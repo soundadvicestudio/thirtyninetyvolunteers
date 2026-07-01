@@ -2,6 +2,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
+import VolunteerForm from '@/components/VolunteerForm'
 
 export default async function HomePage() {
   const supabase = await getServerClient()
@@ -28,9 +29,40 @@ export default async function HomePage() {
     .eq('is_active', true)
     .maybeSingle()
 
+  // Categories and hearing options
+  const { data: categories } = await supabase
+    .from('volunteer_categories')
+    .select('id, name')
+    .eq('is_visible', true)
+    .order('sort_order')
+
+  const { data: hearingOptions } = await supabase
+    .from('hearing_options')
+    .select('id, label')
+    .eq('is_active', true)
+    .order('sort_order')
+
+  // Signup form field toggles
+  const [{ data: showSchoolSetting }, { data: showAgeRangeSetting }] =
+    await Promise.all([
+      supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'signup_show_school')
+        .maybeSingle(),
+      supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'signup_show_age_range')
+        .maybeSingle(),
+    ])
+
   const showBanner = bannerActive?.value === 'true' && !!bannerText?.value
 
   const showConsentLink = !!consentDoc
+
+  const showSchool = showSchoolSetting?.value !== 'false'
+  const showAgeRange = showAgeRangeSetting?.value !== 'false'
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -74,10 +106,12 @@ export default async function HomePage() {
             Join Our Next Production
           </h3>
 
-          {/* FORM_PLACEHOLDER — 2.2 */}
-          <div className="rounded border-2 border-dashed border-divider bg-light-navy p-8 text-center text-mid-gray text-sm">
-            Volunteer registration form — added in Prompt 2.2
-          </div>
+          <VolunteerForm
+            categories={categories ?? []}
+            hearingOptions={hearingOptions ?? []}
+            showSchool={showSchool}
+            showAgeRange={showAgeRange}
+          />
 
           {showConsentLink && (
             <div className="mt-4 text-center">
