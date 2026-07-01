@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026
+### Created: July 2026 | Last Updated: July 2026 — v1.1 (Phase 1 complete)
 
 ---
 
@@ -8,18 +8,19 @@
 
 **30 By Ninety Theatre Volunteer Platform** is a custom, full-stack volunteer management system built from scratch for 30 By Ninety Theatre (Old Mandeville, Louisiana). It replaces SignUp Genius and Google Forms with a single, branded, permanently owned platform.
 
-**Built and maintained by:** Jonathan (YLC member) — sole point of contact for questions, updates, and future development.
+**Built and maintained by:** Jonathan Sturcken (YLC member) — sole point of contact for questions, updates, and future development.
 
 **Two user-facing surfaces:**
 - **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal
 - **Private (Production Crew):** Full admin backend for Super Admins, Editors, and Viewers
 
-**Supabase project:** `thirtyninetyvolunteers`
-**GitHub repo:** `thirtyninetyvolunteers` (private)
+**Supabase project:** `thirtyninetyvolunteers` (ID: `nutvjkplbtobcmymqtzx`, org: `thirtybyninety`)
+**GitHub repo:** `soundadvicestudio/thirtyninetyvolunteers` (private)
 **Deployment:** Vercel (auto-deploy on GitHub push)
-**Alpha URL:** Vercel preview URL (pending — set in env after first deploy)
-**Production URL (Launch):** `volunteers.30byninety.com` (CNAME pending) or `30byninetyvolunteers.com` — TBD
-**Current phase:** Pre-build (Brief finalized, ready for Alpha build)
+**Local folder:** `/Users/soundadvice/volunteers`
+**Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
+**Production URL:** `https://30byninetyvolunteers.com` (live)
+**Current phase:** Alpha build in progress — Phase 1 complete (1.1, 1.2, 1.3 ✓)
 
 ---
 
@@ -46,10 +47,10 @@
 |---|---|---|
 | **Framework** | Next.js (App Router, TypeScript) | Use `create-next-app@latest`. Do not pin to a version. |
 | **Database** | Supabase (PostgreSQL) | Project: `thirtyninetyvolunteers` |
-| **Auth** | Supabase Auth (email/password) | Google SSO deferred to Beta. No self-registration — Super Admin creates all accounts. |
+| **Auth** | Supabase Auth (email/password + Google OAuth) | Google SSO live in Alpha. No self-registration — Super Admin creates all accounts. |
 | **File Storage** | Supabase Storage | Beta only (PDF consent form uploads). |
 | **Styling** | Tailwind CSS v4 | CSS-first. See §4 Critical Constraint. |
-| **UI Components** | shadcn/ui | Accessible, non-technical-friendly. |
+| **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
 | **Email** | Resend | Sandbox domain for Alpha. Real domain verification at Launch. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
 | **Forms** | react-hook-form + zod | All form validation. |
@@ -104,17 +105,22 @@ NEXT_PUBLIC_SITE_URL=            # Full site URL (http://localhost:3000 locally;
 
 ## 5. Supabase Configuration
 
-**Authentication → URL Configuration (set in Supabase dashboard):**
-- Site URL: `http://localhost:3000` (update to production URL at launch)
-- Redirect URLs:
+**Authentication → URL Configuration (confirmed in Supabase dashboard):**
+- Site URL: `https://30byninetyvolunteers.com`
+- Redirect URLs (all confirmed):
   - `http://localhost:3000/auth/callback`
-  - `https://[vercel-preview-url].vercel.app/auth/callback` (add after first deploy)
-  - `https://volunteers.30byninety.com/auth/callback` (add at launch)
+  - `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app/auth/callback`
+  - `https://30byninetyvolunteers.com/auth/callback`
+  - `https://nutvjkplbtobcmymqtzx.supabase.co/auth/v1/callback` (Google OAuth)
 
-**Auth settings:**
+**Auth settings (confirmed):**
 - Email/password: enabled
-- Google OAuth: disabled (Beta)
+- Google OAuth: enabled — credentials from Google Cloud Console (OAuth client: "Volunteers Final")
 - Email confirmation: disabled (accounts created by Super Admin only, not self-registered)
+
+**Google Cloud Console OAuth client ("Volunteers Final"):**
+- Authorized JavaScript origins: `http://localhost:3000`, `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`, `https://30byninetyvolunteers.com`
+- Authorized redirect URIs: all four Supabase/local/Vercel/production callback URLs above
 
 **Storage Buckets (Beta — create when needed):**
 - `documents` — volunteer consent form PDFs (public read)
@@ -167,7 +173,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Volunteer | `/callboard/*` | Own profile only | No | Passwordless login via token |
 | Public | `/`, `/shows/*`, `/forms/*`, `/update`, `/checkin/*` | No | No | No auth required |
 
-**Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Volunteers are NOT Supabase Auth users — they use tokenized magic links only.
+**Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they use tokenized magic links only.
 **No self-registration for admins.** Super Admin creates all accounts manually and triggers a welcome email with credentials.
 
 ---
@@ -180,6 +186,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Conditional announcement banner at top (admin-controlled, on/off)
 - Downloadable consent form link (under-18; admin-swappable PDF — Beta)
 - Discreet "Update my info" link → `/update`
+- Discreet "Production Crew" text link in page footer → `/crew/login` (intentionally subtle — small text, not a CTA button)
 - Volunteer registration form:
   - Full name (required)
   - Email (required)
@@ -359,6 +366,14 @@ Mid Gray:             #555555  --color-mid-gray
 ## 9. Database Schema
 
 All tables created in Migration 001. All FK columns have explicit indexes.
+
+**Migration 001 status:** Applied — `001_core_schema.sql` live on project `nutvjkplbtobcmymqtzx`.
+
+**`is_admin()` function ordering constraint (confirmed technical necessity):**
+`LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
+Creating `is_admin()` before `admin_users` throws `42P01: relation "public.admin_users" does not exist`.
+Correct order: create all tables first → create `is_admin()` → create RLS policies.
+The function definition is unchanged; only its position in the migration differs from the original prompt spec.
 
 ### volunteers
 ```sql
@@ -674,15 +689,16 @@ Ushers/Front of House · Band Members · Concessions · Backstage Crew · Wardro
 
 **Alpha includes:** Volunteer signup, Production Crew backend, show management, slot claiming, custom forms, QR codes, Volunteer Call Board, volunteer hours/milestones, audit log, stub pages for all Beta features, custom 404.
 
-**Alpha excludes (Beta):** Email blasts, check-in system (full), document upload management, Google SSO.
+**Alpha excludes (Beta):** Email blasts, check-in system (full), document upload management.
+*(Google SSO moved to Alpha — completed in 30BN-1.3)*
 
 **Prompt naming:** `30BN-[Phase].[Prompt]`
 
 ---
 
-### Phase 1 — Foundation
+### Phase 1 — Foundation ✓ Complete
 
-**30BN-1.1 — Database Schema & Supabase Setup**
+**30BN-1.1 — Database Schema & Supabase Setup ✓**
 Apply Migration 001: all tables, indexes, foreign keys, triggers, RLS policies, and seed data.
 - All tables per §9 schema
 - Triggers: `trg_volunteers_updated_at`, `trg_shows_updated_at`
@@ -691,7 +707,7 @@ Apply Migration 001: all tables, indexes, foreign keys, triggers, RLS policies, 
 - Seed: `volunteer_categories`, `hearing_options`, `app_settings` defaults
 - Quality gate: all tables present in Supabase dashboard; seed data visible; RLS enabled on all tables
 
-**30BN-1.2 — Next.js Project Scaffold & Vercel Deploy**
+**30BN-1.2 — Next.js Project Scaffold & Vercel Deploy ✓**
 Initialize project and confirm live deployment pipeline.
 - `create-next-app@latest` (TypeScript, App Router, Tailwind, no `tailwind.config.ts`)
 - Install dependencies: `@supabase/supabase-js`, `@supabase/ssr`, `resend`, `qrcode`, `react-hook-form`, `zod`, `date-fns`, `lucide-react`, `shadcn/ui`
@@ -706,8 +722,10 @@ Initialize project and confirm live deployment pipeline.
 - Update `NEXT_PUBLIC_SITE_URL` in Vercel env to preview URL post-deploy
 - Quality gate: Vercel deploy succeeds, `https://[preview].vercel.app` loads without error
 
-**30BN-1.3 — Authentication System**
+**30BN-1.3 — Authentication System ✓**
 Admin login, session management, and route protection.
+**Scope note:** Google SSO included in Alpha (owner decision, 30BN-1.3 session) — moved forward from Beta Phase 16.
+**Gap note:** `admin_users.last_login` column exists but is never written on sign-in. Address as `30BN-ADMIN.1` before Phase 3 ships.
 - `/crew/login`: email/password form using Supabase Auth. On success: verify email exists in `admin_users` AND `is_active = true` → redirect to `/crew/dashboard`. On failure: clear error message.
 - Auth callback route: `/auth/callback` (exchanges code for session)
 - Middleware: protect all `/crew/*` routes. Redirect unauthenticated → `/crew/login`. Redirect authenticated non-admin (not in `admin_users`) → `/crew/login` with error.
@@ -1033,7 +1051,7 @@ Wire audit logging throughout the app and build the read-only viewer.
 - Landing page consent form link wired to active document
 - Replace Alpha stub
 
-### Phase 16 — Google SSO (~1 prompt)
+### Phase 16 — Google SSO ✓ Completed in Alpha (30BN-1.3)
 - Configure Google OAuth in Supabase Auth
 - Add "Sign in with Google" button to `/crew/login`
 - Confirm redirect URIs for production domain
@@ -1050,10 +1068,10 @@ Wire audit logging throughout the app and build the read-only viewer.
 
 | # | Decision | Status | Notes |
 |---|---|---|---|
-| 1 | Production domain | 🔄 Pending | `volunteers.30byninety.com` (CNAME) preferred; fallback: `30byninetyvolunteers.com` |
+| 1 | Production domain | ✅ Resolved | `30byninetyvolunteers.com` — purchased and live |
 | 2 | Sending email address | 🔄 Pending | `volunteers@30byninety.com` — requires DNS access for Resend verification at launch |
-| 3 | Google OAuth credentials | 🔄 Deferred | Deferred to Beta/Phase 16. Free but requires billing account on file with Google. |
-| 4 | Jonathan's surname | 🔄 Pending | Needed only for any auth/email display purposes. Not blocking. |
+| 3 | Google OAuth credentials | ✅ Resolved | Implemented in Alpha (30BN-1.3). Google Cloud OAuth client "Volunteers Final" configured and live. |
+| 4 | Jonathan's surname | ✅ Resolved | Sturcken — Jonathan Sturcken |
 | 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one to be created. Needed at Beta launch. |
 
 ---
@@ -1104,8 +1122,13 @@ The attendance marking UI and its server action must verify that the `show_date`
 ### R14 — Milestone "First Call" Is Not Hours-Based
 The First Call milestone fires on the first `attendance` record with `status = 'showed'` — not when total hours first exceed 0. These are different triggers.
 
+### R15 — shadcn Components Must Use Brand Tailwind Classes
+This project runs `cssVariables: false` in `components.json` (required for Tailwind v4 compatibility). shadcn's default semantic color tokens (`bg-primary`, `border-input`, `ring-ring`, `text-foreground`, `text-muted-foreground`, etc.) will not resolve. At the time any shadcn component is added, replace all default semantic color classes with explicit brand Tailwind classes (`bg-navy`, `border-divider`, `text-dark`, `text-mid-gray`, etc.). Never leave shadcn default color classes in committed code.
+
 ---
 
 *This document is updated at the completion of each build phase.*
-*Version history: v1 (initial — all Alpha prompts, full schema, brand system, standing rules)*
+*Version history:*
+*v1 (initial — all Alpha prompts, full schema, brand system, standing rules)*
+*v1.1 (July 2026 — Phase 1 complete: project facts confirmed, Google SSO moved to Alpha, Production Crew footer link added, Open Decisions #1/#3/#4 resolved, R15 added)*
 *Cross-reference: 30BN_PROCESS_v1.md (build governance)*

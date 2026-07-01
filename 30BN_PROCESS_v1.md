@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.0
-### Created: July 2026 | Last Updated: July 2026
+## 30BN_PROCESS_v1.md — v1.1
+### Created: July 2026 | Last Updated: July 2026 — v1.1 (Phase 1 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -69,6 +69,8 @@ These carry forward to the next prompt.
 **Prompt size evaluation:** Before writing any build prompt, count how many of these it touches: {migration, server action, page, modal/component}. If more than one, evaluate splitting into sub-prompts (e.g., 30BN-3.2a/b pattern). The goal is one clear deliverable per prompt, fully verified before the next begins.
 
 **ADMIN-prefixed prompts:** `30BN-ADMIN.[N]` prompts are for standalone admin or infrastructure features that don't belong to a specific phase sequence. May be executed at any point. Follow all the same standards. Numbering increments from 1.
+
+**Document update prompts** use the prefix `30BN-DOC.[N]` to distinguish them from feature/infrastructure ADMIN prompts. Exception: the Phase 1 completion document updates were labeled `30BN-ADMIN.0a` (Brief) and `30BN-ADMIN.0b` (Process) before this convention was established. All future document-only updates use `30BN-DOC`.
 
 ---
 
@@ -212,6 +214,11 @@ ls tailwind.config.ts 2>/dev/null && echo "EXISTS - REMOVE IT"
 grep -r "router.push" src/app/crew/
 ```
 
+```bash
+# Check for shadcn default semantic color classes left in components (R15)
+grep -r "bg-primary\|text-foreground\|border-input\|text-muted-foreground\|ring-ring\|bg-secondary\|bg-destructive\|bg-muted\|bg-accent\|bg-card" app/ components/
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -224,6 +231,8 @@ Run before every Vercel deployment:
 □ All five env vars set in Vercel → Settings → Environment Variables
 □ NEXT_PUBLIC_SITE_URL set to correct URL for this environment
 □ No SUPABASE_SERVICE_ROLE_KEY referenced in any client component
+□ Vercel framework preset confirmed as Next.js — Settings → General (not "Other")
+□ After any shadcn init or add: confirm no tailwind.config.ts or tailwind.config.js was created — delete immediately if found
 □ All Quality Gates for this prompt passed
 □ Build report written
 □ Q-items noted
@@ -258,10 +267,15 @@ Updated at the end of each phase. Check marks = complete.
 
 ### Alpha Build
 ```
-Phase 1 — Foundation
-  30BN-1.1    Database Schema & Supabase Setup
-  30BN-1.2    Next.js Project Scaffold & Vercel Deploy
-  30BN-1.3    Authentication System
+Phase 1 — Foundation ✓ Complete
+  30BN-1.1  ✓ Database Schema & Supabase Setup
+  30BN-1.2  ✓ Next.js Project Scaffold & Vercel Deploy
+  30BN-1.3  ✓ Authentication System
+
+Document & Admin Prompts
+  30BN-ADMIN.0a  ✓ Brief Update v1.1 (Phase 1 complete)
+  30BN-ADMIN.0b  ✓ Process Update v1.1 (Phase 1 complete)
+  30BN-ADMIN.1   ⏳ Pending — write admin_users.last_login on sign-in (gap identified in 30BN-1.3 build report, address before Phase 3 ships)
 
 Phase 2 — Public Volunteer Signup
   30BN-2.1    Landing Page Design & Layout
@@ -318,12 +332,26 @@ Phase 12 — Polish, Mobile & Performance
 Phase 13 — Email Blast System       (detail in v2)
 Phase 14 — Check-In System          (detail in v2)
 Phase 15 — Document Management      (detail in v2)
-Phase 16 — Google SSO               (detail in v2)
+Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (detail in v2)
 ```
 
 ---
 
-*Last updated: July 2026 — v1.0 (initial)*
+## 14. Process-Specific Standing Rules
+
+Rules governing this build process itself, kept here rather than in Brief §13 because they concern session conduct and CLI tooling behavior rather than product/schema decisions. This is a deliberate deviation from the general §12 protocol ("new standing rule goes in Brief §13 AND is noted here") for these two rules specifically.
+
+### R16 — No Browser Verification in Claude Code Sessions
+Claude Code does not use browser automation tools (Claude in Chrome or any equivalent) for UI, flow, or auth verification. All such verification is performed manually by the owner, who reports results to Claude Code as pass/fail. Build prompts must express all verification steps as manual owner tasks — never as browser tool calls. Established during 30BN-1.3.
+
+### R17 — shadcn Init: Revert var() Injection Into globals.css
+The shadcn CLI (v4.12+) injects a var()-driven CSS custom property theme block into `globals.css` by default during `init`, and may repeat this on `npx shadcn@latest add` commands. This overwrites the R7-compliant `@theme` block and is incompatible with Tailwind v4. After any shadcn init or add, immediately inspect `globals.css` and revert any injected `var()` block. The canonical `@theme` block with static hex values must be restored exactly as specified in 30BN_BRIEF_v1.md §3 Critical Constraint. Known shadcn CLI behavior to guard against.
+
+---
+
 *This document must be updated whenever a new standing rule is agreed upon.*
-*Cross-reference: 30BN_BRIEF_v1.md*
+*Version history:*
+*v1.0 (July 2026 — initial)*
+*v1.1 (July 2026 — Phase 1 complete: R16 (no browser verification in Claude Code) and R17 (shadcn var() injection revert) added in new §14 — deviation from §12 protocol, kept here rather than Brief §13 per owner decision; shadcn color class grep check added to §10; Vercel preset and shadcn tailwind.config checks added to §11; ADMIN/DOC numbering convention clarified in §3; Phase 1 marked complete and Document & Admin Prompts log added in §13)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.1*
