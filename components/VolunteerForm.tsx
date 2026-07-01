@@ -278,6 +278,11 @@ export default function VolunteerForm({
             <option value="51_plus">51+</option>
             <option value="prefer_not">Prefer not to say</option>
           </select>
+          {errors.age_range && (
+            <p className="mt-1 text-sm text-orange">
+              {errors.age_range.message}
+            </p>
+          )}
 
           {/* Guardian fields */}
           {watchedAge === 'under_18' && (
