@@ -22,7 +22,7 @@ const schema = z.object({
   age_range: z.string().optional(),
   guardian_name: z.string().optional(),
   guardian_phone: z.string().optional(),
-  category_ids: z.array(z.string()),
+  category_ids: z.array(z.string()).min(1, 'Please select at least one area of interest'),
   referral_source_label: z.string().optional(),
   referral_source_other: z.string().optional(),
   referral_name: z.string().optional(),
@@ -205,7 +205,9 @@ export default function VolunteerForm({
 
       {/* Volunteer interest areas */}
       <div>
-        <label className={labelClasses}>Areas of Interest</label>
+        <label className={labelClasses}>
+          Areas of Interest<span className="text-orange ml-0.5">*</span>
+        </label>
         <p className="text-sm text-mid-gray">
           Select everything that interests you — no pressure to commit to any
           specific role.
@@ -222,11 +224,14 @@ export default function VolunteerForm({
                 onChange={(e) => {
                   const current = getValues('category_ids') ?? []
                   if (e.target.checked) {
-                    setValue('category_ids', [...current, cat.id])
+                    setValue('category_ids', [...current, cat.id], {
+                      shouldValidate: true,
+                    })
                   } else {
                     setValue(
                       'category_ids',
-                      current.filter((id) => id !== cat.id)
+                      current.filter((id) => id !== cat.id),
+                      { shouldValidate: true }
                     )
                   }
                 }}
@@ -235,6 +240,9 @@ export default function VolunteerForm({
             </label>
           ))}
         </div>
+        {errors.category_ids && (
+          <p className={errorClasses}>{errors.category_ids.message}</p>
+        )}
       </div>
 
       {/* How did you hear about us */}
