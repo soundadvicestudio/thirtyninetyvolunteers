@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useMemo } from 'react'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { VolunteerFormData } from '@/types/volunteer'
@@ -14,47 +14,53 @@ type Props = {
   showAgeRange: boolean
 }
 
-const schema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
-  pronouns: z.string().optional(),
-  pronouns_other: z.string().optional(),
-  school: z.string().optional(),
-  age_range: z.string().optional(),
-  guardian_name: z.string().optional(),
-  guardian_phone: z.string().optional(),
-  category_ids: z.array(z.string()).min(1, 'Please select at least one area of interest'),
-  referral_source_label: z.string().optional(),
-  referral_source_other: z.string().optional(),
-  referral_name: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.age_range === 'under_18') {
-    if (!data.guardian_name?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['guardian_name'],
-        message: 'Guardian name is required for volunteers under 18',
-      })
+function createSchema(showAgeRange: boolean) {
+  return z.object({
+    full_name: z.string().min(1, 'Full name is required'),
+    email: z.string().email('Please enter a valid email address'),
+    phone: z.string().min(1, 'Phone number is required'),
+    pronouns: z.string().optional(),
+    pronouns_other: z.string().optional(),
+    school: z.string().optional(),
+    age_range: showAgeRange
+      ? z.string().min(1, 'Please select an age range')
+      : z.string().optional(),
+    guardian_name: z.string().optional(),
+    guardian_phone: z.string().optional(),
+    category_ids: z.array(z.string()).min(
+      1, 'Please select at least one area of interest'
+    ),
+    referral_source_label: z.string().optional(),
+    referral_source_other: z.string().optional(),
+    referral_name: z.string().optional(),
+  }).superRefine((data, ctx) => {
+    if (data.age_range === 'under_18') {
+      if (!data.guardian_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['guardian_name'],
+          message: 'Guardian name is required for volunteers under 18',
+        })
+      }
+      if (!data.guardian_phone?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['guardian_phone'],
+          message: 'Guardian phone is required for volunteers under 18',
+        })
+      }
     }
-    if (!data.guardian_phone?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['guardian_phone'],
-        message: 'Guardian phone is required for volunteers under 18',
-      })
+    if (data.referral_source_label === 'Other') {
+      if (!data.referral_source_other?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['referral_source_other'],
+          message: 'Please tell us how you heard about us',
+        })
+      }
     }
-  }
-  if (data.referral_source_label === 'Other') {
-    if (!data.referral_source_other?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['referral_source_other'],
-        message: 'Please tell us how you heard about us',
-      })
-    }
-  }
-})
+  })
+}
 
 export default function VolunteerForm({
   categories,
@@ -62,6 +68,11 @@ export default function VolunteerForm({
   showSchool,
   showAgeRange,
 }: Props) {
+  const schema = useMemo(
+    () => createSchema(showAgeRange),
+    [showAgeRange]
+  )
+
   const {
     register,
     handleSubmit,
@@ -70,7 +81,7 @@ export default function VolunteerForm({
     setValue,
     getValues,
   } = useForm<VolunteerFormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<VolunteerFormData>,
     defaultValues: { category_ids: [] },
   })
 
@@ -255,9 +266,11 @@ export default function VolunteerForm({
       {/* Age Range */}
       {showAgeRange && (
         <div>
-          <label className={labelClasses}>Age Range</label>
+          <label className={labelClasses}>
+            Age Range <span className="text-orange ml-0.5">*</span>
+          </label>
           <select className={inputClasses} {...register('age_range')}>
-            <option value="">Prefer not to say</option>
+            <option value="">Select age range</option>
             <option value="under_18">Under 18</option>
             <option value="18_25">18–25</option>
             <option value="26_35">26–35</option>
