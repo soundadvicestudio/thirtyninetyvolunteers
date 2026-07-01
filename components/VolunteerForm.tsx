@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { VolunteerFormData } from '@/types/volunteer'
+import { submitVolunteerForm, mergeVolunteer } from '@/app/actions/volunteer'
 
 type Props = {
   categories: Array<{ id: string; name: string }>
@@ -76,9 +78,49 @@ export default function VolunteerForm({
   const watchedPronouns = watch('pronouns')
   const watchedReferral = watch('referral_source_label')
 
+  const [formState, setFormState] =
+    useState<'idle' | 'success' | 'duplicate' | 'error'>('idle')
+  const [duplicateInfo, setDuplicateInfo] =
+    useState<{ id: string; name: string } | null>(null)
+  const [pendingData, setPendingData] =
+    useState<VolunteerFormData | null>(null)
+  const [errorMessage, setErrorMessage] =
+    useState<string | null>(null)
+
   const onSubmit = async (data: VolunteerFormData) => {
-    // TODO 2.3: replace with server action call
-    console.log('Form validated — submission wired in 2.3:', data)
+    setErrorMessage(null)
+    const result = await submitVolunteerForm(data)
+
+    if (result.status === 'success') {
+      setFormState('success')
+    } else if (result.status === 'duplicate') {
+      setPendingData(data)
+      setDuplicateInfo({
+        id:   result.existingId,
+        name: result.existingName,
+      })
+      setFormState('duplicate')
+    } else {
+      setErrorMessage(result.message)
+      setFormState('error')
+    }
+  }
+
+  const handleMerge = async () => {
+    if (!pendingData || !duplicateInfo) return
+    const result = await mergeVolunteer(duplicateInfo.id, pendingData)
+    if (result.status === 'success') {
+      setFormState('success')
+    } else {
+      setErrorMessage(result.message)
+      setFormState('error')
+    }
+  }
+
+  const handleUseDifferentInfo = () => {
+    setFormState('idle')
+    setDuplicateInfo(null)
+    setPendingData(null)
   }
 
   const inputClasses =
@@ -86,11 +128,72 @@ export default function VolunteerForm({
   const labelClasses = 'block text-sm font-semibold text-dark mb-1'
   const errorClasses = 'mt-1 text-sm text-orange'
 
+  if (formState === 'success') {
+    return (
+      <div className="rounded-xl bg-light-navy border border-divider
+                      p-8 text-center max-w-xl mx-auto">
+        <div className="w-12 h-12 rounded-full bg-orange mx-auto
+                        mb-4 flex items-center justify-center">
+          <span className="text-white text-xl font-bold">✓</span>
+        </div>
+        <h2 className="text-navy font-bold text-xl mb-2">
+          You&apos;re in! Thank you for signing up.
+        </h2>
+        <p className="text-mid-gray text-sm leading-relaxed">
+          We&apos;ve sent a confirmation email with a link to update
+          your information any time. We&apos;ll be in touch when
+          opportunities come up — we can&apos;t wait to have you
+          with us!
+        </p>
+      </div>
+    )
+  }
+
+  if (formState === 'duplicate' && duplicateInfo) {
+    return (
+      <div className="rounded-xl border border-divider
+                      bg-pale-orange p-8 max-w-xl mx-auto">
+        <h2 className="text-navy font-bold text-lg mb-2">
+          We found an existing record
+        </h2>
+        <p className="text-dark text-sm leading-relaxed mb-6">
+          We already have a record for{' '}
+          <span className="font-semibold">{duplicateInfo.name}</span>{' '}
+          with the email or phone you entered. Would you like
+          to update that record with the information you just
+          entered?
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleMerge}
+            className="flex-1 py-3 bg-navy text-white font-bold
+                       rounded-lg hover:bg-opacity-90 transition-colors">
+            Update My Record
+          </button>
+          <button
+            onClick={handleUseDifferentInfo}
+            className="flex-1 py-3 bg-white text-navy font-semibold
+                       rounded-lg border border-divider
+                       hover:border-navy transition-colors">
+            Use Different Contact Info
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="max-w-xl mx-auto px-4 space-y-5"
     >
+      {(formState === 'error' && errorMessage) && (
+        <div className="mb-4 rounded-lg bg-pale-orange border
+                        border-orange p-4 text-sm text-dark">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Full Name */}
       <div>
         <label className={labelClasses}>
