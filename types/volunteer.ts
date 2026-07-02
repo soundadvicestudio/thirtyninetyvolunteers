@@ -8,6 +8,7 @@ export type VolunteerFormData = {
   age_range?: string
   guardian_name?: string
   guardian_phone?: string
+  requires_service_hours?: boolean
   category_ids: string[]
   referral_source_label?: string
   referral_source_other?: string
@@ -28,6 +29,7 @@ export type VolunteerListRow = {
   guardian_name: string | null
   guardian_phone: string | null
   referral_source: string | null
+  requires_service_hours: boolean
   status: 'active' | 'archived'
   total_hours: number
   created_at: string
@@ -49,6 +51,7 @@ export type VolunteerProfile = {
   guardian_phone: string | null
   referral_source: string | null
   referral_name: string | null
+  requires_service_hours: boolean
   status: 'active' | 'archived'
   total_hours: number
   created_at: string

@@ -27,7 +27,7 @@ export async function updateVolunteer(
   const { data: current, error: fetchError } = await supabase
     .from('volunteers')
     .select(
-      'full_name, email, phone, pronouns, school, age_range, is_minor, guardian_name, guardian_phone, referral_source, referral_name'
+      'full_name, email, phone, pronouns, school, age_range, is_minor, guardian_name, guardian_phone, requires_service_hours, referral_source, referral_name'
     )
     .eq('id', volunteerId)
     .single()
@@ -70,6 +70,7 @@ export async function updateVolunteer(
     is_minor: value.is_minor,
     guardian_name: value.guardian_name || null,
     guardian_phone: value.guardian_phone || null,
+    requires_service_hours: (value.school || null) ? (value.requires_service_hours ?? false) : false,
     referral_source: value.referral_source || null,
     referral_name: value.referral_name || null,
   }

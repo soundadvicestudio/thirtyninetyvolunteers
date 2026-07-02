@@ -23,8 +23,8 @@ export default async function UpdatePage({
     .from('volunteers')
     .select(`
       id, full_name, email, phone, pronouns, school, age_range,
-      guardian_name, guardian_phone, referral_source,
-      referral_name, update_token,
+      guardian_name, guardian_phone, requires_service_hours,
+      referral_source, referral_name, update_token,
       volunteer_category_assignments ( category_id )
     `)
     .eq('update_token', token)
@@ -103,6 +103,7 @@ export default async function UpdatePage({
     age_range:              volunteer.age_range ?? '',
     guardian_name:          volunteer.guardian_name ?? '',
     guardian_phone:         volunteer.guardian_phone ?? '',
+    requires_service_hours: volunteer.requires_service_hours ?? false,
     category_ids:           existingCategoryIds,
     referral_source_label:  referralSourceLabel,
     referral_source_other:  referralSourceOther,

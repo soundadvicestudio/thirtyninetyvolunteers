@@ -11,6 +11,7 @@ export const volunteerProfileSchema = z
     is_minor: z.boolean().optional().default(false),
     guardian_name: z.string().optional(),
     guardian_phone: z.string().optional(),
+    requires_service_hours: z.boolean().default(false),
     category_ids: z.array(z.string()).optional().default([]),
     referral_source: z.string().optional(),
     referral_name: z.string().optional(),

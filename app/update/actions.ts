@@ -134,6 +134,9 @@ export async function updateVolunteerInfo(
         is_minor:        data.age_range === 'under_18',
         guardian_name:   data.guardian_name || null,
         guardian_phone:  data.guardian_phone || null,
+        requires_service_hours: (data.school || null)
+          ? (data.requires_service_hours ?? false)
+          : false,
         referral_source: referralSourceValue,
         referral_name:   data.referral_name || null,
         update_token:    newToken,

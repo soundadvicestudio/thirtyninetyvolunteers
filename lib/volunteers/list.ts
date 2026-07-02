@@ -13,7 +13,8 @@ const DB_SORTABLE: Partial<Record<VolunteersUrlState['sort'], string>> = {
 
 const LIST_SELECT = `
   id, full_name, email, phone, pronouns, age_range, school, is_minor,
-  guardian_name, guardian_phone, referral_source, status, total_hours, created_at,
+  guardian_name, guardian_phone, referral_source, requires_service_hours,
+  status, total_hours, created_at,
   volunteer_category_assignments ( volunteer_categories ( id, name ) )
 `
 
@@ -29,6 +30,7 @@ type RawVolunteerRow = {
   guardian_name: string | null
   guardian_phone: string | null
   referral_source: string | null
+  requires_service_hours: boolean
   status: string
   total_hours: number
   created_at: string
@@ -67,6 +69,11 @@ function applyBaseFilters(query: any, filters: VolunteersUrlState) {
     q = q.eq('is_minor', true)
   } else if (filters.isMinor === 'no') {
     q = q.eq('is_minor', false)
+  }
+  if (filters.serviceHours === 'yes') {
+    q = q.eq('requires_service_hours', true)
+  } else if (filters.serviceHours === 'no') {
+    q = q.eq('requires_service_hours', false)
   }
   return q
 }
@@ -131,6 +138,7 @@ function toListRow(
     guardian_name: row.guardian_name,
     guardian_phone: row.guardian_phone,
     referral_source: row.referral_source,
+    requires_service_hours: row.requires_service_hours,
     status: row.status as 'active' | 'archived',
     total_hours: Number(row.total_hours),
     created_at: row.created_at,

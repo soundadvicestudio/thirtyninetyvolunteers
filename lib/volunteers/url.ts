@@ -8,6 +8,7 @@ export type VolunteersUrlState = {
   ageRange: string
   school: 'yes' | 'no' | 'all'
   isMinor: 'yes' | 'no' | 'all'
+  serviceHours: 'yes' | 'no' | 'all'
   sort: VolunteersSort
   dir: 'asc' | 'desc'
   page: number
@@ -20,6 +21,7 @@ export const DEFAULT_URL_STATE: VolunteersUrlState = {
   ageRange: '',
   school: 'all',
   isMinor: 'all',
+  serviceHours: 'all',
   sort: 'name',
   dir: 'asc',
   page: 1,
@@ -32,6 +34,7 @@ export type RawSearchParams = {
   age_range?: string
   school?: string
   is_minor?: string
+  service_hours?: string
   sort?: string
   dir?: string
   page?: string
@@ -49,6 +52,10 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
   const school = params.school === 'yes' || params.school === 'no' ? params.school : 'all'
   const isMinor =
     params.is_minor === 'yes' || params.is_minor === 'no' ? params.is_minor : 'all'
+  const serviceHours =
+    params.service_hours === 'yes' || params.service_hours === 'no'
+      ? params.service_hours
+      : 'all'
   const sort = (SORT_VALUES as readonly string[]).includes(params.sort ?? '')
     ? (params.sort as VolunteersSort)
     : 'name'
@@ -62,6 +69,7 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
     ageRange: params.age_range ?? '',
     school,
     isMinor,
+    serviceHours,
     sort,
     dir,
     page,
@@ -85,6 +93,8 @@ export function buildVolunteersQueryString(
   if (state.ageRange) usp.set('age_range', state.ageRange)
   if (state.school !== DEFAULT_URL_STATE.school) usp.set('school', state.school)
   if (state.isMinor !== DEFAULT_URL_STATE.isMinor) usp.set('is_minor', state.isMinor)
+  if (state.serviceHours !== DEFAULT_URL_STATE.serviceHours)
+    usp.set('service_hours', state.serviceHours)
   if (state.sort !== DEFAULT_URL_STATE.sort) usp.set('sort', state.sort)
   if (state.dir !== DEFAULT_URL_STATE.dir) usp.set('dir', state.dir)
   if (opts.includePage && state.page !== DEFAULT_URL_STATE.page) {
@@ -110,6 +120,7 @@ export function isNonDefaultFilter(state: VolunteersUrlState): boolean {
     state.status !== DEFAULT_URL_STATE.status ||
     !!state.ageRange ||
     state.school !== DEFAULT_URL_STATE.school ||
-    state.isMinor !== DEFAULT_URL_STATE.isMinor
+    state.isMinor !== DEFAULT_URL_STATE.isMinor ||
+    state.serviceHours !== DEFAULT_URL_STATE.serviceHours
   )
 }

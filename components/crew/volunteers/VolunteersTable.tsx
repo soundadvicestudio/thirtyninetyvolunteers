@@ -235,6 +235,11 @@ export default function VolunteersTable({
                   >
                     {v.full_name}
                   </Link>
+                  {v.requires_service_hours && (
+                    <span className="ml-2 text-xs bg-pale-orange text-orange px-1.5 py-0.5 rounded font-medium">
+                      SH
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-dark">{v.email}</td>
                 <td className="px-4 py-3 text-dark">{v.phone}</td>

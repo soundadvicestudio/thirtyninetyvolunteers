@@ -152,6 +152,21 @@ export default function FilterPanel({
           </select>
         </div>
 
+        <div>
+          <label className="block text-xs font-semibold text-mid-gray mb-1">Service Hours</label>
+          <select
+            value={state.serviceHours}
+            onChange={(e) =>
+              navigate({ serviceHours: e.target.value as VolunteersUrlState['serviceHours'] })
+            }
+            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+          >
+            <option value="all">All</option>
+            <option value="yes">Required</option>
+            <option value="no">Not Required</option>
+          </select>
+        </div>
+
         <div className="group relative">
           <label className="block text-xs font-semibold text-mid-gray mb-1">Milestone Tier</label>
           <select

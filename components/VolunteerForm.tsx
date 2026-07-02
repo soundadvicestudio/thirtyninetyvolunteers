@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,6 +27,7 @@ function createSchema(showAgeRange: boolean) {
       : z.string().optional(),
     guardian_name: z.string().optional(),
     guardian_phone: z.string().optional(),
+    requires_service_hours: z.boolean().default(false),
     category_ids: z.array(z.string()).min(
       1, 'Please select at least one area of interest'
     ),
@@ -88,6 +89,16 @@ export default function VolunteerForm({
   const watchedAge = watch('age_range')
   const watchedPronouns = watch('pronouns')
   const watchedReferral = watch('referral_source_label')
+  const watchedSchool = watch('school')
+  const watchedRequiresServiceHours = watch('requires_service_hours')
+  const showServiceHours = !!watchedSchool?.trim()
+
+  useEffect(() => {
+    if (!showServiceHours) {
+      setValue('requires_service_hours', false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showServiceHours])
 
   const [formState, setFormState] =
     useState<'idle' | 'success' | 'duplicate' | 'error'>('idle')
@@ -260,6 +271,38 @@ export default function VolunteerForm({
         <div>
           <label className={labelClasses}>School (if applicable)</label>
           <input type="text" className={inputClasses} {...register('school')} />
+
+          {showServiceHours && (
+            <div className="mt-3">
+              <label className={labelClasses}>
+                Do you require service hours for your school or organization?
+              </label>
+              <div className="flex gap-6 mt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={watchedRequiresServiceHours === true}
+                    onChange={() =>
+                      setValue('requires_service_hours', true, { shouldValidate: true })
+                    }
+                    className="text-navy focus:ring-navy"
+                  />
+                  <span className="text-sm text-dark">Yes</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={watchedRequiresServiceHours === false}
+                    onChange={() =>
+                      setValue('requires_service_hours', false, { shouldValidate: true })
+                    }
+                    className="text-navy focus:ring-navy"
+                  />
+                  <span className="text-sm text-dark">No</span>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
