@@ -10,6 +10,10 @@ export type AuditAction =
   | 'category.rename'
   | 'category.reorder'
   | 'category.visibility'
+  | 'user.create'
+  | 'user.deactivate'
+  | 'user.reactivate'
+  | 'user.role_change'
 
 export async function logAction(
   adminId: string,

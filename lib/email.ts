@@ -261,3 +261,109 @@ export async function sendInfoUpdatedEmail({
     html,
   })
 }
+
+// ─── Production Crew welcome email ───────────────────────────────
+
+const ROLE_LABELS: Record<'editor' | 'viewer', string> = {
+  editor: 'Editor',
+  viewer: 'Viewer',
+}
+
+type WelcomeEmailParams = {
+  toEmail: string
+  toName: string
+  role: 'editor' | 'viewer'
+  tempPassword: string
+}
+
+export async function sendWelcomeEmail({
+  toEmail,
+  toName,
+  role,
+  tempPassword,
+}: WelcomeEmailParams): Promise<void> {
+  const loginUrl = 'https://30byninetyvolunteers.com/crew/login'
+  const safeName = escapeHtml(toName)
+  const safeEmail = escapeHtml(toEmail)
+  const safePassword = escapeHtml(tempPassword)
+  const roleLabel = ROLE_LABELS[role]
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;
+                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;
+                    font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          <h1 style="color:#293994;font-size:22px;font-weight:700;
+                     margin:0 0 12px;">
+            Hi ${safeName},
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            You've been added to the 30 By Ninety Theatre Production Crew
+            as ${roleLabel}.
+          </p>
+
+          <div style="background:#EEF1FA;border-radius:8px;
+                      padding:20px 24px;margin:0 0 24px;">
+            <p style="margin:0 0 8px;color:#293994;font-size:13px;
+                      font-weight:700;text-transform:uppercase;
+                      letter-spacing:0.5px;">
+              Login Details
+            </p>
+            <p style="margin:0 0 4px;color:#555;font-size:14px;">
+              Login URL:
+              <a href="${loginUrl}" style="color:#293994;font-weight:600;">
+                ${loginUrl}
+              </a>
+            </p>
+            <p style="margin:0 0 4px;color:#555;font-size:14px;">
+              Email: <strong style="color:#1A1A1A;">${safeEmail}</strong>
+            </p>
+            <p style="margin:0;color:#555;font-size:14px;">
+              Temporary Password:
+              <strong style="color:#1A1A1A;">${safePassword}</strong>
+            </p>
+          </div>
+
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            Please log in and change your password after your first
+            sign-in.
+          </p>
+
+          <a href="${loginUrl}"
+             style="display:inline-block;background:#F26522;
+                    color:#ffffff;text-decoration:none;
+                    padding:14px 28px;border-radius:8px;
+                    font-weight:700;font-size:15px;">
+            Log In to Production Crew
+          </a>
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    replyTo: 'info@30byninety.com',
+    to: toEmail,
+    subject: 'Welcome to 30 By Ninety Theatre Production Crew',
+    html,
+  })
+}
