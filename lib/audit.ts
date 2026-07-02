@@ -6,6 +6,10 @@ export type AuditAction =
   | 'volunteer.archive'
   | 'volunteer.unarchive'
   | 'volunteer.note.add'
+  | 'category.create'
+  | 'category.rename'
+  | 'category.reorder'
+  | 'category.visibility'
 
 export async function logAction(
   adminId: string,
