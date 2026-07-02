@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.2
-### Created: July 2026 | Last Updated: July 2026 — v1.2 (Phase 2 complete)
+## 30BN_PROCESS_v1.md — v1.3
+### Created: July 2026 | Last Updated: July 2026 — v1.3 (Phase 3 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -187,6 +187,22 @@ The owner performs and reports manual verification after receiving the build rep
 
 If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark something as Verified if it wasn't actually tested.
 
+**Step Tracker Convention (required from v1.3 onward):**
+Every build prompt must begin its execution with a step tracker block declared at the top of the working session. Claude Code declares all steps at the start and updates each to ✓ (complete), ⏳ (in progress), or ✗ (blocked) as work proceeds. This gives the owner visibility into build progress during long sessions and makes interruptions (e.g., rate limit hits) easier to resume.
+
+Format:
+```
+Step tracker:
+  ✓ Step 1: [completed step]
+  ⏳ Step 2: [current step — in progress]
+  ☐ Step 3: [pending step]
+  ☐ Step 4: [pending step]
+```
+
+The step tracker appears in the prompt itself (as a declaration of planned steps) and Claude Code maintains it visibly in its working output.
+
+When writing prompts, always include a step tracker block after the SCOPE section listing all planned steps. This is mandatory from 30BN-DOC.4 onward.
+
 ---
 
 ## 9. Quality Gates
@@ -223,6 +239,22 @@ grep -r "router.push" src/app/crew/
 grep -r "bg-primary\|text-foreground\|border-input\|text-muted-foreground\|ring-ring\|bg-secondary\|bg-destructive\|bg-muted\|bg-accent\|bg-card" app/ components/
 ```
 
+```bash
+# Confirm no dark: classes on public routes (ADMIN.6)
+grep -r "dark:" app/ --include="*.tsx" | \
+  grep -v "/crew/"
+# (Should return no results — dark mode is admin-only)
+
+# Confirm migration files are at repo root (R21)
+ls *.sql 2>/dev/null
+# (Migration files must be here, not in supabase/migrations/)
+
+# Confirm no Button component in files needing brand hover behavior (R19)
+grep -r "from.*components/ui/button" \
+  components/crew/
+# (Review any hits — confirm none need brand hover states that would be blocked by tailwind-merge)
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -241,6 +273,11 @@ Run before every Vercel deployment:
 □ Build report written
 □ Q-items noted
 □ Brief updated if schema or decisions changed (batch with owner approval)
+□ Step tracker declared at session start and updated throughout
+□ All new /crew/* pages placed under app/crew/(app)/ — not app/crew/ directly (R20)
+□ Any new shadcn component installed: check globals.css for var() injection (R17), check for tailwind.config.ts (R7), rebrand all semantic color classes (R15)
+□ Migration files created at repo root, not in supabase/migrations/ (R21)
+□ No Button component imported in files requiring brand hover behavior (R19)
 ```
 
 ---
@@ -277,11 +314,19 @@ Phase 1 — Foundation ✓ Complete
   30BN-1.3  ✓ Authentication System
 
 Document & Admin Prompts
-  30BN-ADMIN.0a  ✓ Brief Update v1.1 (Phase 1 complete)
-  30BN-ADMIN.0b  ✓ Process Update v1.1 (Phase 1 complete)
-  30BN-ADMIN.1   ⏳ Pending — write admin_users.last_login on sign-in (gap identified in 30BN-1.3 build report, address before Phase 3 ships)
-  30BN-DOC.1     ✓ Brief Update v1.2 (Phase 2 complete)
-  30BN-DOC.2     ✓ Process Update v1.2 (Phase 2 complete)
+  30BN-ADMIN.0a  ✓ Brief Update v1.1 (Phase 1)
+  30BN-ADMIN.0b  ✓ Process Update v1.1 (Phase 1)
+  30BN-ADMIN.1   ✓ Write admin_users.last_login on sign-in
+  30BN-ADMIN.2   ✓ Cleanup: sign-out button, timezone utility, landing page
+  30BN-ADMIN.3   ✓ Cosmetic fix: hover states, CTA button position
+  30BN-ADMIN.4   ✓ Service hours field
+  30BN-ADMIN.5   ✓ Users table Super Admin fix + note edit/delete + PWA
+  30BN-ADMIN.6   ✓ Light/Dark mode toggle
+  30BN-ADMIN.7   ✓ Fix PWA start_url
+  30BN-DOC.1     ✓ Brief Update v1.2 (Phase 2)
+  30BN-DOC.2     ✓ Process Update v1.2 (Phase 2)
+  30BN-DOC.3     ✓ Brief Update v1.3 (Phase 3)
+  30BN-DOC.4     ✓ Process Update v1.3 (this prompt)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -290,21 +335,24 @@ Phase 2 — Public Volunteer Signup ✓ Complete
                constraint + required field)
   30BN-2.4  ✓ Volunteer Info Update Flow
 
-Phase 3 — Production Crew Core
-  30BN-3.1    Admin Layout & Navigation
-  30BN-3.2    Volunteers List View
-  30BN-3.3    Volunteer Profile Page
-  30BN-3.4    Category Management
-  30BN-3.5    Super Admin User Management
+Phase 3 — Production Crew Core ✓ Complete
+  30BN-3.1   ✓ Admin Layout & Navigation
+  30BN-3.2   ✓ Volunteers List View
+  30BN-3.2b  ✓ PDF Export + Minor Fixes
+  30BN-3.3   ✓ Volunteer Profile Page
+  30BN-3.4   ✓ Category Management
+  30BN-3.5   ✓ Super Admin User Management
 
 Phase 4 — Shows & Season Management
   30BN-4.1    Show Creation & Edit
   30BN-4.2    Season Management & Show List
   30BN-4.3    Admin Show Detail
+  30BN-4.4    Standing Volunteer Opportunities (NEW)
 
 Phase 5 — Public Show Claiming
-  30BN-5.1    Public Show Listing & Per-Show Claiming Page
+  30BN-5.1    Public Show Listing & Per-Show Page
   30BN-5.2    Slot Claiming Logic & Self-Cancel
+  30BN-5.3    Category-Match Notification Emails (NEW)
 
 Phase 6 — Custom Forms & Surveys
   30BN-6.1    Form Builder
@@ -355,6 +403,21 @@ Claude Code does not use browser automation tools (Claude in Chrome or any equiv
 ### R17 — shadcn Init: Revert var() Injection Into globals.css
 The shadcn CLI (v4.12+) injects a var()-driven CSS custom property theme block into `globals.css` by default during `init`, and may repeat this on `npx shadcn@latest add` commands. This overwrites the R7-compliant `@theme` block and is incompatible with Tailwind v4. After any shadcn init or add, immediately inspect `globals.css` and revert any injected `var()` block. The canonical `@theme` block with static hex values must be restored exactly as specified in 30BN_BRIEF_v1.md §3 Critical Constraint. Known shadcn CLI behavior to guard against.
 
+### R18 — Empty String Normalization (cross-reference)
+Already in Brief §13. Referenced here for R-number continuity. See Brief §13 R18.
+
+### R19 — Plain <button> (cross-reference)
+Documented in Brief §13 R19. Referenced here for continuity. Core rule: never use the Button component in files requiring brand hover behavior due to tailwind-merge incompatibility with custom @theme color tokens.
+
+### R20 — /crew/* Route Placement (cross-reference)
+Documented in Brief §13 R20. Referenced here for continuity. All Production Crew pages under `app/crew/(app)/`. Login under `app/crew/(auth)/login/`.
+
+### R21 — Migration Files at Repo Root (cross-reference)
+Documented in Brief §13 R21. Referenced here for continuity. No `supabase/migrations/` directory.
+
+### R22 — Vercel Deploy Verification Is Owner-Side
+Documented in Brief §13 R22. Referenced here because it directly governs session conduct: Claude Code must not include "confirm Vercel deploy" as a step in its own build process or flag its absence in build reports. Owner confirms deploy independently.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -362,4 +425,5 @@ The shadcn CLI (v4.12+) injects a var()-driven CSS custom property theme block i
 *v1.0 (July 2026 — initial)*
 *v1.1 (July 2026 — Phase 1 complete: R16 (no browser verification in Claude Code) and R17 (shadcn var() injection revert) added in new §14 — deviation from §12 protocol, kept here rather than Brief §13 per owner decision; shadcn color class grep check added to §10; Vercel preset and shadcn tailwind.config checks added to §11; ADMIN/DOC numbering convention clarified in §3; Phase 1 marked complete and Document & Admin Prompts log added in §13)*
 *v1.2 (July 2026 — Phase 2 complete: build report timing convention added to §8; Phase 2 marked complete in §13; DOC.1/DOC.2 added to prompt log)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.2*
+*v1.3 (July 2026 — Phase 3 complete: step tracker convention added to §8; new grep checks and post-build checklist items added to §10 and §11; ADMIN.1–ADMIN.7 and DOC.3–DOC.4 added to prompt log; Phase 3 marked complete; Phases 4 and 5 updated with new prompt slots 4.4 and 5.3; R19–R22 cross-references added to §14)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.3*
