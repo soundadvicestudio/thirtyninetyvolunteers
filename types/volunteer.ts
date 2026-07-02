@@ -15,3 +15,23 @@ export type VolunteerFormData = {
 }
 
 export type UpdateFormData = Omit<VolunteerFormData, 'email'>
+
+export type VolunteerListRow = {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  pronouns: string | null
+  age_range: string | null
+  school: string | null
+  is_minor: boolean
+  guardian_name: string | null
+  guardian_phone: string | null
+  referral_source: string | null
+  status: 'active' | 'archived'
+  total_hours: number
+  created_at: string
+  categories: { id: string; name: string }[]
+  calls: number
+  last_call: string | null
+}
