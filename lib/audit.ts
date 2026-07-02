@@ -18,6 +18,8 @@ export type AuditAction =
   | 'volunteer.note.delete'
   | 'show.create'
   | 'show.update'
+  | 'season.create'
+  | 'show.status_change'
 
 export async function logAction(
   adminId: string,

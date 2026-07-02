@@ -28,3 +28,25 @@ export type ShowRole = {
   role_name: string
   slots_available: number
 }
+
+export type Season = {
+  id: string
+  name: string
+  start_date: string | null
+  end_date: string | null
+  is_current: boolean
+}
+
+export type ShowWithStaffing = {
+  id: string
+  name: string
+  show_type: ShowType
+  status: ShowStatus
+  season_id: string | null
+  created_at: string
+  updated_at: string
+  total_slots: number
+  filled_slots: number
+  earliest_date: string | null
+  latest_date: string | null
+}

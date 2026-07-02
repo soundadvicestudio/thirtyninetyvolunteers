@@ -300,3 +300,88 @@ export async function updateShow(
 
   return { success: true, showId }
 }
+
+export type CreateSeasonResult = { success: true; seasonId: string } | { error: string }
+
+export async function createSeason(formData: {
+  name: string
+  startDate: string | null
+  endDate: string | null
+}): Promise<CreateSeasonResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const name = formData.name.trim()
+  if (!name) {
+    return { error: 'Season name is required.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: season, error } = await supabase
+    .from('seasons')
+    .insert({
+      name,
+      start_date: formData.startDate || null,
+      end_date: formData.endDate || null,
+      is_current: false,
+    })
+    .select('id')
+    .single()
+
+  if (error || !season) {
+    console.error('createSeason insert error:', error)
+    return { error: 'Something went wrong creating the season. Please try again.' }
+  }
+
+  await logAction(admin.id, 'season.create', 'season', season.id, undefined, { name })
+
+  return { success: true, seasonId: season.id }
+}
+
+export type ToggleShowStatusResult = { success: true } | { error: string }
+
+export async function toggleShowStatus(
+  showId: string,
+  newStatus: 'draft' | 'live'
+): Promise<ToggleShowStatusResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('shows')
+    .select('status')
+    .eq('id', showId)
+    .single()
+
+  if (fetchError || !current) {
+    return { error: 'Could not find this show.' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('shows')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', showId)
+
+  if (updateError) {
+    console.error('toggleShowStatus error:', updateError)
+    return { error: 'Something went wrong updating the show status. Please try again.' }
+  }
+
+  await logAction(
+    admin.id,
+    'show.status_change',
+    'show',
+    showId,
+    { status: current.status },
+    { status: newStatus }
+  )
+
+  return { success: true }
+}
