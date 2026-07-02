@@ -73,6 +73,16 @@ export async function sendVolunteerConfirmationEmail({
             In the meantime, you can update your information any time
             using the link below.
           </p>
+          <p style="color:#555;line-height:1.6;margin:16px 0 0;">
+            In the meantime, you can browse current volunteer opportunities
+            on our shows page — new calls are posted throughout the season.
+          </p>
+          <div style="margin:16px 0 0;">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
+               style="color:#293994;font-weight:600;text-decoration:underline;">
+              View Volunteer Opportunities →
+            </a>
+          </div>
 
           ${categoriesHtml}
 
@@ -104,7 +114,7 @@ export async function sendVolunteerConfirmationEmail({
   `
 
   await resend.emails.send({
-    from: 'volunteers@30byninetyvolunteers.com',
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     to,
     subject: `Welcome to 30 By Ninety Theatre, ${name}!`,
     html,
