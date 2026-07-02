@@ -146,6 +146,55 @@ export async function addNote(volunteerId: string, body: string): Promise<Action
   return { success: true }
 }
 
+export async function editNote(noteId: string, body: string): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const trimmed = body.trim()
+  if (!trimmed) {
+    return { error: 'Note cannot be empty.' }
+  }
+  if (trimmed.length > 2000) {
+    return { error: 'Note must be 2000 characters or fewer.' }
+  }
+
+  const supabase = await getServerClient()
+  const { error } = await supabase
+    .from('volunteer_notes')
+    .update({ body: trimmed })
+    .eq('id', noteId)
+
+  if (error) {
+    console.error('editNote error:', error)
+    return { error: 'Something went wrong saving this note. Please try again.' }
+  }
+
+  await logAction(admin.id, 'volunteer.note.edit', 'volunteer_note', noteId)
+
+  return { success: true }
+}
+
+export async function deleteNote(noteId: string): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+  const { error } = await supabase.from('volunteer_notes').delete().eq('id', noteId)
+
+  if (error) {
+    console.error('deleteNote error:', error)
+    return { error: 'Something went wrong deleting this note. Please try again.' }
+  }
+
+  await logAction(admin.id, 'volunteer.note.delete', 'volunteer_note', noteId)
+
+  return { success: true }
+}
+
 export async function toggleStatus(
   volunteerId: string,
   newStatus: 'active' | 'archived'

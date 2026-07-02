@@ -14,6 +14,8 @@ export type AuditAction =
   | 'user.deactivate'
   | 'user.reactivate'
   | 'user.role_change'
+  | 'volunteer.note.edit'
+  | 'volunteer.note.delete'
 
 export async function logAction(
   adminId: string,

@@ -89,11 +89,15 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
             </select>
           )}
 
-          {isSelf ? (
+          {isSelf || user.role === 'super_admin' ? (
             <button
               type="button"
               disabled
-              title="Cannot deactivate your own account"
+              title={
+                isSelf
+                  ? 'Cannot deactivate your own account'
+                  : 'Super Admin accounts cannot be deactivated via this panel'
+              }
               className="text-sm px-3 py-1 rounded-md opacity-40 cursor-not-allowed border border-orange text-orange"
             >
               Deactivate

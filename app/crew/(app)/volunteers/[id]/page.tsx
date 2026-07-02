@@ -152,7 +152,11 @@ export default async function VolunteerProfilePage({
       {admin.role !== 'viewer' && (
         <section className="mt-10">
           <h2 className="text-lg font-semibold text-dark mb-4">Editor Notes</h2>
-          <EditorNotes volunteerId={volunteer.id} notes={notes} />
+          <EditorNotes
+            volunteerId={volunteer.id}
+            notes={notes}
+            isSuperAdmin={admin.role === 'super_admin'}
+          />
         </section>
       )}
     </div>
