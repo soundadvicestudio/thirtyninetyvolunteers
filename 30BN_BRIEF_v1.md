@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.1 (Phase 1 complete)
+### Created: July 2026 | Last Updated: July 2026 — v1.2 (Phase 2 complete)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phase 1 complete (1.1, 1.2, 1.3 ✓)
+**Current phase:** Alpha build in progress — Phase 2 complete (1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4 ✓)
 
 ---
 
@@ -51,9 +51,9 @@
 | **File Storage** | Supabase Storage | Beta only (PDF consent form uploads). |
 | **Styling** | Tailwind CSS v4 | CSS-first. See §4 Critical Constraint. |
 | **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
-| **Email** | Resend | Sandbox domain for Alpha. Real domain verification at Launch. |
+| **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
-| **Forms** | react-hook-form + zod | All form validation. |
+| **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
 | **Dates** | date-fns | Date formatting throughout. |
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
@@ -156,8 +156,7 @@ Mid Gray:             #555555  --color-mid-gray
 - **Background:** Transparent — works on white and navy backgrounds
 
 ### Email Design
-- From address (Alpha): Resend sandbox domain
-- From address (Launch): `volunteers@30byninety.com`
+- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch)
 - Default Reply-To: `info@30byninety.com` (editable per send by Editor)
 - All emails use 30 By Ninety brand colors and Open Sans
 
@@ -203,6 +202,8 @@ Mid Gray:             #555555  --color-mid-gray
   - Match found → friendly merge prompt ("We found an existing record — update it?")
 - Confirmation email: branded, warm, includes personal update token link
 - Success state: warm thank-you in-page (no redirect)
+- Confirmation email sent on signup includes a link to `/shows` so volunteers can browse upcoming opportunities immediately.
+- `age_range` field is required when `signup_show_age_range` setting is `true` (owner decision, 30BN-2.3-FIX).
 
 ### Public — Volunteer Info Update (`/update`)
 - Token-based: each volunteer has a unique `update_token` (UUID)
@@ -736,9 +737,9 @@ Admin login, session management, and route protection.
 
 ---
 
-### Phase 2 — Public Volunteer Signup
+### Phase 2 — Public Volunteer Signup ✓ Complete
 
-**30BN-2.1 — Landing Page Design & Layout**
+**30BN-2.1 — Landing Page Design & Layout ✓**
 - `/` page: full 30 By Ninety branding (§6 palette, Open Sans, logo)
 - Announcement banner: conditional render when `app_settings.announcement_banner_active = 'true'`
 - Consent form link: link to active `documents` record type `consent_under18` (returns null gracefully if none — link hidden)
@@ -747,7 +748,7 @@ Admin login, session management, and route protection.
 - Art direction: warm, energetic, inviting — theater-branded without being stiff. The page should feel like being welcomed into a community.
 - Quality gate: renders correctly on mobile (375px) and desktop; banner conditional behavior works; all links functional
 
-**30BN-2.2 — Volunteer Registration Form**
+**30BN-2.2 — Volunteer Registration Form ✓**
 All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Guardian fields: revealed when age_range = 'under_18'. `is_minor` set to true in DB.
 - Category multi-select: loaded from `volunteer_categories` WHERE `is_visible = true`
@@ -755,8 +756,9 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - School/age range visibility: respect `app_settings` toggles
 - Inline field-level validation errors. No full-page reload on submit.
 - Quality gate: all fields validate correctly; guardian fields show/hide on trigger; submit reaches Supabase
+- **Decision note:** `age_range` made required when `showAgeRange` is true (2.3-FIX). `@hookform/resolvers` confirmed required peer package — added to §3.
 
-**30BN-2.3 — Form Submission Logic**
+**30BN-2.3 — Form Submission Logic ✓**
 - On submit: check `volunteers` for matching email OR phone
   - No match: insert volunteer, generate `update_token`, send Resend confirmation email (sandbox)
   - Match: surface merge prompt ("We found your record — update it?") — on confirm, update; on cancel, proceed as new entry
@@ -765,13 +767,15 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Error state: clear messaging, no data lost on network failure
 - Duplicate check covers: exact email match OR exact phone match
 - Quality gate: new signup appears in Supabase `volunteers`; email received in Resend dashboard; duplicate detection triggers correctly
+- **Decision notes:** Confirmation email includes link to `/shows`. From address `volunteers@30byninetyvolunteers.com` (domain verified mid-Alpha, not deferred to Launch). Empty string fields normalized to null via `|| null` before DB insert — see R18.
 
-**30BN-2.4 — Volunteer Info Update Flow**
+**30BN-2.4 — Volunteer Info Update Flow ✓**
 - `/update`: if no token in URL → show email/phone lookup form → on match, send new update link email; no match → friendly "not found" + link to signup
 - `/update?token=[uuid]`: validate token against `volunteers.update_token` → load volunteer data into pre-filled form (all fields; email read-only)
 - On submit: update record, send "Your info has been updated" confirmation email, regenerate `update_token`
 - Invalid/expired pattern: token is tied to the record; regenerating on each successful update invalidates old links
 - Quality gate: update flow works end-to-end; invalid token shows graceful error; updated data visible in Supabase
+- **Pattern notes:** Duplicate detection uses sequential email-then-phone queries (not OR) to avoid `maybeSingle()` conflict when email and phone match different records. Phone conflict check on update uses `.neq('id', volunteerId)` to exclude the current record.
 
 ---
 
@@ -1069,7 +1073,7 @@ Wire audit logging throughout the app and build the read-only viewer.
 | # | Decision | Status | Notes |
 |---|---|---|---|
 | 1 | Production domain | ✅ Resolved | `30byninetyvolunteers.com` — purchased and live |
-| 2 | Sending email address | 🔄 Pending | `volunteers@30byninety.com` — requires DNS access for Resend verification at launch |
+| 2 | Sending email address | ✅ Resolved | `volunteers@30byninetyvolunteers.com` — domain verified in Resend during Phase 2 Alpha build |
 | 3 | Google OAuth credentials | ✅ Resolved | Implemented in Alpha (30BN-1.3). Google Cloud OAuth client "Volunteers Final" configured and live. |
 | 4 | Jonathan's surname | ✅ Resolved | Sturcken — Jonathan Sturcken |
 | 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one to be created. Needed at Beta launch. |
@@ -1102,7 +1106,7 @@ All QR codes use error correction level H. No exceptions. This ensures print rel
 No `tailwind.config.ts` in this project. `@theme` in `globals.css` uses static hex values only. `var()` inside `@theme` causes runtime 404s even on successful build.
 
 ### R8 — Resend Batch for All Bulk Sends
-Any send to more than one recipient uses `resend.batch.send([...])`. Never loop `resend.emails.send()`.
+Any send to more than one recipient uses `resend.batch.send([...])`. Never loop `resend.emails.send()`. Single transactional emails (one recipient) use `resend.emails.send()` directly — `resend.batch.send()` is for multi-recipient sends only.
 
 ### R9 — Vercel P-DC Pattern for File Uploads
 PDF uploads (Beta doc management) must use direct browser upload to Supabase Storage, not Server Actions. Vercel Hobby plan 4.5MB serverless limit.
@@ -1125,10 +1129,20 @@ The First Call milestone fires on the first `attendance` record with `status = '
 ### R15 — shadcn Components Must Use Brand Tailwind Classes
 This project runs `cssVariables: false` in `components.json` (required for Tailwind v4 compatibility). shadcn's default semantic color tokens (`bg-primary`, `border-input`, `ring-ring`, `text-foreground`, `text-muted-foreground`, etc.) will not resolve. At the time any shadcn component is added, replace all default semantic color classes with explicit brand Tailwind classes (`bg-navy`, `border-divider`, `text-dark`, `text-mid-gray`, etc.). Never leave shadcn default color classes in committed code.
 
+### R16 — No Browser Verification (process rule)
+Documented in 30BN_PROCESS_v1.md §14. Referenced here for R-number continuity.
+
+### R17 — shadcn Init var() Revert (process rule)
+Documented in 30BN_PROCESS_v1.md §14. Referenced here for R-number continuity.
+
+### R18 — Empty String Normalization to Null
+When inserting or updating optional string fields in the database — especially those with CHECK constraints or NOT NULL requirements — use `|| null` rather than `?? null` to normalize the value. `??` passes empty strings through unchanged; `||` converts empty strings, null, and undefined all to null. Example: `age_range: data.age_range || null`. Confirmed failure mode: empty string violated `volunteers_age_range_check` (error code 23514, 30BN-2.3-FIX).
+
 ---
 
 *This document is updated at the completion of each build phase.*
 *Version history:*
 *v1 (initial — all Alpha prompts, full schema, brand system, standing rules)*
 *v1.1 (July 2026 — Phase 1 complete: project facts confirmed, Google SSO moved to Alpha, Production Crew footer link added, Open Decisions #1/#3/#4 resolved, R15 added)*
-*Cross-reference: 30BN_PROCESS_v1.md (build governance)*
+*v1.2 (July 2026 — Phase 2 complete: @hookform/resolvers added to §3, Resend domain verified and from address confirmed, Open Decision #2 resolved, age_range required decision noted, shows link in confirmation email, R16/R17 cross-references added, R18 empty string normalization added, R8 single-send clarification)*
+*Cross-reference: 30BN_PROCESS_v1.md v1.2*
