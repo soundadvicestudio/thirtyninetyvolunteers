@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { FileDown } from 'lucide-react'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import {
@@ -8,24 +9,17 @@ import {
   getAllActiveVolunteersForExport,
   PAGE_SIZE,
 } from '@/lib/volunteers/list'
-import { parseVolunteersUrlState, type VolunteersUrlState } from '@/lib/volunteers/url'
+import {
+  parseVolunteersUrlState,
+  buildVolunteersQueryString,
+  type VolunteersUrlState,
+  type RawSearchParams,
+} from '@/lib/volunteers/url'
 import FilterPanel from '@/components/crew/volunteers/FilterPanel'
 import VolunteersTable from '@/components/crew/volunteers/VolunteersTable'
 import VolunteersSkeleton from '@/components/crew/volunteers/VolunteersSkeleton'
 import ExportAllButton from '@/components/crew/volunteers/ExportAllButton'
 import type { AdminUser } from '@/lib/auth'
-
-type RawSearchParams = {
-  q?: string
-  category?: string | string[]
-  status?: string
-  age_range?: string
-  school?: string
-  is_minor?: string
-  sort?: string
-  dir?: string
-  page?: string
-}
 
 async function VolunteersResults({
   state,
@@ -84,7 +78,19 @@ export default async function VolunteersPage({
             {activeCount} active
           </span>
         </div>
-        {canManage && <ExportAllButton volunteers={exportRows} />}
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <ExportAllButton volunteers={exportRows} />
+            <a
+              href={`/crew/volunteers/export?${buildVolunteersQueryString(state)}`}
+              download
+              className="flex items-center gap-1.5 text-sm bg-white border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy transition-colors"
+            >
+              <FileDown size={14} />
+              Export PDF
+            </a>
+          </div>
+        )}
       </div>
 
       <FilterPanel categories={categories ?? []} state={state} />

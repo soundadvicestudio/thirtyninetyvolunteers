@@ -142,8 +142,10 @@ function toListRow(
 
 export async function getVolunteersList(
   supabase: SupabaseClient,
-  filters: VolunteersUrlState
+  filters: VolunteersUrlState,
+  opts: { fetchAll?: boolean } = {}
 ): Promise<{ volunteers: VolunteerListRow[]; total: number }> {
+  const fetchAll = opts.fetchAll ?? false
   const categoryVolunteerIds = await resolveCategoryVolunteerIds(supabase, filters.categoryIds)
 
   if (categoryVolunteerIds !== null && categoryVolunteerIds.length === 0) {
@@ -164,10 +166,11 @@ export async function getVolunteersList(
     let dataQuery = applyBaseFilters(supabase.from('volunteers').select(LIST_SELECT), filters)
     if (categoryVolunteerIds) dataQuery = dataQuery.in('id', categoryVolunteerIds)
 
-    const offset = (filters.page - 1) * PAGE_SIZE
-    dataQuery = dataQuery
-      .order(dbSortColumn, { ascending: filters.dir === 'asc' })
-      .range(offset, offset + PAGE_SIZE - 1)
+    dataQuery = dataQuery.order(dbSortColumn, { ascending: filters.dir === 'asc' })
+    if (!fetchAll) {
+      const offset = (filters.page - 1) * PAGE_SIZE
+      dataQuery = dataQuery.range(offset, offset + PAGE_SIZE - 1)
+    }
 
     const { data } = await dataQuery
     const rows = (data ?? []) as unknown as RawVolunteerRow[]
@@ -200,6 +203,8 @@ export async function getVolunteersList(
     const bv = b.last_call ?? ''
     return av.localeCompare(bv) * dir
   })
+
+  if (fetchAll) return { volunteers, total }
 
   const offset = (filters.page - 1) * PAGE_SIZE
   return { volunteers: volunteers.slice(offset, offset + PAGE_SIZE), total }

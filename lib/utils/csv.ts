@@ -19,7 +19,7 @@ const CSV_HEADERS = [
   'Referral Source',
 ]
 
-const AGE_RANGE_LABELS: Record<string, string> = {
+export const AGE_RANGE_LABELS: Record<string, string> = {
   under_18: 'Under 18',
   '18_25': '18–25',
   '26_35': '26–35',

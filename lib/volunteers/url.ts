@@ -25,7 +25,7 @@ export const DEFAULT_URL_STATE: VolunteersUrlState = {
   page: 1,
 }
 
-type RawSearchParams = {
+export type RawSearchParams = {
   q?: string
   category?: string | string[]
   status?: string
@@ -69,10 +69,14 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
 }
 
 /**
- * Builds a volunteers list URL from a full state object, omitting any value
- * that matches its default so the URL stays clean.
+ * Builds a volunteers list query string from a full state object, omitting
+ * any value that matches its default so the URL stays clean. Excludes `page`
+ * when the caller doesn't want pagination reflected (e.g. export links).
  */
-export function buildVolunteersUrl(pathname: string, state: VolunteersUrlState): string {
+export function buildVolunteersQueryString(
+  state: VolunteersUrlState,
+  opts: { includePage?: boolean } = {}
+): string {
   const usp = new URLSearchParams()
 
   if (state.q) usp.set('q', state.q)
@@ -83,9 +87,19 @@ export function buildVolunteersUrl(pathname: string, state: VolunteersUrlState):
   if (state.isMinor !== DEFAULT_URL_STATE.isMinor) usp.set('is_minor', state.isMinor)
   if (state.sort !== DEFAULT_URL_STATE.sort) usp.set('sort', state.sort)
   if (state.dir !== DEFAULT_URL_STATE.dir) usp.set('dir', state.dir)
-  if (state.page !== DEFAULT_URL_STATE.page) usp.set('page', String(state.page))
+  if (opts.includePage && state.page !== DEFAULT_URL_STATE.page) {
+    usp.set('page', String(state.page))
+  }
 
-  const qs = usp.toString()
+  return usp.toString()
+}
+
+/**
+ * Builds a volunteers list URL from a full state object, omitting any value
+ * that matches its default so the URL stays clean.
+ */
+export function buildVolunteersUrl(pathname: string, state: VolunteersUrlState): string {
+  const qs = buildVolunteersQueryString(state, { includePage: true })
   return qs ? `${pathname}?${qs}` : pathname
 }
 

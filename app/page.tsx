@@ -119,6 +119,10 @@ export default async function HomePage() {
             </Link>
           </div>
 
+          <h4 className="font-semibold text-navy text-lg text-center mb-4">
+            Sign up to add your name to our volunteer list
+          </h4>
+
           <VolunteerForm
             categories={categories ?? []}
             hearingOptions={hearingOptions ?? []}

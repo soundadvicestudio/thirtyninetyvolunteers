@@ -36,7 +36,12 @@ export default function TopBar({
           {ROLE_LABELS[admin.role]}
         </span>
         <form action={signOut}>
-          <Button type="submit" variant="outline" size="sm" className="border-steel text-dark">
+          <Button
+            type="submit"
+            variant="outline"
+            size="sm"
+            className="border-steel text-dark hover:bg-steel hover:text-white transition-colors"
+          >
             <LogOut />
             Sign Out
           </Button>
