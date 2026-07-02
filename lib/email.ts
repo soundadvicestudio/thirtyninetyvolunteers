@@ -120,3 +120,144 @@ export async function sendVolunteerConfirmationEmail({
     html,
   })
 }
+
+// ─── Update link email ───────────────────────────────────────────
+
+type UpdateLinkEmailParams = {
+  to: string
+  name: string
+  updateToken: string
+}
+
+export async function sendUpdateLinkEmail({
+  to,
+  name,
+  updateToken,
+}: UpdateLinkEmailParams): Promise<void> {
+  const updateUrl =
+    `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;
+                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;
+                    font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          <h1 style="color:#293994;font-size:22px;font-weight:700;
+                     margin:0 0 12px;">
+            Hi ${escapeHtml(name)} — here's your update link
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            You requested a link to update your volunteer
+            information. Click below to view and edit your record.
+          </p>
+          <a href="${updateUrl}"
+             style="display:inline-block;background:#F26522;
+                    color:#ffffff;text-decoration:none;
+                    padding:14px 28px;border-radius:8px;
+                    font-weight:700;font-size:15px;">
+            Update My Information
+          </a>
+          <p style="color:#aaa;font-size:12px;margin:16px 0 0;">
+            Or copy this link: ${updateUrl}
+          </p>
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    to,
+    subject: 'Your link to update your volunteer information',
+    html,
+  })
+}
+
+// ─── Info updated confirmation email ─────────────────────────────
+
+type InfoUpdatedEmailParams = {
+  to: string
+  name: string
+  updateToken: string
+}
+
+export async function sendInfoUpdatedEmail({
+  to,
+  name,
+  updateToken,
+}: InfoUpdatedEmailParams): Promise<void> {
+  const updateUrl =
+    `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;
+                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;
+                    font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          <h1 style="color:#293994;font-size:22px;font-weight:700;
+                     margin:0 0 12px;">
+            Your information has been updated
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            Hi ${escapeHtml(name)} — we've saved your updated
+            volunteer information. If you need to make any further
+            changes, use the link below.
+          </p>
+          <a href="${updateUrl}"
+             style="display:inline-block;background:#F26522;
+                    color:#ffffff;text-decoration:none;
+                    padding:14px 28px;border-radius:8px;
+                    font-weight:700;font-size:15px;">
+            Update My Information Again
+          </a>
+          <p style="color:#aaa;font-size:12px;margin:16px 0 0;">
+            Or copy this link: ${updateUrl}
+          </p>
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    to,
+    subject: 'Your volunteer information has been updated',
+    html,
+  })
+}

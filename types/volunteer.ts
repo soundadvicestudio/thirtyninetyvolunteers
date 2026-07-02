@@ -13,3 +13,5 @@ export type VolunteerFormData = {
   referral_source_other?: string
   referral_name?: string
 }
+
+export type UpdateFormData = Omit<VolunteerFormData, 'email'>
