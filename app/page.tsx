@@ -66,8 +66,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
-
       {/* Header */}
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-2xl mx-auto py-6 px-6 text-center">
@@ -78,12 +76,11 @@ export default async function HomePage() {
             height={64}
             className="mx-auto"
           />
-          <h1 className="text-navy font-extrabold text-2xl md:text-3xl mt-3">
-            30 By Ninety Theatre
-          </h1>
           <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
         </div>
       </header>
+
+      {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
 
       {/* Hero */}
       <section className="w-full bg-light-navy py-12 px-6">
@@ -103,8 +100,24 @@ export default async function HomePage() {
       <section className="w-full bg-white py-10 px-6 flex-1">
         <div className="max-w-2xl mx-auto">
           <h3 className="text-navy font-bold text-xl mb-6 text-center">
-            Join Our Next Production
+            Join the <span className="font-extrabold">30 By Ninety Theatre</span> Volunteer
+            Community
           </h3>
+
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <Link
+              href="/update"
+              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+            >
+              Update My Info
+            </Link>
+            <Link
+              href="/shows"
+              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+            >
+              View Opportunities
+            </Link>
+          </div>
 
           <VolunteerForm
             categories={categories ?? []}
@@ -125,15 +138,6 @@ export default async function HomePage() {
               </a>
             </div>
           )}
-
-          <div className="mt-3 text-center">
-            <Link
-              href="/update"
-              className="inline-block py-3 text-mid-gray text-sm underline hover:text-navy transition-colors"
-            >
-              Update my info
-            </Link>
-          </div>
         </div>
       </section>
 
