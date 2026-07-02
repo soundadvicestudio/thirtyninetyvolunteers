@@ -2,7 +2,6 @@
 
 import { LogOut } from 'lucide-react'
 import { signOut } from '@/app/crew/actions'
-import { Button } from '@/components/ui/button'
 import type { AdminUser } from '@/lib/auth'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
@@ -36,15 +35,20 @@ export default function TopBar({
           {ROLE_LABELS[admin.role]}
         </span>
         <form action={signOut}>
-          <Button
+          <button
             type="submit"
-            variant="outline"
-            size="sm"
-            className="border-steel text-dark hover:bg-steel hover:text-white transition-colors"
+            className="
+              flex items-center gap-2
+              px-3 py-1.5 rounded-md text-sm font-medium
+              border border-steel text-dark bg-white
+              hover:bg-steel hover:text-white
+              transition-colors duration-150
+              cursor-pointer
+            "
           >
-            <LogOut />
+            <LogOut className="w-4 h-4" />
             Sign Out
-          </Button>
+          </button>
         </form>
       </div>
     </header>

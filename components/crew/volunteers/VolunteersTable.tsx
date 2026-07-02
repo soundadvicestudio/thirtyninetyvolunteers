@@ -341,7 +341,7 @@ function SortableTh({
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1 hover:text-navy transition-colors ${
+        className={`inline-flex items-center gap-1 -mx-1.5 -my-0.5 px-1.5 py-0.5 rounded cursor-pointer select-none hover:bg-light-navy hover:text-navy transition-colors duration-150 ${
           align === 'right' ? 'flex-row-reverse' : ''
         }`}
       >
