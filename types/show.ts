@@ -50,3 +50,36 @@ export type ShowWithStaffing = {
   earliest_date: string | null
   latest_date: string | null
 }
+
+export type SlotClaim = {
+  id: string
+  volunteer_role_id: string
+  show_date_id: string
+  volunteer_id: string | null
+  volunteer_name: string
+  volunteer_email: string
+  status: 'claimed' | 'cancelled' | 'waitlisted'
+  waitlist_position: number | null
+  claimed_at: string
+}
+
+export type AttendanceRecord = {
+  id: string
+  slot_claim_id: string
+  status: 'showed' | 'no_show' | 'excused'
+  hours_logged: number
+}
+
+export type ShowEditor = {
+  admin_id: string
+  name: string
+  email: string
+  role: 'super_admin' | 'editor' | 'viewer'
+}
+
+export type AdminUserSummary = {
+  id: string
+  name: string
+  email: string
+  role: 'super_admin' | 'editor' | 'viewer'
+}

@@ -385,3 +385,97 @@ export async function toggleShowStatus(
 
   return { success: true }
 }
+
+export type ShowEditorActionResult = { success: true } | { error: string }
+
+export async function addShowEditor(showId: string, adminId: string): Promise<ShowEditorActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { error } = await supabase
+    .from('show_editors')
+    .upsert({ show_id: showId, admin_id: adminId }, { onConflict: 'show_id,admin_id', ignoreDuplicates: true })
+
+  if (error) {
+    console.error('addShowEditor error:', error)
+    return { error: 'Something went wrong adding this editor. Please try again.' }
+  }
+
+  await logAction(admin.id, 'show.editor_add', 'show', showId, undefined, { admin_id: adminId })
+
+  return { success: true }
+}
+
+export async function removeShowEditor(
+  showId: string,
+  adminId: string
+): Promise<ShowEditorActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { error } = await supabase
+    .from('show_editors')
+    .delete()
+    .eq('show_id', showId)
+    .eq('admin_id', adminId)
+
+  if (error) {
+    console.error('removeShowEditor error:', error)
+    return { error: 'Something went wrong removing this editor. Please try again.' }
+  }
+
+  await logAction(admin.id, 'show.editor_remove', 'show', showId, { admin_id: adminId }, undefined)
+
+  return { success: true }
+}
+
+export async function updateShowStatus(
+  showId: string,
+  newStatus: 'draft' | 'live' | 'past' | 'archived'
+): Promise<ToggleShowStatusResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('shows')
+    .select('status')
+    .eq('id', showId)
+    .single()
+
+  if (fetchError || !current) {
+    return { error: 'Could not find this show.' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('shows')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', showId)
+
+  if (updateError) {
+    console.error('updateShowStatus error:', updateError)
+    return { error: 'Something went wrong updating the show status. Please try again.' }
+  }
+
+  await logAction(
+    admin.id,
+    'show.status_change',
+    'show',
+    showId,
+    { status: current.status },
+    { status: newStatus }
+  )
+
+  return { success: true }
+}

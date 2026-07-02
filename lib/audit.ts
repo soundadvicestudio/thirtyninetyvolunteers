@@ -20,6 +20,9 @@ export type AuditAction =
   | 'show.update'
   | 'season.create'
   | 'show.status_change'
+  | 'attendance.mark'
+  | 'show.editor_add'
+  | 'show.editor_remove'
 
 export async function logAction(
   adminId: string,
