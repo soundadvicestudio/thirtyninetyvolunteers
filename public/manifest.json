@@ -2,7 +2,7 @@
   "name": "30 By Ninety Production Crew",
   "short_name": "Production Crew",
   "description": "Production Crew admin portal for 30 By Ninety Theatre volunteers.",
-  "start_url": "/crew",
+  "start_url": "/crew/dashboard",
   "scope": "/crew/",
   "display": "standalone",
   "orientation": "portrait-primary",
