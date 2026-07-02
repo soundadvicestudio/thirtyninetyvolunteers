@@ -248,7 +248,7 @@ export default function VolunteersTable({
                     {v.categories.slice(0, 3).map((c) => (
                       <span
                         key={c.id}
-                        className="bg-light-navy dark:bg-dark-surface/50 text-navy text-xs rounded-full px-2 py-0.5"
+                        className="bg-light-navy dark:bg-dark-border text-navy dark:text-dark-text text-xs rounded-full px-2 py-0.5"
                       >
                         {c.name}
                       </span>

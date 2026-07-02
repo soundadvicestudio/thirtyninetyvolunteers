@@ -131,7 +131,7 @@ export default function VolunteerProfileForm({
       {!isEditing ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy uppercase tracking-wide">Contact</h3>
+            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Contact</h3>
             <Field label="Full Name" value={volunteer.full_name} />
             <Field label="Email" value={volunteer.email} />
             <Field label="Phone" value={volunteer.phone} />
@@ -139,7 +139,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy uppercase tracking-wide">Personal</h3>
+            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Personal</h3>
             <Field label="Age Range" value={ageRangeLabel(volunteer.age_range)} />
             <Field label="School / Organization" value={volunteer.school} />
             <div>
@@ -162,7 +162,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy uppercase tracking-wide">
+            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">
               Volunteer Interests
             </h3>
             {categories.length > 0 ? (
@@ -170,7 +170,7 @@ export default function VolunteerProfileForm({
                 {categories.map((c) => (
                   <span
                     key={c.id}
-                    className="bg-light-navy dark:bg-dark-surface/50 text-navy text-xs rounded-full px-2 py-0.5"
+                    className="bg-light-navy dark:bg-dark-border text-navy dark:text-dark-text text-xs rounded-full px-2 py-0.5"
                   >
                     {c.name}
                   </span>
@@ -182,7 +182,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy uppercase tracking-wide">
+            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">
               How They Found Us
             </h3>
             <Field label="Referral Source" value={volunteer.referral_source} />
@@ -190,7 +190,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4 md:col-span-2">
-            <h3 className="text-sm font-bold text-navy uppercase tracking-wide">Account</h3>
+            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Account</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Joined" value={formatCT(volunteer.created_at, 'MMM d, yyyy')} />
               <Field label="Last Updated" value={formatCT(volunteer.updated_at, 'MMM d, yyyy')} />
