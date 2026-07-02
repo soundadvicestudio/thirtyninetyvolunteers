@@ -104,7 +104,7 @@ export async function sendVolunteerConfirmationEmail({
   `
 
   await resend.emails.send({
-    from: 'onboarding@resend.dev',
+    from: 'volunteers@30byninetyvolunteers.com',
     to,
     subject: `Welcome to 30 By Ninety Theatre, ${name}!`,
     html,
