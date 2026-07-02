@@ -26,15 +26,15 @@ function ageRangeLabel(value: string | null): string {
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <p className="text-sm text-mid-gray">{label}</p>
-      <p className="text-dark">{value || '—'}</p>
+      <p className="text-sm text-mid-gray dark:text-dark-muted">{label}</p>
+      <p className="text-dark dark:text-dark-text">{value || '—'}</p>
     </div>
   )
 }
 
 const inputClasses =
-  'w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
-const labelClasses = 'block text-sm font-semibold text-dark mb-1'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 const errorClasses = 'mt-1 text-sm text-orange'
 
 export default function VolunteerProfileForm({
@@ -113,14 +113,14 @@ export default function VolunteerProfileForm({
   }
 
   return (
-    <div className="bg-white border border-divider rounded-lg p-6">
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-dark">Profile Details</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-dark-text">Profile Details</h2>
         {canEdit && !isEditing && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 text-sm bg-white border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
           >
             <Pencil size={14} />
             Edit Profile
@@ -143,13 +143,13 @@ export default function VolunteerProfileForm({
             <Field label="Age Range" value={ageRangeLabel(volunteer.age_range)} />
             <Field label="School / Organization" value={volunteer.school} />
             <div>
-              <p className="text-sm text-mid-gray">Service Hours Required</p>
+              <p className="text-sm text-mid-gray dark:text-dark-muted">Service Hours Required</p>
               {volunteer.requires_service_hours ? (
                 <p className="text-orange font-medium">Yes</p>
               ) : volunteer.school ? (
-                <p className="text-mid-gray">No</p>
+                <p className="text-mid-gray dark:text-dark-muted">No</p>
               ) : (
-                <p className="text-mid-gray">—</p>
+                <p className="text-mid-gray dark:text-dark-muted">—</p>
               )}
             </div>
             <Field label="Is Minor" value={volunteer.is_minor ? 'Yes' : 'No'} />
@@ -170,14 +170,14 @@ export default function VolunteerProfileForm({
                 {categories.map((c) => (
                   <span
                     key={c.id}
-                    className="bg-light-navy text-navy text-xs rounded-full px-2 py-0.5"
+                    className="bg-light-navy dark:bg-dark-surface/50 text-navy text-xs rounded-full px-2 py-0.5"
                   >
                     {c.name}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-dark">—</p>
+              <p className="text-dark dark:text-dark-text">—</p>
             )}
           </section>
 
@@ -249,7 +249,7 @@ export default function VolunteerProfileForm({
                         }
                         className="text-navy focus:ring-navy"
                       />
-                      <span className="text-sm text-dark">Yes</span>
+                      <span className="text-sm text-dark dark:text-dark-text">Yes</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -260,7 +260,7 @@ export default function VolunteerProfileForm({
                         }
                         className="text-navy focus:ring-navy"
                       />
-                      <span className="text-sm text-dark">No</span>
+                      <span className="text-sm text-dark dark:text-dark-text">No</span>
                     </label>
                   </div>
                 </div>
@@ -284,9 +284,9 @@ export default function VolunteerProfileForm({
                 <input
                   type="checkbox"
                   {...register('is_minor')}
-                  className="rounded border-divider text-navy focus:ring-navy"
+                  className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
                 />
-                <span className="text-sm font-semibold text-dark">Is Minor</span>
+                <span className="text-sm font-semibold text-dark dark:text-dark-text">Is Minor</span>
               </label>
 
               {isMinor && (
@@ -319,7 +319,7 @@ export default function VolunteerProfileForm({
                 {allCategories.map((cat) => (
                   <label
                     key={cat.id}
-                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-steel hover:bg-light-navy transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy"
+                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider dark:border-dark-border hover:border-steel hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy dark:has-[:checked]:bg-dark-surface/50"
                   >
                     <input
                       type="checkbox"
@@ -340,7 +340,7 @@ export default function VolunteerProfileForm({
                         }
                       }}
                     />
-                    <span className="text-sm text-dark">{cat.name}</span>
+                    <span className="text-sm text-dark dark:text-dark-text">{cat.name}</span>
                   </label>
                 ))}
               </div>
@@ -374,7 +374,7 @@ export default function VolunteerProfileForm({
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="bg-white border border-divider text-dark font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy transition-colors"
+              className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
             >
               Cancel
             </button>

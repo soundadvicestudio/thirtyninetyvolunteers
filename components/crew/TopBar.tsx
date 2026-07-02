@@ -24,11 +24,11 @@ export default function TopBar({
   title?: string
 }) {
   return (
-    <header className="h-16 shrink-0 bg-white border-b border-divider flex items-center justify-between px-6">
-      <h1 className="text-lg font-semibold text-dark">{title}</h1>
+    <header className="h-16 shrink-0 bg-white dark:bg-dark-surface border-b border-divider dark:border-dark-border flex items-center justify-between px-6">
+      <h1 className="text-lg font-semibold text-dark dark:text-dark-text">{title}</h1>
 
       <div className="flex items-center gap-4">
-        <span className="text-sm text-dark">{admin.name}</span>
+        <span className="text-sm text-dark dark:text-dark-text">{admin.name}</span>
         <span
           className={`text-xs font-semibold px-2 py-1 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
         >
@@ -42,6 +42,7 @@ export default function TopBar({
               px-3 py-1.5 rounded-md text-sm font-medium
               border border-steel text-dark bg-white
               hover:bg-steel hover:text-white
+              dark:text-dark-text dark:bg-dark-surface
               transition-colors duration-150
               cursor-pointer
             "

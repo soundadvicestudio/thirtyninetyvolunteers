@@ -11,7 +11,16 @@
   --color-divider: #D0D5E8;
   --color-dark: #1A1A1A;
   --color-mid-gray: #555555;
+
+  --color-dark-bg: #0f1117;
+  --color-dark-surface: #1a1d27;
+  --color-dark-border: #2e3347;
+  --color-dark-nav: #1e2235;
+  --color-dark-text: #e8eaf0;
+  --color-dark-muted: #8b90a0;
 }
+
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 body {
   color: #1A1A1A;

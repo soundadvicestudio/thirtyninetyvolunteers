@@ -74,7 +74,7 @@ function CategoryRow({
   }
 
   return (
-    <tr className="border-b border-divider">
+    <tr className="border-b border-divider dark:border-dark-border">
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <button
@@ -82,7 +82,7 @@ function CategoryRow({
             onClick={() => handleReorder('up')}
             disabled={isFirst}
             aria-label={`Move ${category.name} up`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronUp size={16} />
           </button>
@@ -91,7 +91,7 @@ function CategoryRow({
             onClick={() => handleReorder('down')}
             disabled={isLast}
             aria-label={`Move ${category.name} down`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronDown size={16} />
           </button>
@@ -104,7 +104,7 @@ function CategoryRow({
               type="text"
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
-              className="rounded border border-divider px-2 py-1 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
               autoFocus
             />
             <button
@@ -127,11 +127,11 @@ function CategoryRow({
             </button>
           </div>
         ) : (
-          <span className="text-dark font-medium">{category.name}</span>
+          <span className="text-dark dark:text-dark-text font-medium">{category.name}</span>
         )}
         {error && <p className="text-xs text-orange mt-1">{error}</p>}
       </td>
-      <td className="px-4 py-3 text-mid-gray text-sm">{category.description || '—'}</td>
+      <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm">{category.description || '—'}</td>
       <td className="px-4 py-3">
         <button
           type="button"
@@ -149,7 +149,7 @@ function CategoryRow({
             type="button"
             onClick={() => setEditMode(true)}
             aria-label={`Edit ${category.name}`}
-            className="p-1 rounded text-navy hover:bg-light-navy cursor-pointer"
+            className="p-1 rounded text-navy hover:bg-light-navy cursor-pointer dark:hover:bg-dark-surface/50"
           >
             <Pencil size={16} />
           </button>
@@ -184,7 +184,7 @@ function AddCategoryForm() {
   }
 
   return (
-    <div className="bg-white border border-divider rounded-lg p-6 mb-6">
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-6">
       <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">Add Category</h2>
       <div className="flex flex-col sm:flex-row gap-3">
         <input
@@ -192,14 +192,14 @@ function AddCategoryForm() {
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
         />
         <input
           type="text"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
         />
         <button
           type="button"
@@ -220,7 +220,7 @@ export default function CategoriesTable({ categories }: { categories: Category[]
     return (
       <div>
         <AddCategoryForm />
-        <p className="text-mid-gray text-sm">No categories yet. Add your first one above.</p>
+        <p className="text-mid-gray dark:text-dark-muted text-sm">No categories yet. Add your first one above.</p>
       </div>
     )
   }
@@ -228,19 +228,19 @@ export default function CategoriesTable({ categories }: { categories: Category[]
   return (
     <div>
       <AddCategoryForm />
-      <div className="bg-white border border-divider rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-divider text-left">
-              <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Order</th>
-              <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Name</th>
-              <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">
+            <tr className="border-b border-divider dark:border-dark-border text-left">
+              <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Order</th>
+              <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Name</th>
+              <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
                 Description
               </th>
-              <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">
+              <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
                 Visibility
               </th>
-              <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Actions</th>
+              <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -255,7 +255,7 @@ export default function CategoriesTable({ categories }: { categories: Category[]
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-mid-gray mt-3">
+      <p className="text-xs text-mid-gray dark:text-dark-muted mt-3">
         Hidden categories are removed from the public signup form but remain on existing
         volunteer profiles.
       </p>

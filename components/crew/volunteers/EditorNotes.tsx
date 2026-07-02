@@ -55,10 +55,10 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-baseline gap-2">
-          <span className="font-semibold text-dark text-sm">
+          <span className="font-semibold text-dark dark:text-dark-text text-sm">
             {note.admin_users?.name ?? 'Unknown'}
           </span>
-          <span className="text-xs text-mid-gray">
+          <span className="text-xs text-mid-gray dark:text-dark-muted">
             {formatCT(note.created_at, 'MMM d, yyyy h:mm a')}
           </span>
         </div>
@@ -68,14 +68,14 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
             <button
               type="button"
               onClick={() => setMode('edit')}
-              className="text-mid-gray hover:text-navy text-xs cursor-pointer transition-colors"
+              className="text-mid-gray dark:text-dark-muted hover:text-navy text-xs cursor-pointer transition-colors"
             >
               ✏ Edit
             </button>
             <button
               type="button"
               onClick={() => setMode('delete-confirm')}
-              className="text-mid-gray hover:text-orange text-xs cursor-pointer transition-colors"
+              className="text-mid-gray dark:text-dark-muted hover:text-orange text-xs cursor-pointer transition-colors"
             >
               🗑 Delete
             </button>
@@ -84,7 +84,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
 
         {isSuperAdmin && mode === 'delete-confirm' && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-dark">Delete this note?</span>
+            <span className="text-xs text-dark dark:text-dark-text">Delete this note?</span>
             <button
               type="button"
               onClick={handleConfirmDelete}
@@ -97,7 +97,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={() => setMode('view')}
               disabled={isSubmitting}
-              className="text-xs border border-divider text-dark px-2 py-0.5 rounded hover:bg-light-navy cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -111,7 +111,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
             value={draftBody}
             onChange={(e) => setDraftBody(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark resize-y focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text resize-y focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors"
           />
           {error && <p className="text-xs text-orange">{error}</p>}
           <div className="flex items-center gap-2">
@@ -127,14 +127,14 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={handleCancelEdit}
               disabled={isSubmitting}
-              className="text-xs border border-divider text-dark px-2 py-0.5 rounded hover:bg-light-navy cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <p className="text-dark text-sm mt-1 whitespace-pre-wrap">{note.body}</p>
+        <p className="text-dark dark:text-dark-text text-sm mt-1 whitespace-pre-wrap">{note.body}</p>
       )}
 
       {mode === 'delete-confirm' && error && <p className="text-xs text-orange mt-1">{error}</p>}
@@ -175,13 +175,13 @@ export default function EditorNotes({
   }
 
   return (
-    <div className="bg-white border border-divider rounded-lg p-6">
-      <h2 className="text-lg font-bold text-dark mb-4">Editor Notes</h2>
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6">
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-4">Editor Notes</h2>
 
       {notes.length === 0 ? (
-        <p className="text-mid-gray text-sm mb-4">No notes yet.</p>
+        <p className="text-mid-gray dark:text-dark-muted text-sm mb-4">No notes yet.</p>
       ) : (
-        <div className="divide-y divide-divider mb-6">
+        <div className="divide-y divide-divider dark:divide-dark-border mb-6">
           {notes.map((note) => (
             <NoteItem key={note.id} note={note} isSuperAdmin={isSuperAdmin} />
           ))}

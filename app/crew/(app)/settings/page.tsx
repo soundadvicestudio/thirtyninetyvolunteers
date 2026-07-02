@@ -14,33 +14,33 @@ function LinkedCard({
   return (
     <Link
       href={href}
-      className="block bg-white border border-divider rounded-lg p-6 hover:border-navy transition-colors"
+      className="block bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 hover:border-navy transition-colors"
     >
-      <h3 className="text-dark font-bold mb-1">{title}</h3>
-      <p className="text-mid-gray text-sm">{description}</p>
+      <h3 className="text-dark dark:text-dark-text font-bold mb-1">{title}</h3>
+      <p className="text-mid-gray dark:text-dark-muted text-sm">{description}</p>
     </Link>
   )
 }
 
 function LockedCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="bg-white border border-divider rounded-lg p-6 opacity-60">
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 opacity-60">
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h3 className="text-dark font-bold">{title}</h3>
+        <h3 className="text-dark dark:text-dark-text font-bold">{title}</h3>
         <span className="text-xs font-semibold rounded px-2 py-0.5 bg-mid-gray/20 text-mid-gray whitespace-nowrap">
           Super Admin only
         </span>
       </div>
-      <p className="text-mid-gray text-sm">{description}</p>
+      <p className="text-mid-gray dark:text-dark-muted text-sm">{description}</p>
     </div>
   )
 }
 
 function MutedCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="bg-white border border-divider rounded-lg p-6 opacity-60">
-      <h3 className="text-dark font-bold mb-1">{title}</h3>
-      <p className="text-mid-gray text-sm">{description}</p>
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 opacity-60">
+      <h3 className="text-dark dark:text-dark-text font-bold mb-1">{title}</h3>
+      <p className="text-mid-gray dark:text-dark-muted text-sm">{description}</p>
     </div>
   )
 }

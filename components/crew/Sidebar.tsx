@@ -14,6 +14,7 @@ import {
   UserCog,
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/auth'
+import { ThemeToggle } from './ThemeToggle'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
@@ -33,7 +34,7 @@ export default function Sidebar({ admin }: { admin: AdminUser }) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 h-screen shrink-0 bg-white border-r border-divider flex flex-col">
+    <aside className="w-64 h-screen shrink-0 bg-white dark:bg-dark-surface border-r border-divider dark:border-dark-border flex flex-col">
       <Link href="/crew/dashboard" className="flex items-center justify-center py-6">
         <Image src="/logo.png" alt="30 By Ninety Theatre" width={120} height={80} priority />
       </Link>
@@ -46,7 +47,9 @@ export default function Sidebar({ admin }: { admin: AdminUser }) {
               key={href}
               href={href}
               className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
-                active ? 'bg-navy text-white' : 'text-dark hover:bg-light-navy'
+                active
+                  ? 'bg-navy text-white'
+                  : 'text-dark hover:bg-light-navy dark:text-dark-text dark:hover:bg-dark-surface/50'
               }`}
             >
               <Icon size={18} />
@@ -61,7 +64,7 @@ export default function Sidebar({ admin }: { admin: AdminUser }) {
             className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
               isActivePath(pathname, '/crew/settings/users')
                 ? 'bg-navy text-white'
-                : 'text-dark hover:bg-light-navy'
+                : 'text-dark hover:bg-light-navy dark:text-dark-text dark:hover:bg-dark-surface/50'
             }`}
           >
             <UserCog size={18} />
@@ -69,6 +72,10 @@ export default function Sidebar({ admin }: { admin: AdminUser }) {
           </Link>
         )}
       </nav>
+
+      <div className="px-3 py-3 border-t border-divider dark:border-dark-border shrink-0">
+        <ThemeToggle />
+      </div>
     </aside>
   )
 }

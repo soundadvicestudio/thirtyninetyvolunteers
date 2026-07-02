@@ -52,9 +52,9 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
   const roleBadge = ROLE_BADGE[user.role]
 
   return (
-    <tr className="border-b border-divider">
-      <td className="px-4 py-3 text-dark font-medium">{user.name}</td>
-      <td className="px-4 py-3 text-mid-gray text-sm">{user.email}</td>
+    <tr className="border-b border-divider dark:border-dark-border">
+      <td className="px-4 py-3 text-dark dark:text-dark-text font-medium">{user.name}</td>
+      <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm">{user.email}</td>
       <td className="px-4 py-3">
         <span className={`text-xs font-semibold rounded px-2 py-0.5 ${roleBadge.className}`}>
           {roleBadge.label}
@@ -69,20 +69,20 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
           {user.is_active ? 'Active' : 'Inactive'}
         </span>
       </td>
-      <td className="px-4 py-3 text-dark text-sm">
+      <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">
         {user.last_login ? formatCT(user.last_login, 'MMM d, yyyy h:mm a') : 'Never'}
       </td>
-      <td className="px-4 py-3 text-dark text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
+      <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           {user.role === 'super_admin' ? (
-            <span className="text-sm text-mid-gray">—</span>
+            <span className="text-sm text-mid-gray dark:text-dark-muted">—</span>
           ) : (
             <select
               value={user.role}
               disabled={isSubmitting}
               onChange={(e) => handleRoleChange(e.target.value as 'editor' | 'viewer')}
-              className="rounded border border-divider px-2 py-1 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
             >
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
@@ -135,19 +135,19 @@ export default function UsersTable({
   currentAdminId: string
 }) {
   return (
-    <div className="bg-white border border-divider rounded-lg overflow-x-auto">
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-divider text-left">
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Name</th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Email</th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Role</th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Status</th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">
+          <tr className="border-b border-divider dark:border-dark-border text-left">
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Name</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Email</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Role</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Status</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
               Last Login
             </th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Created</th>
-            <th className="px-4 py-3 text-mid-gray font-semibold uppercase text-xs">Actions</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Created</th>
+            <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Actions</th>
           </tr>
         </thead>
         <tbody>

@@ -72,7 +72,7 @@ export default function FilterPanel({
   const filtered = isNonDefaultFilter(state)
 
   return (
-    <div className="bg-white border border-divider rounded-lg mb-4">
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg mb-4">
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
@@ -86,22 +86,22 @@ export default function FilterPanel({
         className={`${collapsed ? 'hidden md:flex' : 'flex'} flex-col md:flex-row md:flex-wrap items-start gap-4 p-4`}
       >
         <div className="flex-1 min-w-[220px]">
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Search</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Search</label>
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name, email, or phone"
-            className="w-full rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Status</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Status</label>
           <select
             value={state.status}
             onChange={(e) => navigate({ status: e.target.value as VolunteersUrlState['status'] })}
-            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
             <option value="active">Active</option>
             <option value="archived">Archived</option>
@@ -110,11 +110,11 @@ export default function FilterPanel({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Age Range</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Age Range</label>
           <select
             value={state.ageRange}
             onChange={(e) => navigate({ ageRange: e.target.value })}
-            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
             {AGE_RANGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -125,11 +125,11 @@ export default function FilterPanel({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray mb-1">School</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">School</label>
           <select
             value={state.school}
             onChange={(e) => navigate({ school: e.target.value as VolunteersUrlState['school'] })}
-            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
             <option value="all">All</option>
             <option value="yes">Has school</option>
@@ -138,13 +138,13 @@ export default function FilterPanel({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Is Minor</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Is Minor</label>
           <select
             value={state.isMinor}
             onChange={(e) =>
               navigate({ isMinor: e.target.value as VolunteersUrlState['isMinor'] })
             }
-            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
             <option value="all">All</option>
             <option value="yes">Yes</option>
@@ -153,13 +153,13 @@ export default function FilterPanel({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Service Hours</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Service Hours</label>
           <select
             value={state.serviceHours}
             onChange={(e) =>
               navigate({ serviceHours: e.target.value as VolunteersUrlState['serviceHours'] })
             }
-            className="rounded border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
             <option value="all">All</option>
             <option value="yes">Required</option>
@@ -168,11 +168,11 @@ export default function FilterPanel({
         </div>
 
         <div className="group relative">
-          <label className="block text-xs font-semibold text-mid-gray mb-1">Milestone Tier</label>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Milestone Tier</label>
           <select
             disabled
             defaultValue=""
-            className="rounded border border-divider px-3 py-2 text-sm text-mid-gray bg-footer-gray cursor-not-allowed"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-mid-gray dark:text-dark-muted bg-footer-gray dark:bg-dark-bg cursor-not-allowed"
           >
             <option value="">All</option>
           </select>
@@ -182,15 +182,15 @@ export default function FilterPanel({
         </div>
 
         <div className="w-full">
-          <span className="block text-xs font-semibold text-mid-gray mb-1">Categories</span>
+          <span className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Categories</span>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {categories.map((cat) => (
-              <label key={cat.id} className="flex items-center gap-1.5 text-sm text-dark">
+              <label key={cat.id} className="flex items-center gap-1.5 text-sm text-dark dark:text-dark-text">
                 <input
                   type="checkbox"
                   checked={state.categoryIds.includes(cat.id)}
                   onChange={() => toggleCategory(cat.id)}
-                  className="rounded border-divider text-navy focus:ring-navy"
+                  className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
                 />
                 {cat.name}
               </label>

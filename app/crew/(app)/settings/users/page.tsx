@@ -31,7 +31,7 @@ export default async function UsersPage({
     <div>
       <Link
         href="/crew/settings"
-        className="text-sm text-mid-gray hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
       >
         ← Back to Settings
       </Link>
@@ -44,7 +44,7 @@ export default async function UsersPage({
       )}
 
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-dark">User Management</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">User Management</h1>
         <CreateUserModal />
       </div>
 

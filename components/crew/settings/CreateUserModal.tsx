@@ -88,33 +88,33 @@ export default function CreateUserModal() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-dark mb-1">
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
               Full Name<span className="text-orange ml-0.5">*</span>
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
               {...register('name')}
             />
             {errors.name && <p className="mt-1 text-sm text-orange">{errors.name.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-dark mb-1">
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
               Email Address<span className="text-orange ml-0.5">*</span>
             </label>
             <input
               type="email"
-              className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
               {...register('email')}
             />
             {errors.email && <p className="mt-1 text-sm text-orange">{errors.email.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-dark mb-1">Role</label>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Role</label>
             <select
-              className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
               {...register('role')}
             >
               <option value="editor">Editor</option>
@@ -125,10 +125,10 @@ export default function CreateUserModal() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="rounded border-divider text-navy focus:ring-navy"
+              className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
               {...register('sendWelcome')}
             />
-            <span className="text-sm text-dark">Send welcome email</span>
+            <span className="text-sm text-dark dark:text-dark-text">Send welcome email</span>
           </label>
 
           {formError && (
@@ -148,7 +148,7 @@ export default function CreateUserModal() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="w-full border border-divider text-dark hover:bg-light-navy transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+              className="w-full border border-divider text-dark hover:bg-light-navy transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               Cancel
             </button>

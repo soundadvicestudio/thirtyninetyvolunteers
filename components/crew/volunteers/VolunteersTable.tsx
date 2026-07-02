@@ -98,27 +98,27 @@ export default function VolunteersTable({
   if (total === 0) {
     const filtered = isNonDefaultFilter(state)
     return (
-      <div className="bg-white border border-divider rounded-lg py-16 px-6 flex flex-col items-center text-center">
+      <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg py-16 px-6 flex flex-col items-center text-center">
         {filtered ? (
           <>
-            <SearchX size={40} className="text-mid-gray mb-3" />
-            <h3 className="text-dark font-semibold text-lg">No volunteers match your filters.</h3>
-            <p className="text-mid-gray text-sm mt-1 mb-4">
+            <SearchX size={40} className="text-mid-gray dark:text-dark-muted mb-3" />
+            <h3 className="text-dark dark:text-dark-text font-semibold text-lg">No volunteers match your filters.</h3>
+            <p className="text-mid-gray dark:text-dark-muted text-sm mt-1 mb-4">
               Try adjusting your search or clearing your filters.
             </p>
             <button
               type="button"
               onClick={() => router.replace(pathname, { scroll: false })}
-              className="bg-white border border-navy text-navy font-semibold px-4 py-2 rounded hover:bg-light-navy transition-colors"
+              className="bg-white dark:bg-dark-surface border border-navy text-navy font-semibold px-4 py-2 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
             >
               Clear Filters
             </button>
           </>
         ) : (
           <>
-            <Users size={40} className="text-mid-gray mb-3" />
-            <h3 className="text-dark font-semibold text-lg">No volunteers yet.</h3>
-            <p className="text-mid-gray text-sm mt-1">
+            <Users size={40} className="text-mid-gray dark:text-dark-muted mb-3" />
+            <h3 className="text-dark dark:text-dark-text font-semibold text-lg">No volunteers yet.</h3>
+            <p className="text-mid-gray dark:text-dark-muted text-sm mt-1">
               Share your signup link to get started.
             </p>
           </>
@@ -135,8 +135,8 @@ export default function VolunteersTable({
   return (
     <div>
       {canManage && selected.size > 0 && (
-        <div className="flex items-center gap-4 bg-light-navy border border-divider rounded-lg px-4 py-2 mb-3 text-sm">
-          <span className="text-dark font-medium">{selected.size} volunteer(s) selected</span>
+        <div className="flex items-center gap-4 bg-light-navy dark:bg-dark-surface/50 border border-divider dark:border-dark-border rounded-lg px-4 py-2 mb-3 text-sm">
+          <span className="text-dark dark:text-dark-text font-medium">{selected.size} volunteer(s) selected</span>
           <button
             type="button"
             onClick={() => exportCsv('selected')}
@@ -147,7 +147,7 @@ export default function VolunteersTable({
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="text-mid-gray hover:underline"
+            className="text-mid-gray dark:text-dark-muted hover:underline"
           >
             Clear selection
           </button>
@@ -159,7 +159,7 @@ export default function VolunteersTable({
           <button
             type="button"
             onClick={() => exportCsv('page')}
-            className="flex items-center gap-1.5 text-sm bg-white border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
           >
             <Download size={14} />
             Export All (CSV)
@@ -167,10 +167,10 @@ export default function VolunteersTable({
         </div>
       )}
 
-      <div className="bg-white border border-divider rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-divider text-left">
+            <tr className="border-b border-divider dark:border-dark-border text-left">
               {canManage && (
                 <th className="px-4 py-3 w-8">
                   <input
@@ -178,7 +178,7 @@ export default function VolunteersTable({
                     checked={allOnPageSelected}
                     onChange={toggleAllOnPage}
                     aria-label="Select all on page"
-                    className="rounded border-divider text-navy focus:ring-navy"
+                    className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
                   />
                 </th>
               )}
@@ -188,9 +188,9 @@ export default function VolunteersTable({
                 dir={state.dir}
                 onClick={() => toggleSort('name')}
               />
-              <th className="px-4 py-3 font-semibold text-dark">Email</th>
-              <th className="px-4 py-3 font-semibold text-dark">Phone</th>
-              <th className="px-4 py-3 font-semibold text-dark">Categories</th>
+              <th className="px-4 py-3 font-semibold text-dark dark:text-dark-text">Email</th>
+              <th className="px-4 py-3 font-semibold text-dark dark:text-dark-text">Phone</th>
+              <th className="px-4 py-3 font-semibold text-dark dark:text-dark-text">Categories</th>
               <SortableTh
                 label={COLUMN_LABELS.hours}
                 active={state.sort === 'hours'}
@@ -205,7 +205,7 @@ export default function VolunteersTable({
                 onClick={() => toggleSort('calls')}
                 align="right"
               />
-              <th className="px-4 py-3 font-semibold text-dark">Status</th>
+              <th className="px-4 py-3 font-semibold text-dark dark:text-dark-text">Status</th>
               <SortableTh
                 label={COLUMN_LABELS.joined}
                 active={state.sort === 'joined'}
@@ -214,9 +214,9 @@ export default function VolunteersTable({
               />
             </tr>
           </thead>
-          <tbody className="divide-y divide-divider">
+          <tbody className="divide-y divide-divider dark:divide-dark-border">
             {volunteers.map((v) => (
-              <tr key={v.id} className="hover:bg-light-navy/50">
+              <tr key={v.id} className="hover:bg-light-navy/50 dark:hover:bg-dark-surface/50">
                 {canManage && (
                   <td className="px-4 py-3">
                     <input
@@ -224,7 +224,7 @@ export default function VolunteersTable({
                       checked={selected.has(v.id)}
                       onChange={() => toggleRow(v.id)}
                       aria-label={`Select ${v.full_name}`}
-                      className="rounded border-divider text-navy focus:ring-navy"
+                      className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
                     />
                   </td>
                 )}
@@ -241,27 +241,27 @@ export default function VolunteersTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-dark">{v.email}</td>
-                <td className="px-4 py-3 text-dark">{v.phone}</td>
+                <td className="px-4 py-3 text-dark dark:text-dark-text">{v.email}</td>
+                <td className="px-4 py-3 text-dark dark:text-dark-text">{v.phone}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {v.categories.slice(0, 3).map((c) => (
                       <span
                         key={c.id}
-                        className="bg-light-navy text-navy text-xs rounded-full px-2 py-0.5"
+                        className="bg-light-navy dark:bg-dark-surface/50 text-navy text-xs rounded-full px-2 py-0.5"
                       >
                         {c.name}
                       </span>
                     ))}
                     {v.categories.length > 3 && (
-                      <span className="text-xs text-mid-gray">
+                      <span className="text-xs text-mid-gray dark:text-dark-muted">
                         +{v.categories.length - 3} more
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-dark">{v.total_hours}</td>
-                <td className="px-4 py-3 text-right text-dark">{v.calls}</td>
+                <td className="px-4 py-3 text-right text-dark dark:text-dark-text">{v.total_hours}</td>
+                <td className="px-4 py-3 text-right text-dark dark:text-dark-text">{v.calls}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`text-xs font-semibold rounded px-2 py-0.5 ${
@@ -271,14 +271,14 @@ export default function VolunteersTable({
                     {v.status === 'active' ? 'Active' : 'Archived'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-dark">{formatCT(v.created_at, 'MMM d, yyyy')}</td>
+                <td className="px-4 py-3 text-dark dark:text-dark-text">{formatCT(v.created_at, 'MMM d, yyyy')}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-sm text-mid-gray">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 text-sm text-mid-gray dark:text-dark-muted">
         <span>
           Showing {rangeStart}–{rangeEnd} of {total} volunteers
         </span>
@@ -289,13 +289,13 @@ export default function VolunteersTable({
               type="button"
               disabled={page <= 1}
               onClick={() => goTo({ page: page - 1 })}
-              className="px-2 py-1 rounded border border-divider text-dark disabled:opacity-40 disabled:cursor-not-allowed hover:bg-light-navy"
+              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-light-navy dark:hover:bg-dark-surface/50"
             >
               Previous
             </button>
             {getPageNumbers(page, totalPages).map((p, i) =>
               p === 'ellipsis' ? (
-                <span key={`e${i}`} className="px-2 text-mid-gray">
+                <span key={`e${i}`} className="px-2 text-mid-gray dark:text-dark-muted">
                   …
                 </span>
               ) : (
@@ -306,7 +306,7 @@ export default function VolunteersTable({
                   className={`px-2.5 py-1 rounded border ${
                     p === page
                       ? 'bg-navy text-white border-navy'
-                      : 'border-divider text-dark hover:bg-light-navy'
+                      : 'border-divider text-dark hover:bg-light-navy dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50'
                   }`}
                 >
                   {p}
@@ -317,7 +317,7 @@ export default function VolunteersTable({
               type="button"
               disabled={page >= totalPages}
               onClick={() => goTo({ page: page + 1 })}
-              className="px-2 py-1 rounded border border-divider text-dark disabled:opacity-40 disabled:cursor-not-allowed hover:bg-light-navy"
+              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-light-navy dark:hover:bg-dark-surface/50"
             >
               Next
             </button>
@@ -342,11 +342,11 @@ function SortableTh({
   align?: 'left' | 'right'
 }) {
   return (
-    <th className={`px-4 py-3 font-semibold text-dark ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    <th className={`px-4 py-3 font-semibold text-dark dark:text-dark-text ${align === 'right' ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1 -mx-1.5 -my-0.5 px-1.5 py-0.5 rounded cursor-pointer select-none hover:bg-light-navy hover:text-navy transition-colors duration-150 ${
+        className={`inline-flex items-center gap-1 -mx-1.5 -my-0.5 px-1.5 py-0.5 rounded cursor-pointer select-none hover:bg-light-navy hover:text-navy dark:hover:bg-dark-surface/50 transition-colors duration-150 ${
           align === 'right' ? 'flex-row-reverse' : ''
         }`}
       >
@@ -358,7 +358,7 @@ function SortableTh({
             <ChevronDown size={14} />
           )
         ) : (
-          <ChevronsUpDown size={14} className="text-mid-gray" />
+          <ChevronsUpDown size={14} className="text-mid-gray dark:text-dark-muted" />
         )}
       </button>
     </th>

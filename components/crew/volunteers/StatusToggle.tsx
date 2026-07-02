@@ -67,7 +67,7 @@ export default function StatusToggle({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogPrimitive.Cancel className="border border-divider text-dark hover:bg-light-navy transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+          <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
             Cancel
           </AlertDialogPrimitive.Cancel>
           <AlertDialogPrimitive.Action

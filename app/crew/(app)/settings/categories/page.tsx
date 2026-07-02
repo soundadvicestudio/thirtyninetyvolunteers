@@ -23,13 +23,13 @@ export default async function CategoriesPage() {
     <div>
       <Link
         href="/crew/settings"
-        className="text-sm text-mid-gray hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
       >
         ← Back to Settings
       </Link>
 
-      <h1 className="text-2xl font-bold text-dark mb-1">Category Management</h1>
-      <p className="text-mid-gray text-sm mb-8">
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">Category Management</h1>
+      <p className="text-mid-gray dark:text-dark-muted text-sm mb-8">
         Categories shown on the public volunteer signup form. Changes take effect immediately.
       </p>
 
