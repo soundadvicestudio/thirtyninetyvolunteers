@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.1
-### Created: July 2026 | Last Updated: July 2026 — v1.1 (Phase 1 complete)
+## 30BN_PROCESS_v1.md — v1.2
+### Created: July 2026 | Last Updated: July 2026 — v1.2 (Phase 2 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -181,6 +181,10 @@ Q2. [Another item, or "None"]
 F1. [Anything that needs attention before shipping, or "None"]
 ```
 
+**Build report timing:** The build report is delivered at the conclusion of the build session — after code is pushed and the deploy is triggered — without waiting for manual verification steps. Manual verification items (owner-performed per R16) are listed in the Verified section as:
+`⏳ Pending owner verification — [step reference]`
+The owner performs and reports manual verification after receiving the build report. The prompt is not marked complete until the owner confirms all manual items pass. If any manual item fails, treat the failure as a Phase A/B debugging session per §5.
+
 If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark something as Verified if it wasn't actually tested.
 
 ---
@@ -276,12 +280,15 @@ Document & Admin Prompts
   30BN-ADMIN.0a  ✓ Brief Update v1.1 (Phase 1 complete)
   30BN-ADMIN.0b  ✓ Process Update v1.1 (Phase 1 complete)
   30BN-ADMIN.1   ⏳ Pending — write admin_users.last_login on sign-in (gap identified in 30BN-1.3 build report, address before Phase 3 ships)
+  30BN-DOC.1     ✓ Brief Update v1.2 (Phase 2 complete)
+  30BN-DOC.2     ✓ Process Update v1.2 (Phase 2 complete)
 
-Phase 2 — Public Volunteer Signup
-  30BN-2.1    Landing Page Design & Layout
-  30BN-2.2    Volunteer Registration Form
-  30BN-2.3    Form Submission Logic
-  30BN-2.4    Volunteer Info Update Flow
+Phase 2 — Public Volunteer Signup ✓ Complete
+  30BN-2.1  ✓ Landing Page Design & Layout
+  30BN-2.2  ✓ Volunteer Registration Form
+  30BN-2.3  ✓ Form Submission Logic (+ 2.3-FIX: age_range
+               constraint + required field)
+  30BN-2.4  ✓ Volunteer Info Update Flow
 
 Phase 3 — Production Crew Core
   30BN-3.1    Admin Layout & Navigation
@@ -354,4 +361,5 @@ The shadcn CLI (v4.12+) injects a var()-driven CSS custom property theme block i
 *Version history:*
 *v1.0 (July 2026 — initial)*
 *v1.1 (July 2026 — Phase 1 complete: R16 (no browser verification in Claude Code) and R17 (shadcn var() injection revert) added in new §14 — deviation from §12 protocol, kept here rather than Brief §13 per owner decision; shadcn color class grep check added to §10; Vercel preset and shadcn tailwind.config checks added to §11; ADMIN/DOC numbering convention clarified in §3; Phase 1 marked complete and Document & Admin Prompts log added in §13)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.1*
+*v1.2 (July 2026 — Phase 2 complete: build report timing convention added to §8; Phase 2 marked complete in §13; DOC.1/DOC.2 added to prompt log)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.2*
