@@ -16,6 +16,8 @@ export type AuditAction =
   | 'user.role_change'
   | 'volunteer.note.edit'
   | 'volunteer.note.delete'
+  | 'show.create'
+  | 'show.update'
 
 export async function logAction(
   adminId: string,
