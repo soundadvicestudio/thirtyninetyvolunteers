@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.2 (Phase 2 complete)
+### Created: July 2026 | Last Updated: July 2026 — v1.3 (Phase 3 complete, Admin prompts through ADMIN.7 complete)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phase 2 complete (1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4 ✓)
+**Current phase:** Alpha build in progress — Phase 3 complete, Phase 4 pending (ADMIN.1 through ADMIN.7 ✓)
 
 ---
 
@@ -54,9 +54,11 @@
 | **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
 | **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
-| **Dates** | date-fns | Date formatting throughout. |
+| **Dates** | date-fns + date-fns-tz | All date/time display uses `formatCT()` from `lib/utils/date.ts` with America/Chicago (Central Time, auto-DST). Never use raw date-fns `format()` for user-facing dates. |
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
+| **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
+| **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
 
 ### Critical Constraint — Tailwind v4
 Tailwind v4 uses CSS-first configuration. **There is no `tailwind.config.ts` in this project — do not create one.**
@@ -182,9 +184,12 @@ Mid Gray:             #555555  --color-mid-gray
 ### Public — Volunteer Signup Landing Page (`/`)
 - Branded, mobile-first landing page in 30 By Ninety visual identity
 - Accessible via QR code (in programs and print)
-- Conditional announcement banner at top (admin-controlled, on/off)
+- Heading reads "Join the 30 By Ninety Theatre Volunteer Community" (not "Join Our Next Production")
+- Redundant "30 By Ninety Theatre" text under the logo has been removed
+- Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
 - Downloadable consent form link (under-18; admin-swappable PDF — Beta)
-- Discreet "Update my info" link → `/update`
+- Two equal-weight outlined CTA buttons above the signup form: "Update My Info" (→ `/update`) and "View Opportunities" (→ `/shows`). Appear below the bridging text, above the form.
+- "Sign up to add your name to our volunteer list" subheading appears immediately above the form.
 - Discreet "Production Crew" text link in page footer → `/crew/login` (intentionally subtle — small text, not a CTA button)
 - Volunteer registration form:
   - Full name (required)
@@ -194,6 +199,7 @@ Mid Gray:             #555555  --color-mid-gray
   - School (optional, toggleable by admin)
   - Age range (optional, toggleable by admin): Under 18 · 18–25 · 26–35 · 36–50 · 51+ · Prefer not to say
   - Is under 18: when "Under 18" selected → reveals Guardian Name (required) + Guardian Phone (required)
+  - Service hours: when School is non-empty, reveals "Do you require service hours for your school or organization?" Yes/No question. Stored as `requires_service_hours` boolean. Hidden and reset to `false` when School is cleared.
   - Volunteer interest areas: multi-select from active `volunteer_categories`
   - How did you hear about us: dropdown from `hearing_options` table + "Other" with text input
   - Referred by: free text (optional)
@@ -209,6 +215,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Token-based: each volunteer has a unique `update_token` (UUID)
 - Entry via link in confirmation email or token re-request (enter email/phone → receive new link)
 - Pre-filled editable form (all fields; email read-only for reference; phone re-checked for duplicates on change)
+- Service hours question appears pre-filled when the volunteer has a school value on file. Same conditional trigger as the signup form.
 - On submit: update record, send "Your info has been updated" email
 
 ### Public — Show Listing (`/shows`)
@@ -248,6 +255,10 @@ Mid Gray:             #555555  --color-mid-gray
 
 ### Admin — Production Crew (`/crew`)
 
+**General:**
+- **Light/Dark Mode:** The admin UI supports a Light/Dark mode toggle in the crew sidebar (sun/moon icon, bottom of sidebar). Preference persisted to localStorage. System preference (`prefers-color-scheme`) used as default when no saved preference exists. Implemented via Tailwind v4 `@variant dark` scoped to `[data-theme="dark"]` on the admin layout wrapper. Dark palette uses static hex values in `@theme` (dark-bg, dark-surface, dark-border, dark-nav, dark-text, dark-muted). Public pages unaffected.
+- **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`. Mobile sidebar (collapsible/hamburger) deferred to Phase 12 — PWA is most usable on tablet (768px+) until then.
+
 **Login (`/crew/login`):**
 - Email/password form
 - Google SSO: deferred to Beta
@@ -262,24 +273,30 @@ Mid Gray:             #555555  --color-mid-gray
 
 **Volunteers (`/crew/volunteers`):**
 - Searchable, filterable, sortable list (full-text: name/email/phone)
-- Filters: category, status (active/archived), age range, school, is_minor, milestone tier
+- Filters: category, status (active/archived), age range, school, is_minor, milestone tier, Service Hours Required (Yes/No/All)
+- Volunteer list is filterable by category (role)
+- SH badge on list rows indicating `requires_service_hours`
 - Sort: name, date joined, total hours, last call date
 - Columns: Name, Email, Phone, Categories, Total Hours, Calls, Status, Joined
-- Bulk select: export selected to CSV
+- Bulk select: export selected to CSV. `requires_service_hours` included in CSV export.
+- PDF export available (Editor/Super Admin) via server-side route handler at `/crew/volunteers/export`. Respects current filters. Landscape A4, branded header, 8-column table.
 - Row click → volunteer profile
 
 **Volunteer Profile (`/crew/volunteers/[id]`):**
 - All submitted fields (editable by Editors, read-only for Viewers)
+- Service Hours Required field in Personal section: "Yes" (orange) / "No" (mid-gray) / "—" if no school on file. Editable in edit mode.
 - Category tags (editable)
-- Call history table (show, date, role, attendance, hours)
+- Call history table (show, date, role, attendance, hours). Sorted by `claimed_at` descending (PostgREST limitation — strict `show_date` ordering deferred to Phase 12 via Supabase view/RPC).
 - Hours summary + milestone history
-- **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors only. Never visible to volunteer (RLS enforced). For preferences, scheduling considerations, history, sensitive info.
+- **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors and Super Admins only. Never visible to volunteer (RLS enforced). Editors and Super Admins can add notes (append-only for Editors). Super Admins can also edit and delete existing notes. Implemented via Migration 004 RLS policies. For preferences, scheduling considerations, history, sensitive info.
 - Status toggle: Active / Archived (Editors only, confirmation prompt)
 - Audit entries for this volunteer (read-only, Editors only)
 
 **Category Management (`/crew/settings/categories`):**
+- Super Admin only (not Editor or Viewer)
 - Add, rename, reorder (drag-and-drop or arrows), visibility toggle
 - Visibility toggle: hides from public signup form. Does NOT affect existing DB assignments. Can be re-enabled at any time.
+- Category description is settable at creation time only — not editable from the table. Phase 11 cleanup item.
 - Default categories (seeded): Ushers/Front of House · Band Members · Concessions · Backstage Crew · Wardrobe/Costumes · Hair/Make-Up · Lighting Design · Lighting Operator · Sound Design · Sound Operator · Set Build · Set Design · Stage Manager · Tech · Cleaning/Organization
 
 **User Management (`/crew/settings/users`) — Super Admin only:**
@@ -287,7 +304,8 @@ Mid Gray:             #555555  --color-mid-gray
 - Create new account: Name, Email, Role (Editor/Viewer), Send Welcome Email toggle
   - Creates Supabase Auth user, inserts `admin_users` record, sends branded welcome email with login link + temp password + instructions to change password
 - Deactivate/reactivate (cannot deactivate own account)
-- Change role (Super Admin only)
+- Multiple Super Admins are supported. Deactivate button is disabled for ALL Super Admin rows in the Users table (not just own account).
+- Change role (Super Admin only). Super Admin role cannot be changed via the Users panel.
 - Super Admin cannot be demoted via this panel
 
 **Show Management (`/crew/shows`):**
@@ -303,6 +321,22 @@ Mid Gray:             #555555  --color-mid-gray
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
   - Bulk mark: select all → mark all Showed
+
+**Standing Volunteer Opportunities (30BN-4.4):**
+- Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest. Appears on `/shows` public page above productions.
+- Per opportunity, admin can designate:
+  - Claim type: Expression of Interest (EOI) OR Slot Claim. EOI = volunteer submits interest, Editor follows up manually. Slot Claim = same flow as show slot claiming.
+  - Slot cap: optional toggle. If off, open-ended. If on, enter a slot count. EOI opportunities default to open-ended but cap can be toggled.
+- Confirmation email copy reflects EOI vs. Slot Claim.
+
+**Category-Match Notifications (30BN-5.3):**
+- When a show is published (status → live), the system can notify all volunteers who have selected a matching category/role.
+- One email per volunteer per show regardless of how many roles match (deduplicated before send).
+- Send Notifications toggle at publish time.
+- Manual trigger available after publication.
+- No auto-fire on republish unless explicitly confirmed via warning prompt (only if notifications were previously sent for that show).
+- Notification email includes a general link to `/shows` (not a specific show URL).
+- Uses `resend.batch.send()` per R8.
 
 **Staffing Dashboard (`/crew/dashboard`):** See Dashboard above.
 
@@ -366,9 +400,20 @@ Mid Gray:             #555555  --color-mid-gray
 
 ## 9. Database Schema
 
+**MIGRATION FILE LOCATION:** All migration `.sql` files live at repo root (alongside `001_core_schema.sql`). There is no `supabase/migrations/` directory in this project. Do not create one. (R21)
+
 All tables created in Migration 001. All FK columns have explicit indexes.
 
 **Migration 001 status:** Applied — `001_core_schema.sql` live on project `nutvjkplbtobcmymqtzx`.
+
+**Migration 002 status:** Applied — `002_volunteer_notes_role_rls.sql`
+Fixes `volunteer_notes` RLS: replaced generic `authenticated_all_admin` (FOR ALL) policy with role-scoped SELECT/INSERT restricted to `is_editor()` (editor + super_admin). No UPDATE or DELETE policy (append-only). Creates `is_editor()` helper function.
+
+**Migration 003 status:** Applied — `003_requires_service_hours.sql`
+Adds `requires_service_hours` boolean NOT NULL DEFAULT false to `volunteers` table.
+
+**Migration 004 status:** Applied — `004_volunteer_notes_superadmin_rls.sql`
+Adds UPDATE/DELETE policies on `volunteer_notes` restricted to `is_super_admin()`. Creates `is_super_admin()` helper function. Super Admins can edit and delete notes; Editors cannot.
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -395,6 +440,7 @@ status           text NOT NULL DEFAULT 'active' CHECK (status IN ('active','arch
 total_hours      numeric(6,2) NOT NULL DEFAULT 0
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
+requires_service_hours  boolean NOT NULL DEFAULT false
 -- Constraint: UNIQUE (email), UNIQUE (phone)
 -- Trigger: trg_volunteers_updated_at on UPDATE
 ```
@@ -427,7 +473,10 @@ author_id        uuid NOT NULL REFERENCES admin_users(id)
 body             text NOT NULL
 created_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_vnotes_volunteer_id
--- RLS: SELECT, INSERT for editors only. Never accessible via volunteer-facing routes.
+-- RLS: SELECT/INSERT for editors and super_admins
+-- (is_editor()). UPDATE/DELETE for super_admins
+-- only (is_super_admin()). Notes are append-only
+-- for Editors. Never accessible via public routes.
 ```
 
 ### seasons
@@ -779,9 +828,9 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 
 ---
 
-### Phase 3 — Production Crew Core
+### Phase 3 — Production Crew Core ✓ Complete
 
-**30BN-3.1 — Admin Layout & Navigation**
+**30BN-3.1 — Admin Layout & Navigation ✓**
 - `/crew` layout: sidebar nav, top bar (logged-in user name + role badge + sign out), main content area
 - Navigation items — all admins: Dashboard, Volunteers, Shows, Forms, QR Generator, Communication (stub), Settings
 - Navigation items — Editors + Super Admin only: all edit controls rendered
@@ -791,14 +840,19 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Role badge: color-coded (Super Admin = navy, Editor = steel blue, Viewer = gray)
 - Quality gate: nav renders correctly for all three role types; Viewer sees no edit controls
 
-**30BN-3.2 — Volunteers List View**
+**30BN-3.2 — Volunteers List View ✓**
 - `/crew/volunteers`: paginated volunteer list with all filters and sort from §8
 - Columns, search, filters per §8
 - Bulk select → "Export Selected" (CSV with all fields)
 - Row click → `/crew/volunteers/[id]`
 - Quality gate: search, filter, sort, pagination all work; CSV export downloads correctly
 
-**30BN-3.3 — Volunteer Profile Page**
+**30BN-3.2b — PDF Export + Minor Fixes ✓**
+- PDF export route handler at `/crew/volunteers/export` (Editor/Super Admin). Respects current filters. Landscape A4, branded header, 8-column table. Uses `@react-pdf/renderer`.
+- Minor fixes to the Volunteers List View surfaced during 3.2 verification.
+- Quality gate: PDF downloads correctly and reflects active filters; minor fixes verified
+
+**30BN-3.3 — Volunteer Profile Page ✓**
 - `/crew/volunteers/[id]`: full profile per §8
 - All fields, editable inline by Editors (save triggers `updated_at`, logs to `audit_log`)
 - Editor Notes: below profile. Notes input (textarea + submit). Notes displayed stacked chronologically with author name, formatted timestamp. Editors only — not rendered for Viewers. RLS ensures this data never leaks to public routes.
@@ -807,20 +861,32 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Status toggle: Active ↔ Archived (confirmation dialog, Editors only)
 - Quality gate: edit saves correctly; notes appear with correct author/timestamp; archived status persists; Viewer sees no edit controls or notes
 
-**30BN-3.4 — Category Management**
+**30BN-3.4 — Category Management ✓**
 - `/crew/settings/categories`: list of all categories
 - Add category (name + optional description), rename inline, reorder, visibility toggle
 - Visibility toggle: immediately updates `volunteer_categories.is_visible`. Public signup form reflects change without deploy.
 - Deactivating a category does NOT remove existing `volunteer_category_assignments` records
 - Quality gate: add/rename/reorder/toggle all persist; public form immediately shows/hides toggled category
 
-**30BN-3.5 — Super Admin User Management**
+**30BN-3.5 — Super Admin User Management ✓**
 - `/crew/settings/users` (Super Admin only — middleware guards route)
 - Full user list per §8
 - Create account: form → insert `admin_users` + create Supabase Auth user via admin client → send branded welcome email (Resend) with: login URL, email, temporary password, instructions to change password
 - Deactivate/reactivate (guard: cannot deactivate own account)
 - Change role (Super Admin only)
 - Quality gate: new user can log in with provided credentials; deactivated user blocked at middleware; role change reflected immediately
+
+**Document & Admin Prompts (since v1.2):**
+```
+30BN-ADMIN.2  ✓ Cleanup: sign-out button, timezone utility, landing page updates
+30BN-ADMIN.3  ✓ Cosmetic fix: sign-out hover, sort header hover, CTA position
+30BN-ADMIN.4  ✓ Service hours field (schema + all surfaces)
+30BN-ADMIN.5  ✓ Users table Super Admin fix + Super Admin note edit/delete + PWA
+30BN-ADMIN.6  ✓ Light/Dark mode toggle
+30BN-ADMIN.7  ✓ Fix PWA start_url
+30BN-DOC.3    ✓ Brief Update v1.3 (this prompt)
+30BN-DOC.4    ⏳ Process Update v1.3 (next prompt)
+```
 
 ---
 
@@ -853,6 +919,12 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Post-event attendance marking: only available when `show_date` is in the past. Per-volunteer selector: Showed / No-Show / Excused. Bulk mark all Showed button.
 - On Showed: insert `attendance`, increment `volunteer.total_hours`, insert `volunteer_hours_log`, trigger milestone check
 - Quality gate: all tabs render correctly; attendance marking only available for past dates; hours update on volunteer profile after marking
+
+**30BN-4.4 — Standing Volunteer Opportunities**
+- Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest, per §8. Appears on `/shows` public page above productions.
+- Per opportunity: claim type (Expression of Interest OR Slot Claim), optional slot cap toggle (EOI defaults open-ended, cap can be toggled on with a slot count)
+- Confirmation email copy reflects EOI vs. Slot Claim
+- Quality gate: opportunity appears above productions on `/shows`; EOI submissions logged for manual follow-up; Slot Claim opportunities behave like show slot claiming including cap enforcement
 
 ---
 
@@ -890,6 +962,15 @@ Cancel flow:
 - Log in `email_log` (recipient_type: 'transactional')
 
 Quality gate: claim inserts correctly; duplicate warning fires; waitlist promotes on cancel; editor notification sends; 24hr cron verified in Vercel logs
+
+**30BN-5.3 — Category-Match Notification Emails**
+- When a show is published (status → live), notify all volunteers who have selected a matching category/role, per §8
+- One email per volunteer per show regardless of how many roles match (deduplicated before send)
+- Send Notifications toggle at publish time; manual trigger available after publication
+- No auto-fire on republish unless explicitly confirmed via warning prompt (only if notifications were previously sent for that show)
+- Notification email includes a general link to `/shows` (not a specific show URL)
+- Uses `resend.batch.send()` per R8
+- Quality gate: publishing with toggle on sends exactly one email per matching volunteer; republish does not silently resend; manual trigger works; email_log records the send
 
 ---
 
@@ -1016,6 +1097,16 @@ Wire audit logging throughout the app and build the read-only viewer.
 
 ### Phase 12 — Polish, Mobile & Performance
 
+**Deferred polish items (added since v1.2):**
+- Mobile sidebar (collapsible/hamburger for PWA on phone-sized screens)
+- PDF export column for `requires_service_hours`
+- Call history sort by `show_date` (currently `claimed_at` — PostgREST limitation)
+- Volunteer list all-pages CSV export (currently limited to current page for filtered export)
+- Out-of-range page param clamping on volunteer list
+- Category description inline editing
+- Dialog close-X dark mode hover treatment (`button.tsx` not swept in ADMIN.6)
+- Password change UI for new admin accounts
+
 **30BN-12.1 — Mobile Optimization & Empty States**
 - Full responsive audit: `/` (landing), `/shows`, `/shows/[id]`, `/callboard/*`, `/forms/[id]`, `/update`, `/cancel`
 - Test at 375px (iPhone SE), 390px (iPhone 14), 768px (tablet)
@@ -1076,7 +1167,9 @@ Wire audit logging throughout the app and build the read-only viewer.
 | 2 | Sending email address | ✅ Resolved | `volunteers@30byninetyvolunteers.com` — domain verified in Resend during Phase 2 Alpha build |
 | 3 | Google OAuth credentials | ✅ Resolved | Implemented in Alpha (30BN-1.3). Google Cloud OAuth client "Volunteers Final" configured and live. |
 | 4 | Jonathan's surname | ✅ Resolved | Sturcken — Jonathan Sturcken |
-| 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one to be created. Needed at Beta launch. |
+| 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one needed at Beta launch. |
+| 6 | Multiple Super Admins | ✅ Resolved | Multiple Super Admins are expected and supported. Deactivate disabled for all Super Admin rows. Role change blocked for Super Admin rows. |
+| 7 | Mobile PWA sidebar | 🔄 Pending | Collapsible sidebar for phone-sized screens deferred to Phase 12. PWA usable on tablet (768px+) until then. |
 
 ---
 
@@ -1138,6 +1231,18 @@ Documented in 30BN_PROCESS_v1.md §14. Referenced here for R-number continuity.
 ### R18 — Empty String Normalization to Null
 When inserting or updating optional string fields in the database — especially those with CHECK constraints or NOT NULL requirements — use `|| null` rather than `?? null` to normalize the value. `??` passes empty strings through unchanged; `||` converts empty strings, null, and undefined all to null. Example: `age_range: data.age_range || null`. Confirmed failure mode: empty string violated `volunteers_age_range_check` (error code 23514, 30BN-2.3-FIX).
 
+### R19 — Plain <button> Over Button Component for Brand Hover Behavior
+tailwind-merge does not recognize custom `@theme` color tokens as the same class group. Appending brand hover classes (`hover:bg-steel`, `hover:bg-navy`, etc.) via `className` to shadcn Button/cva components produces unpredictable cascade results — both the variant class and the override may end up in the DOM with cascade order deciding the winner. Use plain `<button>` elements with explicit Tailwind classes whenever brand hover behavior is required. Never import the Button component in files where brand-colored hover states are needed. Established ADMIN.3.
+
+### R20 — All /crew/* Pages Under app/crew/(app)/
+The route group pattern established in 30BN-3.1 requires all Production Crew pages and route handlers to live under `app/crew/(app)/`. Files placed directly at `app/crew/[route]/page.tsx` (without the route group) will render without the sidebar/topbar layout shell. Every prompt building a `/crew/*` page must follow this pattern. `/crew/login` lives under `app/crew/(auth)/login/` per the sibling route group pattern.
+
+### R21 — Migration Files at Repo Root
+Migration `.sql` files live at repo root alongside `001_core_schema.sql`. There is no `supabase/migrations/` directory in this project and one must not be created. Filename format: `{number}_{descriptive_snake_case}.sql`. Sequential numbering: 001, 002, 003, etc.
+
+### R22 — Vercel Deploy Verification Is Owner-Side
+Claude Code does not have Vercel CLI access and cannot confirm deploy status independently. Build reports confirm the git push succeeded and note that Vercel auto-deploy will trigger. Owner confirms deploy independently via the Vercel dashboard. Claude Code must not flag absence of deploy confirmation as a build concern or a Flag item.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -1145,4 +1250,5 @@ When inserting or updating optional string fields in the database — especially
 *v1 (initial — all Alpha prompts, full schema, brand system, standing rules)*
 *v1.1 (July 2026 — Phase 1 complete: project facts confirmed, Google SSO moved to Alpha, Production Crew footer link added, Open Decisions #1/#3/#4 resolved, R15 added)*
 *v1.2 (July 2026 — Phase 2 complete: @hookform/resolvers added to §3, Resend domain verified and from address confirmed, Open Decision #2 resolved, age_range required decision noted, shows link in confirmation email, R16/R17 cross-references added, R18 empty string normalization added, R8 single-send clarification)*
+*v1.3 (July 2026 — Phase 3 complete: date-fns-tz/@react-pdf/renderer/PWA added to §3, requires_service_hours added to §8 and §9 (Migration 003), Editor Notes Super Admin edit/delete added (Migration 004), multiple Super Admins support documented, Light/Dark mode and PWA documented, Standing Volunteer Opportunities (4.4) and Category-Match Notifications (5.3) added as new prompt slots, Phase 3 marked complete, Open Decisions #6/#7 added, R19–R22 added)*
 *Cross-reference: 30BN_PROCESS_v1.md v1.2*
