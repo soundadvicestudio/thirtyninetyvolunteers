@@ -456,7 +456,13 @@ without this REVOKE, the anon role could call SECURITY DEFINER functions via
 PostgREST and bypass RLS entirely). This REVOKE pattern is now a standing rule
 (R28) and must be applied to all future SECURITY DEFINER functions.
 
-**Next migration:** 009
+**Migration 009 status:** Applied — `009_fix_activity_feed_execute_privilege.sql`
+Revokes EXECUTE on `get_activity_feed(p_limit integer, p_offset integer)`
+from PUBLIC and anon roles. Re-grants to authenticated for auditability.
+Same fix as Migration 008 applied to the earlier SECURITY DEFINER function.
+See R28.
+
+**Next migration:** 010
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -1219,12 +1225,11 @@ Wire audit logging throughout the app and build the read-only viewer.
 
 ### Phase 12 — Polish, Mobile & Performance
 
-**Planned admin prompts:**
-- `30BN-ADMIN.13` ⏳ Security fix — REVOKE EXECUTE on `get_activity_feed()`
+**Completed admin prompts (since Phase 5):**
+- `30BN-ADMIN.13` ✓ Security fix — REVOKE EXECUTE on `get_activity_feed()`
   from PUBLIC and anon roles (Migration 009). Same
   vulnerability class as caught and fixed in 5.3 for
-  `get_show_notification_targets()`. Must run before
-  Phase 6 ships.
+  `get_show_notification_targets()`. See R28.
 
 **Deferred polish items (added since v1.2):**
 - Mobile sidebar (collapsible/hamburger for PWA on phone-sized screens)
