@@ -1,9 +1,38 @@
 'use server'
 
 import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { volunteerProfileSchema, type VolunteerProfileFormValues } from '@/lib/validations/volunteerProfile'
+
+// Public lookup used by the show-claiming pre-fill (ClaimForm onBlur).
+// No admin session exists on public pages — getAdminClient() is required.
+// Only the three display fields needed for pre-fill are ever returned.
+export async function lookupVolunteer(
+  value: string
+): Promise<{ full_name: string; email: string; phone: string } | null> {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  try {
+    const client = getAdminClient()
+    const isEmail = trimmed.includes('@')
+
+    const { data } = await client
+      .from('volunteers')
+      .select('full_name, email, phone')
+      .eq(isEmail ? 'email' : 'phone', isEmail ? trimmed.toLowerCase() : trimmed)
+      .maybeSingle()
+
+    if (!data) return null
+
+    return { full_name: data.full_name, email: data.email, phone: data.phone }
+  } catch (err) {
+    console.error('lookupVolunteer error:', err)
+    return null
+  }
+}
 
 export type ActionResult = { success: true } | { error: string }
 
