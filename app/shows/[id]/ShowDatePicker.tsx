@@ -12,7 +12,10 @@ function isDateFull(date: PublicShowDate): boolean {
 export default function ShowDatePicker({ dates, showName }: { dates: PublicShowDate[]; showName: string }) {
   const singleDate = dates.length === 1
 
-  const [selectedDateId, setSelectedDateId] = useState<string | null>(singleDate ? dates[0]?.id ?? null : null)
+  const firstOpenDate = dates.find((d) => !isDateFull(d)) ?? dates[0]
+  const [selectedDateId, setSelectedDateId] = useState<string | null>(
+    dates.length === 1 ? dates[0].id : (firstOpenDate?.id ?? null)
+  )
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null)
 
   const selectedDate = dates.find((d) => d.id === selectedDateId) ?? null

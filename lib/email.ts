@@ -512,3 +512,318 @@ export async function sendOpportunitySlotClaimEmail({
 
   return { subject, preview }
 }
+
+
+// ─── Slot claiming emails (30BN-5.2) ─────────────────────────────
+
+const FROM_ADDRESS = '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>'
+const REPLY_TO = 'info@30byninety.com'
+
+function emailShell(bodyHtml: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          ${bodyHtml}
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function showDetailsBlockHtml(showName: string, showDate: string, showTime: string, roleName: string): string {
+  return `
+    <div style="background:#f5f5f5;border-radius:8px;padding:16px 20px;margin:0 0 20px;">
+      <p style="margin:0 0 4px;color:#1A1A1A;font-size:15px;"><strong>${escapeHtml(showName)}</strong></p>
+      <p style="margin:0 0 4px;color:#555;font-size:14px;">${escapeHtml(showDate)} at ${escapeHtml(showTime)}</p>
+      <p style="margin:0;color:#555;font-size:14px;">Role: ${escapeHtml(roleName)}</p>
+    </div>
+  `
+}
+
+function instructionsBlockHtml(volunteerInstructions: string | null): string {
+  if (!volunteerInstructions) return ''
+  return `
+    <div style="background:#EEF1FA;border-radius:8px;padding:20px 24px;margin:0 0 24px;">
+      <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;
+                text-transform:uppercase;letter-spacing:0.5px;">
+        Special Instructions
+      </p>
+      <p style="margin:0;color:#555;font-size:14px;line-height:1.6;white-space:pre-line;">
+        ${escapeHtml(volunteerInstructions)}
+      </p>
+    </div>
+  `
+}
+
+function cancelLinkHtml(cancelUrl: string): string {
+  return `
+    <p style="color:#aaa;font-size:12px;margin:24px 0 0;">
+      Need to cancel? <a href="${cancelUrl}" style="color:#293994;">Click here</a>.
+    </p>
+  `
+}
+
+function browseShowsButtonHtml(): string {
+  return `
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      Browse More Opportunities
+    </a>
+  `
+}
+
+type SlotClaimEmailParams = {
+  to: string
+  volunteerName: string
+  showName: string
+  showDate: string
+  showTime: string
+  roleName: string
+  volunteerInstructions: string | null
+  cancelUrl: string
+}
+
+export async function sendSlotClaimEmail({
+  to,
+  volunteerName,
+  showName,
+  showDate,
+  showTime,
+  roleName,
+  volunteerInstructions,
+  cancelUrl,
+}: SlotClaimEmailParams): Promise<void> {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      You're signed up, ${escapeHtml(volunteerName)}!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      Thanks for volunteering — here are your details:
+    </p>
+    ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
+    ${instructionsBlockHtml(volunteerInstructions)}
+    ${browseShowsButtonHtml()}
+    ${cancelLinkHtml(cancelUrl)}
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: `You're signed up! — ${showName}`,
+    html,
+  })
+}
+
+type WaitlistConfirmationEmailParams = {
+  to: string
+  volunteerName: string
+  showName: string
+  showDate: string
+  showTime: string
+  roleName: string
+  waitlistPosition: number
+  cancelUrl: string
+}
+
+export async function sendWaitlistConfirmationEmail({
+  to,
+  volunteerName,
+  showName,
+  showDate,
+  showTime,
+  roleName,
+  waitlistPosition,
+  cancelUrl,
+}: WaitlistConfirmationEmailParams): Promise<void> {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      You're on the waitlist, ${escapeHtml(volunteerName)}
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      This role is currently full, but you're position <strong>#${waitlistPosition}</strong>
+      on the waitlist. We'll email you right away if a spot opens up.
+    </p>
+    ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
+    ${browseShowsButtonHtml()}
+    <p style="color:#aaa;font-size:12px;margin:24px 0 0;">
+      Plans changed? <a href="${cancelUrl}" style="color:#293994;">Remove yourself from the waitlist</a>.
+    </p>
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: `You're on the waitlist — ${showName}`,
+    html,
+  })
+}
+
+export async function sendWaitlistPromotionEmail({
+  to,
+  volunteerName,
+  showName,
+  showDate,
+  showTime,
+  roleName,
+  volunteerInstructions,
+  cancelUrl,
+}: SlotClaimEmailParams): Promise<void> {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Good news, ${escapeHtml(volunteerName)} — a spot opened up!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      You've moved from the waitlist to a confirmed spot. Here are your details:
+    </p>
+    ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
+    ${instructionsBlockHtml(volunteerInstructions)}
+    ${browseShowsButtonHtml()}
+    ${cancelLinkHtml(cancelUrl)}
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Good news — a spot opened up! — ${showName}`,
+    html,
+  })
+}
+
+type CancellationEditorNotificationEmailParams = {
+  to: string[]
+  volunteerName: string
+  volunteerEmail: string
+  showName: string
+  showDate: string
+  roleName: string
+  adminShowUrl: string
+}
+
+export async function sendCancellationEditorNotificationEmail({
+  to,
+  volunteerName,
+  volunteerEmail,
+  showName,
+  showDate,
+  roleName,
+  adminShowUrl,
+}: CancellationEditorNotificationEmailParams): Promise<void> {
+  if (to.length === 0) return
+
+  const subject = `Volunteer cancellation — ${showName}`
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Volunteer cancellation
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      <strong>${escapeHtml(volunteerName)}</strong> (${escapeHtml(volunteerEmail)}) has cancelled
+      their volunteer spot for <strong>${escapeHtml(roleName)}</strong> on ${escapeHtml(showDate)}
+      (${escapeHtml(showName)}).
+    </p>
+    <a href="${adminShowUrl}"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      View Show in Production Crew
+    </a>
+  `)
+
+  // R8 — multi-recipient send uses resend.batch.send(), one entry per editor.
+  await resend.batch.send(
+    to.map((address) => ({
+      from: FROM_ADDRESS,
+      replyTo: REPLY_TO,
+      to: address,
+      subject,
+      html,
+    }))
+  )
+}
+
+type ReminderEmailParams = {
+  to: string
+  volunteerName: string
+  showName: string
+  showDate: string
+  showTime: string
+  roleName: string
+  volunteerInstructions: string | null
+}
+
+// Exported so the 24hr reminder cron (app/api/cron/reminders) can build
+// payload objects for resend.batch.send() — batching multi-recipient sends
+// is required per R8, so the cron does not call sendReminderEmail() (single
+// send) directly.
+export function buildReminderEmailPayload({
+  to,
+  volunteerName,
+  showName,
+  showDate,
+  showTime,
+  roleName,
+  volunteerInstructions,
+}: ReminderEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      See you tomorrow, ${escapeHtml(volunteerName)}!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      Just a friendly reminder that you're volunteering tomorrow:
+    </p>
+    ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
+    ${instructionsBlockHtml(volunteerInstructions)}
+    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+      Thank you for volunteering with 30 By Ninety Theatre!
+    </p>
+  `)
+
+  return {
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Reminder: you're volunteering tomorrow — ${showName}`,
+    html,
+  }
+}
+
+export async function sendReminderEmail(params: ReminderEmailParams): Promise<void> {
+  await resend.emails.send(buildReminderEmailPayload(params))
+}
+
+type BatchEmailPayload = { from: string; replyTo?: string; to: string; subject: string; html: string }
+
+const BATCH_CHUNK_SIZE = 100
+
+// R8 — resend.batch.send() accepts at most 100 entries per call. Chunks any
+// larger payload list into groups of 100, sending one batch call per chunk.
+export async function sendBatchEmails(payloads: BatchEmailPayload[]): Promise<void> {
+  for (let i = 0; i < payloads.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = payloads.slice(i, i + BATCH_CHUNK_SIZE)
+    await resend.batch.send(chunk)
+  }
+}

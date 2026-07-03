@@ -27,6 +27,7 @@ export type AuditAction =
   | 'opportunity.update'
   | 'opportunity.archive'
   | 'opportunity.submission'
+  | 'slot_claim.cancel'
 
 export async function logAction(
   adminId: string | null,
