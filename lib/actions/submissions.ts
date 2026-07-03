@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendOpportunityEOIEmail, sendOpportunitySlotClaimEmail } from '@/lib/email'
+import { logAction } from '@/lib/audit'
 
 const submitOpportunitySchema = z.object({
   opportunityId: z.string().uuid(),
@@ -108,6 +109,13 @@ export async function submitOpportunity(formData: {
   }
 
   const claimType = opportunity.claim_type as 'eoi' | 'slot_claim'
+
+  await logAction(null, 'opportunity.submission', 'opportunity_submission', submission.id, undefined, {
+    opportunity_id: opportunityId,
+    volunteer_email: volunteerEmail,
+    claim_type: claimType,
+    volunteer_id: volunteerId,
+  })
 
   try {
     const emailResult =

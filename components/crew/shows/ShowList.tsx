@@ -404,7 +404,7 @@ export default function ShowList({
         </div>
       )}
 
-      {shows.length === 0 ? (
+      {groups.length === 0 && !hasActiveFilter ? (
         <div className="text-center py-16">
           <p className="text-mid-gray dark:text-dark-muted mb-4">
             No shows yet. Create your first show to get started.

@@ -29,7 +29,7 @@ export type AuditAction =
   | 'opportunity.submission'
 
 export async function logAction(
-  adminId: string,
+  adminId: string | null,
   action: AuditAction,
   targetType: string,
   targetId: string,
