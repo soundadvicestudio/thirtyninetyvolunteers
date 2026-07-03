@@ -16,7 +16,7 @@ import {
 import type { AdminUser } from '@/lib/auth'
 import type {
   Show,
-  ShowDate,
+  ShowDateWithRoles,
   ShowRole,
   SlotClaim,
   AttendanceRecord,
@@ -166,15 +166,13 @@ function OverviewTab({
 function VolunteersTab({
   showId,
   showDates,
-  roles,
   slotClaims,
   attendance,
   canEdit,
   todayCT,
 }: {
   showId: string
-  showDates: ShowDate[]
-  roles: ShowRole[]
+  showDates: ShowDateWithRoles[]
   slotClaims: SlotClaim[]
   attendance: Record<string, AttendanceRecord>
   canEdit: boolean
@@ -250,7 +248,7 @@ function VolunteersTab({
       </div>
 
       <div className="space-y-6">
-        {roles.map((role) => {
+        {selectedDate.roles.map((role) => {
           const claimsForRole = slotClaims.filter(
             (c) =>
               c.volunteer_role_id === role.id && c.show_date_id === selectedDate.id && c.status === 'claimed'
@@ -406,7 +404,7 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
   )
 }
 
-function DatesTab({ showDates, todayCT }: { showDates: ShowDate[]; todayCT: string }) {
+function DatesTab({ showDates, todayCT }: { showDates: ShowDateWithRoles[]; todayCT: string }) {
   if (showDates.length === 0) {
     return <p className="text-sm text-mid-gray dark:text-dark-muted">No show dates scheduled.</p>
   }
@@ -619,7 +617,6 @@ export default function ShowDetail({
   show,
   season,
   showDates,
-  roles,
   slotClaims,
   attendance,
   showEditors,
@@ -629,8 +626,7 @@ export default function ShowDetail({
 }: {
   show: Show
   season: { id: string; name: string } | null
-  showDates: ShowDate[]
-  roles: ShowRole[]
+  showDates: ShowDateWithRoles[]
   slotClaims: SlotClaim[]
   attendance: Record<string, AttendanceRecord>
   showEditors: ShowEditor[]
@@ -643,6 +639,7 @@ export default function ShowDetail({
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
   const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+  const allRoles: ShowRole[] = showDates.flatMap((d) => d.roles)
 
   return (
     <div>
@@ -670,14 +667,13 @@ export default function ShowDetail({
         <VolunteersTab
           showId={show.id}
           showDates={showDates}
-          roles={roles}
           slotClaims={slotClaims}
           attendance={attendance}
           canEdit={canEdit}
           todayCT={todayCT}
         />
       )}
-      {activeTab === 'waitlist' && <WaitlistTab roles={roles} slotClaims={slotClaims} />}
+      {activeTab === 'waitlist' && <WaitlistTab roles={allRoles} slotClaims={slotClaims} />}
       {activeTab === 'dates' && <DatesTab showDates={showDates} todayCT={todayCT} />}
       {activeTab === 'settings' && (
         <SettingsTab show={show} showEditors={showEditors} allAdminUsers={allAdminUsers} canEdit={canEdit} />

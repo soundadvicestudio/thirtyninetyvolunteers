@@ -63,32 +63,33 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
 
   const showId = show.id as string
 
-  const { error: datesError } = await supabase.from('show_dates').insert(
-    value.dates.map((d) => ({
-      show_id: showId,
-      show_date: d.show_date,
-      show_time: d.show_time,
-    }))
-  )
-  if (datesError) {
-    console.error('createShow dates insert error:', datesError)
-    return {
-      error: 'The show was created, but dates failed to save. Edit the show to add dates.',
-    }
-  }
+  for (const d of value.dates) {
+    const { data: insertedDate, error: dateError } = await supabase
+      .from('show_dates')
+      .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time })
+      .select('id')
+      .single()
 
-  const { error: rolesError } = await supabase.from('volunteer_roles').insert(
-    value.roles.map((r) => ({
-      show_id: showId,
-      role_name: r.role_name,
-      slots_available: r.slots_available,
-      category_id: r.category_id || null,
-    }))
-  )
-  if (rolesError) {
-    console.error('createShow roles insert error:', rolesError)
-    return {
-      error: 'The show was created, but roles failed to save. Edit the show to add roles.',
+    if (dateError || !insertedDate) {
+      console.error('createShow date insert error:', dateError)
+      return {
+        error: 'The show was created, but dates failed to save. Edit the show to add dates.',
+      }
+    }
+
+    const { error: rolesError } = await supabase.from('volunteer_roles').insert(
+      d.roles.map((r) => ({
+        show_date_id: insertedDate.id,
+        role_name: r.role_name,
+        slots_available: r.slots_available,
+        category_id: r.category_id || null,
+      }))
+    )
+    if (rolesError) {
+      console.error('createShow roles insert error:', rolesError)
+      return {
+        error: 'The show was created, but roles failed to save. Edit the show to add roles.',
+      }
     }
   }
 
@@ -176,7 +177,7 @@ export async function updateShow(
     return { error: 'Something went wrong saving the show. Please try again.' }
   }
 
-  // DATES — reconcile
+  // DATES + ROLES — fetch existing state for reconciliation
   const { data: existingDateRows } = await supabase
     .from('show_dates')
     .select('id')
@@ -187,21 +188,63 @@ export async function updateShow(
     value.dates.filter((d) => d.dbId).map((d) => d.dbId as string)
   )
 
+  const existingDateIdList = [...existingDateIds]
+  const { data: existingRoleRows } =
+    existingDateIdList.length > 0
+      ? await supabase.from('volunteer_roles').select('id').in('show_date_id', existingDateIdList)
+      : { data: [] as { id: string }[] }
+
+  const existingRoleIds = new Set((existingRoleRows ?? []).map((r) => r.id as string))
+  const submittedRoleIds = new Set(
+    value.dates.flatMap((d) => d.roles.filter((r) => r.dbId).map((r) => r.dbId as string))
+  )
+
+  // DATES + ROLES — upsert (each date owns its own roles)
   for (const d of value.dates) {
+    let dateId: string
+
     if (d.dbId) {
+      dateId = d.dbId
       await supabase
         .from('show_dates')
         .update({ show_date: d.show_date, show_time: d.show_time })
-        .eq('id', d.dbId)
+        .eq('id', dateId)
     } else {
-      await supabase.from('show_dates').insert({
-        show_id: showId,
-        show_date: d.show_date,
-        show_time: d.show_time,
-      })
+      const { data: insertedDate, error: insertDateError } = await supabase
+        .from('show_dates')
+        .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time })
+        .select('id')
+        .single()
+
+      if (insertDateError || !insertedDate) {
+        console.error('updateShow date insert error:', insertDateError)
+        continue
+      }
+      dateId = insertedDate.id
+    }
+
+    for (const r of d.roles) {
+      if (r.dbId) {
+        await supabase
+          .from('volunteer_roles')
+          .update({
+            role_name: r.role_name,
+            slots_available: r.slots_available,
+            category_id: r.category_id || null,
+          })
+          .eq('id', r.dbId)
+      } else {
+        await supabase.from('volunteer_roles').insert({
+          show_date_id: dateId,
+          role_name: r.role_name,
+          slots_available: r.slots_available,
+          category_id: r.category_id || null,
+        })
+      }
     }
   }
 
+  // DATES — remove (cascades to that date's roles and any unclaimed slot_claims)
   const blockedDates: string[] = []
   const datesToRemove = [...existingDateIds].filter((id) => !submittedDateIds.has(id))
   for (const dateId of datesToRemove) {
@@ -219,37 +262,7 @@ export async function updateShow(
     await supabase.from('show_dates').delete().eq('id', dateId)
   }
 
-  // ROLES — reconcile
-  const { data: existingRoleRows } = await supabase
-    .from('volunteer_roles')
-    .select('id')
-    .eq('show_id', showId)
-
-  const existingRoleIds = new Set((existingRoleRows ?? []).map((r) => r.id as string))
-  const submittedRoleIds = new Set(
-    value.roles.filter((r) => r.dbId).map((r) => r.dbId as string)
-  )
-
-  for (const r of value.roles) {
-    if (r.dbId) {
-      await supabase
-        .from('volunteer_roles')
-        .update({
-          role_name: r.role_name,
-          slots_available: r.slots_available,
-          category_id: r.category_id || null,
-        })
-        .eq('id', r.dbId)
-    } else {
-      await supabase.from('volunteer_roles').insert({
-        show_id: showId,
-        role_name: r.role_name,
-        slots_available: r.slots_available,
-        category_id: r.category_id || null,
-      })
-    }
-  }
-
+  // ROLES — remove
   const blockedRoles: string[] = []
   const rolesToRemove = [...existingRoleIds].filter((id) => !submittedRoleIds.has(id))
   for (const roleId of rolesToRemove) {

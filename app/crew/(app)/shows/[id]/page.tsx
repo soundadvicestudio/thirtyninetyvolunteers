@@ -5,8 +5,7 @@ import { generateQR } from '@/lib/qr'
 import ShowDetail from '@/components/crew/shows/ShowDetail'
 import type {
   Show,
-  ShowDate,
-  ShowRole,
+  ShowDateWithRoles,
   SlotClaim,
   AttendanceRecord,
   ShowEditor,
@@ -16,6 +15,14 @@ import type {
 type RawShowEditorRow = {
   admin_id: string
   admin_users: { id: string; name: string; email: string; role: 'super_admin' | 'editor' | 'viewer' } | null
+}
+
+type RawDateRow = {
+  id: string
+  show_id: string
+  show_date: string
+  show_time: string
+  volunteer_roles: { id: string; category_id: string | null; role_name: string; slots_available: number }[] | null
 }
 
 export default async function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,40 +46,43 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     redirect('/crew/shows')
   }
 
-  const [
-    { data: dateRows },
-    { data: roleRows },
-    { data: editorRows },
-    { data: adminUserRows },
-    { data: settingsRows },
-  ] = await Promise.all([
-    supabase
-      .from('show_dates')
-      .select('id, show_id, show_date, show_time')
-      .eq('show_id', id)
-      .order('show_date', { ascending: true })
-      .order('show_time', { ascending: true }),
-    supabase
-      .from('volunteer_roles')
-      .select('id, show_id, category_id, role_name, slots_available')
-      .eq('show_id', id)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('show_editors')
-      .select('admin_id, admin_users ( id, name, email, role )')
-      .eq('show_id', id),
-    supabase
-      .from('admin_users')
-      .select('id, name, email, role')
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    supabase
-      .from('app_settings')
-      .select('key, value')
-      .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
-  ])
+  const [{ data: dateRows }, { data: editorRows }, { data: adminUserRows }, { data: settingsRows }] =
+    await Promise.all([
+      supabase
+        .from('show_dates')
+        .select(
+          `
+          id, show_id, show_date, show_time,
+          volunteer_roles ( id, category_id, role_name, slots_available )
+        `
+        )
+        .eq('show_id', id)
+        .order('show_date', { ascending: true })
+        .order('show_time', { ascending: true }),
+      supabase
+        .from('show_editors')
+        .select('admin_id, admin_users ( id, name, email, role )')
+        .eq('show_id', id),
+      supabase
+        .from('admin_users')
+        .select('id, name, email, role')
+        .eq('is_active', true)
+        .order('name', { ascending: true }),
+      supabase
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
+    ])
 
-  const roleIds = (roleRows ?? []).map((r) => r.id)
+  const showDates: ShowDateWithRoles[] = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => ({
+    id: d.id,
+    show_id: d.show_id,
+    show_date: d.show_date,
+    show_time: d.show_time,
+    roles: (d.volunteer_roles ?? []).map((r) => ({ ...r, show_date_id: d.id })),
+  }))
+
+  const roleIds = showDates.flatMap((d) => d.roles.map((r) => r.id))
 
   const [{ data: claimRows }, qr] = await Promise.all([
     roleIds.length > 0
@@ -123,8 +133,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     <ShowDetail
       show={show}
       season={seasonRow}
-      showDates={(dateRows ?? []) as ShowDate[]}
-      roles={(roleRows ?? []) as ShowRole[]}
+      showDates={showDates}
       slotClaims={(claimRows ?? []) as SlotClaim[]}
       attendance={attendanceByClaim}
       showEditors={showEditors}

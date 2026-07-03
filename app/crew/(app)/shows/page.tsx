@@ -12,9 +12,12 @@ type RawShowRow = {
   season_id: string | null
   created_at: string
   updated_at: string
-  volunteer_roles:
-    | { id: string; slots_available: number; slot_claims: { status: string }[] | null }[]
-    | null
+}
+
+type RawDateRow = {
+  show_id: string
+  show_date: string
+  volunteer_roles: { id: string; slots_available: number; slot_claims: { status: string }[] | null }[] | null
 }
 
 export default async function ShowsPage() {
@@ -32,38 +35,42 @@ export default async function ShowsPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('shows')
-      .select(
-        `
-        id, name, show_type, status, season_id, created_at, updated_at,
-        volunteer_roles (
-          id,
-          slots_available,
-          slot_claims ( status )
-        )
-      `
-      )
+      .select('id, name, show_type, status, season_id, created_at, updated_at')
       .order('created_at', { ascending: false }),
-    supabase.from('show_dates').select('show_id, show_date'),
+    supabase.from('show_dates').select(
+      `
+      show_id, show_date,
+      volunteer_roles ( id, slots_available, slot_claims ( status ) )
+    `
+    ),
   ])
 
   const dateRangeByShow = new Map<string, { earliest: string; latest: string }>()
-  for (const d of dateRows ?? []) {
-    const existing = dateRangeByShow.get(d.show_id)
-    if (!existing) {
+  const staffingByShow = new Map<string, { total: number; filled: number }>()
+
+  for (const d of (dateRows ?? []) as unknown as RawDateRow[]) {
+    const existingRange = dateRangeByShow.get(d.show_id)
+    if (!existingRange) {
       dateRangeByShow.set(d.show_id, { earliest: d.show_date, latest: d.show_date })
     } else {
-      if (d.show_date < existing.earliest) existing.earliest = d.show_date
-      if (d.show_date > existing.latest) existing.latest = d.show_date
+      if (d.show_date < existingRange.earliest) existingRange.earliest = d.show_date
+      if (d.show_date > existingRange.latest) existingRange.latest = d.show_date
     }
-  }
 
-  const shows: ShowWithStaffing[] = ((showRows ?? []) as unknown as RawShowRow[]).map((row) => {
-    const roles = row.volunteer_roles ?? []
-    const total_slots = roles.reduce((sum, r) => sum + r.slots_available, 0)
-    const filled_slots = roles.reduce(
+    const roles = d.volunteer_roles ?? []
+    const dateTotal = roles.reduce((sum, r) => sum + r.slots_available, 0)
+    const dateFilled = roles.reduce(
       (sum, r) => sum + (r.slot_claims ?? []).filter((c) => c.status === 'claimed').length,
       0
     )
+    const existingStaffing = staffingByShow.get(d.show_id) ?? { total: 0, filled: 0 }
+    existingStaffing.total += dateTotal
+    existingStaffing.filled += dateFilled
+    staffingByShow.set(d.show_id, existingStaffing)
+  }
+
+  const shows: ShowWithStaffing[] = ((showRows ?? []) as unknown as RawShowRow[]).map((row) => {
+    const staffing = staffingByShow.get(row.id) ?? { total: 0, filled: 0 }
     const range = dateRangeByShow.get(row.id)
     return {
       id: row.id,
@@ -73,8 +80,8 @@ export default async function ShowsPage() {
       season_id: row.season_id,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      total_slots,
-      filled_slots,
+      total_slots: staffing.total,
+      filled_slots: staffing.filled,
       earliest_date: range?.earliest ?? null,
       latest_date: range?.latest ?? null,
     }

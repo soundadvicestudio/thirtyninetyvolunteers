@@ -3,7 +3,15 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import ShowForm from '@/components/crew/shows/ShowForm'
-import type { Show, ShowDate, ShowRole } from '@/types/show'
+import type { Show, ShowDateWithRoles } from '@/types/show'
+
+type RawDateRow = {
+  id: string
+  show_id: string
+  show_date: string
+  show_time: string
+  volunteer_roles: { id: string; category_id: string | null; role_name: string; slots_available: number }[] | null
+}
 
 export default async function EditShowPage({
   params,
@@ -51,37 +59,43 @@ export default async function EditShowPage({
     one_off: Number(settingsMap.get('default_hours_one_off') ?? 2),
   }
 
-  const [{ data: showRow }, { data: dateRows }, { data: roleRows }, { data: editorRows }] =
-    await Promise.all([
-      supabase
-        .from('shows')
-        .select(
-          'id, season_id, name, show_type, description, status, volunteer_instructions, default_hours, created_at, updated_at'
-        )
-        .eq('id', id)
-        .maybeSingle(),
-      supabase
-        .from('show_dates')
-        .select('id, show_id, show_date, show_time')
-        .eq('show_id', id)
-        .order('show_date', { ascending: true })
-        .order('show_time', { ascending: true }),
-      supabase
-        .from('volunteer_roles')
-        .select('id, show_id, category_id, role_name, slots_available')
-        .eq('show_id', id)
-        .order('created_at', { ascending: true }),
-      supabase.from('show_editors').select('admin_id').eq('show_id', id),
-    ])
+  const [{ data: showRow }, { data: dateRows }, { data: editorRows }] = await Promise.all([
+    supabase
+      .from('shows')
+      .select(
+        'id, season_id, name, show_type, description, status, volunteer_instructions, default_hours, created_at, updated_at'
+      )
+      .eq('id', id)
+      .maybeSingle(),
+    supabase
+      .from('show_dates')
+      .select(
+        `
+        id, show_id, show_date, show_time,
+        volunteer_roles ( id, category_id, role_name, slots_available )
+      `
+      )
+      .eq('show_id', id)
+      .order('show_date', { ascending: true })
+      .order('show_time', { ascending: true }),
+    supabase.from('show_editors').select('admin_id').eq('show_id', id),
+  ])
 
   if (!showRow) {
     redirect('/crew/shows')
   }
 
+  const dates: ShowDateWithRoles[] = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => ({
+    id: d.id,
+    show_id: d.show_id,
+    show_date: d.show_date,
+    show_time: d.show_time,
+    roles: (d.volunteer_roles ?? []).map((r) => ({ ...r, show_date_id: d.id })),
+  }))
+
   const show = {
     ...(showRow as Show),
-    dates: (dateRows ?? []) as ShowDate[],
-    roles: (roleRows ?? []) as ShowRole[],
+    dates,
     editorIds: (editorRows ?? []).map((e) => e.admin_id as string),
   }
 

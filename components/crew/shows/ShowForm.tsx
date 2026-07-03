@@ -1,7 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useFieldArray, type Resolver } from 'react-hook-form'
+import {
+  useForm,
+  useFieldArray,
+  useWatch,
+  type Resolver,
+  type Control,
+  type UseFormRegister,
+  type FieldErrors,
+} from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash2 } from 'lucide-react'
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
@@ -22,7 +30,7 @@ import {
   type ShowFormValues,
 } from '@/lib/validations/show'
 import type { ShowSubmitPayload } from '@/lib/validations/show'
-import type { Show, ShowDate, ShowRole, ShowStatus } from '@/types/show'
+import type { Show, ShowDateWithRoles, ShowStatus } from '@/types/show'
 
 const DATE_BLOCKED_MESSAGE =
   'This show date has active claims and cannot be removed. Cancel existing claims first.'
@@ -33,6 +41,8 @@ const inputClasses =
   'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 const errorClasses = 'mt-1 text-sm text-orange'
+
+const BLANK_ROLE = { dbId: null, role_name: '', category_id: NO_CATEGORY, slots_available: '1' }
 
 function buildPayload(data: ShowFormValues, status: 'draft' | 'live'): ShowSubmitPayload {
   const isNewSeason = data.seasonId === NEW_SEASON
@@ -51,20 +61,195 @@ function buildPayload(data: ShowFormValues, status: 'draft' | 'live'): ShowSubmi
       dbId: d.dbId,
       show_date: d.show_date,
       show_time: d.show_time,
-    })),
-    roles: data.roles.map((r) => ({
-      dbId: r.dbId,
-      role_name: r.role_name.trim(),
-      category_id: r.category_id || null,
-      slots_available: r.slots_available.trim() === '' ? 0 : Number(r.slots_available),
+      roles: d.roles.map((r) => ({
+        dbId: r.dbId,
+        role_name: r.role_name.trim(),
+        category_id: r.category_id || null,
+        slots_available: r.slots_available.trim() === '' ? 0 : Number(r.slots_available),
+      })),
     })),
     editorIds: data.editorIds,
   }
 }
 
 function hasZeroSlotRole(data: ShowFormValues): boolean {
-  return data.roles.some(
-    (r) => r.slots_available.trim() === '' || Number(r.slots_available) === 0
+  return data.dates.some((d) =>
+    d.roles.some((r) => r.slots_available.trim() === '' || Number(r.slots_available) === 0)
+  )
+}
+
+function DateRow({
+  control,
+  register,
+  errors,
+  dateIndex,
+  dateField,
+  onRemoveDate,
+  canRemoveDate,
+  categories,
+  blockedDateIds,
+  blockedRoleIds,
+}: {
+  control: Control<ShowFormValues>
+  register: UseFormRegister<ShowFormValues>
+  errors: FieldErrors<ShowFormValues>
+  dateIndex: number
+  dateField: { id: string; dbId: string | null }
+  onRemoveDate: () => void
+  canRemoveDate: boolean
+  categories: { id: string; name: string }[]
+  blockedDateIds: string[]
+  blockedRoleIds: string[]
+}) {
+  const { fields: roleFields, append: appendRole, remove: removeRole } = useFieldArray({
+    control,
+    name: `dates.${dateIndex}.roles`,
+  })
+
+  // Always call the hook at a stable path; the copy affordance is gated
+  // on dateIndex > 0 separately, so watching our own roles when
+  // dateIndex === 0 is harmless (its value is simply never used).
+  const previousDateRoles = useWatch({
+    control,
+    name: `dates.${Math.max(dateIndex - 1, 0)}.roles`,
+  })
+  const canCopyFromPrevious = dateIndex > 0 && Array.isArray(previousDateRoles) && previousDateRoles.length > 0
+
+  function handleCopyFromPrevious() {
+    if (!Array.isArray(previousDateRoles)) return
+    for (const r of previousDateRoles) {
+      appendRole({
+        dbId: null,
+        role_name: r.role_name,
+        category_id: r.category_id,
+        slots_available: r.slots_available,
+      })
+    }
+  }
+
+  const dateWarning =
+    dateField.dbId && blockedDateIds.includes(dateField.dbId) ? DATE_BLOCKED_MESSAGE : null
+  const dateErrors = errors.dates?.[dateIndex]
+  const rolesArrayError = dateErrors?.roles?.message
+
+  return (
+    <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="flex-1">
+          <label className={labelClasses}>
+            Date<span className="text-orange ml-0.5">*</span>
+          </label>
+          <input type="date" className={inputClasses} {...register(`dates.${dateIndex}.show_date`)} />
+          {dateErrors?.show_date && <p className={errorClasses}>{dateErrors.show_date.message}</p>}
+        </div>
+        <div className="flex-1">
+          <label className={labelClasses}>
+            Time<span className="text-orange ml-0.5">*</span>
+          </label>
+          <input type="time" className={inputClasses} {...register(`dates.${dateIndex}.show_time`)} />
+          {dateErrors?.show_time && <p className={errorClasses}>{dateErrors.show_time.message}</p>}
+        </div>
+        <button
+          type="button"
+          onClick={onRemoveDate}
+          disabled={!canRemoveDate}
+          aria-label="Remove date"
+          className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+      {dateWarning && <p className="text-sm text-orange">{dateWarning}</p>}
+
+      <div className="border-t border-divider dark:border-dark-border pt-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h4 className="text-sm font-bold text-dark dark:text-dark-text">Roles for this date</h4>
+          {canCopyFromPrevious && (
+            <button
+              type="button"
+              onClick={handleCopyFromPrevious}
+              className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+            >
+              Copy roles from previous date
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {roleFields.map((roleField, roleIndex) => {
+            const roleWarning =
+              roleField.dbId && blockedRoleIds.includes(roleField.dbId) ? ROLE_BLOCKED_MESSAGE : null
+            const roleErrors = dateErrors?.roles?.[roleIndex]
+            return (
+              <div key={roleField.id} className="bg-light-navy/30 dark:bg-dark-bg/40 rounded-lg p-3">
+                <div className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1fr_auto] gap-3 sm:items-end">
+                  <div>
+                    <label className={labelClasses}>
+                      Role Name<span className="text-orange ml-0.5">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className={inputClasses}
+                      {...register(`dates.${dateIndex}.roles.${roleIndex}.role_name`)}
+                    />
+                    {roleErrors?.role_name && (
+                      <p className={errorClasses}>{roleErrors.role_name.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Category</label>
+                    <select
+                      className={inputClasses}
+                      {...register(`dates.${dateIndex}.roles.${roleIndex}.category_id`)}
+                    >
+                      <option value={NO_CATEGORY}>No category</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>
+                      Slots<span className="text-orange ml-0.5">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className={inputClasses}
+                      {...register(`dates.${dateIndex}.roles.${roleIndex}.slots_available`)}
+                    />
+                    {roleErrors?.slots_available && (
+                      <p className={errorClasses}>{roleErrors.slots_available.message}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeRole(roleIndex)}
+                    disabled={roleFields.length === 1}
+                    aria-label="Remove role"
+                    className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                {roleWarning && <p className="text-sm text-orange mt-2">{roleWarning}</p>}
+              </div>
+            )
+          })}
+        </div>
+        {typeof rolesArrayError === 'string' && <p className={errorClasses}>{rolesArrayError}</p>}
+        <button
+          type="button"
+          onClick={() => appendRole({ ...BLANK_ROLE })}
+          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+        >
+          ＋ Add Role for This Date
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -81,7 +266,7 @@ export default function ShowForm({
   adminUsers: { id: string; name: string; email: string }[]
   categories: { id: string; name: string }[]
   defaultHours: { mainstage: number; studio_x: number; one_off: number }
-  show?: Show & { dates: ShowDate[]; roles: ShowRole[]; editorIds: string[] }
+  show?: Show & { dates: ShowDateWithRoles[]; editorIds: string[] }
   blockedDateIds?: string[]
   blockedRoleIds?: string[]
 }) {
@@ -112,16 +297,16 @@ export default function ShowForm({
             dbId: d.id,
             show_date: d.show_date,
             show_time: d.show_time.slice(0, 5),
+            roles: d.roles.length
+              ? d.roles.map((r) => ({
+                  dbId: r.id,
+                  role_name: r.role_name,
+                  category_id: r.category_id ?? NO_CATEGORY,
+                  slots_available: String(r.slots_available),
+                }))
+              : [{ ...BLANK_ROLE }],
           }))
-        : [{ dbId: null, show_date: '', show_time: '' }],
-      roles: show?.roles?.length
-        ? show.roles.map((r) => ({
-            dbId: r.id,
-            role_name: r.role_name,
-            category_id: r.category_id ?? NO_CATEGORY,
-            slots_available: String(r.slots_available),
-          }))
-        : [{ dbId: null, role_name: '', category_id: NO_CATEGORY, slots_available: '1' }],
+        : [{ dbId: null, show_date: '', show_time: '', roles: [{ ...BLANK_ROLE }] }],
       editorIds: show?.editorIds ?? [],
     },
   })
@@ -129,10 +314,6 @@ export default function ShowForm({
   const { fields: dateFields, append: appendDate, remove: removeDate } = useFieldArray({
     control,
     name: 'dates',
-  })
-  const { fields: roleFields, append: appendRole, remove: removeRole } = useFieldArray({
-    control,
-    name: 'roles',
   })
 
   const [status, setStatus] = useState<ShowStatus>(show?.status ?? 'draft')
@@ -344,150 +525,35 @@ export default function ShowForm({
       </div>
 
       <section>
-        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Show Dates</h2>
-        <div className="space-y-3">
-          {dateFields.map((field, index) => {
-            const warning = field.dbId && blockedDateIds.includes(field.dbId) ? DATE_BLOCKED_MESSAGE : null
-            return (
-              <div
-                key={field.id}
-                className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-3"
-              >
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                  <div className="flex-1">
-                    <label className={labelClasses}>
-                      Date<span className="text-orange ml-0.5">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      className={inputClasses}
-                      {...register(`dates.${index}.show_date`)}
-                    />
-                    {errors.dates?.[index]?.show_date && (
-                      <p className={errorClasses}>{errors.dates[index]?.show_date?.message}</p>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <label className={labelClasses}>
-                      Time<span className="text-orange ml-0.5">*</span>
-                    </label>
-                    <input
-                      type="time"
-                      className={inputClasses}
-                      {...register(`dates.${index}.show_time`)}
-                    />
-                    {errors.dates?.[index]?.show_time && (
-                      <p className={errorClasses}>{errors.dates[index]?.show_time?.message}</p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeDate(index)}
-                    disabled={dateFields.length === 1}
-                    aria-label="Remove date"
-                    className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                {warning && <p className="text-sm text-orange mt-2">{warning}</p>}
-              </div>
-            )
-          })}
+        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Show Dates &amp; Roles</h2>
+        <div className="space-y-4">
+          {dateFields.map((field, index) => (
+            <DateRow
+              key={field.id}
+              control={control}
+              register={register}
+              errors={errors}
+              dateIndex={index}
+              dateField={field}
+              onRemoveDate={() => removeDate(index)}
+              canRemoveDate={dateFields.length > 1}
+              categories={categories}
+              blockedDateIds={blockedDateIds}
+              blockedRoleIds={blockedRoleIds}
+            />
+          ))}
         </div>
         {typeof errors.dates?.message === 'string' && (
           <p className={errorClasses}>{errors.dates.message}</p>
         )}
         <button
           type="button"
-          onClick={() => appendDate({ dbId: null, show_date: '', show_time: '' })}
-          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline"
+          onClick={() =>
+            appendDate({ dbId: null, show_date: '', show_time: '', roles: [{ ...BLANK_ROLE }] })
+          }
+          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
         >
           ＋ Add Date
-        </button>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Volunteer Roles</h2>
-        <div className="space-y-3">
-          {roleFields.map((field, index) => {
-            const warning = field.dbId && blockedRoleIds.includes(field.dbId) ? ROLE_BLOCKED_MESSAGE : null
-            return (
-              <div
-                key={field.id}
-                className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-3"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1fr_auto] gap-3 sm:items-end">
-                  <div>
-                    <label className={labelClasses}>
-                      Role Name<span className="text-orange ml-0.5">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={inputClasses}
-                      {...register(`roles.${index}.role_name`)}
-                    />
-                    {errors.roles?.[index]?.role_name && (
-                      <p className={errorClasses}>{errors.roles[index]?.role_name?.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className={labelClasses}>Category</label>
-                    <select
-                      className={inputClasses}
-                      {...register(`roles.${index}.category_id`)}
-                    >
-                      <option value={NO_CATEGORY}>No category</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClasses}>
-                      Slots<span className="text-orange ml-0.5">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      className={inputClasses}
-                      {...register(`roles.${index}.slots_available`)}
-                    />
-                    {errors.roles?.[index]?.slots_available && (
-                      <p className={errorClasses}>
-                        {errors.roles[index]?.slots_available?.message}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeRole(index)}
-                    disabled={roleFields.length === 1}
-                    aria-label="Remove role"
-                    className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                {warning && <p className="text-sm text-orange mt-2">{warning}</p>}
-              </div>
-            )
-          })}
-        </div>
-        {typeof errors.roles?.message === 'string' && (
-          <p className={errorClasses}>{errors.roles.message}</p>
-        )}
-        <button
-          type="button"
-          onClick={() =>
-            appendRole({ dbId: null, role_name: '', category_id: NO_CATEGORY, slots_available: '1' })
-          }
-          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline"
-        >
-          ＋ Add Role
         </button>
       </section>
 

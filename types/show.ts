@@ -23,11 +23,13 @@ export type ShowDate = {
 
 export type ShowRole = {
   id: string
-  show_id: string
+  show_date_id: string
   category_id: string | null
   role_name: string
   slots_available: number
 }
+
+export type ShowDateWithRoles = ShowDate & { roles: ShowRole[] }
 
 export type Season = {
   id: string
