@@ -1,5 +1,5 @@
 import { Calendar } from 'lucide-react'
-import { formatCT } from '@/lib/utils/date'
+import { formatWallClockCT } from '@/lib/utils/date'
 
 type CallHistoryRow = {
   id: string
@@ -52,7 +52,7 @@ export default function CallHistoryTable({ calls }: { calls: CallHistoryRow[] })
             >
               <td className="px-4 py-3 text-dark dark:text-dark-text">{call.show_name}</td>
               <td className="px-4 py-3 text-dark dark:text-dark-text">
-                {call.show_date ? formatCT(call.show_date, 'MMM d, yyyy') : '—'}
+                {call.show_date ? formatWallClockCT(call.show_date, null, 'MMM d, yyyy') : '—'}
               </td>
               <td className="px-4 py-3 text-dark dark:text-dark-text">{call.role_name}</td>
               <td className="px-4 py-3">

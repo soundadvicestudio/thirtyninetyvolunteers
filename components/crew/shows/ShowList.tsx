@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
-import { formatCT } from '@/lib/utils/date'
+import { formatWallClockCT } from '@/lib/utils/date'
 import { createSeason, toggleShowStatus } from '@/lib/actions/shows'
 import {
   SHOW_TYPE_LABEL as TYPE_LABEL,
@@ -26,14 +26,14 @@ const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text 
 function formatDateRange(earliest: string | null, latest: string | null): string | null {
   if (!earliest || !latest) return null
   if (earliest === latest) {
-    return formatCT(earliest, 'MMM d, yyyy')
+    return formatWallClockCT(earliest, null, 'MMM d, yyyy')
   }
-  const earliestYear = formatCT(earliest, 'yyyy')
-  const latestYear = formatCT(latest, 'yyyy')
+  const earliestYear = formatWallClockCT(earliest, null, 'yyyy')
+  const latestYear = formatWallClockCT(latest, null, 'yyyy')
   if (earliestYear === latestYear) {
-    return `${formatCT(earliest, 'MMM d')} – ${formatCT(latest, 'MMM d, yyyy')}`
+    return `${formatWallClockCT(earliest, null, 'MMM d')} – ${formatWallClockCT(latest, null, 'MMM d, yyyy')}`
   }
-  return `${formatCT(earliest, 'MMM d, yyyy')} – ${formatCT(latest, 'MMM d, yyyy')}`
+  return `${formatWallClockCT(earliest, null, 'MMM d, yyyy')} – ${formatWallClockCT(latest, null, 'MMM d, yyyy')}`
 }
 
 function staffingDisplay(show: ShowWithStaffing): { label: string; className: string } {
