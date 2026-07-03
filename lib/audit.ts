@@ -28,6 +28,8 @@ export type AuditAction =
   | 'opportunity.archive'
   | 'opportunity.submission'
   | 'slot_claim.cancel'
+  | 'form.create'
+  | 'form.update'
 
 export async function logAction(
   adminId: string | null,
