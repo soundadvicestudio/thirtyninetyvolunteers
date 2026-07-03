@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.4 (Phase 4 complete, Admin prompts through ADMIN.12 complete)
+### Created: July 2026 | Last Updated: July 2026 — v1.5 (Phase 5 complete)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phase 4 complete (ADMIN.1 through ADMIN.12 ✓), Phase 5 pending
+**Current phase:** Alpha build in progress — Phase 5 complete (30BN-5.1 through 30BN-5.3 ✓), Phase 6 pending
 
 ---
 
@@ -102,9 +102,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Supabase anon/public key (safe for client)
 SUPABASE_SERVICE_ROLE_KEY=       # Service role key — NEVER expose client-side
 RESEND_API_KEY=                  # Resend API key (Alpha: sandbox key)
 NEXT_PUBLIC_SITE_URL=            # Full site URL (http://localhost:3000 locally; Vercel URL on deploy)
+CRON_SECRET=                     # Secret for Vercel Cron Job auth — must match vercel.json cron route
 ```
 
-**Pre-deploy checklist:** Confirm all five are set in Vercel → Settings → Environment Variables before every deployment. A missing variable will not fail the build but WILL cause auth failures or email failures at runtime.
+**Pre-deploy checklist:** Confirm all six are set in Vercel → Settings → Environment Variables before every deployment. A missing variable will not fail the build but WILL cause auth failures, email failures, or cron failures at runtime.
 
 ---
 
@@ -233,13 +234,18 @@ Mid Gray:             #555555  --color-mid-gray
 - Waitlist option appears when a role is fully claimed
 - Claim form: Name, Email, Phone (pre-fill if email/phone found in DB)
 - On claim:
-  - Same show/same date duplicate → friendly non-discouraging confirmation prompt
+  - Same role + same date duplicate (same email/phone) → reassurance message inline; no second insert
+  - Different date of same show (same email/phone) → friendly cross-date heads-up prompt with Confirm / No thanks; Confirm proceeds to insert a second claim for the new date
   - Success → insert `slot_claims`, send confirmation email with custom show instructions
   - Full → insert as waitlisted, send waitlist confirmation
-- Self-cancel: tokenized link in confirmation email → cancel page → cancels claim
-  - Cancellation: reopens slot (or promotes next waitlisted volunteer)
-  - Immediate email to all `show_editors` for that show
-  - If waitlist promoted: sends new confirmation + schedules 24hr reminder
+- `submitClaim()` in `lib/actions/claims.ts` accepts an optional `force: boolean` flag; when true, skips the cross-date duplicate check (used when volunteer confirms the cross-date prompt)
+- Self-cancel: tokenized link in confirmation email → `/cancel?token=[claim_token]`
+  - Cancel page (`app/cancel/page.tsx`): shows claim details (show, date, role, name) + email confirmation input. Volunteer must confirm their email before cancellation proceeds.
+  - On confirm: set `slot_claims.status = 'cancelled'`, `cancelled_at = now()`
+  - Waitlist promotion (claimed cancellations only): promotes next waitlisted volunteer, renumbers remaining positions, sends promotion email
+  - Waitlisted cancellations: renumbers remaining positions only; no editor notification, no promotion
+  - Editor notification: all `show_editors` for the show receive a cancellation email (claimed cancellations only; skipped silently if no editors assigned)
+  - 24hr reminder is handled by the Vercel Cron Job — promoted claims are picked up automatically on the next cron run
 
 ### Public — Volunteer Call Board (`/callboard`)
 - Passwordless login: enter email or phone → receive magic link email
@@ -341,12 +347,16 @@ Mid Gray:             #555555  --color-mid-gray
 
 **Category-Match Notifications (30BN-5.3):**
 - When a show is published (status → live), the system can notify all volunteers who have selected a matching category/role.
-- One email per volunteer per show regardless of how many roles match (deduplicated before send).
-- Send Notifications toggle at publish time.
-- Manual trigger available after publication.
-- No auto-fire on republish unless explicitly confirmed via warning prompt (only if notifications were previously sent for that show).
-- Notification email includes a general link to `/shows` (not a specific show URL).
-- Uses `resend.batch.send()` per R8.
+- One email per volunteer per show regardless of how many roles match (deduplicated by the `get_show_notification_targets()` RPC via GROUP BY — see §9).
+- Notification state tracked via `shows.notifications_sent_at` (nullable timestamptz — null = never sent, non-null = timestamp of most recent send).
+- Send Notifications toggle at publish time: checked by default on first publish (notifications_sent_at null), unchecked by default on republish (notifications_sent_at non-null).
+- Republish guard: if notifications_sent_at is non-null and toggle is checked, an inline warning appears before sending.
+- Show form (new/edit): toggle appears near "Save & Publish" button, only when status = 'live'.
+- Settings tab (show detail): selecting 'live' reveals an inline panel with toggle + confirm/cancel before committing the status change.
+- Manual trigger on Overview tab (Editor/Super Admin only, live shows only): "Send Notifications" button (first send) or "Send Again" with inline confirm (repeat send). Shows "Notifications last sent [formatCT(notifications_sent_at)]" after first send.
+- Notification email links to `/shows` (not a specific show URL). Subject: "Volunteer opportunity — [show name]".
+- Uses `resend.batch.send()` in chunks of 100 per R8.
+- `sendShowNotifications()` in `lib/actions/shows.ts` uses `getServerClient()` (admin-authenticated context).
 
 **Staffing Dashboard (`/crew/dashboard`):** See Dashboard above.
 
@@ -434,7 +444,19 @@ Restructures `volunteer_roles`: replaces `show_id` FK with `show_date_id` FK (re
 **Migration 007 status:** Applied — `007_activity_feed.sql`
 Adds `activity_cleared_at timestamptz` (nullable) to `admin_users`. Creates `get_activity_feed(p_limit, p_offset)` SECURITY DEFINER RPC function: UNIONs volunteer signups, slot claims, slot cancellations, and opportunity submissions into a unified chronological event feed. Granted to authenticated role.
 
-**Next migration:** 008
+**Migration 008 status:** Applied — `008_show_notifications.sql`
+Adds `notifications_sent_at timestamptz` (nullable) to `shows`. Creates
+`get_show_notification_targets(p_show_id uuid)` SECURITY DEFINER RPC function:
+joins `volunteers → volunteer_category_assignments → volunteer_roles → show_dates`
+to return matching volunteer id, full_name, email, and aggregated matching role
+names for a given show. Granted to `authenticated` role only.
+**Security note:** EXECUTE explicitly revoked from PUBLIC and anon roles after
+creation (PostgreSQL grants EXECUTE to PUBLIC by default on new functions;
+without this REVOKE, the anon role could call SECURITY DEFINER functions via
+PostgREST and bypass RLS entirely). This REVOKE pattern is now a standing rule
+(R28) and must be applied to all future SECURITY DEFINER functions.
+
+**Next migration:** 009
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -521,10 +543,14 @@ status           text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','live',
 volunteer_instructions text
 check_in_token   uuid DEFAULT gen_random_uuid()
 default_hours    numeric(4,2)
+notifications_sent_at timestamptz
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_shows_season_id, idx_shows_status
 -- Trigger: trg_shows_updated_at
+-- NOTE: notifications_sent_at added in Migration 008.
+-- Null = notifications never sent; non-null = timestamp
+-- of most recent category-match notification send.
 ```
 
 ### show_dates
@@ -1028,15 +1054,17 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 30BN-ADMIN.10  ✓ Season display fix + opportunity submission audit log
 30BN-ADMIN.11  ✓ Roles-per-date schema fix (Migration 006)
 30BN-ADMIN.12  ✓ Activity feed with pagination and per-user read state (Migration 007)
-30BN-DOC.5     ✓ Brief Update v1.4 (this prompt)
-30BN-DOC.6     ⏳ Process Update v1.4 (next prompt)
+30BN-DOC.5     ✓ Brief Update v1.4
+30BN-DOC.6     ✓ Process Update v1.4
+30BN-DOC.7     ✓ Brief Update v1.5 (Phase 5)
+30BN-DOC.8     ⏳ Process Update v1.5 (next prompt)
 ```
 
 ---
 
-### Phase 5 — Public Show Claiming
+### Phase 5 — Public Show Claiming ✓ Complete
 
-**30BN-5.1 — Public Show Listing & Per-Show Claiming Page**
+**30BN-5.1 — Public Show Listing & Per-Show Page ✓**
 - `/shows`: all live shows with ≥1 open slot, mobile-first, branded
 - `/shows/[id]`: show detail, all dates/times, all roles with open slot counts, waitlist indicator when full
 - Claiming form: Name, Email, Phone. Pre-fill if email/phone found in `volunteers`.
@@ -1044,39 +1072,26 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 - Each show page has a standalone public URL — works independently for non-DB volunteers and rental productions
 - Quality gate: only live shows with open slots appear; full roles show waitlist; closed shows redirect to `/shows` with friendly message
 
-**30BN-5.2 — Slot Claiming Logic & Self-Cancel**
+**30BN-5.2 — Slot Claiming Logic & Self-Cancel ✓**
 Claim flow:
-- Check for existing active claim by same email/phone for same show_date_id + volunteer_role_id
-- If exists: friendly duplicate prompt ("You're already signed up for this show on [date] — did you mean to sign up again?") — Confirm / Cancel
-- If no conflict: insert `slot_claims` (status: 'claimed')
-- If role full: insert as 'waitlisted' (assign `waitlist_position`)
-- On claim: send confirmation email including `volunteer_instructions` from show record
-- On waitlist: send waitlist confirmation email
+- Two-tier duplicate detection: (A) same role + same date → reassurance, no insert; (B) different date of same show → cross-date heads-up prompt, Confirm proceeds to insert. Both checked by email ILIKE and phone. `force: boolean` param on `submitClaim()` skips check B when volunteer confirms.
+- Slot availability computed server-side (never trusts client `isWaitlist` hint). Counts only `status = 'claimed'` records.
+- Volunteer match: sequential email-then-phone lookup sets `slot_claims.volunteer_id` FK if found.
+- On claim: insert `slot_claims` (status: 'claimed'), send `sendSlotClaimEmail()` with `volunteer_instructions` and cancel URL.
+- On full: insert as 'waitlisted' (assign `waitlist_position`), send `sendWaitlistConfirmationEmail()`.
+- Cancel flow: `/cancel?token=[claim_token]` → email verification → cancel → waitlist promotion + renumber → editor notification (claimed cancellations only). See §8 Per-Show Claiming Page.
+- 24hr reminder: Vercel Cron Job at `0 5 * * *` (5 AM UTC = midnight CT) via `app/api/cron/reminders/route.ts`. Queries claims where `show_date = CURRENT_DATE + 1` and `status = 'claimed'`. Batch sends via `resend.batch.send()` in chunks of 100. Route secured by `CRON_SECRET` Bearer token.
+- `vercel.json` at repo root configures the cron schedule.
+- New email functions: `sendSlotClaimEmail`, `sendWaitlistConfirmationEmail`, `sendWaitlistPromotionEmail`, `sendCancellationEditorNotificationEmail`, `sendReminderEmail` (+ `buildReminderEmailPayload` helper for batch use).
+- `cancelClaim()` added to `lib/actions/claims.ts`. `slot_claim.cancel` added to AuditAction union.
+- **Implementation note (Q1):** Waitlist renumbering uses sequential per-row JS updates (supabase-js has no expression-based col = col - 1 update). Correct for realistic waitlist sizes; candidate for a Postgres function in Phase 12 if concurrent cancellations become a concern.
 
-Cancel flow:
-- Tokenized cancel link in confirmation email: `/cancel?token=[claim_token]`
-- Cancel page: show claim details, email confirmation input, confirm button
-- On confirm: set `slot_claims.status = 'cancelled'`, `cancelled_at = now()`
-- Check for next waitlisted volunteer for same role/date:
-  - If exists: update their status to 'claimed', send new confirmation email + schedule 24hr reminder
-  - If not: slot simply reopens
-- Send cancellation notification to all `show_editors` for that show (via Resend)
-
-24hr reminder:
-- Vercel Cron Job (daily): query `slot_claims` for show_dates in next 24 hours, status = 'claimed'
-- Send reminder email to each volunteer
-- Log in `email_log` (recipient_type: 'transactional')
-
-Quality gate: claim inserts correctly; duplicate warning fires; waitlist promotes on cancel; editor notification sends; 24hr cron verified in Vercel logs
-
-**30BN-5.3 — Category-Match Notification Emails**
-- When a show is published (status → live), notify all volunteers who have selected a matching category/role, per §8
-- One email per volunteer per show regardless of how many roles match (deduplicated before send)
-- Send Notifications toggle at publish time; manual trigger available after publication
-- No auto-fire on republish unless explicitly confirmed via warning prompt (only if notifications were previously sent for that show)
-- Notification email includes a general link to `/shows` (not a specific show URL)
-- Uses `resend.batch.send()` per R8
-- Quality gate: publishing with toggle on sends exactly one email per matching volunteer; republish does not silently resend; manual trigger works; email_log records the send
+**30BN-5.3 — Category-Match Notification Emails ✓**
+- `get_show_notification_targets(p_show_id uuid)` SECURITY DEFINER RPC (Migration 008) returns deduplicated volunteers with matching role names; EXECUTE revoked from PUBLIC and anon (R28).
+- `sendShowNotifications(showId)` in `lib/actions/shows.ts` uses `getServerClient()` (admin session context). Calls RPC, batch-sends via `buildCategoryMatchNotificationPayload` + `resend.batch.send()` in chunks of 100, updates `shows.notifications_sent_at` after send, logs to `email_log`.
+- UI surfaces: show form toggle (near Save & Publish), Settings tab inline panel on live transition, Overview tab NotificationsSection (manual trigger with confirm step for repeat sends).
+- `notifications_sent_at` (timestamptz on `shows`) tracks send state. See §9.
+- `types/show.ts` updated with `notifications_sent_at: string | null`.
 
 ---
 
@@ -1204,6 +1219,13 @@ Wire audit logging throughout the app and build the read-only viewer.
 
 ### Phase 12 — Polish, Mobile & Performance
 
+**Planned admin prompts:**
+- `30BN-ADMIN.13` ⏳ Security fix — REVOKE EXECUTE on `get_activity_feed()`
+  from PUBLIC and anon roles (Migration 009). Same
+  vulnerability class as caught and fixed in 5.3 for
+  `get_show_notification_targets()`. Must run before
+  Phase 6 ships.
+
 **Deferred polish items (added since v1.2):**
 - Mobile sidebar (collapsible/hamburger for PWA on phone-sized screens)
 - PDF export column for `requires_service_hours`
@@ -1215,6 +1237,9 @@ Wire audit logging throughout the app and build the read-only viewer.
 - Password change UI for new admin accounts
 - `slot_claims.show_date_id` schema cleanup — column is now denormalized (implied by the role's own `show_date_id`). Candidate for removal in Phase 12 schema review.
 - Step tracker prompt convention — single persistent tracker that updates in place; must not be re-emitted after individual steps. Brief prompts written from DOC.6 onward must not include "re-emit the tracker" instructions. See R27.
+- `sendReminderEmail()` single-send function in `lib/email.ts` is currently unused in production (cron uses `buildReminderEmailPayload` directly). Candidate for removal in Phase 12 cleanup.
+- Waitlist renumbering in `cancelClaim()` uses sequential JS updates rather than a single Postgres expression update. Candidate for a Postgres function or RPC in Phase 12 if concurrent cancellations become a concern.
+- `slot_claims.show_date_id` denormalization cleanup deferred from Migration 006. Candidate for removal in Phase 12 schema review.
 
 **30BN-12.1 — Mobile Optimization & Empty States**
 - Full responsive audit: `/` (landing), `/shows`, `/shows/[id]`, `/callboard/*`, `/forms/[id]`, `/update`, `/cancel`
@@ -1367,6 +1392,15 @@ React's rules of hooks prohibit calling `useFieldArray` inside a render loop ove
 ### R27 — Step Tracker Is a Single Persistent Widget
 The step tracker declared at the start of a build session is a single element that updates in place as work progresses. It must not be re-emitted or repeated after individual steps — doing so produces multiple copies that obscure build progress rather than clarifying it. Prompts must not include the instruction to "re-emit the tracker after each step." Claude Code manages the live-update behavior natively when given an initial tracker declaration. Established Phase 4 build session.
 
+### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute
+PostgreSQL grants EXECUTE to PUBLIC by default when a function is created. For SECURITY DEFINER functions, this means the anon role can call them directly via PostgREST and bypass RLS entirely — exposing any data the function returns regardless of row-level policies. After creating any SECURITY DEFINER function, immediately add:
+```sql
+REVOKE EXECUTE ON FUNCTION function_name(param_types) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION function_name(param_types) FROM anon;
+GRANT EXECUTE ON FUNCTION function_name(param_types) TO authenticated;
+```
+Include these REVOKE/GRANT statements in the same migration file as the CREATE FUNCTION. Verify with `SELECT proacl FROM pg_proc WHERE proname = 'function_name'` — result must not include `=X/` (PUBLIC) or `anon=X/`. Established 30BN-5.3. Applies retroactively: `get_activity_feed()` (Migration 007) needs the same fix — tracked as ADMIN.13.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -1376,4 +1410,5 @@ The step tracker declared at the start of a build session is a single element th
 *v1.2 (July 2026 — Phase 2 complete: @hookform/resolvers added to §3, Resend domain verified and from address confirmed, Open Decision #2 resolved, age_range required decision noted, shows link in confirmation email, R16/R17 cross-references added, R18 empty string normalization added, R8 single-send clarification)*
 *v1.3 (July 2026 — Phase 3 complete: date-fns-tz/@react-pdf/renderer/PWA added to §3, requires_service_hours added to §8 and §9 (Migration 003), Editor Notes Super Admin edit/delete added (Migration 004), multiple Super Admins support documented, Light/Dark mode and PWA documented, Standing Volunteer Opportunities (4.4) and Category-Match Notifications (5.3) added as new prompt slots, Phase 3 marked complete, Open Decisions #6/#7 added, R19–R22 added)*
 *v1.4 (July 2026 — Phase 4 complete: volunteer_roles restructured to show_date_id (Migration 006), standing_opportunities and opportunity_submissions added (Migration 005), activity_cleared_at added to admin_users (Migration 007), activity feed with pagination and per-user read state, roles-per-date form structure, formatWallClockCT() for date-only columns, R23–R27 added, Phase 4 prompts and all ADMIN prompts through ADMIN.12 marked complete)*
-*Cross-reference: 30BN_PROCESS_v1.md v1.4*
+*v1.5 (July 2026 — Phase 5 complete: slot claiming with two-tier duplicate detection, self-cancel flow with email verification, waitlist promotion and renumbering, 24hr Vercel Cron reminder, category-match notifications with notifications_sent_at tracking and SECURITY DEFINER RPC, CRON_SECRET env var added, /cancel public route, vercel.json cron config, R28 (SECURITY DEFINER REVOKE) added, ADMIN.13 planned for get_activity_feed() security fix, Phase 5 prompts 5.1–5.3 marked complete, DOC.7–DOC.8 logged)*
+*Cross-reference: 30BN_PROCESS_v1.md v1.5*
