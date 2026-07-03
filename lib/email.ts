@@ -827,3 +827,69 @@ export async function sendBatchEmails(payloads: BatchEmailPayload[]): Promise<vo
     await resend.batch.send(chunk)
   }
 }
+
+
+// ─── Category-match volunteer notification email (30BN-5.3) ─────
+
+type CategoryMatchNotificationEmailParams = {
+  to: string
+  volunteerName: string
+  showName: string
+  matchingRoles: string[]
+}
+
+// Exported so sendShowNotifications() (lib/actions/shows.ts) can build
+// payload objects for resend.batch.send() — same reasoning as
+// buildReminderEmailPayload: batching multi-recipient sends is required
+// per R8, so the action does not call sendCategoryMatchNotificationEmail()
+// (single send) in a loop.
+export function buildCategoryMatchNotificationPayload({
+  to,
+  volunteerName,
+  showName,
+  matchingRoles,
+}: CategoryMatchNotificationEmailParams): {
+  from: string
+  replyTo: string
+  to: string
+  subject: string
+  html: string
+} {
+  const rolesList = matchingRoles.map((r) => escapeHtml(r)).join(', ')
+
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Hi ${escapeHtml(volunteerName)}, we could use your help!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      A show you might be interested in is coming up: <strong>${escapeHtml(showName)}</strong>.
+    </p>
+    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+      We're looking for volunteers in these areas: <strong>${rolesList}</strong>.
+    </p>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      View Volunteer Opportunities
+    </a>
+    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+      We'd love to have you on board — sign up today!
+    </p>
+  `)
+
+  return {
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: `Volunteer opportunity — ${showName}`,
+    html,
+  }
+}
+
+export async function sendCategoryMatchNotificationEmail(
+  params: CategoryMatchNotificationEmailParams
+): Promise<void> {
+  await resend.emails.send(buildCategoryMatchNotificationPayload(params))
+}

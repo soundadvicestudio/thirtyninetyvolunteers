@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { createShow, updateShow } from '@/lib/actions/shows'
+import { createShow, updateShow, sendShowNotifications } from '@/lib/actions/shows'
 import {
   showFormSchema,
   NO_SEASON,
@@ -322,6 +322,8 @@ export default function ShowForm({
   const [pendingPublish, setPendingPublish] = useState<ShowFormValues | null>(null)
   const [showPublishWarning, setShowPublishWarning] = useState(false)
   const [defaultHoursDirty, setDefaultHoursDirty] = useState(show?.default_hours != null)
+  const [notify, setNotify] = useState(!show?.notifications_sent_at)
+  const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
   const watchedShowType = watch('show_type')
   const watchedSeasonId = watch('seasonId')
@@ -359,6 +361,7 @@ export default function ShowForm({
 
   async function submitForm(data: ShowFormValues, targetStatus: 'draft' | 'live') {
     setFormError(null)
+    setNotifyResult(null)
     setSubmittingStatus(targetStatus)
 
     const payload = buildPayload(data, targetStatus)
@@ -382,6 +385,21 @@ export default function ShowForm({
         params.set('blockedRoles', result.warnings.blockedRoles.join(','))
       }
       window.location.href = `/crew/shows/${result.showId}/edit?${params.toString()}`
+      return
+    }
+
+    if (targetStatus === 'live' && notify) {
+      const notifyRes = await sendShowNotifications(result.showId)
+      if (notifyRes.error) {
+        setNotifyResult('Show published — notification send failed. You can retry from the show detail page.')
+      } else if (notifyRes.sent === 0) {
+        setNotifyResult("No volunteers matched this show's roles.")
+      } else {
+        setNotifyResult(`Notifications sent to ${notifyRes.sent} matching volunteer(s).`)
+      }
+      setTimeout(() => {
+        window.location.href = '/crew/shows'
+      }, 1800)
       return
     }
 
@@ -590,6 +608,25 @@ export default function ShowForm({
           {formError}
         </div>
       )}
+
+      <div className="space-y-2">
+        <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
+          <input
+            type="checkbox"
+            checked={notify}
+            onChange={(e) => setNotify(e.target.checked)}
+            className="mt-0.5"
+          />
+          Notify matching volunteers about this show
+        </label>
+        {notify && show?.notifications_sent_at && (
+          <p className="text-sm text-orange">
+            Notifications were previously sent for this show. Checking this will send again to all matching
+            volunteers.
+          </p>
+        )}
+        {notifyResult && <p className="text-sm text-navy dark:text-steel">{notifyResult}</p>}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <button

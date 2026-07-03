@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { showSubmitSchema, type ShowSubmitPayload } from '@/lib/validations/show'
+import { buildCategoryMatchNotificationPayload, sendBatchEmails } from '@/lib/email'
 
 export type ShowActionResult =
   | { success: true; showId: string; warnings?: { blockedDates: string[]; blockedRoles: string[] } }
@@ -491,4 +492,112 @@ export async function updateShowStatus(
   )
 
   return { success: true }
+}
+
+type NotificationTarget = {
+  volunteer_id: string
+  full_name: string
+  email: string
+  matching_roles: string[]
+}
+
+export type SendShowNotificationsResult = { sent: number; error?: string }
+
+// Admin-authenticated action — called from admin UI only (show publish
+// flow, Settings tab status panel, Overview tab manual trigger). Uses
+// getServerClient() + getAdminUser(), matching every other export in this
+// file, and matching get_show_notification_targets()'s
+// `GRANT EXECUTE ... TO authenticated` (Migration 008) — the RPC is meant
+// to be invoked under the admin's own session, not the service role.
+export async function sendShowNotifications(showId: string): Promise<SendShowNotificationsResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { sent: 0, error: 'Unauthorized' }
+  }
+
+  try {
+    const supabase = await getServerClient()
+
+    // A. Fetch show, verify live.
+    const { data: show, error: showError } = await supabase
+      .from('shows')
+      .select('id, name, status')
+      .eq('id', showId)
+      .maybeSingle()
+
+    if (showError || !show || show.status !== 'live') {
+      return { sent: 0, error: 'Show not found or not live' }
+    }
+
+    // B. RPC call — zero matches is valid, not an error.
+    const { data: targetRows, error: rpcError } = await supabase.rpc('get_show_notification_targets', {
+      p_show_id: showId,
+    })
+
+    if (rpcError) {
+      console.error('sendShowNotifications RPC error:', rpcError)
+      return { sent: 0, error: 'Something went wrong finding matching volunteers. Please try again.' }
+    }
+
+    const targets = (targetRows ?? []) as NotificationTarget[]
+    if (targets.length === 0) {
+      return { sent: 0 }
+    }
+
+    // C. Build payloads — one per volunteer, with their own matching roles.
+    const payloads = targets.map((t) =>
+      buildCategoryMatchNotificationPayload({
+        to: t.email,
+        volunteerName: t.full_name,
+        showName: show.name,
+        matchingRoles: t.matching_roles,
+      })
+    )
+
+    // D. Batch send (R8) — log failures, do not abort. Partial sends are
+    // better than no send.
+    try {
+      await sendBatchEmails(payloads)
+    } catch (err) {
+      console.error('sendShowNotifications batch send error:', err)
+    }
+
+    // E. Update notifications_sent_at — after the send, not before.
+    await supabase
+      .from('shows')
+      .update({ notifications_sent_at: new Date().toISOString() })
+      .eq('id', showId)
+
+    // F. Log to email_log — non-blocking.
+    try {
+      const { data: logRow } = await supabase
+        .from('email_log')
+        .insert({
+          sent_by: admin.id,
+          subject: `Volunteer opportunity — ${show.name}`,
+          recipient_type: 'category',
+          recipient_count: targets.length,
+        })
+        .select('id')
+        .single()
+
+      if (logRow) {
+        await supabase.from('email_log_recipients').insert(
+          targets.map((t) => ({
+            email_log_id: logRow.id,
+            volunteer_id: t.volunteer_id,
+            email_address: t.email,
+          }))
+        )
+      }
+    } catch (err) {
+      console.error('sendShowNotifications email_log error:', err)
+    }
+
+    // G. Return.
+    return { sent: targets.length }
+  } catch (err) {
+    console.error('sendShowNotifications error:', err)
+    return { sent: 0, error: 'Something went wrong sending notifications. Please try again.' }
+  }
 }

@@ -63,7 +63,7 @@ export default async function EditShowPage({
     supabase
       .from('shows')
       .select(
-        'id, season_id, name, show_type, description, status, volunteer_instructions, default_hours, created_at, updated_at'
+        'id, season_id, name, show_type, description, status, volunteer_instructions, default_hours, notifications_sent_at, created_at, updated_at'
       )
       .eq('id', id)
       .maybeSingle(),

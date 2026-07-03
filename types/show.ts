@@ -10,6 +10,7 @@ export type Show = {
   status: ShowStatus
   volunteer_instructions: string | null
   default_hours: number | null
+  notifications_sent_at: string | null
   created_at: string
   updated_at: string
 }

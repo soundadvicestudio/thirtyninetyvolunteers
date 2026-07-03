@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { markAttendance, bulkMarkAttendance } from '@/lib/actions/attendance'
-import { addShowEditor, removeShowEditor, updateShowStatus } from '@/lib/actions/shows'
+import { addShowEditor, removeShowEditor, updateShowStatus, sendShowNotifications } from '@/lib/actions/shows'
 import {
   SHOW_TYPE_LABEL,
   SHOW_TYPE_BADGE,
@@ -159,6 +159,92 @@ function OverviewTab({
           </a>
         </div>
       </div>
+
+      <NotificationsSection show={show} canEdit={canEdit} />
+    </div>
+  )
+}
+
+function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean }) {
+  const router = useRouter()
+  const [sending, setSending] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+
+  if (!canEdit || show.status !== 'live') return null
+
+  const alreadySent = !!show.notifications_sent_at
+
+  async function handleSend() {
+    setSending(true)
+    setResult(null)
+    const res = await sendShowNotifications(show.id)
+    setSending(false)
+    setConfirming(false)
+    if (res.error) {
+      setResult('Notification send failed. Please try again.')
+    } else if (res.sent === 0) {
+      setResult("No volunteers matched this show's roles.")
+    } else {
+      setResult(`Notifications sent to ${res.sent} matching volunteer(s).`)
+    }
+    router.refresh()
+  }
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Volunteer Notifications</h2>
+
+      {alreadySent && (
+        <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
+          Notifications last sent {formatCT(show.notifications_sent_at!, 'MMM d, yyyy h:mm a')}
+        </p>
+      )}
+
+      {result && <p className="text-sm text-navy dark:text-steel mb-3">{result}</p>}
+
+      {!alreadySent ? (
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={sending}
+          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+        >
+          {sending ? 'Sending…' : 'Send Notifications to Matching Volunteers'}
+        </button>
+      ) : confirming ? (
+        <div className="space-y-3">
+          <p className="text-sm text-dark dark:text-dark-text">
+            Notifications were previously sent for this show. Send again to all currently matching volunteers?
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending}
+              className="bg-orange text-white hover:bg-opacity-90 transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              {sending ? 'Sending…' : 'Yes, send again'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={sending}
+              className="text-sm font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+        >
+          Send Again
+        </button>
+      )}
     </div>
   )
 }
@@ -461,6 +547,10 @@ function SettingsTab({
   const [statusSaving, setStatusSaving] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
   const [statusSaved, setStatusSaved] = useState(false)
+  const [notify, setNotify] = useState(!show.notifications_sent_at)
+  const [notifyResult, setNotifyResult] = useState<string | null>(null)
+
+  const showLivePanel = statusValue === 'live' && statusValue !== show.status
 
   const assignedIds = new Set(showEditors.map((e) => e.admin_id))
   const searchTerm = search.trim().toLowerCase()
@@ -509,6 +599,40 @@ function SettingsTab({
     }
     setStatusSaved(true)
     router.refresh()
+  }
+
+  async function handleConfirmLive() {
+    setStatusSaving(true)
+    setStatusError(null)
+    setStatusSaved(false)
+    setNotifyResult(null)
+
+    const result = await updateShowStatus(show.id, 'live')
+    if ('error' in result) {
+      setStatusSaving(false)
+      setStatusError(result.error)
+      return
+    }
+
+    if (notify) {
+      const notifyRes = await sendShowNotifications(show.id)
+      if (notifyRes.error) {
+        setNotifyResult('Show published — notification send failed. You can retry from the show detail page.')
+      } else if (notifyRes.sent === 0) {
+        setNotifyResult("No volunteers matched this show's roles.")
+      } else {
+        setNotifyResult(`Notifications sent to ${notifyRes.sent} matching volunteer(s).`)
+      }
+    }
+
+    setStatusSaving(false)
+    setStatusSaved(true)
+    router.refresh()
+  }
+
+  function handleCancelLive() {
+    setStatusValue(show.status)
+    setNotifyResult(null)
   }
 
   return (
@@ -588,6 +712,7 @@ function SettingsTab({
               onChange={(e) => {
                 setStatusValue(e.target.value as ShowStatus)
                 setStatusSaved(false)
+                setNotifyResult(null)
               }}
               className={selectClasses}
             >
@@ -596,17 +721,58 @@ function SettingsTab({
               <option value="past">Past</option>
               <option value="archived">Archived</option>
             </select>
-            <button
-              type="button"
-              onClick={handleSaveStatus}
-              disabled={statusSaving || statusValue === show.status}
-              className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
-            >
-              {statusSaving ? 'Saving…' : 'Save Status'}
-            </button>
+            {!showLivePanel && (
+              <button
+                type="button"
+                onClick={handleSaveStatus}
+                disabled={statusSaving || statusValue === show.status}
+                className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {statusSaving ? 'Saving…' : 'Save Status'}
+              </button>
+            )}
             {statusSaved && <span className="text-sm text-green-700 dark:text-green-400">Saved</span>}
           </div>
           {statusError && <p className="text-sm text-orange mt-2">{statusError}</p>}
+
+          {showLivePanel && (
+            <div className="mt-4 rounded-lg border border-divider dark:border-dark-border bg-light-navy/30 dark:bg-dark-bg/40 p-4 space-y-3 max-w-md">
+              <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
+                <input
+                  type="checkbox"
+                  checked={notify}
+                  onChange={(e) => setNotify(e.target.checked)}
+                  className="mt-0.5"
+                />
+                Notify matching volunteers about this show
+              </label>
+              {notify && show.notifications_sent_at && (
+                <p className="text-sm text-orange">
+                  Notifications were previously sent for this show. Checking this will send again to all matching
+                  volunteers.
+                </p>
+              )}
+              {notifyResult && <p className="text-sm text-navy dark:text-steel">{notifyResult}</p>}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleConfirmLive}
+                  disabled={statusSaving}
+                  className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  {statusSaving ? 'Confirming…' : 'Confirm'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelLive}
+                  disabled={statusSaving}
+                  className="text-sm font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>
