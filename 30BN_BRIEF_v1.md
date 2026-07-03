@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.3 (Phase 3 complete, Admin prompts through ADMIN.7 complete)
+### Created: July 2026 | Last Updated: July 2026 — v1.4 (Phase 4 complete, Admin prompts through ADMIN.12 complete)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phase 3 complete, Phase 4 pending (ADMIN.1 through ADMIN.7 ✓)
+**Current phase:** Alpha build in progress — Phase 4 complete (ADMIN.1 through ADMIN.12 ✓), Phase 5 pending
 
 ---
 
@@ -54,11 +54,14 @@
 | **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
 | **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
-| **Dates** | date-fns + date-fns-tz | All date/time display uses `formatCT()` from `lib/utils/date.ts` with America/Chicago (Central Time, auto-DST). Never use raw date-fns `format()` for user-facing dates. |
+| **Dates** | date-fns + date-fns-tz | Two utility functions in `lib/utils/date.ts`. `formatCT()` — for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info. `formatWallClockCT()` — for bare `date` column values (`'YYYY-MM-DD'`) and manually constructed date+time strings; these parse as UTC on Vercel without this function, shifting displayed dates by hours. Never use raw date-fns `format()`. See R23. |
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
 | **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
+
+**React Hook Form — Nested Arrays:**
+Nested `useFieldArray` calls (arrays of arrays, e.g. dates each containing their own roles list) must be placed in their own named sub-component. React's rules of hooks prohibit calling `useFieldArray` inside a render loop over a parent field array. Pattern established in ADMIN.11 (DateRow sub-component inside ShowForm). See R24.
 
 ### Critical Constraint — Tailwind v4
 Tailwind v4 uses CSS-first configuration. **There is no `tailwind.config.ts` in this project — do not create one.**
@@ -172,7 +175,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Editor | All `/crew/*` except user management | Yes | Yes (Beta) | Full operational access |
 | Viewer | All `/crew/*` | No | No | Read-only. No edit controls rendered. |
 | Volunteer | `/callboard/*` | Own profile only | No | Passwordless login via token |
-| Public | `/`, `/shows/*`, `/forms/*`, `/update`, `/checkin/*` | No | No | No auth required |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*` | No | No | No auth required |
 
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they use tokenized magic links only.
 **No self-registration for admins.** Super Admin creates all accounts manually and triggers a welcome email with credentials.
@@ -269,7 +272,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Season at a glance: all live shows, per-role fill status (red/yellow/green)
 - Quick stats: Total Active Volunteers, Upcoming Shows This Month, Volunteers Needed, Recent Signups (7 days)
 - Pending milestone acknowledgments widget (volunteers who hit milestone, awaiting personal thanks)
-- Recent activity feed: last 10 slot claims, cancellations, new signups
+- Activity feed: paginated feed of platform events — volunteer signups, slot claims, cancellations, opportunity submissions — in reverse chronological order. Loads 10 at a time; "Load more" button appends the next 10. Per-user read state: each admin has an `activity_cleared_at` timestamp; events newer than this are highlighted "NEW." "Mark all as read" updates the timestamp without a page reload. Events include volunteer name (linked to profile) and context (show name linked to show detail, opportunity title linked to opportunity detail). Implemented via `get_activity_feed()` Supabase RPC (UNION of four event sources, SECURITY DEFINER).
 
 **Volunteers (`/crew/volunteers`):**
 - Searchable, filterable, sortable list (full-text: name/email/phone)
@@ -310,24 +313,31 @@ Mid Gray:             #555555  --color-mid-gray
 
 **Show Management (`/crew/shows`):**
 - Show list organized by season, filter by type/status
-- Create/edit show: name, show type (Mainstage/Studio X/One-Off), season, dates+times (multiple), volunteer roles + slot counts per role, assigned editors, custom show instructions (included in slot claim confirmation email), status (draft/live/past/archived)
+- Create/edit show: name, show type (Mainstage/Studio X/One-Off), season, dates+times with per-date volunteer roles (each date has its own independent role configuration — role name, category, slot count), assigned editors, custom show instructions (included in slot claim confirmation email), status (draft/live/past/archived). "Copy roles from previous date" convenience copies the role structure from the preceding date row.
 - Draft/Live toggle: live = visible to public immediately
 - Per-show detail page (`/crew/shows/[id]`):
   - Tabs: Overview / Volunteers / Waitlist / Dates / Settings
   - Volunteers tab: per-role roster, attendance status, per-date filter
   - Waitlist tab: ordered list per role, volunteer name + time added
-  - Settings tab: assigned editors (add/remove any time), public page toggle, status
+  - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
 - Post-event attendance marking (Editors only, only available after show date has passed):
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
-  - Bulk mark: select all → mark all Showed
+  - Bulk mark: per-role "Mark All Showed" button (one button per role section, not a global button for all roles at once)
+- Attendance re-marking: changing a volunteer from Showed to No-Show or Excused subtracts the previously logged hours from `volunteers.total_hours` and inserts a negative `volunteer_hours_log` entry. Changing from a non-Showed status to Showed adds hours. The hours delta is computed server-side and applied atomically. If `slot_claims.volunteer_id` is null (non-registered volunteer), the attendance record is still inserted but hours are not tallied.
 
-**Standing Volunteer Opportunities (30BN-4.4):**
-- Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest. Appears on `/shows` public page above productions.
-- Per opportunity, admin can designate:
-  - Claim type: Expression of Interest (EOI) OR Slot Claim. EOI = volunteer submits interest, Editor follows up manually. Slot Claim = same flow as show slot claiming.
-  - Slot cap: optional toggle. If off, open-ended. If on, enter a slot count. EOI opportunities default to open-ended but cap can be toggled.
-- Confirmation email copy reflects EOI vs. Slot Claim.
+**Standing Volunteer Opportunities (30BN-4.4a/4.4b):**
+- Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest. Public URL: `/opportunities/[id]`. Linked from `/shows` public page above productions (wired in Phase 5).
+- Admin management at `/crew/shows/opportunities`: list (all statuses), create, edit, archive. Cross-linked from `/crew/shows` via "Standing Opportunities →" link.
+- Per opportunity, admin designates:
+  - Title and optional description
+  - Claim type: Expression of Interest (EOI) OR Slot Claim. EOI = volunteer submits interest, Editor follows up manually. Slot Claim = same cap enforcement as show slot claiming.
+  - Slot cap: optional toggle. If off, open-ended. If on, enter a slot count. Cap applies to both EOI and Slot Claim types.
+- Public submission page (`/opportunities/[id]`): name, email, phone form. Duplicate detection by email (friendly message, not an error). Cap enforcement: if Slot Claim and cap hit, "full" message rendered, no form shown.
+- Confirmation email copy is distinct by claim type: EOI — warm, "we'll be in touch." Slot Claim — confirms the position.
+- Admin detail page (`/crew/shows/opportunities/[id]`): public URL copy/view, edit link, submissions table (name, email, phone, linked volunteer profile if email/phone matches a `volunteers` record, submitted date, status).
+- Submissions logged to `opportunity_submissions`. All submissions (including public) logged to `audit_log` with `admin_id = null` (see R25).
+- No waitlist for opportunity submissions in Alpha. Deferred to Phase 5.2 for consistency with show claiming.
 
 **Category-Match Notifications (30BN-5.3):**
 - When a show is published (status → live), the system can notify all volunteers who have selected a matching category/role.
@@ -402,7 +412,7 @@ Mid Gray:             #555555  --color-mid-gray
 
 **MIGRATION FILE LOCATION:** All migration `.sql` files live at repo root (alongside `001_core_schema.sql`). There is no `supabase/migrations/` directory in this project. Do not create one. (R21)
 
-All tables created in Migration 001. All FK columns have explicit indexes.
+Core tables created in Migration 001. Subsequent migrations add columns and tables as noted below. All FK columns have explicit indexes.
 
 **Migration 001 status:** Applied — `001_core_schema.sql` live on project `nutvjkplbtobcmymqtzx`.
 
@@ -414,6 +424,17 @@ Adds `requires_service_hours` boolean NOT NULL DEFAULT false to `volunteers` tab
 
 **Migration 004 status:** Applied — `004_volunteer_notes_superadmin_rls.sql`
 Adds UPDATE/DELETE policies on `volunteer_notes` restricted to `is_super_admin()`. Creates `is_super_admin()` helper function. Super Admins can edit and delete notes; Editors cannot.
+
+**Migration 005 status:** Applied — `005_standing_opportunities.sql`
+Adds `standing_opportunities` and `opportunity_submissions` tables with indexes, `trg_standing_opportunities_updated_at` trigger (reuses `handle_updated_at()` function), and 4 RLS policies (admin_all + public_select_active on opportunities; admin_all + anon_insert on submissions).
+
+**Migration 006 status:** Applied — `006_roles_per_date.sql`
+Restructures `volunteer_roles`: replaces `show_id` FK with `show_date_id` FK (references `show_dates`). Backfills existing rows to each show's earliest date. Drops old `show_id` column, FK, and index. Adds `idx_volunteer_roles_show_date_id`. Roles now belong to individual show dates, enabling per-date independent staffing configurations.
+
+**Migration 007 status:** Applied — `007_activity_feed.sql`
+Adds `activity_cleared_at timestamptz` (nullable) to `admin_users`. Creates `get_activity_feed(p_limit, p_offset)` SECURITY DEFINER RPC function: UNIONs volunteer signups, slot claims, slot cancellations, and opportunity submissions into a unified chronological event feed. Granted to authenticated role.
+
+**Next migration:** 008
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -519,12 +540,16 @@ created_at       timestamptz NOT NULL DEFAULT now()
 ### volunteer_roles
 ```sql
 id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-show_id          uuid NOT NULL REFERENCES shows(id) ON DELETE CASCADE
+show_date_id     uuid NOT NULL REFERENCES show_dates(id) ON DELETE CASCADE
 category_id      uuid REFERENCES volunteer_categories(id)
 role_name        text NOT NULL
 slots_available  integer NOT NULL DEFAULT 1
 created_at       timestamptz NOT NULL DEFAULT now()
--- INDEX: idx_volunteer_roles_show_id
+-- INDEX: idx_volunteer_roles_show_date_id
+-- NOTE: roles belong to show_dates, not shows.
+-- To query all roles for a show, join through
+-- show_dates: WHERE show_dates.show_id = [id]
+-- Migration 006 (006_roles_per_date.sql)
 ```
 
 ### slot_claims
@@ -542,6 +567,11 @@ waitlist_position integer
 claimed_at       timestamptz NOT NULL DEFAULT now()
 cancelled_at     timestamptz
 -- INDEX: idx_slot_claims_role_id, idx_slot_claims_volunteer_id, idx_slot_claims_show_date_id
+-- NOTE: show_date_id is denormalized as of
+-- Migration 006 — the date is implied by
+-- volunteer_role_id → show_date_id on
+-- volunteer_roles. Kept for query convenience.
+-- Phase 12 cleanup candidate.
 ```
 
 ### attendance
@@ -576,9 +606,13 @@ name             text NOT NULL
 email            text NOT NULL UNIQUE
 role             text NOT NULL CHECK (role IN ('super_admin','editor','viewer'))
 is_active        boolean NOT NULL DEFAULT true
-last_login       timestamptz
-created_at       timestamptz NOT NULL DEFAULT now()
+last_login               timestamptz
+activity_cleared_at      timestamptz
+created_at               timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_admin_users_email
+-- NOTE: activity_cleared_at added in Migration 007.
+-- Null = never cleared; all feed events treated
+-- as new until first clear.
 ```
 
 ### forms
@@ -711,6 +745,47 @@ id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
 label            text NOT NULL
 sort_order       integer NOT NULL DEFAULT 0
 is_active        boolean NOT NULL DEFAULT true
+```
+
+### standing_opportunities
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title            text NOT NULL
+description      text
+claim_type       text NOT NULL
+  CHECK (claim_type IN ('eoi', 'slot_claim'))
+slot_cap_enabled boolean NOT NULL DEFAULT false
+slot_cap         integer
+status           text NOT NULL DEFAULT 'active'
+  CHECK (status IN ('active', 'archived'))
+created_by       uuid REFERENCES admin_users(id)
+created_at       timestamptz NOT NULL DEFAULT now()
+updated_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_opp_status
+-- Trigger: trg_standing_opportunities_updated_at
+-- RLS: admin_all (authenticated, is_admin()),
+--      public_select_active (anon, status='active')
+-- Migration 005 (005_standing_opportunities.sql)
+```
+
+### opportunity_submissions
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+opportunity_id   uuid NOT NULL
+  REFERENCES standing_opportunities(id) ON DELETE CASCADE
+volunteer_id     uuid REFERENCES volunteers(id)
+volunteer_name   text NOT NULL
+volunteer_email  text NOT NULL
+volunteer_phone  text
+submission_token uuid NOT NULL DEFAULT gen_random_uuid()
+status           text NOT NULL DEFAULT 'submitted'
+  CHECK (status IN ('submitted', 'cancelled'))
+submitted_at     timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_opp_submissions_opportunity_id
+-- INDEX: idx_opp_submissions_volunteer_id
+-- RLS: admin_all (authenticated, is_admin()),
+--      anon_insert (anon INSERT only — no anon SELECT)
+-- Migration 005 (005_standing_opportunities.sql)
 ```
 
 **Default `app_settings` seed values:**
@@ -890,41 +965,72 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 
 ---
 
-### Phase 4 — Shows & Season Management
+### Phase 4 — Shows & Season Management ✓ Complete
 
-**30BN-4.1 — Show Creation & Edit**
-- `/crew/shows/new` and `/crew/shows/[id]/edit`
-- Full form per §8: name, type, season (select existing or create inline), dates+times (dynamic rows — add/remove), volunteer roles (dynamic rows: role name + slot count), assigned editors (multi-select), volunteer instructions, status
-- Volunteer instructions field: plaintext, included verbatim in slot claim confirmation emails
-- Default hours: inherit from `app_settings` by show type, overridable per show
-- Save as Draft or Publish Live (warn before Live if any role has 0 slots)
-- All fields editable post-creation
-- Quality gate: show appears in list; dates and roles saved correctly; assigned editors visible in show detail
+**30BN-4.1 — Show Creation & Edit ✓**
+- `/crew/shows/new` and `/crew/shows/[id]/edit` under `app/crew/(app)/` (R20)
+- Unified "Show Dates & Roles" form: dates and roles are one section; each date row owns its own nested roles (role name, category from DB per R4, slot count). Minimum one date and one role per date required.
+- "Copy roles from previous date" on each date row (except first) copies role structure from the preceding date — reduces repetitive entry for multi-date shows with identical staffing.
+- Nested `useFieldArray` per date lives in a `DateRow` sub-component (R24).
+- Season: select existing or create new inline (created on form submit, not eagerly).
+- Default hours: auto-fills from `app_settings` by show type when not manually edited; manually overridable per show.
+- Save as Draft / Save & Publish. Publish warns if any role across any date has 0 slots; slots_available accepts 0 so the warning is reachable.
+- Edit mode: update-in-place for existing dates and roles (preserves slot_claims FKs). Deletion guarded against active claims; blocked deletions returned as warnings via query params, not blocking the full save.
+- `lib/validations/show.ts` — form and server payload schemas. `types/show.ts` — Show, ShowDate, ShowDateWithRoles, ShowRole types.
+- Audit: `show.create`, `show.update`
 
-**30BN-4.2 — Season Management & Show List**
-- `/crew/shows`: shows organized by season (tab or accordion per season)
-- Create season inline (name + optional date range)
-- Per-show card: name, type badge, status badge, date range, staffing summary (X/Y total slots filled across all roles)
-- Filters: type, status
-- Quick actions: Edit, View Public Page, Copy Public URL, Set Live/Draft toggle
-- Quality gate: multiple seasons display correctly; status toggles take effect; public URL copy works
+**30BN-4.2 — Season Management & Show List ✓**
+- `/crew/shows`: season accordion (not tabs). Season with `is_current = true` expanded by default; if none, most recently created season. All other seasons collapsed.
+- Empty seasons (zero shows) always render with "0 shows" header when no filter is active. Hidden only when a type/status filter empties them.
+- "Unseasoned Shows" group for shows with null season_id — visible only when it has shows.
+- Inline season creation panel (name, optional dates) above accordion; uses `router.refresh()` on success (in-place update, not navigation).
+- Per-show card: name, type badge, status badge, date range (via `formatWallClockCT()`), staffing summary (X/Y slots across all dates and roles, color-coded). Staffing summary query joins through `show_dates → volunteer_roles → slot_claims`.
+- Filters: type, status — client-side, no round trip.
+- Quick actions: Edit, View Public Page (opens new tab), Copy Public URL (clipboard, 2s feedback), Set Live/Draft toggle (calls `toggleShowStatus()`, `router.refresh()` on success).
+- Viewer: Edit, Set Live/Draft, New Show, New Season controls hidden. View and Copy URL visible.
+- `lib/utils/showDisplay.ts` — shared type/status badge maps (imported by list and detail views).
+- Audit: `season.create`, `show.status_change`
 
-**30BN-4.3 — Admin Show Detail**
-- `/crew/shows/[id]`: tabbed detail view per §8 (Overview / Volunteers / Waitlist / Dates / Settings)
-- Overview: show info, edit link, public URL with copy button, QR code (from shared utility)
-- Volunteers tab: per-role roster, attendance status column, per-date filter dropdown
-- Waitlist tab: ordered list per role (position, name, email, time added)
-- Dates tab: list of all dates/times
-- Settings tab: assigned editors (add/remove inline), public page toggle, status selector
-- Post-event attendance marking: only available when `show_date` is in the past. Per-volunteer selector: Showed / No-Show / Excused. Bulk mark all Showed button.
-- On Showed: insert `attendance`, increment `volunteer.total_hours`, insert `volunteer_hours_log`, trigger milestone check
-- Quality gate: all tabs render correctly; attendance marking only available for past dates; hours update on volunteer profile after marking
+**30BN-4.3 — Admin Show Detail ✓**
+- `/crew/shows/[id]`: five-tab view (Overview / Volunteers / Waitlist / Dates / Settings)
+- Overview: show info, edit link (Editor/Super Admin), public URL with copy/view, QR code (inline SVG preview + PNG and SVG download links). QR generated server-side via `lib/qr.ts`.
+- Volunteers tab: per-date filter dropdown (default: most recent past date). For the selected date, roles are read directly from the date object (roles are date-scoped post-Migration 006). Per-role table: volunteer name, email, claimed at, attendance selector. Auto-save on selector change (no separate save button). Per-role bulk "Mark All Showed" button. Past dates only show controls (R13). Future dates show "—". Warning indicator on rows where `slot_claim.volunteer_id` is null ("hours won't tally").
+- Waitlist tab: ordered list per role (waitlist_position ASC) — name, email, added at.
+- Dates tab: read-only, all show dates in order. Past dates visually distinguished.
+- Settings tab: assigned editors search/add/remove (`addShowEditor`, `removeShowEditor`). Status selector (all four values — Draft/Live/Past/Archived) via `updateShowStatus()`. No separate public toggle — visibility is status = 'live'.
+- Attendance re-marking: hours delta computed server-side (subtract on Showed→other, add on other→Showed). Null volunteer_id: attendance row inserted, hours skip.
+- `lib/qr.ts` introduced here: `generateQR(url)` → `{ svg: string, pngBase64: string }`. Level H (R6). 2000px PNG. Used here, in Phase 6, and Phase 7.
+- `lib/milestones.ts` stub introduced here: `checkMilestones()` and `checkFirstCall()`. Wired in attendance action; real logic ships in 9.2.
+- `lib/actions/attendance.ts` — `markAttendance()`, `bulkMarkAttendance()`.
+- `formatWallClockCT()` added to `lib/utils/date.ts` (R23). Used for all show_date/show_time display.
+- Audit: `attendance.mark`, `show.editor_add`, `show.editor_remove`, `show.status_change`
 
-**30BN-4.4 — Standing Volunteer Opportunities**
-- Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest, per §8. Appears on `/shows` public page above productions.
-- Per opportunity: claim type (Expression of Interest OR Slot Claim), optional slot cap toggle (EOI defaults open-ended, cap can be toggled on with a slot count)
-- Confirmation email copy reflects EOI vs. Slot Claim
-- Quality gate: opportunity appears above productions on `/shows`; EOI submissions logged for manual follow-up; Slot Claim opportunities behave like show slot claiming including cap enforcement
+**30BN-4.4a — Standing Volunteer Opportunities: Admin Management ✓**
+- Migration 005: `standing_opportunities` and `opportunity_submissions` tables (see §9).
+- `/crew/shows/opportunities`: admin list with claim-type badges, slot cap display, submission counts, archive confirmation. Cross-linked from `/crew/shows`. Back-link to `/crew/shows`.
+- `/crew/shows/opportunities/new` and `/crew/shows/opportunities/[id]/edit`: create/edit form (title, description, claim type, slot cap toggle).
+- Archive action: sets `status = 'archived'`. No reactivate in Alpha (Q-item).
+- `lib/actions/opportunities.ts` — `createOpportunity()`, `updateOpportunity()`, `archiveOpportunity()`.
+- Audit: `opportunity.create`, `opportunity.update`, `opportunity.archive`
+
+**30BN-4.4b — Standing Volunteer Opportunities: Public Submission & Admin Viewer ✓**
+- Public page `app/opportunities/[id]/page.tsx` (at app root — no `app/(public)/` route group exists in this project). Branded header, "no longer available" state for inactive/missing, "full" state for capped Slot Claim opportunities.
+- Submission form (`OpportunitySubmitForm.tsx`): name, email, phone. Submit label and success copy vary by claim type. Duplicate detection by email. Light mode only (public pages, per ADMIN.6).
+- `lib/actions/submissions.ts` — `submitOpportunity()`: validates active status, enforces cap, checks duplicate, matches to volunteer record, inserts submission, sends confirmation email, logs to email_log/email_log_recipients, logs to audit_log with admin_id = null (R25).
+- Two email templates in `lib/email.ts`: `sendOpportunityEOIEmail()` ("we'll be in touch"), `sendOpportunitySlotClaimEmail()` ("you're signed up").
+- Admin detail page (`/crew/shows/opportunities/[id]`): public URL copy/view, edit link, submissions table with linked volunteer profile links.
+- Audit: `opportunity.submission` (null admin_id)
+
+**Document & Admin Prompts (since v1.3):**
+```
+30BN-ADMIN.8   ✓ (prior session — details in "Volunteer Platform Build Pt 2")
+30BN-ADMIN.9   ✓ Timezone sweep — formatWallClockCT()
+30BN-ADMIN.10  ✓ Season display fix + opportunity submission audit log
+30BN-ADMIN.11  ✓ Roles-per-date schema fix (Migration 006)
+30BN-ADMIN.12  ✓ Activity feed with pagination and per-user read state (Migration 007)
+30BN-DOC.5     ✓ Brief Update v1.4 (this prompt)
+30BN-DOC.6     ⏳ Process Update v1.4 (next prompt)
+```
 
 ---
 
@@ -1006,7 +1112,7 @@ Quality gate: claim inserts correctly; duplicate warning fires; waitlist promote
 
 **30BN-7.1 — QR Code Utility & Generator Tool**
 Shared QR utility used in three places:
-- `lib/qr.ts`: exports `generateQR(url: string): Promise<{ svg: string, png: Buffer }>` using `qrcode` npm package, error correction level H, min 2000px PNG
+- `lib/qr.ts`: exports `generateQR(url: string): Promise<{ svg: string, pngBase64: string }>`. PNG is returned as a base64 string (no data: prefix). Callers construct download links as `href="data:image/png;base64,${pngBase64}"`. Built in 30BN-4.3; reused in Phases 6 and 7.
 - Standalone generator: `/crew/tools/qr-generator` — URL input, label, live preview, download PNG button, download SVG button
 - Per-show QR: on show detail Overview tab — QR for `/shows/[id]`. Download buttons.
 - Per-form QR: on form detail page — QR for `/forms/[id]`. Download buttons.
@@ -1043,6 +1149,7 @@ Shared QR utility used in three places:
 - Auto-increment already wired in 30BN-4.3 (attendance marking). This prompt adds manual entry and verification.
 - Manual hours entry on volunteer profile (Editors only): hours amount + note + date → insert `volunteer_hours_log` (source_type: 'manual') → update `volunteers.total_hours` → trigger milestone check
 - Hours display: profile shows total, per-season breakdown (join on `shows.season_id` via `attendance` + `show_dates`), `volunteer_hours_log` table for full history
+- **Schema note (Migration 006):** Per-season hours breakdown joins `attendance → show_dates → shows` to get `shows.season_id`. Any query retrieving "all roles for a show" must join through `show_dates` (volunteer_roles.show_date_id → show_dates.show_id). Do not query volunteer_roles directly by show_id — that column no longer exists.
 - Quality gate: manual hours add to total; per-season breakdown accurate; hours log shows both auto and manual entries
 
 **30BN-9.2 — Milestone System**
@@ -1106,6 +1213,8 @@ Wire audit logging throughout the app and build the read-only viewer.
 - Category description inline editing
 - Dialog close-X dark mode hover treatment (`button.tsx` not swept in ADMIN.6)
 - Password change UI for new admin accounts
+- `slot_claims.show_date_id` schema cleanup — column is now denormalized (implied by the role's own `show_date_id`). Candidate for removal in Phase 12 schema review.
+- Step tracker prompt convention — single persistent tracker that updates in place; must not be re-emitted after individual steps. Brief prompts written from DOC.6 onward must not include "re-emit the tracker" instructions. See R27.
 
 **30BN-12.1 — Mobile Optimization & Empty States**
 - Full responsive audit: `/` (landing), `/shows`, `/shows/[id]`, `/callboard/*`, `/forms/[id]`, `/update`, `/cancel`
@@ -1243,6 +1352,21 @@ Migration `.sql` files live at repo root alongside `001_core_schema.sql`. There 
 ### R22 — Vercel Deploy Verification Is Owner-Side
 Claude Code does not have Vercel CLI access and cannot confirm deploy status independently. Build reports confirm the git push succeeded and note that Vercel auto-deploy will trigger. Owner confirms deploy independently via the Vercel dashboard. Claude Code must not flag absence of deploy confirmation as a build concern or a Flag item.
 
+### R23 — formatWallClockCT() for Date-Only Columns
+`formatCT()` parses bare `date` column values (`'YYYY-MM-DD'`) as UTC on Vercel (UTC runtime), shifting displayed dates by hours for Central Time users. Use `formatWallClockCT()` from `lib/utils/date.ts` for any value sourced from a `date` column or manually constructed date+time string. Use `formatCT()` only for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info and parse correctly. Established ADMIN.9. See also the grep check in Process §10.
+
+### R24 — Nested useFieldArray Requires Its Own Sub-Component
+React's rules of hooks prohibit calling `useFieldArray` inside a render loop over a parent field array. Any form with arrays-of-arrays (e.g. dates each containing their own roles list) must place the nested `useFieldArray` in its own named sub-component. Pattern: parent maps over date fields and renders `<DateRow key={...} index={...} control={...} />` where `DateRow` owns the nested `useFieldArray`. Confirmed in ADMIN.11. Applying this pattern after the fact is a major refactor; design forms with this requirement in mind from the start.
+
+### R25 — Public Submissions Use null admin_id in audit_log
+`logAction()` accepts `string | null` as its first argument (widened in ADMIN.10 — `audit_log.admin_id` is nullable in the schema). When a public-facing action has no admin session (e.g. opportunity submission, volunteer signup), pass `null` as admin_id. Never skip logging to avoid the null — public submissions are consequential and must be in the audit trail. Established ADMIN.10.
+
+### R26 — Roles Belong to show_dates, Not shows
+`volunteer_roles.show_date_id` is the FK parent as of Migration 006. Each show date has its own independent role configuration. Any code that needs "all roles for a show" must join through `show_dates`: `volunteer_roles JOIN show_dates ON volunteer_roles.show_date_id = show_dates.id WHERE show_dates.show_id = [id]`. Never assume or attempt to query volunteer_roles by show_id — that column no longer exists. Established ADMIN.11.
+
+### R27 — Step Tracker Is a Single Persistent Widget
+The step tracker declared at the start of a build session is a single element that updates in place as work progresses. It must not be re-emitted or repeated after individual steps — doing so produces multiple copies that obscure build progress rather than clarifying it. Prompts must not include the instruction to "re-emit the tracker after each step." Claude Code manages the live-update behavior natively when given an initial tracker declaration. Established Phase 4 build session.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -1251,4 +1375,5 @@ Claude Code does not have Vercel CLI access and cannot confirm deploy status ind
 *v1.1 (July 2026 — Phase 1 complete: project facts confirmed, Google SSO moved to Alpha, Production Crew footer link added, Open Decisions #1/#3/#4 resolved, R15 added)*
 *v1.2 (July 2026 — Phase 2 complete: @hookform/resolvers added to §3, Resend domain verified and from address confirmed, Open Decision #2 resolved, age_range required decision noted, shows link in confirmation email, R16/R17 cross-references added, R18 empty string normalization added, R8 single-send clarification)*
 *v1.3 (July 2026 — Phase 3 complete: date-fns-tz/@react-pdf/renderer/PWA added to §3, requires_service_hours added to §8 and §9 (Migration 003), Editor Notes Super Admin edit/delete added (Migration 004), multiple Super Admins support documented, Light/Dark mode and PWA documented, Standing Volunteer Opportunities (4.4) and Category-Match Notifications (5.3) added as new prompt slots, Phase 3 marked complete, Open Decisions #6/#7 added, R19–R22 added)*
-*Cross-reference: 30BN_PROCESS_v1.md v1.2*
+*v1.4 (July 2026 — Phase 4 complete: volunteer_roles restructured to show_date_id (Migration 006), standing_opportunities and opportunity_submissions added (Migration 005), activity_cleared_at added to admin_users (Migration 007), activity feed with pagination and per-user read state, roles-per-date form structure, formatWallClockCT() for date-only columns, R23–R27 added, Phase 4 prompts and all ADMIN prompts through ADMIN.12 marked complete)*
+*Cross-reference: 30BN_PROCESS_v1.md v1.4*
