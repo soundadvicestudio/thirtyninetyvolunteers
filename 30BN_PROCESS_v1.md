@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.4
-### Created: July 2026 | Last Updated: July 2026 — v1.4 (Phase 4 complete)
+## 30BN_PROCESS_v1.md — v1.5
+### Created: July 2026 | Last Updated: July 2026 — v1.5 (Phase 5 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -130,6 +130,15 @@ This is mandatory because:
 **Critical RLS rule for this project:**
 `volunteer_notes` must have SELECT restricted to admin users only. The public-facing routes, the Call Board session, and any anonymous context must never be able to query this table. Verify this policy is in place before any prompt that touches volunteer profiles or Call Board pages.
 
+**SECURITY DEFINER function privilege verification (R28):**
+Before shipping any migration that creates a SECURITY DEFINER function, verify execute privileges after creation:
+```sql
+SELECT proname, proacl
+FROM pg_proc
+WHERE proname = 'your_function_name';
+```
+The `proacl` result must NOT contain `=X/` (PUBLIC execute) or `anon=X/`. If either is present, immediately add REVOKE statements to the migration before committing. See R28 in Brief §13 for the required REVOKE/GRANT pattern. This check is mandatory — confirmed failure mode discovered in 30BN-5.3 (get_show_notification_targets) and retroactively fixed in ADMIN.13 (get_activity_feed).
+
 ---
 
 ## 7. Supabase Client Rules
@@ -145,8 +154,9 @@ Two Supabase clients exist in this project. Use the correct one for the context.
 **`lib/supabase/admin.ts` — `getAdminClient()`**
 - Uses `SUPABASE_SERVICE_ROLE_KEY` — bypasses RLS entirely
 - Server-only. Never import in Client Components.
-- Use for: Super Admin account creation, sending admin welcome emails, any operation that must bypass RLS (e.g., looking up a volunteer by token without a user session), and public Server Component reads where no user session exists (e.g., fetching active opportunities or shows for a public page — server-side only, key never exposed to client)
+- Use for: Super Admin account creation, sending admin welcome emails, any operation that must bypass RLS (e.g., looking up a volunteer by token without a user session), public Server Component reads where no user session exists (e.g., fetching active opportunities or shows for a public page — server-side only, key never exposed to client), and Vercel Cron route handlers (no session context)
 - **Never expose to client side.** If you find yourself importing `admin.ts` in a `'use client'` file, stop — this is a security failure.
+- **Do not use for admin server actions called from authenticated sessions.** If a server action is invoked only from the Production Crew UI (i.e., a logged-in Editor or Super Admin), use `getServerClient()` — the session exists and RLS should apply. `getAdminClient()` bypasses RLS and should only be used when there is genuinely no session. Confirmed pattern: `sendShowNotifications()` uses `getServerClient()` because it is always called by an authenticated admin. (30BN-5.3 Q1)
 
 **Never create a client inside a loop.** Create once per function, reuse.
 
@@ -186,6 +196,8 @@ F1. [Anything that needs attention before shipping, or "None"]
 The owner performs and reports manual verification after receiving the build report. The prompt is not marked complete until the owner confirms all manual items pass. If any manual item fails, treat the failure as a Phase A/B debugging session per §5.
 
 If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark something as Verified if it wasn't actually tested.
+
+**Database-state verification in build reports:** Some quality gate items can be confirmed by Claude Code directly via live database queries rather than deferred to manual owner verification. When a build report includes a live query result that confirms a fix (e.g., a `pg_proc.proacl` check confirming privilege state, or a row count confirming a migration applied), that item is listed in the Verified section as confirmed — not as pending owner verification. The build report must include the actual query result, not just a claim that it was checked. Established ADMIN.13.
 
 **Step Tracker Convention (required from v1.3 onward):**
 Every build prompt must declare a step tracker block after the SCOPE section. The tracker lists all planned steps at the start of the session. Claude Code updates it in place as work proceeds — marking each step ✓ (complete) or ✗ (blocked) when done.
@@ -276,6 +288,25 @@ grep -rn "volunteer_roles" app/ components/ lib/ \
 # Must return zero results
 ```
 
+```bash
+# Confirm SECURITY DEFINER functions have no PUBLIC/anon
+# execute privilege (R28) — run after any migration that
+# creates a SECURITY DEFINER function
+# Replace function_name with the actual function name
+# Must NOT show =X/ (PUBLIC) or anon=X/ in proacl
+```
+```sql
+SELECT proname, proacl
+FROM pg_proc
+WHERE proname IN (
+  'get_activity_feed',
+  'get_show_notification_targets'
+);
+```
+-- Both must show only postgres, authenticated,
+-- service_role in proacl. If =X/ or anon=X/ appears,
+-- apply REVOKE immediately per R28.
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -285,7 +316,10 @@ Add project-specific checks as new standing rules emerge.
 Run before every Vercel deployment:
 
 ```
-□ All five env vars set in Vercel → Settings → Environment Variables
+□ All six env vars set in Vercel → Settings → Environment Variables
+  (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
+  NEXT_PUBLIC_SITE_URL, CRON_SECRET)
 □ NEXT_PUBLIC_SITE_URL set to correct URL for this environment
 □ No SUPABASE_SERVICE_ROLE_KEY referenced in any client component
 □ Vercel framework preset confirmed as Next.js — Settings → General (not "Other")
@@ -301,6 +335,8 @@ Run before every Vercel deployment:
 □ Any new shadcn component installed: check globals.css for var() injection (R17), check for tailwind.config.ts (R7), rebrand all semantic color classes (R15)
 □ Migration files created at repo root, not in supabase/migrations/ (R21)
 □ No Button component imported in files requiring brand hover behavior (R19)
+□ Any new SECURITY DEFINER function in a migration: verify pg_proc.proacl
+  shows no PUBLIC or anon execute privilege after applying (R28)
 ```
 
 ---
@@ -360,7 +396,12 @@ Document & Admin Prompts
   30BN-ADMIN.12  ✓ Activity feed with pagination and
                    per-user read state (Migration 007)
   30BN-DOC.5     ✓ Brief Update v1.4 (Phase 4)
-  30BN-DOC.6     ✓ Process Update v1.4 (this prompt)
+  30BN-DOC.6     ✓ Process Update v1.4
+  30BN-ADMIN.13  ✓ Security fix — REVOKE EXECUTE on
+                   get_activity_feed() from PUBLIC/anon
+                   (Migration 009)
+  30BN-DOC.7     ✓ Brief Update v1.5 (Phase 5)
+  30BN-DOC.8     ✓ Process Update v1.5 (this prompt)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -386,10 +427,10 @@ Phase 4 — Shows & Season Management ✓ Complete
   30BN-4.4b   ✓ Standing Volunteer Opportunities —
                 Public Submission & Admin Viewer
 
-Phase 5 — Public Show Claiming
-  30BN-5.1    Public Show Listing & Per-Show Page
-  30BN-5.2    Slot Claiming Logic & Self-Cancel
-  30BN-5.3    Category-Match Notification Emails (NEW)
+Phase 5 — Public Show Claiming ✓ Complete
+  30BN-5.1    ✓ Public Show Listing & Per-Show Page
+  30BN-5.2    ✓ Slot Claiming Logic & Self-Cancel
+  30BN-5.3    ✓ Category-Match Notification Emails
 
 Phase 6 — Custom Forms & Surveys
   30BN-6.1    Form Builder
@@ -472,6 +513,9 @@ The step tracker declared at the start of a build session is a single element up
 
 Note on placement: R27 governs session conduct (how the tracker widget behaves during a Claude Code session), not a product or schema decision. It lives here in §14 rather than Brief §13 for the same reason as R16 and R22. Brief §13 carries a cross-reference to this entry.
 
+### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute (cross-reference)
+Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule: after creating any SECURITY DEFINER function, immediately REVOKE EXECUTE from PUBLIC and anon; GRANT EXECUTE to authenticated only. Verify via pg_proc.proacl check. Confirmed failure mode found in 30BN-5.3 and fixed retroactively in ADMIN.13. See §6 for the required verification query and §10 for the grep/query check.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -481,4 +525,5 @@ Note on placement: R27 governs session conduct (how the tracker widget behaves d
 *v1.2 (July 2026 — Phase 2 complete: build report timing convention added to §8; Phase 2 marked complete in §13; DOC.1/DOC.2 added to prompt log)*
 *v1.3 (July 2026 — Phase 3 complete: step tracker convention added to §8; new grep checks and post-build checklist items added to §10 and §11; ADMIN.1–ADMIN.7 and DOC.3–DOC.4 added to prompt log; Phase 3 marked complete; Phases 4 and 5 updated with new prompt slots 4.4 and 5.3; R19–R22 cross-references added to §14)*
 *v1.4 (July 2026 — Phase 4 complete: step tracker re-emit behavior corrected (R27), admin client public-read use case documented (§7), src/ path errors fixed in grep checks (§10), R23/R26 grep checks added (§10), R23/R26 post-build checklist items added (§11), Phase 4 marked complete in §13, ADMIN.8–ADMIN.12 and DOC.5–DOC.6 added to prompt log, R23–R27 added to §14)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.4*
+*v1.5 (July 2026 — Phase 5 complete: SECURITY DEFINER privilege verification added to §6, getServerClient vs getAdminClient distinction clarified in §7 (confirmed pattern from 5.3 Q1), DB-query verification pattern added to §8 (established ADMIN.13), R28 pg_proc.proacl check added to §10, env var count updated to six and R28 checklist item added to §11, Phase 5 marked complete and ADMIN.13/DOC.7/DOC.8 added to prompt log in §13, R28 cross-reference added to §14)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.5*
