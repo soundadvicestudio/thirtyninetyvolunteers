@@ -26,6 +26,7 @@ export type AuditAction =
   | 'opportunity.create'
   | 'opportunity.update'
   | 'opportunity.archive'
+  | 'opportunity.submission'
 
 export async function logAction(
   adminId: string,

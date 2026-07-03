@@ -367,3 +367,148 @@ export async function sendWelcomeEmail({
     html,
   })
 }
+
+// ─── Standing Opportunity submission emails ──────────────────────
+
+type OpportunityEmailParams = {
+  to: string
+  name: string
+  opportunityTitle: string
+}
+
+export async function sendOpportunityEOIEmail({
+  to,
+  name,
+  opportunityTitle,
+}: OpportunityEmailParams): Promise<{ subject: string; preview: string }> {
+  const safeName = escapeHtml(name)
+  const safeTitle = escapeHtml(opportunityTitle)
+  const subject = 'Thanks for your interest — 30 By Ninety Theatre'
+  const preview = `Thank you for your interest in ${opportunityTitle}. A member of our team will be in touch soon.`.slice(
+    0,
+    200
+  )
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          <h1 style="color:#293994;font-size:22px;font-weight:700;
+                     margin:0 0 12px;">
+            Thanks for your interest, ${safeName}!
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            We've received your expression of interest in
+            <strong>${safeTitle}</strong>. A member of our team will follow
+            up with you personally soon.
+          </p>
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            In the meantime, feel free to browse other upcoming volunteer
+            opportunities.
+          </p>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
+             style="display:inline-block;background:#F26522;
+                    color:#ffffff;text-decoration:none;
+                    padding:14px 28px;border-radius:8px;
+                    font-weight:700;font-size:15px;">
+            Browse Upcoming Shows
+          </a>
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    to,
+    subject,
+    html,
+  })
+
+  return { subject, preview }
+}
+
+export async function sendOpportunitySlotClaimEmail({
+  to,
+  name,
+  opportunityTitle,
+}: OpportunityEmailParams): Promise<{ subject: string; preview: string }> {
+  const safeName = escapeHtml(name)
+  const safeTitle = escapeHtml(opportunityTitle)
+  const subject = `You're signed up — ${opportunityTitle}`
+  const preview = `You're confirmed for ${opportunityTitle}. We're so glad to have you on board.`.slice(
+    0,
+    200
+  )
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <body style="margin:0;padding:0;background:#f5f5f5;
+                 font-family:'Open Sans',Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;
+                  background:#ffffff;border-radius:8px;
+                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <div style="background:#293994;padding:28px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
+            30 By Ninety Theatre
+          </p>
+        </div>
+        <div style="padding:32px;">
+          <h1 style="color:#293994;font-size:22px;font-weight:700;
+                     margin:0 0 12px;">
+            You're signed up, ${safeName}!
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            You're confirmed for <strong>${safeTitle}</strong>. We're so glad
+            to have you on board — thank you for volunteering with us.
+          </p>
+          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+            In the meantime, feel free to browse other upcoming volunteer
+            opportunities.
+          </p>
+          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
+             style="display:inline-block;background:#F26522;
+                    color:#ffffff;text-decoration:none;
+                    padding:14px 28px;border-radius:8px;
+                    font-weight:700;font-size:15px;">
+            Browse Upcoming Shows
+          </a>
+        </div>
+        <div style="background:#f5f5f5;padding:16px 32px;
+                    border-top:1px solid #D0D5E8;">
+          <p style="margin:0;color:#aaa;font-size:12px;">
+            30 By Ninety Theatre · Old Mandeville, Louisiana
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    to,
+    subject,
+    html,
+  })
+
+  return { subject, preview }
+}

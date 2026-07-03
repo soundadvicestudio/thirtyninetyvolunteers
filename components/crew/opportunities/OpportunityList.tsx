@@ -105,7 +105,14 @@ export default function OpportunityList({
                         isArchived ? 'opacity-60' : ''
                       }`}
                     >
-                      <td className="px-4 py-2 text-dark dark:text-dark-text font-medium">{opp.title}</td>
+                      <td className="px-4 py-2 font-medium">
+                        <Link
+                          href={`/crew/shows/opportunities/${opp.id}`}
+                          className="text-dark dark:text-dark-text hover:text-navy dark:hover:text-steel transition-colors"
+                        >
+                          {opp.title}
+                        </Link>
+                      </td>
                       <td className="px-4 py-2">
                         <span
                           className={`text-xs font-semibold rounded px-2 py-0.5 ${CLAIM_TYPE_BADGE[opp.claim_type]}`}
