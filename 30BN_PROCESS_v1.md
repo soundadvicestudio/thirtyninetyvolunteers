@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.3
-### Created: July 2026 | Last Updated: July 2026 — v1.3 (Phase 3 complete)
+## 30BN_PROCESS_v1.md — v1.4
+### Created: July 2026 | Last Updated: July 2026 — v1.4 (Phase 4 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -145,7 +145,7 @@ Two Supabase clients exist in this project. Use the correct one for the context.
 **`lib/supabase/admin.ts` — `getAdminClient()`**
 - Uses `SUPABASE_SERVICE_ROLE_KEY` — bypasses RLS entirely
 - Server-only. Never import in Client Components.
-- Use for: Super Admin account creation, sending admin welcome emails, any operation that must bypass RLS (e.g., looking up a volunteer by token without a user session)
+- Use for: Super Admin account creation, sending admin welcome emails, any operation that must bypass RLS (e.g., looking up a volunteer by token without a user session), and public Server Component reads where no user session exists (e.g., fetching active opportunities or shows for a public page — server-side only, key never exposed to client)
 - **Never expose to client side.** If you find yourself importing `admin.ts` in a `'use client'` file, stop — this is a security failure.
 
 **Never create a client inside a loop.** Create once per function, reuse.
@@ -188,20 +188,18 @@ The owner performs and reports manual verification after receiving the build rep
 If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark something as Verified if it wasn't actually tested.
 
 **Step Tracker Convention (required from v1.3 onward):**
-Every build prompt must begin its execution with a step tracker block declared at the top of the working session. Claude Code declares all steps at the start and updates each to ✓ (complete), ⏳ (in progress), or ✗ (blocked) as work proceeds. This gives the owner visibility into build progress during long sessions and makes interruptions (e.g., rate limit hits) easier to resume.
+Every build prompt must declare a step tracker block after the SCOPE section. The tracker lists all planned steps at the start of the session. Claude Code updates it in place as work proceeds — marking each step ✓ (complete) or ✗ (blocked) when done.
 
 Format:
 ```
 Step tracker:
-  ✓ Step 1: [completed step]
-  ⏳ Step 2: [current step — in progress]
-  ☐ Step 3: [pending step]
-  ☐ Step 4: [pending step]
+✓ Step 1: [completed]
+☐ Step 2: [in progress]
+☐ Step 3: [pending]
+☐ Step 4: [pending]
 ```
 
-The step tracker appears in the prompt itself (as a declaration of planned steps) and Claude Code maintains it visibly in its working output.
-
-When writing prompts, always include a step tracker block after the SCOPE section listing all planned steps. This is mandatory from 30BN-DOC.4 onward.
+**The tracker is a single persistent element.** It must not be re-emitted or repeated after individual steps — doing so produces multiple copies that obscure build progress rather than clarifying it. Claude Code manages live-update behavior natively when given an initial declaration. Prompts must not include the instruction to "re-emit the tracker after each step." See R27.
 
 ---
 
@@ -222,16 +220,16 @@ Before marking a prompt complete, run a search to verify no unintended patterns 
 
 ```bash
 # Check for hardcoded category names (R4)
-grep -r "Ushers\|Band Members\|Concessions\|Backstage" src/
+grep -r "Ushers\|Band Members\|Concessions\|Backstage" app/ components/ lib/
 
 # Check for service role key in client files (R10)
-grep -r "SERVICE_ROLE_KEY" src/components/ src/app/
+grep -r "SERVICE_ROLE_KEY" components/ app/
 
 # Check for tailwind.config.ts (R7)
 ls tailwind.config.ts 2>/dev/null && echo "EXISTS - REMOVE IT"
 
 # Check for router.push after mutations (R12)
-grep -r "router.push" src/app/crew/
+grep -r "router.push" app/crew/
 ```
 
 ```bash
@@ -255,6 +253,29 @@ grep -r "from.*components/ui/button" \
 # (Review any hits — confirm none need brand hover states that would be blocked by tailwind-merge)
 ```
 
+```bash
+# Confirm no formatCT() on bare date-only columns (R23)
+# Safe: timestamptz columns (created_at, updated_at,
+#   claimed_at, last_login, submitted_at, etc.)
+# Fix needed: date columns (show_date, start_date,
+#   end_date) or constructed strings (date + 'T' + time)
+grep -rn "formatCT(" app/ components/ \
+  --include="*.tsx" --include="*.ts"
+# Review hits — any call on a bare date column or
+# constructed date+time string must use
+# formatWallClockCT() instead
+```
+
+```bash
+# Confirm no volunteer_roles queries use show_id (R26)
+# show_id was removed from volunteer_roles in
+# Migration 006 — all queries must join through
+# show_dates instead
+grep -rn "volunteer_roles" app/ components/ lib/ \
+  --include="*.ts" --include="*.tsx" | grep "show_id"
+# Must return zero results
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -273,7 +294,9 @@ Run before every Vercel deployment:
 □ Build report written
 □ Q-items noted
 □ Brief updated if schema or decisions changed (batch with owner approval)
-□ Step tracker declared at session start and updated throughout
+□ Step tracker declared at session start — single persistent tracker, not re-emitted after individual steps (R27)
+□ Any new date display: confirm formatWallClockCT() used for bare date columns (show_date, start_date, end_date), formatCT() for timestamptz columns (created_at, updated_at, claimed_at, etc.) (R23)
+□ Any code touching volunteer_roles: confirm query joins through show_dates — no direct show_id reference (column removed in Migration 006) (R26)
 □ All new /crew/* pages placed under app/crew/(app)/ — not app/crew/ directly (R20)
 □ Any new shadcn component installed: check globals.css for var() injection (R17), check for tailwind.config.ts (R7), rebrand all semantic color classes (R15)
 □ Migration files created at repo root, not in supabase/migrations/ (R21)
@@ -327,6 +350,17 @@ Document & Admin Prompts
   30BN-DOC.2     ✓ Process Update v1.2 (Phase 2)
   30BN-DOC.3     ✓ Brief Update v1.3 (Phase 3)
   30BN-DOC.4     ✓ Process Update v1.3 (this prompt)
+  30BN-ADMIN.8   ✓ (prior session — details in
+                   "Volunteer Platform Build Pt 2")
+  30BN-ADMIN.9   ✓ Timezone sweep — formatWallClockCT()
+  30BN-ADMIN.10  ✓ Season display fix + opportunity
+                   submission audit log
+  30BN-ADMIN.11  ✓ Roles-per-date schema fix
+                   (Migration 006)
+  30BN-ADMIN.12  ✓ Activity feed with pagination and
+                   per-user read state (Migration 007)
+  30BN-DOC.5     ✓ Brief Update v1.4 (Phase 4)
+  30BN-DOC.6     ✓ Process Update v1.4 (this prompt)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -343,11 +377,14 @@ Phase 3 — Production Crew Core ✓ Complete
   30BN-3.4   ✓ Category Management
   30BN-3.5   ✓ Super Admin User Management
 
-Phase 4 — Shows & Season Management
-  30BN-4.1    Show Creation & Edit
-  30BN-4.2    Season Management & Show List
-  30BN-4.3    Admin Show Detail
-  30BN-4.4    Standing Volunteer Opportunities (NEW)
+Phase 4 — Shows & Season Management ✓ Complete
+  30BN-4.1    ✓ Show Creation & Edit
+  30BN-4.2    ✓ Season Management & Show List
+  30BN-4.3    ✓ Admin Show Detail
+  30BN-4.4a   ✓ Standing Volunteer Opportunities —
+                Admin Management
+  30BN-4.4b   ✓ Standing Volunteer Opportunities —
+                Public Submission & Admin Viewer
 
 Phase 5 — Public Show Claiming
   30BN-5.1    Public Show Listing & Per-Show Page
@@ -418,6 +455,23 @@ Documented in Brief §13 R21. Referenced here for continuity. No `supabase/migra
 ### R22 — Vercel Deploy Verification Is Owner-Side
 Documented in Brief §13 R22. Referenced here because it directly governs session conduct: Claude Code must not include "confirm Vercel deploy" as a step in its own build process or flag its absence in build reports. Owner confirms deploy independently.
 
+### R23 — formatWallClockCT() for Date-Only Columns (cross-reference)
+Documented in Brief §13 R23. Referenced here for R-number continuity. Core rule: use formatWallClockCT() for bare date column values and constructed date+time strings; use formatCT() only for full timestamptz values. See grep check in §10.
+
+### R24 — Nested useFieldArray Requires Its Own Sub-Component (cross-reference)
+Documented in Brief §13 R24. Referenced here for R-number continuity. Core rule: nested field arrays in react-hook-form must live in their own named component — not inline in a render loop over a parent field array.
+
+### R25 — Public Submissions Use null admin_id in audit_log (cross-reference)
+Documented in Brief §13 R25. Referenced here for R-number continuity. Core rule: logAction() accepts string | null as admin_id; pass null for public-facing actions with no admin session.
+
+### R26 — Roles Belong to show_dates, Not shows (cross-reference)
+Documented in Brief §13 R26. Referenced here for R-number continuity. Core rule: volunteer_roles.show_date_id is the FK parent as of Migration 006. Any query for "all roles for a show" must join through show_dates. See grep check in §10.
+
+### R27 — Step Tracker Is a Single Persistent Widget
+The step tracker declared at the start of a build session is a single element updated in place as work proceeds. It must not be re-emitted or repeated after individual steps. Claude Code manages the live-update behavior natively when given an initial declaration. Prompts must not include the instruction to "re-emit the tracker after each step" — this causes multiple tracker copies to appear, obscuring rather than clarifying progress. The correct instruction is to declare the tracker once in the SCOPE section and allow Claude Code to update it. Established Phase 4 build session.
+
+Note on placement: R27 governs session conduct (how the tracker widget behaves during a Claude Code session), not a product or schema decision. It lives here in §14 rather than Brief §13 for the same reason as R16 and R22. Brief §13 carries a cross-reference to this entry.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -426,4 +480,5 @@ Documented in Brief §13 R22. Referenced here because it directly governs sessio
 *v1.1 (July 2026 — Phase 1 complete: R16 (no browser verification in Claude Code) and R17 (shadcn var() injection revert) added in new §14 — deviation from §12 protocol, kept here rather than Brief §13 per owner decision; shadcn color class grep check added to §10; Vercel preset and shadcn tailwind.config checks added to §11; ADMIN/DOC numbering convention clarified in §3; Phase 1 marked complete and Document & Admin Prompts log added in §13)*
 *v1.2 (July 2026 — Phase 2 complete: build report timing convention added to §8; Phase 2 marked complete in §13; DOC.1/DOC.2 added to prompt log)*
 *v1.3 (July 2026 — Phase 3 complete: step tracker convention added to §8; new grep checks and post-build checklist items added to §10 and §11; ADMIN.1–ADMIN.7 and DOC.3–DOC.4 added to prompt log; Phase 3 marked complete; Phases 4 and 5 updated with new prompt slots 4.4 and 5.3; R19–R22 cross-references added to §14)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.3*
+*v1.4 (July 2026 — Phase 4 complete: step tracker re-emit behavior corrected (R27), admin client public-read use case documented (§7), src/ path errors fixed in grep checks (§10), R23/R26 grep checks added (§10), R23/R26 post-build checklist items added (§11), Phase 4 marked complete in §13, ADMIN.8–ADMIN.12 and DOC.5–DOC.6 added to prompt log, R23–R27 added to §14)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.4*
