@@ -23,6 +23,9 @@ export type AuditAction =
   | 'attendance.mark'
   | 'show.editor_add'
   | 'show.editor_remove'
+  | 'opportunity.create'
+  | 'opportunity.update'
+  | 'opportunity.archive'
 
 export async function logAction(
   adminId: string,

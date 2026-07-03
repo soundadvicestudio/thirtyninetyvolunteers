@@ -293,7 +293,7 @@ export default function ShowList({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Shows</h1>
         {canEdit && (
           <Link
@@ -304,6 +304,13 @@ export default function ShowList({
           </Link>
         )}
       </div>
+
+      <Link
+        href="/crew/shows/opportunities"
+        className="inline-block text-sm font-semibold text-navy dark:text-steel hover:underline mb-6"
+      >
+        Standing Opportunities →
+      </Link>
 
       <div className="flex flex-wrap gap-3 mb-4">
         <select
