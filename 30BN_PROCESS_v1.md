@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.5
-### Created: July 2026 | Last Updated: July 2026 — v1.5 (Phase 5 complete)
+## 30BN_PROCESS_v1.md — v1.6
+### Created: July 2026 | Last Updated: July 2026 — v1.6 (Phases 6 and 7 complete)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -307,6 +307,26 @@ WHERE proname IN (
 -- service_role in proacl. If =X/ or anon=X/ appears,
 -- apply REVOKE immediately per R28.
 
+```bash
+# Confirm revalidatePath only in server-side files (R29)
+# Never in a 'use client' file — server-only import
+grep -rn "revalidatePath" app/ components/ \
+  --include="*.tsx" --include="*.ts"
+# Review every hit: must be in a file that has
+# 'use server' at the top or is a server action file.
+# A revalidatePath call in a client component will
+# throw a runtime error.
+```
+
+```bash
+# Confirm no drag library installed (Phase 6 decision)
+# Field reorder uses arrow buttons only — no drag lib.
+# Installing one would violate the explicit decision
+# made when building the form builder (30BN-6.1).
+cat package.json | grep -i "dnd\|drag\|sortable"
+# Must return nothing.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -337,6 +357,10 @@ Run before every Vercel deployment:
 □ No Button component imported in files requiring brand hover behavior (R19)
 □ Any new SECURITY DEFINER function in a migration: verify pg_proc.proacl
   shows no PUBLIC or anon execute privilege after applying (R28)
+□ Any new mutating server action: confirm revalidatePath() calls are present
+  for all routes that display the mutated data (R29)
+□ Any prompt touching forms or field reorder: confirm no drag library was
+  added to package.json (Phase 6 confirmed decision — arrow buttons only)
 ```
 
 ---
@@ -401,7 +425,17 @@ Document & Admin Prompts
                    get_activity_feed() from PUBLIC/anon
                    (Migration 009)
   30BN-DOC.7     ✓ Brief Update v1.5 (Phase 5)
-  30BN-DOC.8     ✓ Process Update v1.5 (this prompt)
+  30BN-DOC.8     ✓ Process Update v1.5
+  30BN-ADMIN.14  ✓ Cache revalidation sweep
+                   (revalidatePath in all mutating actions),
+                   dialog close-button dark hover fix,
+                   theme toggle hydration fix
+                   (ThemeProvider → document.body), show
+                   edit blank-role trap fix, opportunity
+                   reactivate action and UI. R29/R30
+                   established.
+  30BN-DOC.9     ✓ Brief Update v1.6 (Phases 6 and 7)
+  30BN-DOC.10    ✓ Process Update v1.6 (this prompt)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -432,13 +466,15 @@ Phase 5 — Public Show Claiming ✓ Complete
   30BN-5.2    ✓ Slot Claiming Logic & Self-Cancel
   30BN-5.3    ✓ Category-Match Notification Emails
 
-Phase 6 — Custom Forms & Surveys
-  30BN-6.1    Form Builder
-  30BN-6.2    Public Form Page & Response Capture
-  30BN-6.3    Form Response Viewer & Embed
+Phase 6 — Custom Forms & Surveys ✓ Complete
+  30BN-6.1    ✓ Form Builder
+  30BN-6.2    ✓ Public Form Page & Response Capture
+  30BN-6.3    ✓ Form Response Viewer & Embed
 
-Phase 7 — QR Code Generator
-  30BN-7.1    QR Code Utility & Generator Tool
+Phase 7 — QR Code Generator ✓ Complete
+  30BN-7.1    ✓ QR Code Utility & Generator Tool
+                (per-form QR pulled forward into 6.3;
+                standalone generator built here)
 
 Phase 8 — Volunteer Call Board
   30BN-8.1    Call Board Login & Session
@@ -478,6 +514,17 @@ Rules governing this build process itself, kept here rather than in Brief §13 b
 ### R16 — No Browser Verification in Claude Code Sessions
 Claude Code does not use browser automation tools (Claude in Chrome or any equivalent) for UI, flow, or auth verification. All such verification is performed manually by the owner, who reports results to Claude Code as pass/fail. Build prompts must express all verification steps as manual owner tasks — never as browser tool calls. Established during 30BN-1.3.
 
+**Verification session pattern (R16 clarification):**
+Claude in Chrome may be used in a separate, dedicated verification session — distinct from a
+Claude Code build session — with explicit owner approval. This is not a violation of R16 because:
+(a) it runs in Claude.ai, not in a Claude Code session, and (b) it is read/evaluate/audit only —
+no code is written, no commits are made. The pattern established in this project uses a
+structured sequence: SETUP-1 (data and account seeding), VERIFY-1 through VERIFY-N (grouped
+browser checks), and DB-VERIFY.N (Supabase query-only checks). Each prompt returns a structured
+PASS/FAIL/SKIP report which the owner pastes into the planning chat for analysis. Fixes from
+FAIL items follow the normal Phase A/B debugging protocol and ship as ADMIN-prefixed prompts.
+R16 continues to prohibit browser automation within any Claude Code build or debug session.
+
 ### R17 — shadcn Init: Revert var() Injection Into globals.css
 The shadcn CLI (v4.12+) injects a var()-driven CSS custom property theme block into `globals.css` by default during `init`, and may repeat this on `npx shadcn@latest add` commands. This overwrites the R7-compliant `@theme` block and is incompatible with Tailwind v4. After any shadcn init or add, immediately inspect `globals.css` and revert any injected `var()` block. The canonical `@theme` block with static hex values must be restored exactly as specified in 30BN_BRIEF_v1.md §3 Critical Constraint. Known shadcn CLI behavior to guard against.
 
@@ -516,6 +563,22 @@ Note on placement: R27 governs session conduct (how the tracker widget behaves d
 ### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute (cross-reference)
 Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule: after creating any SECURITY DEFINER function, immediately REVOKE EXECUTE from PUBLIC and anon; GRANT EXECUTE to authenticated only. Verify via pg_proc.proacl check. Confirmed failure mode found in 30BN-5.3 and fixed retroactively in ADMIN.13. See §6 for the required verification query and §10 for the grep/query check.
 
+### R29 — revalidatePath() Required After Every Mutation (cross-reference)
+Documented in Brief §13 R29. Referenced here for R-number continuity. Core rule: every server
+action that mutates data must call revalidatePath() for all routes that display that data.
+Without it, Next.js serves stale cached Server Component renders. Never call revalidatePath()
+in a 'use client' file. Confirmed failure mode: show status change not reflected on /shows
+(VERIFY-1 C9); slot count not updating after claim (VERIFY-4). Fixed in ADMIN.14. See §10
+for the grep check and §11 for the checklist item.
+
+### R30 — Theme Toggle Must Target document.body (cross-reference)
+Documented in Brief §13 R30. Referenced here for R-number continuity. Core rule: the
+data-theme attribute driving the Tailwind @variant dark rule must be set on document.body,
+not on an inner wrapper element. Both ThemeProvider.tsx and the inline script in the crew
+layout must target document.body explicitly. The ThemeProvider effect must include the current
+theme in its dependency array. Confirmed failure mode: dark→light toggle required a hard reload
+(VERIFY-1 A4). Fixed in ADMIN.14.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -526,4 +589,5 @@ Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule
 *v1.3 (July 2026 — Phase 3 complete: step tracker convention added to §8; new grep checks and post-build checklist items added to §10 and §11; ADMIN.1–ADMIN.7 and DOC.3–DOC.4 added to prompt log; Phase 3 marked complete; Phases 4 and 5 updated with new prompt slots 4.4 and 5.3; R19–R22 cross-references added to §14)*
 *v1.4 (July 2026 — Phase 4 complete: step tracker re-emit behavior corrected (R27), admin client public-read use case documented (§7), src/ path errors fixed in grep checks (§10), R23/R26 grep checks added (§10), R23/R26 post-build checklist items added (§11), Phase 4 marked complete in §13, ADMIN.8–ADMIN.12 and DOC.5–DOC.6 added to prompt log, R23–R27 added to §14)*
 *v1.5 (July 2026 — Phase 5 complete: SECURITY DEFINER privilege verification added to §6, getServerClient vs getAdminClient distinction clarified in §7 (confirmed pattern from 5.3 Q1), DB-query verification pattern added to §8 (established ADMIN.13), R28 pg_proc.proacl check added to §10, env var count updated to six and R28 checklist item added to §11, Phase 5 marked complete and ADMIN.13/DOC.7/DOC.8 added to prompt log in §13, R28 cross-reference added to §14)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.5*
+*v1.6 (July 2026 — Phases 6 and 7 complete: revalidatePath grep check added to §10 (R29), drag-library guard grep check added to §10 (Phase 6 decision), R29/drag-library checklist items added to §11, Phases 6 and 7 marked complete in §13, ADMIN.14/DOC.9/DOC.10 added to prompt log in §13, R16 clarified with verification session pattern in §14, R29/R30 cross-references added to §14)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.6*
