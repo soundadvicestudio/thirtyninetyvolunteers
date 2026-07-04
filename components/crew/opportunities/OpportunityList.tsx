@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { archiveOpportunity } from '@/lib/actions/opportunities'
+import { archiveOpportunity, reactivateOpportunity } from '@/lib/actions/opportunities'
 import type { AdminUser } from '@/lib/auth'
 import type { OpportunityWithSubmissionCount, ClaimType, OpportunityStatus } from '@/types/opportunity'
 
@@ -39,6 +39,8 @@ export default function OpportunityList({
   const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [archiveError, setArchiveError] = useState<string | null>(null)
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
+  const [reactivateError, setReactivateError] = useState<string | null>(null)
 
   async function handleArchive(id: string) {
     setArchivingId(id)
@@ -47,6 +49,18 @@ export default function OpportunityList({
     setArchivingId(null)
     if ('error' in result) {
       setArchiveError(result.error)
+      return
+    }
+    router.refresh()
+  }
+
+  async function handleReactivate(id: string) {
+    setReactivatingId(id)
+    setReactivateError(null)
+    const result = await reactivateOpportunity(id)
+    setReactivatingId(null)
+    if ('error' in result) {
+      setReactivateError(result.error)
       return
     }
     router.refresh()
@@ -76,6 +90,12 @@ export default function OpportunityList({
       {archiveError && (
         <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text mb-4">
           {archiveError}
+        </div>
+      )}
+
+      {reactivateError && (
+        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text mb-4">
+          {reactivateError}
         </div>
       )}
 
@@ -172,6 +192,16 @@ export default function OpportunityList({
                               </AlertDialogContent>
                             </AlertDialog>
                           </div>
+                        )}
+                        {canEdit && isArchived && (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivate(opp.id)}
+                            disabled={reactivatingId === opp.id}
+                            className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50"
+                          >
+                            {reactivatingId === opp.id ? 'Reactivating…' : 'Reactivate'}
+                          </button>
                         )}
                       </td>
                     </tr>

@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
@@ -48,6 +49,8 @@ export async function createOpportunity(
     slot_cap_enabled: value.slot_cap_enabled,
     slot_cap: value.slot_cap_enabled ? value.slot_cap : null,
   })
+
+  revalidatePath('/crew/shows/opportunities')
 
   return { success: true, opportunityId: inserted.id }
 }
@@ -101,6 +104,9 @@ export async function updateOpportunity(
 
   await logAction(admin.id, 'opportunity.update', 'opportunity', opportunityId, current, afterValue)
 
+  revalidatePath('/crew/shows/opportunities')
+  revalidatePath(`/crew/shows/opportunities/${opportunityId}`)
+
   return { success: true }
 }
 
@@ -140,6 +146,52 @@ export async function archiveOpportunity(opportunityId: string): Promise<Opportu
     { status: current.status },
     { status: 'archived' }
   )
+
+  revalidatePath('/crew/shows/opportunities')
+
+  return { success: true }
+}
+
+export async function reactivateOpportunity(opportunityId: string): Promise<OpportunityActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('standing_opportunities')
+    .select('status')
+    .eq('id', opportunityId)
+    .eq('status', 'archived')
+    .single()
+
+  if (fetchError || !current) {
+    return { error: 'Could not find this opportunity.' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('standing_opportunities')
+    .update({ status: 'active', updated_at: new Date().toISOString() })
+    .eq('id', opportunityId)
+    .eq('status', 'archived')
+
+  if (updateError) {
+    console.error('reactivateOpportunity error:', updateError)
+    return { error: 'Something went wrong reactivating the opportunity. Please try again.' }
+  }
+
+  await logAction(
+    admin.id,
+    'opportunity.reactivate',
+    'opportunity',
+    opportunityId,
+    { status: 'archived' },
+    { status: 'active' }
+  )
+
+  revalidatePath('/crew/shows/opportunities')
 
   return { success: true }
 }

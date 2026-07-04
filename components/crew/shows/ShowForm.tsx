@@ -304,7 +304,7 @@ export default function ShowForm({
                   category_id: r.category_id ?? NO_CATEGORY,
                   slots_available: String(r.slots_available),
                 }))
-              : [{ ...BLANK_ROLE }],
+              : [],
           }))
         : [{ dbId: null, show_date: '', show_time: '', roles: [{ ...BLANK_ROLE }] }],
       editorIds: show?.editorIds ?? [],

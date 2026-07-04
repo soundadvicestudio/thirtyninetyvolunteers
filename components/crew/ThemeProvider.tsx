@@ -31,6 +31,19 @@ export function ThemeProvider({
     setMounted(true)
   }, [])
 
+  // Keep document.body in sync with theme state on every change — this is
+  // the same element the pre-hydration inline script (in the crew layout)
+  // sets on first paint, so toggling never leaves a stale attribute on an
+  // ancestor the dark: variant still matches.
+  useEffect(() => {
+    if (!mounted) return
+    if (theme === 'dark') {
+      document.body.setAttribute('data-theme', 'dark')
+    } else {
+      document.body.removeAttribute('data-theme')
+    }
+  }, [theme, mounted])
+
   const toggle = () => {
     setTheme(prev => {
       const next = prev === 'light' ? 'dark' : 'light'
@@ -39,17 +52,10 @@ export function ThemeProvider({
     })
   }
 
-  // Prevent flash: render children without theme
-  // attribute until mounted (SSR safe)
   return (
-    <div
-      data-theme={mounted ? theme : undefined}
-      className="contents"
-    >
-      <ThemeContext.Provider value={{ theme, toggle }}>
-        {children}
-      </ThemeContext.Provider>
-    </div>
+    <ThemeContext.Provider value={{ theme, toggle }}>
+      {children}
+    </ThemeContext.Provider>
   )
 }
 

@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
@@ -108,6 +109,9 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
     show_type: value.show_type,
     status: value.status,
   })
+
+  revalidatePath('/crew/shows')
+  revalidatePath('/shows')
 
   return { success: true, showId }
 }
@@ -308,6 +312,11 @@ export async function updateShow(
 
   await logAction(admin.id, 'show.update', 'show', showId, current, afterShow)
 
+  revalidatePath('/crew/shows')
+  revalidatePath(`/crew/shows/${showId}`)
+  revalidatePath('/shows')
+  revalidatePath(`/shows/${showId}`)
+
   if (blockedDates.length > 0 || blockedRoles.length > 0) {
     return { success: true, showId, warnings: { blockedDates, blockedRoles } }
   }
@@ -397,6 +406,10 @@ export async function toggleShowStatus(
     { status: newStatus }
   )
 
+  revalidatePath('/shows')
+  revalidatePath('/crew/shows')
+  revalidatePath(`/crew/shows/${showId}`)
+
   return { success: true }
 }
 
@@ -420,6 +433,8 @@ export async function addShowEditor(showId: string, adminId: string): Promise<Sh
   }
 
   await logAction(admin.id, 'show.editor_add', 'show', showId, undefined, { admin_id: adminId })
+
+  revalidatePath(`/crew/shows/${showId}`)
 
   return { success: true }
 }
@@ -447,6 +462,8 @@ export async function removeShowEditor(
   }
 
   await logAction(admin.id, 'show.editor_remove', 'show', showId, { admin_id: adminId }, undefined)
+
+  revalidatePath(`/crew/shows/${showId}`)
 
   return { success: true }
 }
@@ -490,6 +507,10 @@ export async function updateShowStatus(
     { status: current.status },
     { status: newStatus }
   )
+
+  revalidatePath('/shows')
+  revalidatePath('/crew/shows')
+  revalidatePath(`/crew/shows/${showId}`)
 
   return { success: true }
 }
@@ -593,6 +614,8 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
     } catch (err) {
       console.error('sendShowNotifications email_log error:', err)
     }
+
+    revalidatePath(`/crew/shows/${showId}`)
 
     // G. Return.
     return { sent: targets.length }

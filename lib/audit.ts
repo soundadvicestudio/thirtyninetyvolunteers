@@ -26,6 +26,7 @@ export type AuditAction =
   | 'opportunity.create'
   | 'opportunity.update'
   | 'opportunity.archive'
+  | 'opportunity.reactivate'
   | 'opportunity.submission'
   | 'slot_claim.cancel'
   | 'form.create'

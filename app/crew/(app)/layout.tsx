@@ -45,8 +45,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
                   ).matches ? 'dark' : 'light'
                 );
                 if (preferred === 'dark') {
-                  document.currentScript.parentElement
-                    .setAttribute('data-theme', 'dark');
+                  document.body.setAttribute('data-theme', 'dark');
                 }
               } catch(e) {}
             })();

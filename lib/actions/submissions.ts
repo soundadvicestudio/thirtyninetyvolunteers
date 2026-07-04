@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendOpportunityEOIEmail, sendOpportunitySlotClaimEmail } from '@/lib/email'
 import { logAction } from '@/lib/audit'
@@ -107,6 +108,8 @@ export async function submitOpportunity(formData: {
     console.error('submitOpportunity insert error:', insertError)
     return { error: 'Something went wrong submitting your interest. Please try again.' }
   }
+
+  revalidatePath(`/crew/shows/opportunities/${opportunityId}`)
 
   const claimType = opportunity.claim_type as 'eoi' | 'slot_claim'
 

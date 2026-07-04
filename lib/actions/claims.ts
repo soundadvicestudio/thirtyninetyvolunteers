@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { logAction } from '@/lib/audit'
@@ -199,6 +200,9 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
       return { status: 'error', message: 'Something went wrong submitting your claim. Please try again.' }
     }
 
+    revalidatePath('/shows')
+    revalidatePath(`/shows/${show.id}`)
+
     // H + I. Confirmation email + email_log — non-blocking, claim is already inserted.
     const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'MMMM d, yyyy')
     const formattedTime = formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
@@ -303,6 +307,17 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
     if (cancelError) {
       console.error('cancelClaim update error:', cancelError)
       return { success: false, error: 'Something went wrong. Please try again.' }
+    }
+
+    // Cache revalidation — derive show_id from show_dates for /shows and this show's page.
+    const { data: showDateForCache } = await client
+      .from('show_dates')
+      .select('show_id')
+      .eq('id', claim.show_date_id)
+      .maybeSingle()
+    if (showDateForCache) {
+      revalidatePath('/shows')
+      revalidatePath(`/shows/${showDateForCache.show_id}`)
     }
 
     // Everything below is best-effort: the cancellation already succeeded,
