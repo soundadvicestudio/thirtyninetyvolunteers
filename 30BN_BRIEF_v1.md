@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.5 (Phase 5 complete)
+### Created: July 2026 | Last Updated: July 2026 — v1.6 (Phases 6 and 7 complete)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phase 5 complete (30BN-5.1 through 30BN-5.3 ✓), Phase 6 pending
+**Current phase:** Alpha build in progress — Phase 7 complete (30BN-6.1 through 30BN-7.1 ✓), Phase 8 pending
 
 ---
 
@@ -343,7 +343,10 @@ Mid Gray:             #555555  --color-mid-gray
 - Confirmation email copy is distinct by claim type: EOI — warm, "we'll be in touch." Slot Claim — confirms the position.
 - Admin detail page (`/crew/shows/opportunities/[id]`): public URL copy/view, edit link, submissions table (name, email, phone, linked volunteer profile if email/phone matches a `volunteers` record, submitted date, status).
 - Submissions logged to `opportunity_submissions`. All submissions (including public) logged to `audit_log` with `admin_id = null` (see R25).
-- No waitlist for opportunity submissions in Alpha. Deferred to Phase 5.2 for consistency with show claiming.
+- No waitlist for opportunity submissions in Alpha.
+- Archive action: sets `status = 'archived'`. Reactivate action: sets `status = 'active'`.
+  Both are available to Editors and Super Admins from the opportunities admin list.
+  `reactivateOpportunity()` added in ADMIN.14. `opportunity.reactivate` added to AuditAction.
 
 **Category-Match Notifications (30BN-5.3):**
 - When a show is published (status → live), the system can notify all volunteers who have selected a matching category/role.
@@ -361,21 +364,53 @@ Mid Gray:             #555555  --color-mid-gray
 **Staffing Dashboard (`/crew/dashboard`):** See Dashboard above.
 
 **Forms & Surveys (`/crew/forms`):**
-- Form builder: text, textarea, dropdown, checkbox, radio, date, rating (1–5), number
-- Per-field: label, placeholder, required toggle, option list (for dropdown/radio/checkbox), sort order (drag-and-drop)
-- Preview mode before publish
-- Status: draft / live / closed
-- Published form → unique public URL (`/forms/[id]`) + embeddable widget code + QR code
-- Response viewer: table, linked volunteer profiles (email/phone match), date filter, CSV export
+- Form builder at `/crew/forms/new` and `/crew/forms/[id]/edit`
+- Field types: text, textarea, dropdown, checkbox, radio, date, rating (1–5), number
+- Per-field: label, placeholder, required toggle, option list (for dropdown/radio/checkbox), sort_order
+- Field reorder via up/down arrow buttons — NOT drag-and-drop. No drag library is installed.
+  This was a confirmed explicit decision (replacing the original spec language). Do not install
+  a drag library for this feature.
+- Nested options arrays (for dropdown/radio/checkbox) are managed in their own sub-component
+  `FieldOptionsEditor` per R24 — nested useFieldArray cannot be inlined in the parent field row.
+- The options field in form_fields stores a JSON array string in the DB; parsed to string[] on
+  read. Internally managed as `{ value: string }[]` in react-hook-form state (RHF requires
+  object arrays for useFieldArray, not primitive string arrays); unwrapped to string[] at the
+  FormData boundary and before passing to FormPreview.
+- Preview tab: renders all 8 field types in read-only/disabled mode
+- Status: draft / live / closed. Status selector + save buttons in FormBuilder.tsx.
+- Form detail page (`/crew/forms/[id]`): public URL + copy, embed code + copy, QR code
+  (inline SVG preview, PNG + SVG download via data URI pattern — same as show detail).
+  Response count linked to responses page. Edit button (Editor/Super Admin only).
+- Published form → unique public URL (`/forms/[id]`) — accessible publicly only when live.
+  Draft and closed forms show a generic "not available" or "no longer accepting" state.
+- Public form (`/forms/[id]`): dynamic zod schema built from field configuration at runtime,
+  keyed by field id. Checkbox fields use Controller (not register) for string[] value management.
+  Rating field rendered as 5 plain <button> elements (R19). Volunteer profile linking scans
+  submitted values for email (@) and phone (digits) patterns — best-effort, not field-typed.
+- Response viewer at `/crew/forms/[id]/responses`: client-side date range and match/unmatch
+  filters (useMemo, no round trip). Checkbox values stored as JSON array string, rendered as
+  comma-joined string in the viewer. CSV export of filtered set via lib/utils/csv.ts.
+- Embed widget code: `<iframe src="/forms/[id]" ...>` snippet — copyable from form detail page.
+- Key files: types/form.ts, lib/validations/form.ts, lib/data/forms.ts (getPublicForm,
+  getFormDetail, getFormResponses), lib/actions/forms.ts (createForm, updateForm, getForms,
+  getForm, submitFormResponse), lib/utils/formDisplay.ts (shared status label/badge maps),
+  components/crew/forms/ (FormBuilder, FieldRow, FieldOptionsEditor, FormPreview, FormList).
 
 **QR Code Generator (`/crew/tools/qr-generator`):**
-- Standalone: paste any URL → generate, preview, download PNG + SVG
-- Level H error correction (scannable with up to 30% damage/obstruction)
-- PNG: min 2000×2000px for print use
-- SVG: vector, infinitely scalable
-- Per-show QR: on show detail page (links to `/shows/[id]`)
-- Per-form QR: on form detail page (links to `/forms/[id]`)
-- All three use the same shared QR utility component
+- `lib/qr.ts`: server-side utility. `generateQR(url)` → `{ svg: string, pngBase64: string }`.
+  Level H error correction. 2000×2000px PNG (base64, no data: prefix — callers construct
+  download links as `href="data:image/png;base64,${pngBase64}"`). SVG download uses data URI:
+  `href="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}"`. This is the confirmed
+  actual pattern (not Blob) — verified against the show detail page implementation.
+- Standalone generator (`/crew/tools/qr-generator`): URL input + optional label, "Generate QR
+  Code" button, auto-prepends https:// if no protocol provided, result cleared on URL input
+  change. QR preview renders in a white container regardless of dark mode (QR scanability
+  requires white background). lib/actions/qr.ts wraps generateQR() as a server action for the
+  standalone tool.
+- Per-show QR: on show detail Overview tab (links to `/shows/[id]`). Built in 30BN-4.3.
+- Per-form QR: on form detail page `/crew/forms/[id]` (links to `/forms/[id]`). Built in
+  30BN-6.3 — pulled forward from Phase 7 scope because the form detail page was built then.
+- All surfaces use the same `generateQR()` from lib/qr.ts.
 
 **Volunteer Hours & Milestones:**
 - Auto-tally: hours increment when attendance marked Showed
@@ -1063,7 +1098,15 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 30BN-DOC.5     ✓ Brief Update v1.4
 30BN-DOC.6     ✓ Process Update v1.4
 30BN-DOC.7     ✓ Brief Update v1.5 (Phase 5)
-30BN-DOC.8     ⏳ Process Update v1.5 (next prompt)
+30BN-DOC.8     ✓ Process Update v1.5
+30BN-ADMIN.14  ✓ Cache revalidation sweep (revalidatePath
+                 in all mutating actions), dialog close-button
+                 dark hover fix, theme toggle hydration fix
+                 (ThemeProvider → document.body), show edit
+                 blank-role trap fix, opportunity reactivate
+                 action and UI. R29/R30 established.
+30BN-DOC.9     ✓ Brief Update v1.6 (Phases 6 and 7)
+30BN-DOC.10    ⏳ Process Update v1.6 (next prompt)
 ```
 
 ---
@@ -1101,44 +1144,58 @@ Claim flow:
 
 ---
 
-### Phase 6 — Custom Forms & Surveys
+### Phase 6 — Custom Forms & Surveys ✓ Complete
 
-**30BN-6.1 — Form Builder**
-- `/crew/forms/new` and `/crew/forms/[id]/edit`
-- All field types per §8
-- Dynamic field list: add field → select type → configure. Reorder via drag-and-drop.
-- Preview tab: renders form exactly as public will see it
-- Save draft / Publish live / Close
-- Published form: `forms.status = 'live'` → public URL active
-- Quality gate: all field types render in preview; draft/live/closed states work; form appears at `/forms/[id]` when live
+**30BN-6.1 — Form Builder ✓**
+- `/crew/forms/new` and `/crew/forms/[id]/edit` under `app/crew/(app)/` (R20)
+- All 8 field types per §8. Field reorder via ↑↓ arrow buttons — NOT drag-and-drop (confirmed
+  decision; no drag library installed). Nested options arrays in their own FieldOptionsEditor
+  sub-component per R24.
+- Preview tab renders all field types in read-only mode using FormPreview component.
+- Status: draft / live / closed. Save buttons update status on submit.
+- Form detail page (`/crew/forms/[id]`) ships in 6.3 — the list page links to edit and responses.
+- lib/validations/form.ts — zod schema for the builder. types/form.ts — all form types.
 
-**30BN-6.2 — Public Form Page & Response Capture**
-- `/forms/[id]`: renders all fields per `form_fields` config, branded, mobile-friendly
-- On submit: insert `form_responses` + `form_response_values`
-- Profile linking: check submitted email + phone against `volunteers` → if match, set `form_responses.volunteer_id`
-- Confirmation message in-page (no redirect)
-- Closed form: friendly "This form is no longer accepting responses" state
-- Quality gate: responses appear in `form_responses`; email/phone matching links to correct volunteer
+**30BN-6.2 — Public Form Page & Response Capture ✓**
+- `/forms/[id]`: three states — live (form renders), closed ("no longer accepting"), draft/missing
+  (generic "not available" — draft status not revealed publicly).
+- Dynamic zod schema built at runtime from field config, keyed by field id.
+- Checkbox: Controller-managed string[] value. Rating: 5 plain <button> elements (R19).
+- Profile linking: scans submitted values for email (@) and phone (digits) patterns.
+  Sequential email-then-phone volunteer lookup (maybeSingle). volunteer_id set if matched.
+- Checkbox values stored as JSON array string; all other values as plain text or null.
+- lib/data/forms.ts — getPublicForm() uses getAdminClient() (public route, no session).
+- lib/actions/forms.ts — submitFormResponse() added: live-status gate, required field
+  validation, volunteer linking, batch insert of form_response_values.
 
-**30BN-6.3 — Form Response Viewer & Embed**
-- `/crew/forms/[id]/responses`: table of all responses, linked volunteer name (clickable → profile), all field values, date submitted
-- Filters: date range, matched/unmatched volunteer
-- Export: CSV of all responses (all field values + volunteer name if matched)
-- Embed widget code: `<iframe src="/forms/[id]" ...>` snippet — copyable from form detail page
-- Quality gate: responses display correctly; CSV downloads with correct headers; iframe code is copyable
+**30BN-6.3 — Form Response Viewer & Embed ✓**
+- Form detail page (`/crew/forms/[id]`): public URL + copy, embed code + copy, QR code
+  (inline SVG preview + PNG/SVG data URI downloads), response count, Edit button.
+  Per-form QR pulled forward from Phase 7 here since the detail page was built in this prompt.
+- `/crew/forms/[id]/responses`: client-side filters (date range, match/unmatch) via useMemo.
+  Checkbox values rendered as comma-joined string. CSV export of filtered set.
+  Volunteer name in matched rows links to profile.
+- lib/data/forms.ts — getFormDetail() and getFormResponses() added (getServerClient() —
+  admin session exists on these pages). No N+1: 5 fixed queries regardless of response count.
+- lib/utils/formDisplay.ts — shared form status label/badge maps (extracted from FormList.tsx
+  for reuse on detail page, matching showDisplay.ts pattern).
+- lib/utils/csv.ts — escapeCsvField exported (was private) for ResponseViewer reuse.
 
 ---
 
-### Phase 7 — QR Code Generator
+### Phase 7 — QR Code Generator ✓ Complete
 
-**30BN-7.1 — QR Code Utility & Generator Tool**
-Shared QR utility used in three places:
-- `lib/qr.ts`: exports `generateQR(url: string): Promise<{ svg: string, pngBase64: string }>`. PNG is returned as a base64 string (no data: prefix). Callers construct download links as `href="data:image/png;base64,${pngBase64}"`. Built in 30BN-4.3; reused in Phases 6 and 7.
-- Standalone generator: `/crew/tools/qr-generator` — URL input, label, live preview, download PNG button, download SVG button
-- Per-show QR: on show detail Overview tab — QR for `/shows/[id]`. Download buttons.
-- Per-form QR: on form detail page — QR for `/forms/[id]`. Download buttons.
-- All three use the same `generateQR()` utility
-- Quality gate: QR codes scan correctly on a real device; PNG downloads at ≥2000px; SVG downloads as valid vector
+**30BN-7.1 — QR Code Utility & Generator Tool ✓**
+- `lib/qr.ts` and `generateQR()` already existed from 30BN-4.3. Per-show QR already on
+  show detail Overview tab (4.3). Per-form QR pulled forward into 6.3 (not built here).
+- This prompt delivered only the standalone generator tool.
+- Standalone generator (`/crew/tools/qr-generator`): URL input (auto-prepends https://),
+  optional label (used in filename sanitization), "Generate QR Code" button, inline SVG
+  preview in white container, PNG and SVG data URI download links.
+- `lib/actions/qr.ts` — `generateQRCode(url)` server action: trims, validates, prepends
+  protocol, calls generateQR(), returns { svg, pngBase64 } or { error }.
+- Sidebar nav link to /crew/tools/qr-generator was already present from Phase 3 nav stub.
+- Phase 7 is now complete. The per-form QR (originally scoped here) shipped in 6.3.
 
 ---
 
@@ -1238,13 +1295,14 @@ Wire audit logging throughout the app and build the read-only viewer.
 - Volunteer list all-pages CSV export (currently limited to current page for filtered export)
 - Out-of-range page param clamping on volunteer list
 - Category description inline editing
-- Dialog close-X dark mode hover treatment (`button.tsx` not swept in ADMIN.6)
+- ~~Dialog close-X dark mode hover treatment~~ — Fixed in ADMIN.14.
 - Password change UI for new admin accounts
-- `slot_claims.show_date_id` schema cleanup — column is now denormalized (implied by the role's own `show_date_id`). Candidate for removal in Phase 12 schema review.
 - Step tracker prompt convention — single persistent tracker that updates in place; must not be re-emitted after individual steps. Brief prompts written from DOC.6 onward must not include "re-emit the tracker" instructions. See R27.
 - `sendReminderEmail()` single-send function in `lib/email.ts` is currently unused in production (cron uses `buildReminderEmailPayload` directly). Candidate for removal in Phase 12 cleanup.
 - Waitlist renumbering in `cancelClaim()` uses sequential JS updates rather than a single Postgres expression update. Candidate for a Postgres function or RPC in Phase 12 if concurrent cancellations become a concern.
 - `slot_claims.show_date_id` denormalization cleanup deferred from Migration 006. Candidate for removal in Phase 12 schema review.
+- `form_response_values.field_id` has no ON DELETE CASCADE. Deleting a form field that has responses will fail with a FK constraint error. The current updateForm() catches this gracefully (skips the deletion) but leaves orphaned fields alongside new fields on re-edit. Candidate for Phase 12 schema review — either add CASCADE or soft-delete fields.
+- ThemeProvider.tsx has a pre-existing ESLint warning (react-hooks/set-state-in-effect). Predates ADMIN.14, flagged for future cleanup pass.
 
 **30BN-12.1 — Mobile Optimization & Empty States**
 - Full responsive audit: `/` (landing), `/shows`, `/shows/[id]`, `/callboard/*`, `/forms/[id]`, `/update`, `/cancel`
@@ -1404,7 +1462,31 @@ REVOKE EXECUTE ON FUNCTION function_name(param_types) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION function_name(param_types) FROM anon;
 GRANT EXECUTE ON FUNCTION function_name(param_types) TO authenticated;
 ```
-Include these REVOKE/GRANT statements in the same migration file as the CREATE FUNCTION. Verify with `SELECT proacl FROM pg_proc WHERE proname = 'function_name'` — result must not include `=X/` (PUBLIC) or `anon=X/`. Established 30BN-5.3. Applies retroactively: `get_activity_feed()` (Migration 007) needs the same fix — tracked as ADMIN.13.
+Include these REVOKE/GRANT statements in the same migration file as the CREATE FUNCTION. Verify with `SELECT proacl FROM pg_proc WHERE proname = 'function_name'` — result must not include `=X/` (PUBLIC) or `anon=X/`. Established 30BN-5.3. Fixed retroactively in ADMIN.13 (Migration 009): `get_activity_feed()` (Migration 007) received the same REVOKE treatment. Both RPCs are now correctly restricted.
+
+### R29 — revalidatePath() Required After Every Mutation
+Next.js App Router caches Server Component renders by default. Without explicit cache invalidation,
+mutations (status changes, slot claims, editor adds, etc.) are not reflected on the page until
+Next.js revalidates on its own schedule — which can be minutes or never for static-ish pages.
+After every server action that mutates data, call `revalidatePath()` for all routes that display
+that data. Import from `'next/cache'`. Common patterns:
+- Show status change: revalidatePath('/shows'), revalidatePath('/crew/shows'), revalidatePath(`/crew/shows/${id}`)
+- Slot claim/cancel: revalidatePath('/shows'), revalidatePath(`/shows/${showId}`)
+- Editor add/remove: revalidatePath(`/crew/shows/${showId}`)
+- Opportunity mutations: revalidatePath('/crew/shows/opportunities')
+Never call revalidatePath() in a 'use client' file — it is server-only.
+Confirmed failure mode: show status change not reflected on /shows (VERIFY-1 C9); slot count
+not updating on show card after claim (VERIFY-4). Fixed in ADMIN.14.
+
+### R30 — Theme Toggle Must Target document.body
+The `data-theme` attribute that drives the Tailwind `@variant dark` rule must be applied to
+`document.body`, not to an inner wrapper element. Setting it on a child div creates a two-DOM-node
+conflict with the pre-hydration inline script: the inline script sets `data-theme` on one element,
+the React component sets it on another, and React's reconciliation can leave the original stale
+attribute in place until a hard reload. Both `ThemeProvider.tsx` and the inline script in
+`app/crew/(app)/layout.tsx` must target `document.body` explicitly. The effect in ThemeProvider
+must have the current theme value in its dependency array so it runs on every toggle, not just
+on mount. Established ADMIN.14.
 
 ---
 
@@ -1416,4 +1498,5 @@ Include these REVOKE/GRANT statements in the same migration file as the CREATE F
 *v1.3 (July 2026 — Phase 3 complete: date-fns-tz/@react-pdf/renderer/PWA added to §3, requires_service_hours added to §8 and §9 (Migration 003), Editor Notes Super Admin edit/delete added (Migration 004), multiple Super Admins support documented, Light/Dark mode and PWA documented, Standing Volunteer Opportunities (4.4) and Category-Match Notifications (5.3) added as new prompt slots, Phase 3 marked complete, Open Decisions #6/#7 added, R19–R22 added)*
 *v1.4 (July 2026 — Phase 4 complete: volunteer_roles restructured to show_date_id (Migration 006), standing_opportunities and opportunity_submissions added (Migration 005), activity_cleared_at added to admin_users (Migration 007), activity feed with pagination and per-user read state, roles-per-date form structure, formatWallClockCT() for date-only columns, R23–R27 added, Phase 4 prompts and all ADMIN prompts through ADMIN.12 marked complete)*
 *v1.5 (July 2026 — Phase 5 complete: slot claiming with two-tier duplicate detection, self-cancel flow with email verification, waitlist promotion and renumbering, 24hr Vercel Cron reminder, category-match notifications with notifications_sent_at tracking and SECURITY DEFINER RPC, CRON_SECRET env var added, /cancel public route, vercel.json cron config, R28 (SECURITY DEFINER REVOKE) added, ADMIN.13 planned for get_activity_feed() security fix, Phase 5 prompts 5.1–5.3 marked complete, DOC.7–DOC.8 logged)*
-*Cross-reference: 30BN_PROCESS_v1.md v1.5*
+*v1.6 (July 2026 — Phases 6 and 7 complete: form builder with arrow reorder (not drag), public form with dynamic zod schema, response viewer with client-side filters and CSV export, form detail page with embed code and QR, standalone QR generator tool, per-form QR pulled forward into 6.3, lib/data/forms.ts and lib/actions/qr.ts added, ADMIN.14 (cache revalidation sweep, theme toggle hydration fix, dialog hover fix, blank-role trap fix, opportunity reactivate), R28 retroactive note corrected, R29 (revalidatePath required) and R30 (theme toggle targets document.body) added, duplicate deferred item removed, new deferred items added (form_response_values FK, ThemeProvider ESLint), DOC.8/ADMIN.14/DOC.9 logged)*
+*Cross-reference: 30BN_PROCESS_v1.md v1.6*
