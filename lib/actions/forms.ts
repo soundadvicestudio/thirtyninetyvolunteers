@@ -1,6 +1,7 @@
 'use server'
 
 import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import type { FieldType, FormData, FormFieldData, FormListItem, FullForm } from '@/types/form'
@@ -199,4 +200,132 @@ export async function getForm(id: string): Promise<FullForm | null> {
   }))
 
   return { ...form, fields }
+}
+
+// Public, unauthenticated submission — uses getAdminClient() for the
+// volunteer lookup (bypasses RLS) and the form/fields fetch. The anon
+// INSERT RLS policies on form_responses/form_response_values already
+// cover the actual inserts.
+export async function submitFormResponse(
+  formId: string,
+  values: Record<string, string | string[]>
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const client = getAdminClient()
+
+    // A. Verify form is live
+    const { data: form, error: formError } = await client
+      .from('forms')
+      .select('id, status')
+      .eq('id', formId)
+      .maybeSingle()
+
+    if (formError || !form || form.status !== 'live') {
+      return { error: 'This form is not available.' }
+    }
+
+    // B. Fetch fields for validation + insertion
+    const { data: fieldRows, error: fieldsError } = await client
+      .from('form_fields')
+      .select('id, is_required, sort_order')
+      .eq('form_id', formId)
+      .order('sort_order', { ascending: true })
+
+    if (fieldsError || !fieldRows) {
+      return { error: 'Submission failed. Please try again.' }
+    }
+
+    // C. Server-side required field validation
+    for (const field of fieldRows) {
+      if (!field.is_required) continue
+      const value = values[field.id]
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return { error: 'Please complete all required fields.' }
+        }
+      } else if (!value || value.trim().length === 0) {
+        return { error: 'Please complete all required fields.' }
+      }
+    }
+
+    // D. Volunteer profile linking — scan all submitted values for an
+    // email and a loose digits-only phone pattern.
+    let emailValue: string | null = null
+    let phoneValue: string | null = null
+
+    for (const value of Object.values(values)) {
+      if (typeof value === 'string') {
+        if (value.includes('@')) {
+          emailValue = value.trim().toLowerCase()
+        }
+        if (/^\d{7,15}$/.test(value.trim())) {
+          phoneValue = value.trim()
+        }
+      }
+    }
+
+    // Sequential email-then-phone lookup (pattern from 30BN-2.4) — avoids
+    // maybeSingle() conflicts when email and phone match different records.
+    let volunteerId: string | null = null
+    if (emailValue) {
+      const { data: byEmail } = await client
+        .from('volunteers')
+        .select('id')
+        .ilike('email', emailValue)
+        .maybeSingle()
+      if (byEmail) volunteerId = byEmail.id
+    }
+    if (!volunteerId && phoneValue) {
+      const { data: byPhone } = await client
+        .from('volunteers')
+        .select('id')
+        .eq('phone', phoneValue)
+        .maybeSingle()
+      if (byPhone) volunteerId = byPhone.id
+    }
+
+    // E. Insert form_responses
+    const { data: response, error: responseError } = await client
+      .from('form_responses')
+      .insert({ form_id: formId, volunteer_id: volunteerId })
+      .select('id')
+      .single()
+
+    if (responseError || !response) {
+      console.error('submitFormResponse insert response error:', responseError)
+      return { error: 'Submission failed. Please try again.' }
+    }
+
+    // F. Insert form_response_values
+    const valueRows = fieldRows.map((field) => {
+      const rawValue = values[field.id]
+      let serialized: string | null
+
+      if (Array.isArray(rawValue)) {
+        serialized = JSON.stringify(rawValue)
+      } else if (typeof rawValue === 'string') {
+        serialized = rawValue.trim() || null
+      } else {
+        serialized = null
+      }
+
+      return {
+        response_id: response.id,
+        field_id: field.id,
+        value: serialized,
+      }
+    })
+
+    const { error: valuesError } = await client.from('form_response_values').insert(valueRows)
+
+    if (valuesError) {
+      console.error('submitFormResponse insert values error:', valuesError)
+      return { error: 'Submission failed. Please try again.' }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error('submitFormResponse error:', err)
+    return { error: 'Submission failed. Please try again.' }
+  }
 }
