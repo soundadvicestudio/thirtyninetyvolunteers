@@ -29,7 +29,7 @@ export const AGE_RANGE_LABELS: Record<string, string> = {
   prefer_not: 'Prefer not to say',
 }
 
-function escapeCsvField(value: string): string {
+export function escapeCsvField(value: string): string {
   if (/[",\r\n]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`
   }
