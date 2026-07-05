@@ -1,6 +1,9 @@
 export const SORT_VALUES = ['name', 'joined', 'hours', 'last_call', 'calls'] as const
 export type VolunteersSort = (typeof SORT_VALUES)[number]
 
+export const MILESTONE_TIER_VALUES = ['all', 'any', 'first_call', '10', '20', '50', '100'] as const
+export type MilestoneTier = (typeof MILESTONE_TIER_VALUES)[number]
+
 export type VolunteersUrlState = {
   q: string
   categoryIds: string[]
@@ -9,6 +12,7 @@ export type VolunteersUrlState = {
   school: 'yes' | 'no' | 'all'
   isMinor: 'yes' | 'no' | 'all'
   serviceHours: 'yes' | 'no' | 'all'
+  milestoneTier: MilestoneTier
   sort: VolunteersSort
   dir: 'asc' | 'desc'
   page: number
@@ -22,6 +26,7 @@ export const DEFAULT_URL_STATE: VolunteersUrlState = {
   school: 'all',
   isMinor: 'all',
   serviceHours: 'all',
+  milestoneTier: 'all',
   sort: 'name',
   dir: 'asc',
   page: 1,
@@ -35,6 +40,7 @@ export type RawSearchParams = {
   school?: string
   is_minor?: string
   service_hours?: string
+  milestone_tier?: string
   sort?: string
   dir?: string
   page?: string
@@ -56,6 +62,11 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
     params.service_hours === 'yes' || params.service_hours === 'no'
       ? params.service_hours
       : 'all'
+  const milestoneTier = (MILESTONE_TIER_VALUES as readonly string[]).includes(
+    params.milestone_tier ?? ''
+  )
+    ? (params.milestone_tier as MilestoneTier)
+    : 'all'
   const sort = (SORT_VALUES as readonly string[]).includes(params.sort ?? '')
     ? (params.sort as VolunteersSort)
     : 'name'
@@ -70,6 +81,7 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
     school,
     isMinor,
     serviceHours,
+    milestoneTier,
     sort,
     dir,
     page,
@@ -95,6 +107,8 @@ export function buildVolunteersQueryString(
   if (state.isMinor !== DEFAULT_URL_STATE.isMinor) usp.set('is_minor', state.isMinor)
   if (state.serviceHours !== DEFAULT_URL_STATE.serviceHours)
     usp.set('service_hours', state.serviceHours)
+  if (state.milestoneTier !== DEFAULT_URL_STATE.milestoneTier)
+    usp.set('milestone_tier', state.milestoneTier)
   if (state.sort !== DEFAULT_URL_STATE.sort) usp.set('sort', state.sort)
   if (state.dir !== DEFAULT_URL_STATE.dir) usp.set('dir', state.dir)
   if (opts.includePage && state.page !== DEFAULT_URL_STATE.page) {
@@ -121,6 +135,7 @@ export function isNonDefaultFilter(state: VolunteersUrlState): boolean {
     !!state.ageRange ||
     state.school !== DEFAULT_URL_STATE.school ||
     state.isMinor !== DEFAULT_URL_STATE.isMinor ||
-    state.serviceHours !== DEFAULT_URL_STATE.serviceHours
+    state.serviceHours !== DEFAULT_URL_STATE.serviceHours ||
+    state.milestoneTier !== DEFAULT_URL_STATE.milestoneTier
   )
 }

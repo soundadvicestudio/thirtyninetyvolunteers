@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import LoginForm from './LoginForm'
+import AuthTabs from './AuthTabs'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_credentials: 'Invalid email or password. Please try again.',
@@ -32,7 +32,7 @@ export default async function LoginPage({
           </div>
         )}
 
-        <LoginForm />
+        <AuthTabs />
       </div>
     </main>
   )

@@ -17,7 +17,7 @@ const CSV_HEADERS = [
   'Calls',
   'Status',
   'Joined Date',
-  'Referral Source',
+  'How did you hear about us?',
 ]
 
 export const AGE_RANGE_LABELS: Record<string, string> = {

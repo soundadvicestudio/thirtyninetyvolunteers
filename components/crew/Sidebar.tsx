@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   Theater,
+  Briefcase,
   FileText,
   QrCode,
   Mail,
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
+  { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
   { label: 'Forms', href: '/crew/forms', icon: FileText },
   { label: 'QR Generator', href: '/crew/tools/qr-generator', icon: QrCode },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
@@ -30,7 +32,13 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export default function Sidebar({ admin }: { admin: AdminUser }) {
+export default function Sidebar({
+  admin,
+  pendingRegistrationCount = 0,
+}: {
+  admin: AdminUser
+  pendingRegistrationCount?: number
+}) {
   const pathname = usePathname()
 
   return (
@@ -69,6 +77,11 @@ export default function Sidebar({ admin }: { admin: AdminUser }) {
           >
             <UserCog size={18} />
             Users
+            {pendingRegistrationCount > 0 && (
+              <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-navy text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+                {pendingRegistrationCount}
+              </span>
+            )}
           </Link>
         )}
       </nav>

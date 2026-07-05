@@ -46,6 +46,10 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
     },
   })
 
+  // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
+  // field would be a broader refactor across this form's conditional-reveal logic,
+  // not a surgical fix.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const claimType = watch('claim_type')
   const slotCapEnabled = watch('slot_cap_enabled')
 

@@ -41,6 +41,10 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
       return { status: 'error', message: 'Please check your name and email and try again.' }
     }
 
+    if (volunteerName.length > 150 || volunteerEmail.length > 150 || volunteerPhone.length > 30) {
+      return { status: 'error', message: 'Please check your name, email, and phone and try again.' }
+    }
+
     const client = getAdminClient()
 
     // A. Fetch role and show context

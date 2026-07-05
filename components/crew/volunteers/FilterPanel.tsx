@@ -20,6 +20,16 @@ const AGE_RANGE_OPTIONS = [
   { value: 'prefer_not', label: 'Prefer not to say' },
 ]
 
+const MILESTONE_TIER_OPTIONS: { value: VolunteersUrlState['milestoneTier']; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'any', label: 'Any milestone earned' },
+  { value: 'first_call', label: 'First Call' },
+  { value: '10', label: '10+ Hours' },
+  { value: '20', label: '20+ Hours' },
+  { value: '50', label: '50+ Hours' },
+  { value: '100', label: '100+ Hours' },
+]
+
 export default function FilterPanel({
   categories,
   state,
@@ -167,18 +177,19 @@ export default function FilterPanel({
           </select>
         </div>
 
-        <div className="group relative">
+        <div>
           <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Milestone Tier</label>
           <select
-            disabled
-            defaultValue=""
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-mid-gray dark:text-dark-muted bg-footer-gray dark:bg-dark-bg cursor-not-allowed"
+            value={state.milestoneTier}
+            onChange={(e) => navigate({ milestoneTier: e.target.value as VolunteersUrlState['milestoneTier'] })}
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
           >
-            <option value="">All</option>
+            {MILESTONE_TIER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
-          <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden whitespace-nowrap rounded bg-dark px-2 py-1 text-xs text-white group-hover:block">
-            Milestone tracking coming in a future phase.
-          </div>
         </div>
 
         <div className="w-full">

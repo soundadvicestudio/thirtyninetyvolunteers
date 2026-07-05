@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
+import { getServerClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/crew/Sidebar'
 import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
@@ -29,6 +30,16 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
     redirect('/crew/login')
   }
 
+  let pendingRegistrationCount = 0
+  if (admin.role === 'super_admin') {
+    const supabase = await getServerClient()
+    const { count } = await supabase
+      .from('pending_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    pendingRegistrationCount = count ?? 0
+  }
+
   return (
     <>
       <script
@@ -54,7 +65,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       />
       <ThemeProvider>
         <div className="flex h-screen">
-          <Sidebar admin={admin} />
+          <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} />
           <div className="flex-1 flex flex-col">
             <TopBar admin={admin} />
             <main className="flex-1 overflow-y-auto bg-light-navy dark:bg-dark-bg p-6">{children}</main>

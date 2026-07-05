@@ -8,9 +8,9 @@ import { logAction } from '@/lib/audit'
 
 const submitOpportunitySchema = z.object({
   opportunityId: z.string().uuid(),
-  volunteerName: z.string().min(1, 'Name is required'),
-  volunteerEmail: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  volunteerPhone: z.string().optional(),
+  volunteerName: z.string().min(1, 'Name is required').max(150),
+  volunteerEmail: z.string().min(1, 'Email is required').email('Enter a valid email address').max(150),
+  volunteerPhone: z.string().max(30).optional(),
 })
 
 export type SubmitOpportunityResult =

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { ChevronUp, ChevronDown, ChevronsUpDown, Download, Users, SearchX } from 'lucide-react'
@@ -58,10 +58,6 @@ export default function VolunteersTable({
   const canManage = role === 'super_admin' || role === 'editor'
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    setSelected(new Set())
-  }, [page, state])
 
   function goTo(next: Partial<VolunteersUrlState>) {
     router.replace(buildVolunteersUrl(pathname, { ...state, ...next }), { scroll: false })

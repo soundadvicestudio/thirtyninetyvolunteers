@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
@@ -74,10 +75,23 @@ export async function createForm(data: FormData): Promise<{ id: string } | { err
     status: data.status,
   })
 
+  revalidatePath('/crew/forms')
+
   return { id: inserted.id }
 }
 
-export type UpdateFormResult = { success: true; warning?: string } | { error: string }
+export type UpdateFormResult = { success: true } | { error: string }
+
+function fieldColumns(field: FormFieldData, sortOrder: number) {
+  return {
+    field_type: field.field_type,
+    label: field.label,
+    placeholder: field.placeholder || null,
+    options: field.options?.length ? JSON.stringify(field.options) : null,
+    is_required: field.is_required,
+    sort_order: sortOrder,
+  }
+}
 
 export async function updateForm(id: string, data: FormData): Promise<UpdateFormResult> {
   const admin = await getAdminUser()
@@ -112,21 +126,46 @@ export async function updateForm(id: string, data: FormData): Promise<UpdateForm
     return { error: 'Something went wrong saving the form. Please try again.' }
   }
 
-  // Full field replace strategy: fetch existing field ids, delete each
-  // individually so a field blocked by an FK constraint (existing
-  // form_response_values) can be skipped without failing the others.
+  // Diff-based field sync (30BN-ADMIN.17-FIX): existing fields are updated
+  // in place, preserving their id, so form_response_values for that field is
+  // never touched. Only fields the admin actually removed are deleted —
+  // CASCADE on form_response_values.field_id (Migration 012) fires only
+  // there, which is correct (response values for a removed field are
+  // meaningless without it).
   const { data: existingFields } = await supabase.from('form_fields').select('id').eq('form_id', id)
+  const existingIds = new Set((existingFields ?? []).map((f) => f.id))
 
-  const skippedFieldIds: string[] = []
-  for (const field of existingFields ?? []) {
-    const { error: deleteError } = await supabase.from('form_fields').delete().eq('id', field.id)
+  const fields = data.fields
+  const toUpdate = fields.filter(
+    (f): f is FormFieldData & { id: string } => !!f.id && existingIds.has(f.id)
+  )
+  const toInsert = fields.filter((f) => !f.id || !existingIds.has(f.id))
+  const toDeleteIds = [...existingIds].filter((fieldId) => !fields.some((f) => f.id === fieldId))
+
+  if (toDeleteIds.length > 0) {
+    const { error: deleteError } = await supabase.from('form_fields').delete().in('id', toDeleteIds)
     if (deleteError) {
-      skippedFieldIds.push(field.id)
+      console.error('updateForm delete fields error:', deleteError)
+      return { error: 'Form saved, but removing deleted fields failed. Please try again.' }
     }
   }
 
-  if (data.fields.length > 0) {
-    const { error: insertError } = await supabase.from('form_fields').insert(fieldsToRows(id, data.fields))
+  for (const field of toUpdate) {
+    const { error: fieldUpdateError } = await supabase
+      .from('form_fields')
+      .update(fieldColumns(field, fields.indexOf(field)))
+      .eq('id', field.id)
+
+    if (fieldUpdateError) {
+      console.error('updateForm field update error:', fieldUpdateError)
+      return { error: 'Form saved, but its fields failed to update. Please try again.' }
+    }
+  }
+
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from('form_fields')
+      .insert(toInsert.map((field) => ({ form_id: id, ...fieldColumns(field, fields.indexOf(field)) })))
 
     if (insertError) {
       console.error('updateForm insert fields error:', insertError)
@@ -143,12 +182,9 @@ export async function updateForm(id: string, data: FormData): Promise<UpdateForm
     { title: data.title, status: data.status }
   )
 
-  if (skippedFieldIds.length > 0) {
-    return {
-      success: true,
-      warning: `${skippedFieldIds.length} field(s) could not be removed because they already have responses.`,
-    }
-  }
+  revalidatePath('/crew/forms')
+  revalidatePath(`/crew/forms/${id}`)
+  revalidatePath(`/forms/${id}`)
 
   return { success: true }
 }
@@ -235,16 +271,21 @@ export async function submitFormResponse(
       return { error: 'Submission failed. Please try again.' }
     }
 
-    // C. Server-side required field validation
+    // C. Server-side required field validation + per-value length cap
+    const MAX_VALUE_LENGTH = 2000
     for (const field of fieldRows) {
-      if (!field.is_required) continue
       const value = values[field.id]
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
+      if (field.is_required) {
+        if (Array.isArray(value)) {
+          if (value.length === 0) {
+            return { error: 'Please complete all required fields.' }
+          }
+        } else if (!value || value.trim().length === 0) {
           return { error: 'Please complete all required fields.' }
         }
-      } else if (!value || value.trim().length === 0) {
-        return { error: 'Please complete all required fields.' }
+      }
+      if (typeof value === 'string' && value.length > MAX_VALUE_LENGTH) {
+        return { error: 'One or more responses is too long. Please shorten your answer and try again.' }
       }
     }
 

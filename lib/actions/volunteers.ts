@@ -1,9 +1,11 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
+import { checkFirstCall, checkMilestones } from '@/lib/milestones'
 import { volunteerProfileSchema, type VolunteerProfileFormValues } from '@/lib/validations/volunteerProfile'
 
 // Public lookup used by the show-claiming pre-fill (ClaimForm onBlur).
@@ -256,4 +258,93 @@ export async function toggleStatus(
   )
 
   return { success: true }
+}
+
+export type AddManualHoursResult = { success: true; newTotal: number } | { error: string }
+
+const LOGGED_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+export async function addManualHours(
+  volunteerId: string,
+  hours: number,
+  note: string,
+  loggedDate: string
+): Promise<AddManualHoursResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  if (typeof hours !== 'number' || !Number.isFinite(hours) || hours <= 0) {
+    return { error: 'invalid_hours' }
+  }
+  if (hours > 24) {
+    return { error: 'invalid_hours' }
+  }
+
+  const trimmedNote = note.trim()
+  if (!trimmedNote) {
+    return { error: 'Description is required.' }
+  }
+
+  if (!LOGGED_DATE_PATTERN.test(loggedDate)) {
+    return { error: 'Invalid date.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: volunteer, error: fetchError } = await supabase
+    .from('volunteers')
+    .select('total_hours')
+    .eq('id', volunteerId)
+    .single()
+
+  if (fetchError || !volunteer) {
+    return { error: 'volunteer_not_found' }
+  }
+
+  const currentTotal = Number(volunteer.total_hours)
+  const roundedHours = Math.round(hours * 100) / 100
+  const newTotal = Math.round((currentTotal + roundedHours) * 100) / 100
+
+  const { error: logError } = await supabase.from('volunteer_hours_log').insert({
+    volunteer_id: volunteerId,
+    hours: roundedHours,
+    source_type: 'manual',
+    source_id: null,
+    note: trimmedNote,
+    logged_date: loggedDate,
+    added_by: admin.id,
+  })
+
+  if (logError) {
+    console.error('addManualHours log insert error:', logError)
+    return { error: 'log_insert_failed' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('volunteers')
+    .update({ total_hours: newTotal })
+    .eq('id', volunteerId)
+
+  if (updateError) {
+    console.error('addManualHours total update error:', updateError)
+    return { error: 'total_update_failed' }
+  }
+
+  await checkMilestones(volunteerId)
+  await checkFirstCall(volunteerId)
+
+  await logAction(
+    admin.id,
+    'volunteer.hours_add',
+    'volunteer',
+    volunteerId,
+    { total_hours: currentTotal },
+    { hours_added: roundedHours, note: trimmedNote, logged_date: loggedDate, new_total: newTotal }
+  )
+
+  revalidatePath(`/crew/volunteers/${volunteerId}`)
+
+  return { success: true, newTotal }
 }

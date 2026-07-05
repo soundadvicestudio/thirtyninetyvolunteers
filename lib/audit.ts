@@ -2,35 +2,65 @@ import 'server-only'
 import { getAdminClient } from '@/lib/supabase/admin'
 
 export type AuditAction =
+  // Volunteers
   | 'volunteer.update'
   | 'volunteer.archive'
   | 'volunteer.unarchive'
   | 'volunteer.note.add'
+  | 'volunteer.note.edit'
+  | 'volunteer.note.delete'
+  | 'volunteer.hours_add'
+
+  // Shows & Seasons
+  | 'show.create'
+  | 'show.update'
+  | 'show.status_change'
+  | 'show.editor_add'
+  | 'show.editor_remove'
+  | 'season.create'
+
+  // Categories
   | 'category.create'
   | 'category.rename'
   | 'category.reorder'
   | 'category.visibility'
+
+  // Users & Auth
   | 'user.create'
   | 'user.deactivate'
   | 'user.reactivate'
   | 'user.role_change'
-  | 'volunteer.note.edit'
-  | 'volunteer.note.delete'
-  | 'show.create'
-  | 'show.update'
-  | 'season.create'
-  | 'show.status_change'
-  | 'attendance.mark'
-  | 'show.editor_add'
-  | 'show.editor_remove'
+  | 'user.decline_registration'
+  | 'user.password_change'
+
+  // Opportunities
   | 'opportunity.create'
   | 'opportunity.update'
   | 'opportunity.archive'
   | 'opportunity.reactivate'
   | 'opportunity.submission'
-  | 'slot_claim.cancel'
+
+  // Forms
   | 'form.create'
   | 'form.update'
+
+  // Attendance & Hours
+  | 'attendance.mark'
+  | 'attendance.hours_confirm'
+
+  // Slot Claims
+  | 'slot_claim.cancel'
+
+  // Milestones
+  | 'milestone.acknowledge'
+
+  // Settings (Phase 11 — logAction() calls added in Phase 11.2; types
+  // defined here so the audit log viewer can display them once they appear)
+  | 'settings.update'
+  | 'hearing_options.create'
+  | 'hearing_options.update'
+  | 'hearing_options.reorder'
+  | 'hearing_options.deactivate'
 
 export async function logAction(
   adminId: string | null,

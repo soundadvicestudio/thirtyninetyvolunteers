@@ -21,6 +21,8 @@ export function ThemeProvider({
     // Read saved preference, fall back to system
     const saved = localStorage.getItem('crew-theme') as Theme | null
     if (saved) {
+      // Reads localStorage (client-only) after mount to avoid SSR hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(saved)
     } else if (
       window.matchMedia('(prefers-color-scheme: dark)')

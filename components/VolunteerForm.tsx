@@ -16,24 +16,24 @@ type Props = {
 
 function createSchema(showAgeRange: boolean) {
   return z.object({
-    full_name: z.string().min(1, 'Full name is required'),
-    email: z.string().email('Please enter a valid email address'),
-    phone: z.string().min(1, 'Phone number is required'),
-    pronouns: z.string().optional(),
+    full_name: z.string().min(1, 'Full name is required').max(150),
+    email: z.string().email('Please enter a valid email address').max(150),
+    phone: z.string().min(1, 'Phone number is required').max(30),
+    pronouns: z.string().max(100).optional(),
     pronouns_other: z.string().optional(),
-    school: z.string().optional(),
+    school: z.string().max(200).optional(),
     age_range: showAgeRange
       ? z.string().min(1, 'Please select an age range')
       : z.string().optional(),
-    guardian_name: z.string().optional(),
-    guardian_phone: z.string().optional(),
+    guardian_name: z.string().max(150).optional(),
+    guardian_phone: z.string().max(30).optional(),
     requires_service_hours: z.boolean().default(false),
     category_ids: z.array(z.string()).min(
       1, 'Please select at least one area of interest'
     ),
     referral_source_label: z.string().optional(),
-    referral_source_other: z.string().optional(),
-    referral_name: z.string().optional(),
+    referral_source_other: z.string().max(500).optional(),
+    referral_name: z.string().max(200).optional(),
   }).superRefine((data, ctx) => {
     if (data.age_range === 'under_18') {
       if (!data.guardian_name?.trim()) {
@@ -86,6 +86,10 @@ export default function VolunteerForm({
     defaultValues: { category_ids: [] },
   })
 
+  // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
+  // field would be a broader refactor across this form's conditional-reveal logic,
+  // not a surgical fix.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedAge = watch('age_range')
   const watchedPronouns = watch('pronouns')
   const watchedReferral = watch('referral_source_label')

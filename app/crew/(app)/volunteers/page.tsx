@@ -6,7 +6,6 @@ import { getServerClient } from '@/lib/supabase/server'
 import {
   getVolunteersList,
   getActiveVolunteerCount,
-  getAllActiveVolunteersForExport,
   PAGE_SIZE,
 } from '@/lib/volunteers/list'
 import {
@@ -31,8 +30,16 @@ async function VolunteersResults({
   const supabase = await getServerClient()
   const { volunteers, total } = await getVolunteersList(supabase, state)
 
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  if (state.page > totalPages && totalPages > 0) {
+    redirect(
+      `/crew/volunteers?${buildVolunteersQueryString({ ...state, page: totalPages }, { includePage: true })}`
+    )
+  }
+
   return (
     <VolunteersTable
+      key={JSON.stringify(state)}
       volunteers={volunteers}
       total={total}
       page={state.page}
@@ -66,7 +73,9 @@ export default async function VolunteersPage({
       .eq('is_visible', true)
       .order('sort_order'),
     getActiveVolunteerCount(supabase),
-    canManage ? getAllActiveVolunteersForExport(supabase) : Promise.resolve([]),
+    canManage
+      ? getVolunteersList(supabase, state, { fetchAll: true }).then((r) => r.volunteers)
+      : Promise.resolve([]),
   ])
 
   return (

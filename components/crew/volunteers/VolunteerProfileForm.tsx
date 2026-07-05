@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Pencil } from 'lucide-react'
@@ -48,6 +49,7 @@ export default function VolunteerProfileForm({
   allCategories: { id: string; name: string }[]
   role: AdminUser['role']
 }) {
+  const router = useRouter()
   const canEdit = role === 'super_admin' || role === 'editor'
   const [isEditing, setIsEditing] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -79,6 +81,10 @@ export default function VolunteerProfileForm({
     },
   })
 
+  // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
+  // field would be a broader refactor across this form's conditional-reveal logic,
+  // not a surgical fix.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const isMinor = watch('is_minor')
   const selectedCategories = watch('category_ids') ?? []
   const watchedSchool = watch('school')
@@ -97,7 +103,8 @@ export default function VolunteerProfileForm({
     const result = await updateVolunteer(volunteer.id, data)
 
     if ('success' in result) {
-      window.location.href = window.location.pathname
+      setIsEditing(false)
+      router.refresh()
       return
     }
 
@@ -185,8 +192,8 @@ export default function VolunteerProfileForm({
             <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">
               How They Found Us
             </h3>
-            <Field label="Referral Source" value={volunteer.referral_source} />
-            <Field label="Referred By" value={volunteer.referral_name} />
+            <Field label="How did you hear about us?" value={volunteer.referral_source} />
+            <Field label="Referred by (name)" value={volunteer.referral_name} />
           </section>
 
           <section className="space-y-4 md:col-span-2">
@@ -347,12 +354,12 @@ export default function VolunteerProfileForm({
             </div>
 
             <div>
-              <label className={labelClasses}>Referral Source</label>
+              <label className={labelClasses}>How did you hear about us?</label>
               <input type="text" className={inputClasses} {...register('referral_source')} />
             </div>
 
             <div>
-              <label className={labelClasses}>Referred By</label>
+              <label className={labelClasses}>Referred by (name)</label>
               <input type="text" className={inputClasses} {...register('referral_name')} />
             </div>
           </div>

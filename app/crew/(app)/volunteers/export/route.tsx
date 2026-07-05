@@ -23,6 +23,8 @@ export async function GET(request: Request) {
     age_range: searchParams.get('age_range') ?? undefined,
     school: searchParams.get('school') ?? undefined,
     is_minor: searchParams.get('is_minor') ?? undefined,
+    service_hours: searchParams.get('service_hours') ?? undefined,
+    milestone_tier: searchParams.get('milestone_tier') ?? undefined,
     sort: searchParams.get('sort') ?? undefined,
     dir: searchParams.get('dir') ?? undefined,
   }

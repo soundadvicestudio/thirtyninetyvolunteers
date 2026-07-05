@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { LogOut } from 'lucide-react'
 import { signOut } from '@/app/crew/actions'
 import type { AdminUser } from '@/lib/auth'
@@ -34,6 +35,12 @@ export default function TopBar({
         >
           {ROLE_LABELS[admin.role]}
         </span>
+        <Link
+          href="/crew/settings/password"
+          className="text-sm text-mid-gray hover:text-navy dark:text-dark-muted transition-colors"
+        >
+          Change Password
+        </Link>
         <form action={signOut}>
           <button
             type="submit"

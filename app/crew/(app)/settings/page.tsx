@@ -22,13 +22,21 @@ function LinkedCard({
   )
 }
 
-function LockedCard({ title, description }: { title: string; description: string }) {
+function LockedCard({
+  title,
+  description,
+  badgeLabel = 'Super Admin only',
+}: {
+  title: string
+  description: string
+  badgeLabel?: string
+}) {
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 opacity-60">
       <div className="flex items-center justify-between gap-2 mb-1">
         <h3 className="text-dark dark:text-dark-text font-bold">{title}</h3>
         <span className="text-xs font-semibold rounded px-2 py-0.5 bg-mid-gray/20 text-mid-gray whitespace-nowrap">
-          Super Admin only
+          {badgeLabel}
         </span>
       </div>
       <p className="text-mid-gray dark:text-dark-muted text-sm">{description}</p>
@@ -52,6 +60,7 @@ export default async function SettingsPage() {
   }
 
   const isSuperAdmin = admin.role === 'super_admin'
+  const canViewAuditLog = admin.role !== 'viewer'
 
   return (
     <div>
@@ -82,6 +91,20 @@ export default async function SettingsPage() {
           <LockedCard
             title="User Management"
             description="Create and manage Production Crew admin accounts."
+          />
+        )}
+
+        {canViewAuditLog ? (
+          <LinkedCard
+            href="/crew/settings/audit-log"
+            title="Audit Log"
+            description="Read-only record of all admin actions."
+          />
+        ) : (
+          <LockedCard
+            title="Audit Log"
+            description="Read-only record of all admin actions."
+            badgeLabel="Editor & Super Admin only"
           />
         )}
 

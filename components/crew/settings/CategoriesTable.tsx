@@ -32,6 +32,7 @@ function CategoryRow({
 }) {
   const [editMode, setEditMode] = useState(false)
   const [draftName, setDraftName] = useState(category.name)
+  const [draftDescription, setDraftDescription] = useState(category.description ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,7 +59,7 @@ function CategoryRow({
   async function handleSave() {
     setError(null)
     setIsSubmitting(true)
-    const result = await renameCategory(category.id, draftName)
+    const result = await renameCategory(category.id, draftName, draftDescription)
     if ('success' in result) {
       reload()
       return
@@ -69,6 +70,7 @@ function CategoryRow({
 
   function handleCancel() {
     setDraftName(category.name)
+    setDraftDescription(category.description ?? '')
     setEditMode(false)
     setError(null)
   }
@@ -131,7 +133,20 @@ function CategoryRow({
         )}
         {error && <p className="text-xs text-orange mt-1">{error}</p>}
       </td>
-      <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm">{category.description || '—'}</td>
+      <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm align-top">
+        {editMode ? (
+          <textarea
+            value={draftDescription}
+            onChange={(e) => setDraftDescription(e.target.value)}
+            placeholder="Description (optional)"
+            maxLength={500}
+            rows={2}
+            className="w-full rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy resize-y"
+          />
+        ) : (
+          category.description || '—'
+        )}
+      </td>
       <td className="px-4 py-3">
         <button
           type="button"
@@ -194,12 +209,13 @@ function AddCategoryForm() {
           onChange={(e) => setName(e.target.value)}
           className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
         />
-        <input
-          type="text"
+        <textarea
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          maxLength={500}
+          rows={2}
+          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy resize-y"
         />
         <button
           type="button"

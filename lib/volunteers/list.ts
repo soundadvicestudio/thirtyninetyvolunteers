@@ -90,6 +90,24 @@ async function resolveCategoryVolunteerIds(
   return Array.from(new Set((data ?? []).map((r) => r.volunteer_id as string)))
 }
 
+async function resolveMilestoneTierVolunteerIds(
+  supabase: SupabaseClient,
+  milestoneTier: VolunteersUrlState['milestoneTier']
+): Promise<string[] | null> {
+  if (milestoneTier === 'all') return null
+
+  let query = supabase.from('milestone_log').select('volunteer_id')
+  if (milestoneTier === 'first_call') {
+    query = query.eq('milestone_hours', 0)
+  } else if (milestoneTier !== 'any') {
+    query = query.gte('milestone_hours', Number(milestoneTier))
+  }
+  // 'any' — no additional filter, matches any milestone_log row
+
+  const { data } = await query
+  return Array.from(new Set((data ?? []).map((r) => r.volunteer_id as string)))
+}
+
 async function attachCallsAndLastCall(
   supabase: SupabaseClient,
   volunteerIds: string[]
@@ -160,11 +178,28 @@ export async function getVolunteersList(
     return { volunteers: [], total: 0 }
   }
 
+  const milestoneVolunteerIds = await resolveMilestoneTierVolunteerIds(supabase, filters.milestoneTier)
+
+  if (milestoneVolunteerIds !== null && milestoneVolunteerIds.length === 0) {
+    return { volunteers: [], total: 0 }
+  }
+
+  // Category and milestone-tier restrictions combine with AND semantics —
+  // intersect the two id sets when both are active.
+  let restrictedIds: string[] | null = null
+  if (categoryVolunteerIds !== null && milestoneVolunteerIds !== null) {
+    const milestoneSet = new Set(milestoneVolunteerIds)
+    restrictedIds = categoryVolunteerIds.filter((id) => milestoneSet.has(id))
+    if (restrictedIds.length === 0) return { volunteers: [], total: 0 }
+  } else {
+    restrictedIds = categoryVolunteerIds ?? milestoneVolunteerIds
+  }
+
   let countQuery = applyBaseFilters(
     supabase.from('volunteers').select('id', { count: 'exact', head: true }),
     filters
   )
-  if (categoryVolunteerIds) countQuery = countQuery.in('id', categoryVolunteerIds)
+  if (restrictedIds) countQuery = countQuery.in('id', restrictedIds)
   const { count } = await countQuery
   const total = count ?? 0
 
@@ -172,7 +207,7 @@ export async function getVolunteersList(
 
   if (dbSortColumn) {
     let dataQuery = applyBaseFilters(supabase.from('volunteers').select(LIST_SELECT), filters)
-    if (categoryVolunteerIds) dataQuery = dataQuery.in('id', categoryVolunteerIds)
+    if (restrictedIds) dataQuery = dataQuery.in('id', restrictedIds)
 
     dataQuery = dataQuery.order(dbSortColumn, { ascending: filters.dir === 'asc' })
     if (!fetchAll) {
@@ -193,7 +228,7 @@ export async function getVolunteersList(
   // sort === 'last_call' | 'calls' — not a DB column, so fetch all matches,
   // compute in JS, sort, then slice the requested page.
   let allQuery = applyBaseFilters(supabase.from('volunteers').select(LIST_SELECT), filters)
-  if (categoryVolunteerIds) allQuery = allQuery.in('id', categoryVolunteerIds)
+  if (restrictedIds) allQuery = allQuery.in('id', restrictedIds)
 
   const { data: allData } = await allQuery
   const allRows = (allData ?? []) as unknown as RawVolunteerRow[]
@@ -224,22 +259,4 @@ export async function getActiveVolunteerCount(supabase: SupabaseClient): Promise
     .select('id', { count: 'exact', head: true })
     .eq('status', 'active')
   return count ?? 0
-}
-
-export async function getAllActiveVolunteersForExport(
-  supabase: SupabaseClient
-): Promise<VolunteerListRow[]> {
-  const { data } = await supabase
-    .from('volunteers')
-    .select(LIST_SELECT)
-    .eq('status', 'active')
-    .order('full_name', { ascending: true })
-
-  const rows = (data ?? []) as unknown as RawVolunteerRow[]
-  const extra = await attachCallsAndLastCall(
-    supabase,
-    rows.map((r) => r.id)
-  )
-
-  return rows.map((r) => toListRow(r, extra))
 }

@@ -66,16 +66,16 @@ export async function submitVolunteerForm(
         email:          data.email,
         phone:          data.phone,
         pronouns:       pronounsValue,
-        school:         data.school ?? null,
+        school:         data.school || null,
         age_range:      data.age_range || null,
         is_minor:       data.age_range === 'under_18',
-        guardian_name:  data.guardian_name ?? null,
-        guardian_phone: data.guardian_phone ?? null,
+        guardian_name:  data.guardian_name || null,
+        guardian_phone: data.guardian_phone || null,
         requires_service_hours: (data.school || null)
           ? (data.requires_service_hours ?? false)
           : false,
         referral_source: referralSourceValue,
-        referral_name:  data.referral_name ?? null,
+        referral_name:  data.referral_name || null,
       })
       .select('id, update_token')
       .single()
@@ -161,16 +161,16 @@ export async function mergeVolunteer(
         full_name:      data.full_name,
         phone:          data.phone,
         pronouns:       pronounsValue,
-        school:         data.school ?? null,
+        school:         data.school || null,
         age_range:      data.age_range || null,
         is_minor:       data.age_range === 'under_18',
-        guardian_name:  data.guardian_name ?? null,
-        guardian_phone: data.guardian_phone ?? null,
+        guardian_name:  data.guardian_name || null,
+        guardian_phone: data.guardian_phone || null,
         requires_service_hours: (data.school || null)
           ? (data.requires_service_hours ?? false)
           : false,
         referral_source: referralSourceValue,
-        referral_name:  data.referral_name ?? null,
+        referral_name:  data.referral_name || null,
       })
       .eq('id', existingId)
 

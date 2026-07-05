@@ -112,7 +112,7 @@ export default async function HomePage() {
               Update My Info
             </Link>
             <Link
-              href="/shows"
+              href="/callboard"
               className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
             >
               View Opportunities

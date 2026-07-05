@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.6
-### Created: July 2026 | Last Updated: July 2026 — v1.6 (Phases 6 and 7 complete)
+## 30BN_PROCESS_v1.md — v1.8
+### Created: July 2026 | Last Updated: July 2026 — v1.8 (9.2 and 10.1 build corrections)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -79,7 +79,7 @@ These carry forward to the next prompt.
 ### Naming Convention
 Migrations are numbered sequentially: `001`, `002`, `003`, etc.
 Filename format: `{number}_{descriptive_snake_case}.sql`
-Examples: `001_core_schema.sql`, `002_callboard_tokens.sql`
+Examples: `001_core_schema.sql`, `002_volunteer_notes_role_rls.sql`
 
 ### Migration Rules
 - One migration per logical unit of change
@@ -110,6 +110,22 @@ Any prompt that involves debugging, investigating unexpected behavior, or fixing
 
 **Why:** A fix based on assumed state rather than live state can create new failures. Phase A must verify against what is actually live.
 
+**Read/audit/diagnose session pattern (established ADMIN.18):**
+A read-only audit session is a Phase A with no Phase B — the entire output is a structured
+findings document used to drive a separate execution prompt. No code is written, no files are
+modified. The build report documents findings per audit topic with exact file paths, line
+numbers, and specific recommended changes. The follow-up execution prompt (ADMIN.19 in this
+case) executes all findings without needing to re-investigate. Use this pattern when multiple
+unrelated areas need assessment before fixes can be confidently written.
+
+**FIX prompt naming convention (established ADMIN.17-FIX):**
+When a build report Flag item identifies a critical correctness issue that cannot wait for
+the next scheduled prompt, a fix prompt is issued immediately. Naming: `[PROMPT-ID]-FIX`
+(e.g., `30BN-ADMIN.17-FIX`). FIX prompts follow all the same standards as regular prompts
+(Session Starter Block, schema verification, step tracker, build report). They may be issued
+regardless of phase sequence. The original prompt's Flag item must reference the issue
+clearly enough that the FIX prompt can proceed directly to Phase B without re-investigation.
+
 ---
 
 ## 6. RLS Pre-Prompt Verification
@@ -129,6 +145,20 @@ This is mandatory because:
 
 **Critical RLS rule for this project:**
 `volunteer_notes` must have SELECT restricted to admin users only. The public-facing routes, the Call Board session, and any anonymous context must never be able to query this table. Verify this policy is in place before any prompt that touches volunteer profiles or Call Board pages.
+
+**Call Board exception — RLS not applicable:**
+The Call Board (`/callboard`) uses `getAdminClient()` for all data reads — there is no
+Supabase Auth session in this context. RLS verification is not applicable to Call Board data
+fetches; the admin client bypasses RLS by design. This is intentional and correct: volunteer
+data is fetched server-side using the service role key, which is never exposed to the client.
+
+**"RLS Policy Always True" Supabase advisory (known, accepted):**
+Public INSERT policies with `WITH CHECK (true)` on `volunteers`, `slot_claims`,
+`opportunity_submissions`, `form_responses`, `form_response_values`, and
+`pending_registrations` are flagged by Supabase security advisors as "RLS Policy Always True."
+This is a known and accepted pattern in this project — these tables intentionally allow
+anonymous inserts from public-facing forms. The advisory is not actionable and should not
+trigger alarm. All other access on these tables is restricted.
 
 **SECURITY DEFINER function privilege verification (R28):**
 Before shipping any migration that creates a SECURITY DEFINER function, verify execute privileges after creation:
@@ -157,6 +187,34 @@ Two Supabase clients exist in this project. Use the correct one for the context.
 - Use for: Super Admin account creation, sending admin welcome emails, any operation that must bypass RLS (e.g., looking up a volunteer by token without a user session), public Server Component reads where no user session exists (e.g., fetching active opportunities or shows for a public page — server-side only, key never exposed to client), and Vercel Cron route handlers (no session context)
 - **Never expose to client side.** If you find yourself importing `admin.ts` in a `'use client'` file, stop — this is a security failure.
 - **Do not use for admin server actions called from authenticated sessions.** If a server action is invoked only from the Production Crew UI (i.e., a logged-in Editor or Super Admin), use `getServerClient()` — the session exists and RLS should apply. `getAdminClient()` bypasses RLS and should only be used when there is genuinely no session. Confirmed pattern: `sendShowNotifications()` uses `getServerClient()` because it is always called by an authenticated admin. (30BN-5.3 Q1)
+
+**Call Board session context — third use case for `getAdminClient()`:**
+The Volunteer Call Board introduces a third auth context beyond the two described above.
+Volunteers are not Supabase Auth users — there is no Supabase session cookie. The Call Board
+uses a custom `callboard_session` cookie storing the volunteer's UUID. `getCallboardSession()`
+in `lib/callboard/session.ts` reads this cookie and fetches the volunteer record using
+`getAdminClient()` — because there is no RLS session to use. Server actions in the Call Board
+context (`lookupVolunteer()`, `signOutCallboard()`) also use `getAdminClient()` for the same
+reason. This is correct and intentional — never use `getServerClient()` in a Call Board
+context where no Supabase Auth session exists.
+
+**Server-only file split pattern (established 9.2):**
+When a file carries `import 'server-only'` at the top, that directive poisons the entire
+module for any client import chain — not just specific exports. If pure utilities (no DB
+calls, no server-only dependencies) need to be shared with client components, extract them
+into a `*-shared.ts` sibling file with no server-only imports. The server file can then
+re-export those symbols for server-side callers who want a single import point.
+Pattern confirmed: `lib/milestones.ts` (server-only) / `lib/milestones-shared.ts` (pure,
+client-safe). Apply this pattern to any future server-only file that needs to export pure
+utilities.
+
+**DST-aware date-range filtering (established 10.1):**
+When filtering records by a CT date boundary (e.g., "all records from this date in CT"),
+use `fromZonedTime()` from `date-fns-tz` to compute the correct UTC boundary — never a
+hardcoded UTC offset (`-06:00` or `-05:00`). Central Time alternates between CST (-06:00)
+and CDT (-05:00) seasonally. A hardcoded offset is wrong for approximately 8 months of
+the year. This is the same principle as R23 — use the date-fns-tz primitives, never raw
+offsets. Confirmed failure mode avoided in 10.1 Q3.
 
 **Never create a client inside a loop.** Create once per function, reuse.
 
@@ -195,7 +253,49 @@ F1. [Anything that needs attention before shipping, or "None"]
 `⏳ Pending owner verification — [step reference]`
 The owner performs and reports manual verification after receiving the build report. The prompt is not marked complete until the owner confirms all manual items pass. If any manual item fails, treat the failure as a Phase A/B debugging session per §5.
 
-If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark something as Verified if it wasn't actually tested.
+If a build is incomplete or something didn't work as expected, that goes in Flags. Never mark
+something as Verified if it wasn't actually tested.
+
+**Lint output must be captured in full (untruncated):**
+Always run `npm run lint 2>&1` and capture complete output before asserting the number of
+issues or affected files. Tail-truncated lint output caused undercounting of affected files
+in this project (ADMIN.17 Q1 — four files were hidden by truncation). A lint baseline of
+zero errors and zero warnings was achieved in ADMIN.17 and must be maintained. Any new lint
+issue introduced by a build is a build defect.
+
+**Read/audit/diagnose session build report format:**
+When a prompt is a read-only audit session (no code written, no files modified), the build
+report uses this abbreviated format:
+
+```
+## Build Report — [Prompt ID]
+
+### Audit A — [Topic]
+[Findings with exact files, line numbers, and ADMIN.19 actions]
+Risk: LOW / MEDIUM / HIGH
+Follow-up action: [exact change to make in next prompt]
+
+### Audit B — [Topic]
+[Same structure]
+
+### Completed
+Read-only audit session. No files modified.
+
+### Verified
+No code changes to verify.
+
+### Migrations Applied
+None
+
+### Files Created / Modified
+None
+
+### Q-Items
+Q1. [Anything noticed during reads out of scope]
+
+### Flags
+F1. [Critical finding needing immediate attention, or None]
+```
 
 **Database-state verification in build reports:** Some quality gate items can be confirmed by Claude Code directly via live database queries rather than deferred to manual owner verification. When a build report includes a live query result that confirms a fix (e.g., a `pg_proc.proacl` check confirming privilege state, or a row count confirming a migration applied), that item is listed in the Verified section as confirmed — not as pending owner verification. The build report must include the actual query result, not just a claim that it was checked. Established ADMIN.13.
 
@@ -240,8 +340,24 @@ grep -r "SERVICE_ROLE_KEY" components/ app/
 # Check for tailwind.config.ts (R7)
 ls tailwind.config.ts 2>/dev/null && echo "EXISTS - REMOVE IT"
 
+# Check for window.location.href on volunteer profile
+# mutations — must be zero (standardized to
+# router.refresh() in ADMIN.19 per R12 update)
+grep -rn "window.location" \
+  app/crew/\(app\)/volunteers/ \
+  components/crew/volunteers/ \
+  --include="*.tsx" --include="*.ts"
+# Must return zero results on the profile page.
+# window.location is still valid for navigation
+# away to a different URL (e.g. categories page
+# reload() — different context, not a mutation).
+
 # Check for router.push after mutations (R12)
-grep -r "router.push" app/crew/
+# router.push() does not re-run Server Component
+# data fetches — use router.refresh() instead
+grep -r "router.push" app/crew/ --include="*.tsx"
+# Review any hits — confirm none are post-mutation
+# nav that should be router.refresh() instead
 ```
 
 ```bash
@@ -319,12 +435,43 @@ grep -rn "revalidatePath" app/ components/ \
 ```
 
 ```bash
+# Confirm hours_confirmed explicitly set to false on
+# all Showed attendance marks — never left to DEFAULT
+# (9.1 requirement — the dashboard Pending Hours Review
+# card depends on this being explicitly set)
+grep -n "hours_confirmed" lib/actions/attendance.ts
+# Must show: false on all insert/update paths.
+# Must NOT show: true on any Showed mark.
+```
+
+```bash
 # Confirm no drag library installed (Phase 6 decision)
 # Field reorder uses arrow buttons only — no drag lib.
 # Installing one would violate the explicit decision
 # made when building the form builder (30BN-6.1).
 cat package.json | grep -i "dnd\|drag\|sortable"
 # Must return nothing.
+```
+
+```bash
+# Confirm lint baseline is maintained (zero errors,
+# zero warnings — achieved in ADMIN.17)
+npm run lint 2>&1
+# Any new issue = a defect introduced by this build.
+# Lint output must be captured in full (untruncated).
+# If suppressing with eslint-disable, the comment must
+# include a documented reason explaining why suppression
+# is correct (e.g. hydration-safe client-only API read).
+```
+
+```bash
+# Confirm no window.location on volunteer profile
+# components (router.refresh() standard, R12/ADMIN.19)
+grep -rn "window.location" \
+  app/crew/\(app\)/volunteers/ \
+  components/crew/volunteers/ \
+  --include="*.tsx" --include="*.ts"
+# Must return zero results
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -361,6 +508,18 @@ Run before every Vercel deployment:
   for all routes that display the mutated data (R29)
 □ Any prompt touching forms or field reorder: confirm no drag library was
   added to package.json (Phase 6 confirmed decision — arrow buttons only)
+□ npm run lint returns zero errors, zero warnings — lint baseline maintained
+  (ADMIN.17). Capture full untruncated output. Any new issue is a build defect.
+□ Any mutation component on the volunteer profile page: uses router.refresh()
+  not window.location.href for in-place re-renders (R12, ADMIN.19)
+□ Any new attendance mutation marking Showed: confirm hours_confirmed = false
+  set explicitly (not left to DEFAULT) on the insert/update (9.1 pattern)
+□ Any new server action that increments volunteer hours (markAttendance,
+  confirmHours, addManualHours): confirm both checkMilestones() and
+  checkFirstCall() are called non-blocking after the hours update (9.2 pattern)
+□ Any new SECURITY DEFINER function: verify pg_proc.proacl AND confirm
+  lib/milestones.ts MILESTONE_THRESHOLDS is the single source of truth —
+  no local threshold arrays in any component (9.2 pattern, Q3 from 8.1)
 ```
 
 ---
@@ -382,6 +541,15 @@ The Brief (30BN_BRIEF_v1.md) and Process (30BN_PROCESS_v1.md) are living documen
 - A feature decision that resolves an Open Decision (Brief §12)
 - A phase completed (status tracking in Brief §10)
 - Any confirmed deviation from the Brief
+
+**Batching pattern (established DOC.13/DOC.14):**
+Comprehensive document updates are batched at the completion of a multi-phase milestone
+rather than after every ADMIN prompt. The recommended trigger point is after a natural
+phase boundary (e.g., after Phase 10 before Phase 11). Minor corrections discovered during
+a build are recorded as Q-items and included in the next batch update. The deferred
+verification document (30BN_DEFERRED_VERIFICATIONS) is updated via DOC prompts as needed
+and is not subject to the same batching requirement — it should be updated after any prompt
+that adds pending verification items.
 
 ---
 
@@ -435,7 +603,59 @@ Document & Admin Prompts
                    reactivate action and UI. R29/R30
                    established.
   30BN-DOC.9     ✓ Brief Update v1.6 (Phases 6 and 7)
-  30BN-DOC.10    ✓ Process Update v1.6 (this prompt)
+  30BN-DOC.10    ✓ Process Update v1.6
+  30BN-DOC.11    ✓ Brief Update v1.7 (Call Board redesign)
+  30BN-DOC.12    ✓ Deferred Verification Document v3
+                   (ADMIN.15–16 verification items added)
+  30BN-ADMIN.15  ✓ Self-registration + pending approval
+                   flow, change password (/crew/settings/
+                   password), referral field label
+                   corrections. Migration 010.
+                   Patterns: registerAdminRequest(),
+                   approveRegistration(),
+                   declineRegistration().
+  30BN-ADMIN.16  ✓ Add to Home Screen PWA card (mobile
+                   dashboard), Opportunities sidebar link,
+                   /crew → /crew/dashboard redirect fix,
+                   Brief cleanup (DOC.11 Q1 + stale items)
+  30BN-ADMIN.17  ✓ Lint sweep — zero errors/warnings
+                   achieved across all 10 affected files
+                   (3 fixed, 10 suppressed with documented
+                   reasoning). Phase 12 quick wins:
+                   sendReminderEmail() removed,
+                   PDF Svc Hrs column added, page-param
+                   clamp, Migration 012 (CASCADE on
+                   form_response_values.field_id).
+  30BN-ADMIN.17-FIX ✓ updateForm() diff-based field sync
+                   (critical data-destruction fix).
+                   updateForm() full-replace strategy
+                   replaced with diff-based reconciliation:
+                   UPDATE existing fields in place,
+                   INSERT new fields, DELETE only
+                   explicitly removed fields. revalidatePath
+                   added to updateForm() and createForm().
+                   FIX prompt pattern established.
+  30BN-ADMIN.18  ✓ Read/audit/diagnose session — no code
+                   changes. Six audits: call history sort,
+                   all-pages CSV export design, category
+                   description editing design, empty states
+                   (5/6 already exist), image optimization
+                   (all already <Image>), input sanitization
+                   (R18 gaps + .max() caps needed).
+                   Read/audit session pattern established.
+  30BN-ADMIN.19  ✓ Targeted fixes (post-audit sweep):
+                   markAttendance() + createForm()
+                   revalidatePath (R29); call history JS
+                   sort by show_date (admin profile +
+                   Call Board); filter-aware CSV export
+                   ("Export Matching"); category description
+                   inline editing; R18 fix (8× ?? → ||);
+                   .max() caps on public Zod schemas;
+                   volunteer profile standardized to
+                   router.refresh(); dark: gaps fixed on
+                   profile header/status badge.
+  30BN-DOC.13    ✓ Brief Update v1.8 (Phases 8–10,
+                   ADMIN.15–19, comprehensive corrections)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -476,16 +696,58 @@ Phase 7 — QR Code Generator ✓ Complete
                 (per-form QR pulled forward into 6.3;
                 standalone generator built here)
 
-Phase 8 — Volunteer Call Board
-  30BN-8.1    Call Board Login & Session
-  30BN-8.2    Call Board Portal Pages
+Phase 8 — Volunteer Call Board ✓ Complete
+  30BN-8.1  ✓ Call Board (complete — redesigned from
+              two-prompt to single-prompt delivery;
+              single-page /callboard hub, cookie-only
+              session, no magic link, no sub-routes,
+              lib/callboard/session.ts,
+              lib/actions/callboard.ts, types/callboard.ts)
 
-Phase 9 — Volunteer Hours & Milestones
-  30BN-9.1    Hours Tracking
-  30BN-9.2    Milestone System
+Phase 9 — Volunteer Hours & Milestones ✓ Complete
+  30BN-9.1  ✓ Hours Tracking (Migration 011:
+              attendance.hours_confirmed +
+              volunteer_hours_log.logged_date;
+              confirmHours(); addManualHours();
+              PendingHoursCard on dashboard;
+              volunteer profile hours section +
+              milestone history display)
+  30BN-9.2  ✓ Milestone System (Migration 013:
+              UNIQUE on milestone_log;
+              checkMilestones() + checkFirstCall()
+              real implementations;
+              lib/milestones-shared.ts — new pure
+              file (MILESTONE_THRESHOLDS +
+              getNextMilestone(), client-safe);
+              lib/milestones.ts re-exports both,
+              carries 'server-only';
+              sendMilestoneEmail() tier-specific,
+              CTA → /callboard;
+              acknowledgeMilestone() — audit entry
+              added in 10.1, not 9.2;
+              PendingMilestonesCard on dashboard;
+              milestone tier filter activated;
+              VolunteerCard imports from
+              lib/milestones-shared;
+              Call Board hours breakdown)
 
-Phase 10 — Audit Log
-  30BN-10.1   Audit Log
+Phase 10 — Audit Log ✓ Complete
+  30BN-10.1 ✓ Audit Log Viewer (no migration;
+              AuditAction type union completed with
+              9 comment groups including "Slot Claims"
+              as distinct group + Phase 11 forward
+              declarations; logAction() added to
+              acknowledgeMilestone() (corrects 9.2
+              spec which said no audit entry) and to
+              changePassword() (also added
+              getAdminUser() — ADMIN.15 had omitted
+              it); DST-aware date filtering via
+              fromZonedTime(); server-side paginated
+              viewer at /crew/settings/audit-log;
+              AuditLogFilters + AuditLogTable;
+              expandable diff rows; Viewer redirect
+              guard; Audit Log card added to
+              /crew/settings hub)
 
 Phase 11 — Stubs, 404 & App Settings
   30BN-11.1   Beta Stub Pages & Custom 404
@@ -503,6 +765,17 @@ Phase 14 — Check-In System          (detail in v2)
 Phase 15 — Document Management      (detail in v2)
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (detail in v2)
+
+New Beta features confirmed during Alpha build:
+Phase 18 — Additional Alpha Features (moved to Alpha scope)
+  - Volunteer communication history on profile
+  - Show-level post-show reporting
+  - Volunteer self-service hours history on Call Board
+  - Bulk email from show detail
+Phase 19 — Waitlist notification preferences
+  (volunteer opt-in for notification method)
+Phase 20 — Automated thank-you email after a show
+  (24–48h post-show, sent to all Showed volunteers)
 ```
 
 ---
@@ -510,6 +783,13 @@ Phase 17 — Launch                   (detail in v2)
 ## 14. Process-Specific Standing Rules
 
 Rules governing this build process itself, kept here rather than in Brief §13 because they concern session conduct and CLI tooling behavior rather than product/schema decisions. This is a deliberate deviation from the general §12 protocol ("new standing rule goes in Brief §13 AND is noted here") for these two rules specifically.
+
+### R12 — router.refresh() for In-Place Re-Renders; window.location.href for Full Nav (cross-reference)
+Documented in Brief §13 R12. Referenced here for R-number continuity. Core rule: router.refresh()
+is the preferred pattern for Client Components that need to re-fetch Server Component data after
+a mutation without navigating away. window.location.href is used only for full navigation to a
+different URL. router.push() must not be used for post-mutation re-renders. Standardized across
+volunteer profile mutations in ADMIN.19. See §10 for the grep check and §11 for the checklist item.
 
 ### R16 — No Browser Verification in Claude Code Sessions
 Claude Code does not use browser automation tools (Claude in Chrome or any equivalent) for UI, flow, or auth verification. All such verification is performed manually by the owner, who reports results to Claude Code as pass/fail. Build prompts must express all verification steps as manual owner tasks — never as browser tool calls. Established during 30BN-1.3.
@@ -567,9 +847,13 @@ Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule
 Documented in Brief §13 R29. Referenced here for R-number continuity. Core rule: every server
 action that mutates data must call revalidatePath() for all routes that display that data.
 Without it, Next.js serves stale cached Server Component renders. Never call revalidatePath()
-in a 'use client' file. Confirmed failure mode: show status change not reflected on /shows
-(VERIFY-1 C9); slot count not updating after claim (VERIFY-4). Fixed in ADMIN.14. See §10
-for the grep check and §11 for the checklist item.
+in a 'use client' file. Confirmed failure modes:
+- Show status change not reflected on /shows (VERIFY-1 C9) — fixed ADMIN.14
+- Slot count not updating after claim (VERIFY-4) — fixed ADMIN.14
+- createForm() missing revalidatePath('/crew/forms') — fixed ADMIN.17-FIX/ADMIN.19
+- updateForm() missing revalidatePath calls — fixed ADMIN.17-FIX
+- markAttendance() missing revalidatePath calls — fixed ADMIN.19
+See §10 for the grep check and §11 for the checklist item.
 
 ### R30 — Theme Toggle Must Target document.body (cross-reference)
 Documented in Brief §13 R30. Referenced here for R-number continuity. Core rule: the
@@ -590,4 +874,6 @@ theme in its dependency array. Confirmed failure mode: dark→light toggle requi
 *v1.4 (July 2026 — Phase 4 complete: step tracker re-emit behavior corrected (R27), admin client public-read use case documented (§7), src/ path errors fixed in grep checks (§10), R23/R26 grep checks added (§10), R23/R26 post-build checklist items added (§11), Phase 4 marked complete in §13, ADMIN.8–ADMIN.12 and DOC.5–DOC.6 added to prompt log, R23–R27 added to §14)*
 *v1.5 (July 2026 — Phase 5 complete: SECURITY DEFINER privilege verification added to §6, getServerClient vs getAdminClient distinction clarified in §7 (confirmed pattern from 5.3 Q1), DB-query verification pattern added to §8 (established ADMIN.13), R28 pg_proc.proacl check added to §10, env var count updated to six and R28 checklist item added to §11, Phase 5 marked complete and ADMIN.13/DOC.7/DOC.8 added to prompt log in §13, R28 cross-reference added to §14)*
 *v1.6 (July 2026 — Phases 6 and 7 complete: revalidatePath grep check added to §10 (R29), drag-library guard grep check added to §10 (Phase 6 decision), R29/drag-library checklist items added to §11, Phases 6 and 7 marked complete in §13, ADMIN.14/DOC.9/DOC.10 added to prompt log in §13, R16 clarified with verification session pattern in §14, R29/R30 cross-references added to §14)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.6*
+*v1.7 (July 2026 — Phases 8–10 complete, ADMIN.15–19: §1 unchanged; §4 migration example corrected (002 filename); §5 read/audit session and FIX prompt patterns added; §6 Call Board RLS exception + "RLS Always True" advisory note added; §7 Call Board third client context documented; §8 lint capture rule and read-only build report format added; §10 R12 grep updated, lint baseline check added, window.location check added, hours_confirmed check added; §11 four new checklist items added; §12 batching pattern documented; §13 ADMIN.15–19 + DOC.11–13 logged, Phases 8–10 marked complete, Beta phases 18–20 added; §14 R12 cross-reference stub added, R29 additional failure modes added; DOC.14 logged)*
+*v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
+*Cross-reference: 30BN_BRIEF_v1.md v1.9*

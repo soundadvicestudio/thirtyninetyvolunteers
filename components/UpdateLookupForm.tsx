@@ -41,7 +41,7 @@ export default function UpdateLookupForm() {
           Check your email
         </h2>
         <p className="text-mid-gray text-sm leading-relaxed">
-          We've sent an update link to the email address on your
+          We&apos;ve sent an update link to the email address on your
           record. Click the link in that email to update your
           information.
         </p>
@@ -57,13 +57,13 @@ export default function UpdateLookupForm() {
       <p className="text-mid-gray text-sm text-center mb-8
                     leading-relaxed">
         Enter the email address or phone number you signed up with
-        and we'll send you a link to update your record.
+        and we&apos;ll send you a link to update your record.
       </p>
 
       {state === 'not_found' && (
         <div className="mb-4 rounded-lg bg-pale-orange border
                         border-orange p-4 text-sm text-dark">
-          We couldn't find a record with that email or phone.{' '}
+          We couldn&apos;t find a record with that email or phone.{' '}
           <Link href="/"
                 className="font-semibold text-navy underline">
             Sign up here

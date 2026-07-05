@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
 import {
   AlertDialog,
@@ -22,13 +23,14 @@ export default function StatusToggle({
   currentStatus: 'active' | 'archived'
   volunteerName: string
 }) {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   async function handleToggle(newStatus: 'active' | 'archived') {
     setIsSubmitting(true)
     const result = await toggleStatus(volunteerId, newStatus)
     if ('success' in result) {
-      window.location.href = window.location.href
+      router.refresh()
       return
     }
     setIsSubmitting(false)

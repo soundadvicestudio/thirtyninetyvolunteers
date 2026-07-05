@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
@@ -125,6 +126,7 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
         show_date_id: showDateId,
         status: newStatus,
         hours_logged: newStatus === 'showed' ? hours : 0,
+        hours_confirmed: false,
         source: 'manual',
         marked_by: admin.id,
       })
@@ -155,6 +157,7 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
       .update({
         status: newStatus,
         hours_logged: newStatus === 'showed' ? hours : 0,
+        hours_confirmed: false,
         marked_by: admin.id,
         marked_at: new Date().toISOString(),
       })
@@ -189,6 +192,8 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
       { status: previousRecord?.status ?? null },
       { status: newStatus, volunteer_id: null, show_id: showId, show_date_id: showDateId }
     )
+    revalidatePath('/crew/dashboard')
+    revalidatePath(`/crew/shows/${showId}`)
     return { success: true, attendanceId, warning: 'No linked volunteer — hours not tallied.' }
   }
 
@@ -217,6 +222,10 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
       show_date_id: showDateId,
     }
   )
+
+  revalidatePath('/crew/dashboard')
+  revalidatePath(`/crew/shows/${showId}`)
+  revalidatePath(`/crew/volunteers/${claim.volunteer_id}`)
 
   return { success: true, attendanceId }
 }
@@ -253,4 +262,100 @@ export async function bulkMarkAttendance(
   }
 
   return { success: results.every((r) => r.success), results }
+}
+
+export type ConfirmHoursResult =
+  | { success: true; newHours: number; delta: number }
+  | { error: string }
+
+// Option A hours review: hours already logged on Showed (see markAttendance),
+// this confirms or adjusts the recorded value and clears hours_confirmed.
+export async function confirmHours(
+  attendanceId: string,
+  newHours: number
+): Promise<ConfirmHoursResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { error: 'Unauthorized' }
+  }
+
+  if (typeof newHours !== 'number' || !Number.isFinite(newHours) || newHours < 0) {
+    return { error: 'Hours must be 0 or greater.' }
+  }
+  if (newHours > 24) {
+    return { error: 'Hours cannot exceed 24.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: attendance, error: fetchError } = await supabase
+    .from('attendance')
+    .select('id, volunteer_id, hours_logged, hours_confirmed, show_id, show_date_id')
+    .eq('id', attendanceId)
+    .eq('status', 'showed')
+    .single()
+
+  if (fetchError || !attendance) {
+    return { error: 'Could not find this attendance record.' }
+  }
+
+  if (attendance.hours_confirmed) {
+    return { error: 'already_confirmed' }
+  }
+
+  const previousHours = Number(attendance.hours_logged)
+  const delta = Math.round((newHours - previousHours) * 100) / 100
+
+  if (delta !== 0 && attendance.volunteer_id) {
+    const { data: volunteer } = await supabase
+      .from('volunteers')
+      .select('total_hours')
+      .eq('id', attendance.volunteer_id)
+      .single()
+
+    const currentTotal = volunteer ? Number(volunteer.total_hours) : 0
+    let appliedDelta = delta
+    let newTotal = currentTotal + delta
+    if (newTotal < 0) {
+      appliedDelta = -currentTotal
+      newTotal = 0
+    }
+
+    await supabase.from('volunteers').update({ total_hours: newTotal }).eq('id', attendance.volunteer_id)
+    await supabase.from('attendance').update({ hours_logged: newHours }).eq('id', attendanceId)
+    await supabase.from('volunteer_hours_log').insert({
+      volunteer_id: attendance.volunteer_id,
+      hours: appliedDelta,
+      source_type: 'attendance',
+      source_id: attendanceId,
+      note: 'Hours adjusted during review',
+      added_by: admin.id,
+      logged_date: null,
+    })
+
+    await checkMilestones(attendance.volunteer_id)
+    await checkFirstCall(attendance.volunteer_id)
+  }
+  // delta === 0, or volunteer_id is null (unregistered volunteer — hours were
+  // never tallied for them, same existing behavior as markAttendance): no
+  // hours_logged/total update needed, but the record still clears from the
+  // review queue below.
+
+  await supabase.from('attendance').update({ hours_confirmed: true }).eq('id', attendanceId)
+
+  await logAction(
+    admin.id,
+    'attendance.hours_confirm',
+    'attendance',
+    attendanceId,
+    { hours_logged: previousHours, hours_confirmed: false },
+    { hours_logged: newHours, hours_confirmed: true, delta }
+  )
+
+  revalidatePath('/crew/dashboard')
+  if (attendance.volunteer_id) {
+    revalidatePath(`/crew/volunteers/${attendance.volunteer_id}`)
+  }
+
+  return { success: true, newHours, delta }
 }

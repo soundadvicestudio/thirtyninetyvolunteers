@@ -777,8 +777,7 @@ type ReminderEmailParams = {
 
 // Exported so the 24hr reminder cron (app/api/cron/reminders) can build
 // payload objects for resend.batch.send() — batching multi-recipient sends
-// is required per R8, so the cron does not call sendReminderEmail() (single
-// send) directly.
+// is required per R8, so the cron never sends reminders one at a time.
 export function buildReminderEmailPayload({
   to,
   volunteerName,
@@ -809,10 +808,6 @@ export function buildReminderEmailPayload({
     subject: `Reminder: you're volunteering tomorrow — ${showName}`,
     html,
   }
-}
-
-export async function sendReminderEmail(params: ReminderEmailParams): Promise<void> {
-  await resend.emails.send(buildReminderEmailPayload(params))
 }
 
 type BatchEmailPayload = { from: string; replyTo?: string; to: string; subject: string; html: string }
@@ -892,4 +887,301 @@ export async function sendCategoryMatchNotificationEmail(
   params: CategoryMatchNotificationEmailParams
 ): Promise<void> {
   await resend.emails.send(buildCategoryMatchNotificationPayload(params))
+}
+
+// ─── Admin self-registration emails (30BN-ADMIN.15) ──────────────
+
+type PendingRegistrationEmailParams = {
+  to: string[]
+  name: string
+  email: string
+}
+
+// Notifies all active Super Admins that a new access request is awaiting
+// review. R8 — multi-recipient uses resend.batch.send(); a single Super
+// Admin recipient uses resend.emails.send() directly.
+export async function sendPendingRegistrationEmail({
+  to,
+  name,
+  email,
+}: PendingRegistrationEmailParams): Promise<void> {
+  if (to.length === 0) return
+
+  const subject = `New access request — ${name} (${email})`
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      New access request
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+      <strong>${escapeHtml(name)}</strong> (${escapeHtml(email)}) has requested access to the
+      30 By Ninety Theatre Production Crew. Log in to review and approve or decline this request.
+    </p>
+    <a href="https://30byninetyvolunteers.com/crew/settings/users"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      Review Request
+    </a>
+  `)
+
+  if (to.length === 1) {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: to[0],
+      subject,
+      html,
+    })
+    return
+  }
+
+  // R8 — multi-recipient send uses resend.batch.send(), one entry per Super Admin.
+  await resend.batch.send(
+    to.map((address) => ({
+      from: FROM_ADDRESS,
+      to: address,
+      subject,
+      html,
+    }))
+  )
+}
+
+type RegistrationApprovedEmailParams = {
+  to: string
+  name: string
+}
+
+export async function sendRegistrationApprovedEmail({
+  to,
+  name,
+}: RegistrationApprovedEmailParams): Promise<void> {
+  const loginUrl = 'https://30byninetyvolunteers.com/crew/login'
+
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Hi ${escapeHtml(name)}, you're approved!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+      Your request to join the 30 By Ninety Theatre Production Crew has been approved.
+      You can now log in at the link below with the email and password you registered with.
+    </p>
+    <a href="${loginUrl}"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      Log In to Production Crew
+    </a>
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: 'Your access request has been approved',
+    html,
+  })
+}
+
+type RegistrationDeclinedEmailParams = {
+  to: string
+  name: string
+}
+
+export async function sendRegistrationDeclinedEmail({
+  to,
+  name,
+}: RegistrationDeclinedEmailParams): Promise<void> {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Hi ${escapeHtml(name)},
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+      Thank you for your interest in the 30 By Ninety Theatre Production Crew. Unfortunately your
+      access request was not approved at this time. Please reach out to the theatre directly if
+      you have questions.
+    </p>
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to,
+    subject: 'Your access request was not approved',
+    html,
+  })
+}
+
+// ─── Milestone congratulations email (30BN-9.2) ──────────────────
+
+type MilestoneEmailContent = { subject: string; bodyHtml: string }
+
+function milestoneEmailContent(
+  name: string,
+  milestoneLabel: string,
+  milestoneHours: number,
+  totalHours: number | null
+): MilestoneEmailContent {
+  const safeName = escapeHtml(name)
+  const totalHoursLine =
+    totalHours != null
+      ? `<p style="color:#555;line-height:1.6;margin:16px 0 0;">Your total hours: <strong>${totalHours}</strong>.</p>`
+      : ''
+
+  switch (milestoneHours) {
+    case 0:
+      return {
+        subject: 'Welcome to the 30 By Ninety volunteer family!',
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            Welcome to the family, ${safeName}!
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            Welcome to the 30 By Ninety Theatre volunteer community! You've just made your first
+            contribution to bringing live theatre to our community — and that means everything to us.
+          </p>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            We're so glad you're here. Keep an eye out for upcoming shows and opportunities on the
+            Volunteer Call Board. We can't wait to see you again.
+          </p>
+        `,
+      }
+    case 10:
+      return {
+        subject: "You've reached 10 volunteer hours — thank you!",
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            10 hours, ${safeName}!
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            You've officially logged 10 volunteer hours with 30 By Ninety Theatre. That's real time,
+            real effort, and a real difference in the lives of everyone who walks through our doors.
+            Thank you.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    case 20:
+      return {
+        subject: "20 hours of giving — you're making a difference",
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            20 hours, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            20 hours. You keep showing up, and it shows. The 30 By Ninety community is stronger
+            because you're part of it. Thank you for your continued dedication.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    case 35:
+      return {
+        subject: "35 hours — you're becoming a cornerstone of our community",
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            35 hours, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            35 volunteer hours is no small thing — that's a serious commitment to our community and
+            to live theatre. We see you, and we're grateful for every hour you've given.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    case 50:
+      return {
+        subject: `50 volunteer hours — that's remarkable, ${name}`,
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            50 hours, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            Fifty hours. Take a moment to let that sink in. You've given 50 hours of your time to 30
+            By Ninety Theatre — and our community is richer for it. This is a milestone worth
+            celebrating. Thank you, from all of us.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    case 75:
+      return {
+        subject: "75 hours of dedication — we're so grateful",
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            75 hours, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            75 hours of service — you've become one of the pillars of the 30 By Ninety volunteer
+            community. The shows we produce, the experiences we create, the community we build — all
+            of it exists because of people like you.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    case 100:
+      return {
+        subject: "100 hours — you've achieved something truly special",
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            100 hours, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            One hundred hours. This is something very few volunteers ever achieve, and you've done
+            it. 100 hours of showing up, helping out, and making live theatre happen. We are deeply
+            grateful. You are part of what makes 30 By Ninety special.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+    default:
+      return {
+        subject: `${milestoneHours} hours of service — thank you for everything`,
+        bodyHtml: `
+          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+            ${escapeHtml(milestoneLabel)}, ${safeName}
+          </h1>
+          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+            ${escapeHtml(milestoneLabel)} of volunteer service. You continue to show up for 30 By
+            Ninety Theatre in ways that genuinely move us. Thank you for your extraordinary
+            commitment to our community.
+          </p>
+          ${totalHoursLine}
+        `,
+      }
+  }
+}
+
+export async function sendMilestoneEmail(
+  email: string,
+  name: string,
+  milestoneLabel: string,
+  milestoneHours: number,
+  totalHours: number | null
+): Promise<void> {
+  const { subject, bodyHtml } = milestoneEmailContent(name, milestoneLabel, milestoneHours, totalHours)
+
+  const html = emailShell(`
+    ${bodyHtml}
+    <div style="margin:24px 0 0;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL}/callboard"
+         style="display:inline-block;background:#F26522;
+                color:#ffffff;text-decoration:none;
+                padding:14px 28px;border-radius:8px;
+                font-weight:700;font-size:15px;">
+        View Your Volunteer Card
+      </a>
+    </div>
+    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+      — The 30 By Ninety Theatre Team
+    </p>
+  `)
+
+  await resend.emails.send({
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to: email,
+    subject,
+    html,
+  })
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatCT } from '@/lib/utils/date'
 import { addNote, editNote, deleteNote } from '@/lib/actions/volunteers'
 
@@ -11,11 +12,8 @@ type Note = {
   admin_users: { name: string } | null
 }
 
-function reload() {
-  window.location.href = window.location.pathname
-}
-
 function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean }) {
+  const router = useRouter()
   const [mode, setMode] = useState<'view' | 'edit' | 'delete-confirm'>('view')
   const [draftBody, setDraftBody] = useState(note.body)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -26,7 +24,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
     setIsSubmitting(true)
     const result = await editNote(note.id, draftBody)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
     setIsSubmitting(false)
@@ -43,7 +41,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
     setIsSubmitting(true)
     const result = await deleteNote(note.id)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
     setIsSubmitting(false)
@@ -151,6 +149,7 @@ export default function EditorNotes({
   notes: Note[]
   isSuperAdmin: boolean
 }) {
+  const router = useRouter()
   const [body, setBody] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -166,7 +165,7 @@ export default function EditorNotes({
 
     if ('success' in result) {
       setBody('')
-      reload()
+      router.refresh()
       return
     }
 

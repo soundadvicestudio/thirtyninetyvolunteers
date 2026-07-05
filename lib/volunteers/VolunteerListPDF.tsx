@@ -70,9 +70,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: MID_GRAY,
   },
-  colName: { width: '20%' },
-  colEmail: { width: '20%' },
+  colName: { width: '17%' },
+  colEmail: { width: '17%' },
   colPhone: { width: '12%' },
+  colServiceHours: { width: '6%' },
   colCategories: { width: '18%' },
   colHours: { width: '6%' },
   colCalls: { width: '6%' },
@@ -106,6 +107,7 @@ export default function VolunteerListPDF({
             <Text style={[styles.headerCell, styles.colName]}>Full Name</Text>
             <Text style={[styles.headerCell, styles.colEmail]}>Email</Text>
             <Text style={[styles.headerCell, styles.colPhone]}>Phone</Text>
+            <Text style={[styles.headerCell, styles.colServiceHours]}>Svc Hrs</Text>
             <Text style={[styles.headerCell, styles.colCategories]}>Categories</Text>
             <Text style={[styles.headerCell, styles.colHours]}>Hours</Text>
             <Text style={[styles.headerCell, styles.colCalls]}>Calls</Text>
@@ -121,6 +123,9 @@ export default function VolunteerListPDF({
               <Text style={[styles.cell, styles.colName]}>{v.full_name}</Text>
               <Text style={[styles.cell, styles.colEmail]}>{v.email}</Text>
               <Text style={[styles.cell, styles.colPhone]}>{v.phone}</Text>
+              <Text style={[styles.cell, styles.colServiceHours]}>
+                {v.requires_service_hours ? 'Yes' : 'No'}
+              </Text>
               <Text style={[styles.cell, styles.colCategories]}>
                 {v.categories.map((c) => c.name).join(', ')}
               </Text>

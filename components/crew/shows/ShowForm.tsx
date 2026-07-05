@@ -325,6 +325,10 @@ export default function ShowForm({
   const [notify, setNotify] = useState(!show?.notifications_sent_at)
   const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
+  // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
+  // field would be a broader refactor across this form's nested date/role field
+  // arrays (R24), not a surgical fix.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedShowType = watch('show_type')
   const watchedSeasonId = watch('seasonId')
   const watchedEditorIds = watch('editorIds') ?? []

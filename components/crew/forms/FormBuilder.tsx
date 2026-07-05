@@ -92,6 +92,10 @@ export default function FormBuilder({
   const [submittingStatus, setSubmittingStatus] = useState<'draft' | 'live' | 'closed' | null>(null)
   const [newFieldIndex, setNewFieldIndex] = useState<number | null>(null)
 
+  // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
+  // field would be a broader refactor across this form's field-array/preview logic,
+  // not a surgical fix.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const status = watch('status')
   const watchedTitle = watch('title')
   const watchedDescription = watch('description')

@@ -7,6 +7,7 @@ import { logAction } from '@/lib/audit'
 export type ActionResult = { success: true } | { error: string }
 
 const MAX_NAME_LENGTH = 100
+const MAX_DESCRIPTION_LENGTH = 500
 
 export async function addCategory(name: string, description?: string): Promise<ActionResult> {
   const admin = await getAdminUser()
@@ -58,7 +59,11 @@ export async function addCategory(name: string, description?: string): Promise<A
   return { success: true }
 }
 
-export async function renameCategory(id: string, name: string): Promise<ActionResult> {
+export async function renameCategory(
+  id: string,
+  name: string,
+  description?: string
+): Promise<ActionResult> {
   const admin = await getAdminUser()
   if (!admin || admin.role !== 'super_admin') {
     return { error: 'Unauthorized' }
@@ -71,12 +76,15 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
   if (trimmedName.length > MAX_NAME_LENGTH) {
     return { error: 'Name must be 100 characters or fewer.' }
   }
+  if (description && description.trim().length > MAX_DESCRIPTION_LENGTH) {
+    return { error: 'Description must be 500 characters or fewer.' }
+  }
 
   const client = getAdminClient()
 
   const { data: current, error: fetchError } = await client
     .from('volunteer_categories')
-    .select('name')
+    .select('name, description')
     .eq('id', id)
     .single()
 
@@ -84,9 +92,11 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
     return { error: 'Could not find this category.' }
   }
 
+  const descriptionValue = description?.trim() || null
+
   const { error: updateError } = await client
     .from('volunteer_categories')
-    .update({ name: trimmedName })
+    .update({ name: trimmedName, description: descriptionValue })
     .eq('id', id)
 
   if (updateError) {
@@ -99,8 +109,8 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
     'category.rename',
     'category',
     id,
-    { name: current.name },
-    { name: trimmedName }
+    { name: current.name, description: current.description },
+    { name: trimmedName, description: descriptionValue }
   )
 
   return { success: true }
