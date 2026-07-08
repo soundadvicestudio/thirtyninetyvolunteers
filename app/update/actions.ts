@@ -2,6 +2,7 @@
 
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendUpdateLinkEmail, sendInfoUpdatedEmail } from '@/lib/email'
+import { normalizePhone } from '@/lib/utils/phone'
 import type { UpdateFormData } from '@/types/volunteer'
 
 export type SendLinkResult =
@@ -39,7 +40,7 @@ export async function sendUpdateLink(
       const { data: phoneMatch } = await supabase
         .from('volunteers')
         .select('id, full_name, email, update_token')
-        .eq('phone', trimmed)
+        .eq('phone', normalizePhone(trimmed))
         .maybeSingle()
 
       if (!phoneMatch) {
@@ -80,6 +81,7 @@ export async function updateVolunteerInfo(
 ): Promise<UpdateResult> {
   try {
     const supabase = getAdminClient()
+    const normalizedPhone = normalizePhone(data.phone)
 
     // Fetch current record to get original phone
     const { data: current, error: fetchError } = await supabase
@@ -96,11 +98,11 @@ export async function updateVolunteerInfo(
     }
 
     // Phone conflict check (only if phone changed)
-    if (data.phone !== current.phone) {
+    if (normalizedPhone !== current.phone) {
       const { data: conflict } = await supabase
         .from('volunteers')
         .select('id')
-        .eq('phone', data.phone)
+        .eq('phone', normalizedPhone)
         .neq('id', volunteerId)
         .maybeSingle()
 
@@ -127,7 +129,7 @@ export async function updateVolunteerInfo(
       .from('volunteers')
       .update({
         full_name:       data.full_name,
-        phone:           data.phone,
+        phone:           normalizedPhone,
         pronouns:        pronounsValue,
         school:          data.school || null,
         age_range:       data.age_range || null,

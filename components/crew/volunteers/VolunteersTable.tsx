@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { ChevronUp, ChevronDown, ChevronsUpDown, Download, Users, SearchX } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
+import { formatPhone } from '@/lib/utils/phone'
 import { buildVolunteersCsv, csvExportFilename, downloadCsv } from '@/lib/utils/csv'
 import { buildVolunteersUrl, isNonDefaultFilter, type VolunteersUrlState } from '@/lib/volunteers/url'
 import type { VolunteerListRow } from '@/types/volunteer'
@@ -238,7 +239,7 @@ export default function VolunteersTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-dark dark:text-dark-text">{v.email}</td>
-                <td className="px-4 py-3 text-dark dark:text-dark-text">{v.phone}</td>
+                <td className="px-4 py-3 text-dark dark:text-dark-text">{formatPhone(v.phone)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {v.categories.slice(0, 3).map((c) => (

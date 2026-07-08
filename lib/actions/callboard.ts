@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { normalizePhone } from '@/lib/utils/phone'
 
 const SESSION_COOKIE = 'callboard_session'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
@@ -31,7 +32,7 @@ export async function lookupVolunteer(input: string): Promise<LookupVolunteerRes
   }
 
   if (!volunteer) {
-    const digitsOnly = trimmed.replace(/\D/g, '')
+    const digitsOnly = normalizePhone(trimmed)
     if (digitsOnly) {
       const { data } = await client
         .from('volunteers')

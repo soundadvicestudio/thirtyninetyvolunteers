@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import {
   sendSlotClaimEmail,
@@ -34,7 +35,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
     const showDateId = data.showDateId
     const volunteerName = data.volunteerName.trim()
     const volunteerEmail = data.volunteerEmail.trim().toLowerCase()
-    const volunteerPhone = data.volunteerPhone.trim()
+    const volunteerPhone = normalizePhone(data.volunteerPhone.trim())
     const force = data.force ?? false
 
     if (!roleId || !showDateId || !volunteerName || !volunteerEmail) {

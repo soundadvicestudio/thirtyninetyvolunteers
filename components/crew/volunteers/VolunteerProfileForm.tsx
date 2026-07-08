@@ -6,6 +6,7 @@ import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Pencil } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
+import { formatPhone } from '@/lib/utils/phone'
 import { updateVolunteer } from '@/lib/actions/volunteers'
 import { volunteerProfileSchema, type VolunteerProfileFormValues } from '@/lib/validations/volunteerProfile'
 import type { VolunteerProfile } from '@/types/volunteer'
@@ -141,7 +142,7 @@ export default function VolunteerProfileForm({
             <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Contact</h3>
             <Field label="Full Name" value={volunteer.full_name} />
             <Field label="Email" value={volunteer.email} />
-            <Field label="Phone" value={volunteer.phone} />
+            <Field label="Phone" value={formatPhone(volunteer.phone)} />
             <Field label="Preferred Pronouns" value={volunteer.pronouns} />
           </section>
 

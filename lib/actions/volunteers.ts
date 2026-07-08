@@ -5,6 +5,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
+import { normalizePhone } from '@/lib/utils/phone'
 import { checkFirstCall, checkMilestones } from '@/lib/milestones'
 import { volunteerProfileSchema, type VolunteerProfileFormValues } from '@/lib/validations/volunteerProfile'
 
@@ -24,7 +25,7 @@ export async function lookupVolunteer(
     const { data } = await client
       .from('volunteers')
       .select('full_name, email, phone')
-      .eq(isEmail ? 'email' : 'phone', isEmail ? trimmed.toLowerCase() : trimmed)
+      .eq(isEmail ? 'email' : 'phone', isEmail ? trimmed.toLowerCase() : normalizePhone(trimmed))
       .maybeSingle()
 
     if (!data) return null
@@ -52,6 +53,7 @@ export async function updateVolunteer(
     return { error: 'Invalid input. Please check the form and try again.' }
   }
   const value = parsed.data
+  const normalizedPhone = normalizePhone(value.phone)
 
   const supabase = await getServerClient()
 
@@ -79,11 +81,11 @@ export async function updateVolunteer(
     }
   }
 
-  if (value.phone !== current.phone) {
+  if (normalizedPhone !== current.phone) {
     const { data: phoneConflict } = await supabase
       .from('volunteers')
       .select('id')
-      .eq('phone', value.phone)
+      .eq('phone', normalizedPhone)
       .neq('id', volunteerId)
       .maybeSingle()
     if (phoneConflict) {
@@ -94,7 +96,7 @@ export async function updateVolunteer(
   const afterRecord = {
     full_name: value.full_name,
     email: value.email,
-    phone: value.phone,
+    phone: normalizedPhone,
     pronouns: value.pronouns || null,
     school: value.school || null,
     age_range: value.age_range || null,

@@ -2,6 +2,7 @@
 
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendVolunteerConfirmationEmail } from '@/lib/email'
+import { normalizePhone } from '@/lib/utils/phone'
 import { VolunteerFormData } from '@/types/volunteer'
 
 export type SubmitResult =
@@ -14,6 +15,7 @@ export async function submitVolunteerForm(
 ): Promise<SubmitResult> {
   try {
     const supabase = getAdminClient()
+    const normalizedPhone = normalizePhone(data.phone)
 
     // DUPLICATE DETECTION: check email first, then phone.
     // Two sequential queries — not an OR query — to avoid
@@ -36,7 +38,7 @@ export async function submitVolunteerForm(
     const { data: phoneMatch } = await supabase
       .from('volunteers')
       .select('id, full_name')
-      .eq('phone', data.phone)
+      .eq('phone', normalizedPhone)
       .maybeSingle()
 
     if (phoneMatch) {
@@ -64,7 +66,7 @@ export async function submitVolunteerForm(
       .insert({
         full_name:      data.full_name,
         email:          data.email,
-        phone:          data.phone,
+        phone:          normalizedPhone,
         pronouns:       pronounsValue,
         school:         data.school || null,
         age_range:      data.age_range || null,
@@ -159,7 +161,7 @@ export async function mergeVolunteer(
       .from('volunteers')
       .update({
         full_name:      data.full_name,
-        phone:          data.phone,
+        phone:          normalizePhone(data.phone),
         pronouns:       pronounsValue,
         school:         data.school || null,
         age_range:      data.age_range || null,
