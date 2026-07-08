@@ -8,7 +8,8 @@ import CallHistoryTable from '@/components/crew/volunteers/CallHistoryTable'
 import EditorNotes from '@/components/crew/volunteers/EditorNotes'
 import StatusToggle from '@/components/crew/volunteers/StatusToggle'
 import ManualHoursForm from '@/components/crew/volunteers/ManualHoursForm'
-import type { VolunteerProfile } from '@/types/volunteer'
+import CommunicationHistory from '@/components/crew/volunteers/CommunicationHistory'
+import type { VolunteerProfile, CommunicationHistoryEntry } from '@/types/volunteer'
 
 type RawCallRow = {
   id: string
@@ -52,6 +53,25 @@ type RawMilestoneRow = {
   milestone_label: string
   triggered_at: string
   email_sent: boolean
+}
+
+type RawCommEmailLogRow = {
+  id: string
+  sent_at: string
+  subject: string
+  body_preview: string | null
+  recipient_type: string
+  recipient_filter: string | null
+  recipient_count: number
+  reply_to: string | null
+  sent_by: string | null
+  admin_users: { name: string } | null
+}
+
+type RawCommHistoryRow = {
+  id: string
+  email_address: string
+  email_log: RawCommEmailLogRow | null
 }
 
 export default async function VolunteerProfilePage({
@@ -135,6 +155,7 @@ export default async function VolunteerProfilePage({
     { data: manualHoursRows },
     { data: hoursLogRows },
     { data: milestoneRows },
+    { data: commHistoryRaw },
   ] = await Promise.all([
     supabase
       .from('attendance')
@@ -162,6 +183,27 @@ export default async function VolunteerProfilePage({
       .select('id, milestone_hours, milestone_label, triggered_at, email_sent')
       .eq('volunteer_id', id)
       .order('triggered_at', { ascending: true }),
+    supabase
+      .from('email_log_recipients')
+      .select(
+        `
+        id,
+        email_address,
+        email_log (
+          id,
+          sent_at,
+          subject,
+          body_preview,
+          recipient_type,
+          recipient_filter,
+          recipient_count,
+          reply_to,
+          sent_by,
+          admin_users ( name )
+        )
+        `
+      )
+      .eq('volunteer_id', id),
   ])
 
   const seasonTotals = new Map<string, number>()
@@ -182,6 +224,23 @@ export default async function VolunteerProfilePage({
 
   const hoursLog = (hoursLogRows ?? []) as unknown as RawHoursLogRow[]
   const milestones = (milestoneRows ?? []) as unknown as RawMilestoneRow[]
+
+  const communicationHistory: CommunicationHistoryEntry[] = (
+    (commHistoryRaw ?? []) as unknown as RawCommHistoryRow[]
+  )
+    .filter((row) => row.email_log !== null)
+    .map((row) => ({
+      id: row.email_log!.id,
+      sentAt: row.email_log!.sent_at,
+      subject: row.email_log!.subject,
+      bodyPreview: row.email_log!.body_preview || null,
+      recipientType: row.email_log!.recipient_type,
+      recipientFilter: row.email_log!.recipient_filter || null,
+      recipientCount: row.email_log!.recipient_count,
+      replyTo: row.email_log!.reply_to || null,
+      sentByName: row.email_log!.admin_users?.name || null,
+    }))
+    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
 
   return (
     <div>
@@ -334,6 +393,8 @@ export default async function VolunteerProfilePage({
           </ul>
         )}
       </section>
+
+      <CommunicationHistory history={communicationHistory} />
 
       {admin.role !== 'viewer' && (
         <section className="mt-10">

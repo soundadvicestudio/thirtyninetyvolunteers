@@ -58,3 +58,15 @@ export type VolunteerProfile = {
   updated_at: string
 }
 
+export type CommunicationHistoryEntry = {
+  id: string
+  sentAt: string
+  subject: string
+  bodyPreview: string | null
+  recipientType: string
+  recipientFilter: string | null
+  recipientCount: number
+  replyTo: string | null
+  sentByName: string | null
+}
+
