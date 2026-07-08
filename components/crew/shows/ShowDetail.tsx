@@ -13,6 +13,7 @@ import {
   SHOW_STATUS_LABEL,
   SHOW_STATUS_BADGE,
 } from '@/lib/utils/showDisplay'
+import PostShowReport from '@/components/crew/shows/PostShowReport'
 import type { AdminUser } from '@/lib/auth'
 import type {
   Show,
@@ -23,6 +24,7 @@ import type {
   ShowEditor,
   AdminUserSummary,
   ShowStatus,
+  PostShowReportData,
 } from '@/types/show'
 
 const inputClasses =
@@ -51,6 +53,7 @@ const TABS = [
   { key: 'volunteers', label: 'Volunteers' },
   { key: 'waitlist', label: 'Waitlist' },
   { key: 'dates', label: 'Dates' },
+  { key: 'report', label: 'Report' },
   { key: 'settings', label: 'Settings' },
 ] as const
 
@@ -789,6 +792,7 @@ export default function ShowDetail({
   allAdminUsers,
   qr,
   adminRole,
+  reportData,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -801,16 +805,18 @@ export default function ShowDetail({
   qr: { svg: string; pngBase64: string }
   adminRole: AdminUser['role']
   adminId: string
+  reportData: PostShowReportData | null
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
   const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
   const allRoles: ShowRole[] = showDates.flatMap((d) => d.roles)
+  const visibleTabs = TABS.filter((tab) => tab.key !== 'report' || show.status === 'past')
 
   return (
     <div>
       <div className="flex border-b border-divider dark:border-dark-border mb-6 overflow-x-auto">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
@@ -841,6 +847,9 @@ export default function ShowDetail({
       )}
       {activeTab === 'waitlist' && <WaitlistTab roles={allRoles} slotClaims={slotClaims} />}
       {activeTab === 'dates' && <DatesTab showDates={showDates} todayCT={todayCT} />}
+      {activeTab === 'report' && show.status === 'past' && reportData && (
+        <PostShowReport data={reportData} />
+      )}
       {activeTab === 'settings' && (
         <SettingsTab show={show} showEditors={showEditors} allAdminUsers={allAdminUsers} canEdit={canEdit} />
       )}

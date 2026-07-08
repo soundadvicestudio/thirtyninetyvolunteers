@@ -86,3 +86,29 @@ export type AdminUserSummary = {
   email: string
   role: 'super_admin' | 'editor' | 'viewer'
 }
+
+export type PostShowDateStats = {
+  dateId: string
+  showDate: string
+  showTime: string
+  totalClaimed: number
+  showedCount: number
+  noShowCount: number
+  excusedCount: number
+  unmarkedCount: number
+  totalHours: number
+  pendingHours: number
+}
+
+export type PostShowReportData = {
+  perDate: PostShowDateStats[]
+  totalClaimedAppearances: number
+  uniqueVolunteerCount: number
+  totalShowedCount: number
+  totalNoShowCount: number
+  totalExcusedCount: number
+  totalUnmarkedCount: number
+  totalHours: number
+  totalPendingHoursCount: number
+  attendanceRate: number | null
+}

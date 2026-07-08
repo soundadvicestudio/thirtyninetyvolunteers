@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { generateQR } from '@/lib/qr'
+import { getPostShowReportData } from '@/lib/data/showReport'
 import ShowDetail from '@/components/crew/shows/ShowDetail'
 import type {
   Show,
@@ -129,6 +130,8 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
   const rawShow = showRow as unknown as Show & { seasons: { id: string; name: string } | null }
   const { seasons: seasonRow, ...show } = rawShow
 
+  const reportData = show.status === 'past' ? await getPostShowReportData(show.id, supabase) : null
+
   return (
     <ShowDetail
       show={show}
@@ -142,6 +145,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       qr={qr}
       adminRole={admin.role}
       adminId={admin.id}
+      reportData={reportData}
     />
   )
 }
