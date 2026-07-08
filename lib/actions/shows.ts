@@ -5,7 +5,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { showSubmitSchema, type ShowSubmitPayload } from '@/lib/validations/show'
-import { buildCategoryMatchNotificationPayload, sendBatchEmails } from '@/lib/email'
+import { buildCategoryMatchNotificationPayload, buildShowBulkEmailPayload, sendBatchEmails } from '@/lib/email'
 
 export type ShowActionResult =
   | { success: true; showId: string; warnings?: { blockedDates: string[]; blockedRoles: string[] } }
@@ -622,5 +622,136 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
   } catch (err) {
     console.error('sendShowNotifications error:', err)
     return { sent: 0, error: 'Something went wrong sending notifications. Please try again.' }
+  }
+}
+
+type BulkEmailClaimRow = {
+  id: string
+  volunteer_id: string | null
+  volunteer_name: string
+  volunteer_email: string
+}
+
+export type SendShowBulkEmailParams = {
+  showId: string
+  showName: string
+  subject: string
+  body: string
+  replyTo: string
+}
+
+export type SendShowBulkEmailResult = { success: boolean; sentCount: number; error?: string }
+
+const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Admin-authenticated action — called from the show detail Overview tab's
+// "Message Volunteers" quick action (Editor/Super Admin only). Uses
+// getServerClient() + getAdminUser(), matching every other export in this
+// file — always invoked from an authenticated admin session.
+export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promise<SendShowBulkEmailResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer') {
+    return { success: false, sentCount: 0, error: 'unauthorized' }
+  }
+
+  const subject = params.subject.trim()
+  const body = params.body.trim()
+  const replyTo = params.replyTo.trim()
+
+  if (!subject) {
+    return { success: false, sentCount: 0, error: 'Subject required' }
+  }
+  if (!body) {
+    return { success: false, sentCount: 0, error: 'Message required' }
+  }
+  if (!BASIC_EMAIL_PATTERN.test(replyTo)) {
+    return { success: false, sentCount: 0, error: 'Invalid reply-to address' }
+  }
+
+  try {
+    const supabase = await getServerClient()
+
+    // A. Fetch all claimed slot_claims for this show, across all dates —
+    // two-step app-side filter (Supabase JS has no literal IN-subquery),
+    // same pattern used throughout this codebase (e.g. page.tsx roleIds).
+    const { data: dateRows } = await supabase.from('show_dates').select('id').eq('show_id', params.showId)
+
+    const dateIds = (dateRows ?? []).map((d) => d.id as string)
+    if (dateIds.length === 0) {
+      return { success: false, sentCount: 0, error: 'no_recipients' }
+    }
+
+    const { data: claimRows } = await supabase
+      .from('slot_claims')
+      .select('id, volunteer_id, volunteer_name, volunteer_email')
+      .in('show_date_id', dateIds)
+      .eq('status', 'claimed')
+
+    // B. Deduplicate by lowercased email — last-write-wins on name.
+    const recipientMap = new Map<string, { volunteerId: string | null; name: string; email: string }>()
+    for (const c of (claimRows ?? []) as BulkEmailClaimRow[]) {
+      const key = c.volunteer_email.toLowerCase()
+      recipientMap.set(key, { volunteerId: c.volunteer_id, name: c.volunteer_name, email: c.volunteer_email })
+    }
+    const recipients = [...recipientMap.values()]
+
+    if (recipients.length === 0) {
+      return { success: false, sentCount: 0, error: 'no_recipients' }
+    }
+
+    // C. Build payloads and send in batch (R8) — sendBatchEmails() chunks
+    // into groups of 100, matching sendShowNotifications() above.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+    const payloads = recipients.map((r) =>
+      buildShowBulkEmailPayload({
+        recipientEmail: r.email,
+        recipientName: r.name,
+        subject,
+        body,
+        replyTo,
+        showName: params.showName,
+        siteUrl,
+      })
+    )
+
+    try {
+      await sendBatchEmails(payloads)
+    } catch (err) {
+      console.error('sendShowBulkEmail batch send error:', err)
+      return { success: false, sentCount: 0, error: 'send_failed' }
+    }
+
+    // D. Log to email_log + email_log_recipients.
+    const { data: logRow, error: logError } = await supabase
+      .from('email_log')
+      .insert({
+        sent_by: admin.id,
+        subject,
+        body_preview: body.slice(0, 200),
+        recipient_type: 'category',
+        recipient_filter: `show:${params.showId}`,
+        reply_to: replyTo,
+        recipient_count: recipients.length,
+      })
+      .select('id')
+      .single()
+
+    if (logError) {
+      console.error('sendShowBulkEmail email_log error:', logError)
+    } else if (logRow) {
+      await supabase.from('email_log_recipients').insert(
+        recipients.map((r) => ({
+          email_log_id: logRow.id,
+          volunteer_id: r.volunteerId || null,
+          email_address: r.email,
+        }))
+      )
+    }
+
+    // E. Return — send already succeeded even if logging above had issues.
+    return { success: true, sentCount: recipients.length }
+  } catch (err) {
+    console.error('sendShowBulkEmail error:', err)
+    return { success: false, sentCount: 0, error: 'send_failed' }
   }
 }

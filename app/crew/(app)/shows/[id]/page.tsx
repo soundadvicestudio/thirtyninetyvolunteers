@@ -47,33 +47,39 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     redirect('/crew/shows')
   }
 
-  const [{ data: dateRows }, { data: editorRows }, { data: adminUserRows }, { data: settingsRows }] =
-    await Promise.all([
-      supabase
-        .from('show_dates')
-        .select(
-          `
-          id, show_id, show_date, show_time,
-          volunteer_roles ( id, category_id, role_name, slots_available )
+  const [
+    { data: dateRows },
+    { data: editorRows },
+    { data: adminUserRows },
+    { data: settingsRows },
+    { data: replyToRow },
+  ] = await Promise.all([
+    supabase
+      .from('show_dates')
+      .select(
         `
-        )
-        .eq('show_id', id)
-        .order('show_date', { ascending: true })
-        .order('show_time', { ascending: true }),
-      supabase
-        .from('show_editors')
-        .select('admin_id, admin_users ( id, name, email, role )')
-        .eq('show_id', id),
-      supabase
-        .from('admin_users')
-        .select('id, name, email, role')
-        .eq('is_active', true)
-        .order('name', { ascending: true }),
-      supabase
-        .from('app_settings')
-        .select('key, value')
-        .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
-    ])
+        id, show_id, show_date, show_time,
+        volunteer_roles ( id, category_id, role_name, slots_available )
+      `
+      )
+      .eq('show_id', id)
+      .order('show_date', { ascending: true })
+      .order('show_time', { ascending: true }),
+    supabase
+      .from('show_editors')
+      .select('admin_id, admin_users ( id, name, email, role )')
+      .eq('show_id', id),
+    supabase
+      .from('admin_users')
+      .select('id, name, email, role')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+    supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
+    supabase.from('app_settings').select('value').eq('key', 'default_reply_to').maybeSingle(),
+  ])
 
   const showDates: ShowDateWithRoles[] = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => ({
     id: d.id,
@@ -111,6 +117,17 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     attendanceByClaim[a.slot_claim_id] = a
   }
 
+  // Bulk email recipient count — same dedup logic (claimed only, lowercased
+  // email) as sendShowBulkEmail(). Reuses claimRows already fetched above
+  // rather than issuing a second identical query.
+  const bulkEmailRecipientEmails = new Set(
+    ((claimRows ?? []) as SlotClaim[])
+      .filter((c) => c.status === 'claimed')
+      .map((c) => c.volunteer_email.toLowerCase())
+  )
+  const bulkEmailRecipientCount = bulkEmailRecipientEmails.size
+  const defaultReplyTo = replyToRow?.value ?? 'info@30byninety.com'
+
   const settingsMap = new Map((settingsRows ?? []).map((r) => [r.key, r.value]))
   const defaultHours = {
     mainstage: Number(settingsMap.get('default_hours_mainstage') ?? 3),
@@ -146,6 +163,8 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       adminRole={admin.role}
       adminId={admin.id}
       reportData={reportData}
+      bulkEmailRecipientCount={bulkEmailRecipientCount}
+      defaultReplyTo={defaultReplyTo}
     />
   )
 }

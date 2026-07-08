@@ -889,6 +889,62 @@ export async function sendCategoryMatchNotificationEmail(
   await resend.emails.send(buildCategoryMatchNotificationPayload(params))
 }
 
+// ─── Show bulk email — "Message Volunteers" quick action (30BN-ADMIN.23) ─
+
+type ShowBulkEmailParams = {
+  recipientEmail: string
+  recipientName: string
+  subject: string
+  body: string
+  replyTo: string
+  showName: string
+  siteUrl: string
+}
+
+// Exported so sendShowBulkEmail() (lib/actions/shows.ts) can build payload
+// objects for sendBatchEmails() — same batching reasoning as
+// buildReminderEmailPayload/buildCategoryMatchNotificationPayload. Kept
+// visually minimal (no branded button/highlight block) since this is an
+// admin-composed operational message, not a campaign template. replyTo is
+// per-send here (not the module REPLY_TO default) — the admin can edit it.
+export function buildShowBulkEmailPayload({
+  recipientEmail,
+  recipientName,
+  subject,
+  body,
+  replyTo,
+  showName,
+  siteUrl,
+}: ShowBulkEmailParams): {
+  from: string
+  replyTo: string
+  to: string
+  subject: string
+  html: string
+} {
+  const html = emailShell(`
+    <p style="color:#1A1A1A;line-height:1.6;margin:0 0 4px;">
+      Hi ${escapeHtml(recipientName)},
+    </p>
+    <p style="color:#1A1A1A;line-height:1.6;margin:0 0 20px;white-space:pre-line;">
+      ${escapeHtml(body)}
+    </p>
+    <p style="color:#aaa;font-size:12px;margin:24px 0 0;border-top:1px solid #D0D5E8;padding-top:16px;">
+      This message was sent to volunteers rostered for ${escapeHtml(showName)}.<br />
+      To update your volunteer information, visit
+      <a href="${siteUrl}/update" style="color:#293994;">${siteUrl}/update</a>.
+    </p>
+  `)
+
+  return {
+    from: FROM_ADDRESS,
+    replyTo,
+    to: recipientEmail,
+    subject,
+    html,
+  }
+}
+
 // ─── Admin self-registration emails (30BN-ADMIN.15) ──────────────
 
 type PendingRegistrationEmailParams = {

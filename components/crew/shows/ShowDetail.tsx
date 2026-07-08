@@ -14,6 +14,7 @@ import {
   SHOW_STATUS_BADGE,
 } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
+import BulkEmailSection from '@/components/crew/shows/BulkEmailSection'
 import type { AdminUser } from '@/lib/auth'
 import type {
   Show,
@@ -64,11 +65,15 @@ function OverviewTab({
   season,
   canEdit,
   qr,
+  bulkEmailRecipientCount,
+  defaultReplyTo,
 }: {
   show: Show
   season: { id: string; name: string } | null
   canEdit: boolean
   qr: { svg: string; pngBase64: string }
+  bulkEmailRecipientCount: number
+  defaultReplyTo: string
 }) {
   const [copied, setCopied] = useState(false)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -164,6 +169,15 @@ function OverviewTab({
       </div>
 
       <NotificationsSection show={show} canEdit={canEdit} />
+
+      {canEdit && (
+        <BulkEmailSection
+          showId={show.id}
+          showName={show.name}
+          recipientCount={bulkEmailRecipientCount}
+          defaultReplyTo={defaultReplyTo}
+        />
+      )}
     </div>
   )
 }
@@ -793,6 +807,8 @@ export default function ShowDetail({
   qr,
   adminRole,
   reportData,
+  bulkEmailRecipientCount,
+  defaultReplyTo,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -806,6 +822,8 @@ export default function ShowDetail({
   adminRole: AdminUser['role']
   adminId: string
   reportData: PostShowReportData | null
+  bulkEmailRecipientCount: number
+  defaultReplyTo: string
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
@@ -833,7 +851,14 @@ export default function ShowDetail({
       </div>
 
       {activeTab === 'overview' && (
-        <OverviewTab show={show} season={season} canEdit={canEdit} qr={qr} />
+        <OverviewTab
+          show={show}
+          season={season}
+          canEdit={canEdit}
+          qr={qr}
+          bulkEmailRecipientCount={bulkEmailRecipientCount}
+          defaultReplyTo={defaultReplyTo}
+        />
       )}
       {activeTab === 'volunteers' && (
         <VolunteersTab
