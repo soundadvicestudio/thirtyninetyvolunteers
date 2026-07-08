@@ -10,6 +10,7 @@ import {
   Briefcase,
   FileText,
   QrCode,
+  ScanLine,
   Mail,
   Settings,
   UserCog,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
   { label: 'Forms', href: '/crew/forms', icon: FileText },
   { label: 'QR Generator', href: '/crew/tools/qr-generator', icon: QrCode },
+  { label: 'Check-In', href: '/crew/tools/checkin', icon: ScanLine },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
   { label: 'Settings', href: '/crew/settings', icon: Settings },
 ]
