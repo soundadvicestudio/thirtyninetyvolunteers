@@ -150,8 +150,8 @@ export default function PendingQueueClient({
     })
   }
 
-  async function handleApproveSingle(eventId: string) {
-    const locationId = locationSelections[eventId]
+  async function handleApproveSingle(eventId: string, fallbackLocationId: string | null) {
+    const locationId = locationSelections[eventId] ?? fallbackLocationId ?? ''
     if (!locationId) {
       setError(eventId, 'Select a location first')
       return
@@ -316,7 +316,7 @@ export default function PendingQueueClient({
                           />
                           <button
                             type="button"
-                            onClick={() => handleApproveSingle(event.id)}
+                            onClick={() => handleApproveSingle(event.id, event.location_id)}
                             disabled={
                               !locationSelections[event.id] ||
                               conflictStatus[event.id] === true ||
@@ -378,7 +378,7 @@ export default function PendingQueueClient({
                 />
                 <button
                   type="button"
-                  onClick={() => handleApproveSingle(event.id)}
+                  onClick={() => handleApproveSingle(event.id, event.location_id)}
                   disabled={
                     !(locationSelections[event.id] ?? event.location_id) ||
                     conflictStatus[event.id] === true ||
