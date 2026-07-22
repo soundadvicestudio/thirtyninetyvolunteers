@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 4 | July 2026 | Through Phase 10.1 (pre-Phase 11)
+## Version 6 | July 2026 | Through Phase 12 (Alpha complete)
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -12,7 +12,9 @@ fixed by ADMIN.14 and require re-verification (🔁).
 
 Sections cover: ADMIN.14 re-verify, Phases 5–7 remaining,
 ADMIN.15–19, Phase 8 (Call Board), Phase 9 (Hours &
-Milestones), Phase 10 (Audit Log).
+Milestones), Phase 10 (Audit Log), ADMIN.20 (Dashboard),
+Phase 11.1–11.2 (Stubs/404/Settings), ADMIN.21–24,
+Phase 12 (12.1–12.4).
 
 ---
 
@@ -60,6 +62,45 @@ Also clean up verification session data created in SETUP-1:
 
 The "Test" show (bd3f4b2a) is currently LIVE and publicly
 visible. Archive or unpublish before launch.
+
+Also clean up any email_log + email_log_recipients rows
+created by ADMIN.23 bulk email test sends before launch:
+
+  DELETE FROM email_log_recipients
+  WHERE email_log_id IN (
+    SELECT id FROM email_log
+    WHERE recipient_filter LIKE 'show:%'
+      AND sent_by IS NOT NULL
+      AND sent_at > '2026-07-01'
+  );
+
+  DELETE FROM email_log
+  WHERE recipient_filter LIKE 'show:%'
+    AND sent_by IS NOT NULL
+    AND sent_at > '2026-07-01';
+
+Also clean up any thank-you cron email_log rows
+created during testing before launch:
+
+  DELETE FROM email_log_recipients
+  WHERE email_log_id IN (
+    SELECT id FROM email_log
+    WHERE recipient_filter LIKE 'show_date:%'
+      AND sent_by IS NULL
+      AND sent_at > '2026-07-01'
+  );
+
+  DELETE FROM email_log
+  WHERE recipient_filter LIKE 'show_date:%'
+    AND sent_by IS NULL
+    AND sent_at > '2026-07-01';
+
+Also reset any show_dates.thank_you_sent_at values
+populated during test cron runs:
+
+  UPDATE show_dates
+  SET thank_you_sent_at = NULL
+  WHERE thank_you_sent_at IS NOT NULL;
 
 ---
 
@@ -1034,11 +1075,14 @@ From address: 30 By Ninety Theatre
 ## QUICK REFERENCE
 
 ### Requires Viewer account password reset (A1):
-4.1 V9, 4.3 V17, 4.4a V6, 5.3 V9, 5.3 V13, 6.1 V11
+4.1 V9, 4.3 V17, 4.4a V6, 5.3 V9, 5.3 V13, 6.1 V11,
+10.1 V2, 10.1 V9 (partial), 11.2 V3, 11.2 V10,
+ADMIN.23 V2, ADMIN.24 V10, 12.2b V2
 
 ### Requires real email delivery:
 4.4b V2, 4.4b V7, 5.2 V2, 5.2 V3, 5.2 V9,
-5.2 V16, 5.2 V17, 5.3 V2, 5.3 V6, 5.3 V7
+5.2 V16, 5.2 V17, 5.3 V2, 5.3 V6, 5.3 V7,
+9.2 V1, V2, V3, ADMIN.23 V11, 12.4 V5
 
 ### Requires Supabase slot adjustment (temporary):
 5.1 V2, 5.1 V9, 5.1 V10, 5.2 V8 (browser)
@@ -1079,9 +1123,6 @@ ADMIN.19 V1–V6 (all browser)
 ### Phase 9.1 — requires Viewer account (A1):
 9.1 V4, 9.1 V7
 
-### Phase 9.2 — requires real email delivery:
-9.2 V1, V2, V3
-
 ### Phase 9.2 — requires Viewer account (A1):
 9.2 V6
 
@@ -1090,6 +1131,33 @@ ADMIN.19 V1–V6 (all browser)
 
 ### Needs test data (VERIFY Test Form from SETUP-1):
 6.2 V7–V12, 6.3 V8–V16
+
+### ADMIN.20 — requires Editor account:
+ADMIN.20 V6
+
+### ADMIN.20 — requires PDF download:
+ADMIN.20 V12, V13
+
+### Phase 11.1 — requires temporary code change:
+11.1 V11, V12 (error boundary test — throw + revert)
+
+### Phase 11.2 — requires Editor account:
+11.2 V2
+
+### Phase 11.2 — requires Supabase cross-check:
+11.2 V25 (audit log entry after settings save)
+
+### ADMIN.21 — requires Supabase cross-check:
+ADMIN.21 V1 (phone stored as digits-only after signup)
+
+### ADMIN.22 — requires a show set to status = 'past':
+ADMIN.22 V1–V9 (flip test show via Settings tab)
+
+### ADMIN.23 — requires Supabase cross-check:
+ADMIN.23 V9, V10 (email_log + deduplication)
+
+### ADMIN.23 — requires real email delivery:
+ADMIN.23 V11
 
 ---
 
@@ -1105,13 +1173,907 @@ If any FAIL, add them to the fixes queue.
 
 ---
 
-*Total items in this carry-forward list: 157*
-*Includes: 6 ADMIN.14 re-verify, 52 Phase 4–6 items,*
-*10 email delivery, 10 Phase 7/QR, Vercel cron,*
-*23 ADMIN.15, 7 ADMIN.16, 2 ADMIN.17, 3 ADMIN.17-FIX,*
-*6 ADMIN.19, 11 Phase 8, 8 Phase 9.1, 9 Phase 9.2,*
-*9 Phase 10.1*
+*Total items in this carry-forward list: 314*
+*Prior (v5): 246 items through ADMIN.24*
+*New (v6): 50 items — 16 Phase 12.1, 2 Phase 12.2a,*
+*10 Phase 12.2b, 5 Phase 12.2c, 9 Phase 12.3,*
+*8 Phase 12.4*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v4 (through Phase 10.1, pre-Phase 11)*
-*Previous version covered through ADMIN.16 (pre-Phase 8)*
+*Last updated: July 2026 — v6 (Phase 12 complete,*
+*Alpha build complete)*
+*Previous version covered through ADMIN.24*
+*(pre-Phase 12)*
+
+---
+
+## ADMIN.20 — Dashboard (Season at a Glance + Quick Stats)
+
+**Quick Stats tiles:**
+
+- [ ] **ADMIN.20 V1** — Navigate to /crew/dashboard as
+      any admin role. Confirm four Quick Stats tiles
+      appear at the top: "Total Active Volunteers,"
+      "Upcoming Shows This Month," "Volunteers Needed,"
+      and "New Volunteers (7 Days)." Confirm all four
+      show numeric values (not blank or zero if data
+      exists to back them).
+
+- [ ] **ADMIN.20 V2** — Confirm "Total Active Volunteers"
+      matches the count of volunteers with status =
+      'active' visible on /crew/volunteers. *(Supabase
+      cross-check optional)*
+
+- [ ] **ADMIN.20 V3** — Confirm "Volunteers Needed"
+      reflects total open slots across all live shows
+      (slots_available minus claimed count). If no live
+      shows exist or all slots are filled, value should
+      be 0, not blank.
+
+**Season at a Glance (fallback — no pinned season):**
+
+- [ ] **ADMIN.20 V4** — With no season pinned
+      (dashboard_season_id not yet set in app_settings),
+      confirm the Season at a Glance section heading
+      reads "All Live Shows" and lists all currently
+      live shows.
+
+- [ ] **ADMIN.20 V5** — For a live show with roles,
+      confirm each role row shows a staffing indicator:
+      red dot for 0 claimed, yellow for partial, green
+      for fully claimed. Confirm the claimed/total slot
+      count appears beside the role name.
+
+**Season selector (Super Admin only):**
+
+- [ ] **ADMIN.20 V6** — Log in as Super Admin. Confirm
+      a season selector dropdown appears in the Season
+      at a Glance section header. Log in as Editor.
+      Confirm the selector is absent — the section
+      shows the same data but with no selector.
+      *(Requires Editor account)*
+
+- [ ] **ADMIN.20 V7** — As Super Admin: select a season
+      from the dropdown. Confirm the section updates
+      in place (no full page reload) and shows only
+      shows belonging to that season. Confirm the
+      section heading changes to the season name.
+
+- [ ] **ADMIN.20 V8** — Select "— All Live Shows —"
+      from the dropdown. Confirm the section reverts
+      to fallback mode showing all live shows.
+
+- [ ] **ADMIN.20 V9** — After selecting a season,
+      reload the page. Confirm the same season remains
+      pinned (the selection persisted to app_settings).
+
+**Dashboard layout and dark mode:**
+
+- [ ] **ADMIN.20 V10** — Confirm section render order
+      from top to bottom: Quick Stats → Season at a
+      Glance → Pending Milestones → Pending Hours →
+      Add to Home Screen (mobile only) → Activity Feed.
+
+- [ ] **ADMIN.20 V11** — Toggle to dark mode. Confirm
+      Quick Stats tiles and Season at a Glance section
+      respect dark: variants — no light backgrounds
+      or invisible text.
+
+**PDF export filter fix:**
+
+- [ ] **ADMIN.20 V12** — On /crew/volunteers, apply the
+      "Service Hours Required" filter (Yes). Click the
+      PDF export link. Open the downloaded PDF. Confirm
+      only volunteers with requires_service_hours = true
+      appear. *(Verifies the service_hours filter fix
+      bundled with ADMIN.20)*
+
+- [ ] **ADMIN.20 V13** — Apply the milestone tier filter
+      (e.g. "First Call"). Click PDF export. Confirm
+      only volunteers with a First Call milestone entry
+      appear in the PDF. *(Verifies the milestoneTier
+      filter fix)*
+
+---
+
+## PHASE 11.1 — Beta Stub Pages & Custom 404
+
+**Admin stub pages:**
+
+- [ ] **11.1 V1** — Navigate to /crew/communication.
+      Confirm the page renders within the sidebar layout
+      (not a blank page or 404). Confirm "Coming Soon"
+      badge and feature description are visible.
+
+- [ ] **11.1 V2** — Navigate to /crew/tools/checkin.
+      Confirm the page renders with sidebar layout,
+      "Coming Soon" badge, and the check-in feature
+      description.
+
+- [ ] **11.1 V3** — Navigate to /crew/settings/documents.
+      Confirm the page renders with sidebar layout,
+      "Coming Soon" badge, and document management
+      description.
+
+- [ ] **11.1 V4** — Toggle to dark mode. Navigate to
+      each of the three stub pages. Confirm all text
+      and backgrounds render correctly — no invisible
+      text or missing dark: variants.
+
+**Check-In sidebar link:**
+
+- [ ] **11.1 V5** — In the crew sidebar, confirm a
+      "Check-In" link appears immediately after
+      "QR Generator." Confirm it navigates to
+      /crew/tools/checkin.
+
+- [ ] **11.1 V6** — While on /crew/tools/checkin,
+      confirm the "Check-In" sidebar link is highlighted
+      as active (same visual treatment as other active
+      links).
+
+**Custom 404 page:**
+
+- [ ] **11.1 V7** — Navigate to a non-existent public
+      route (e.g. /this-does-not-exist). Confirm the
+      custom branded 404 page appears — not the default
+      Next.js 404. Confirm the 30 By Ninety logo,
+      friendly heading, and both navigation links
+      ("Go to volunteer signup" → / and "Go to
+      Production Crew" → /crew/dashboard) are visible.
+
+- [ ] **11.1 V8** — Navigate to a non-existent admin
+      route (e.g. /crew/doesnotexist). Confirm the same
+      custom 404 page appears.
+
+- [ ] **11.1 V9** — Click "Go to volunteer signup" on
+      the 404 page. Confirm it navigates to /. Click
+      "Go to Production Crew." Confirm it navigates
+      to /crew/dashboard.
+
+- [ ] **11.1 V10** — In dark mode, navigate to a
+      non-existent route. Confirm the 404 page stays
+      light (no dark mode applied — public-facing page).
+
+**Global error boundary:**
+
+- [ ] **11.1 V11** — *(Requires temporary code change)*
+      In any crew page Server Component, add
+      `throw new Error('test')` temporarily and deploy
+      (or trigger locally). Confirm the branded error
+      page appears with "Something went wrong" heading,
+      the AlertTriangle icon, and both action elements.
+      Revert the throw immediately after confirming.
+
+- [ ] **11.1 V12** — On the error page, click "Try
+      again." Confirm the page re-renders (reset()
+      is called). *(Confirm during the same test
+      session as V11)*
+
+---
+
+## PHASE 11.2 — App Settings & Announcement Banner
+
+**Settings hub (/crew/settings):**
+
+- [ ] **11.2 V1** — Navigate to /crew/settings as Super
+      Admin. Confirm all 8 cards are visible:
+      Announcement Banner, Hearing Options, Signup Form,
+      General Defaults, Category Management, User
+      Management, Audit Log, Document Management.
+      Confirm "Document Management" card has a "Beta"
+      or "Coming Soon" badge.
+
+- [ ] **11.2 V2** — As Super Admin: confirm Category
+      Management and User Management cards are linked
+      (LinkedCard). Log in as Editor. Confirm those
+      two cards show as locked/inaccessible (LockedCard
+      with "Super Admin only" indicator). Confirm all
+      other cards are linked.
+      *(Requires Editor account)*
+
+- [ ] **11.2 V3** — Log in as Viewer. Navigate to
+      /crew/settings. Confirm Announcement Banner,
+      Hearing Options, Signup Form, General Defaults,
+      and Audit Log cards appear as locked. Confirm
+      Category Management and User Management cards
+      appear as locked.
+      *(Requires Viewer account — A1)*
+
+**Announcement banner:**
+
+- [ ] **11.2 V4** — Navigate to /crew/settings/
+      announcement. Confirm the page loads with the
+      toggle, textarea, character count, preview
+      section, and save button.
+
+- [ ] **11.2 V5** — Type text into the banner textarea.
+      Confirm the character count updates live
+      (e.g. "42 / 280").
+
+- [ ] **11.2 V6** — Check the "Banner active" toggle
+      and enter text. Confirm the preview section shows
+      a rendered banner matching the entered text in
+      light-mode styling (even if admin is in dark mode).
+
+- [ ] **11.2 V7** — Save with banner active and text
+      set. Navigate to / (public landing page) in a
+      new tab. Confirm the announcement banner appears
+      immediately at the top of the page — no Vercel
+      redeploy required.
+
+- [ ] **11.2 V8** — Return to /crew/settings/announcement.
+      Uncheck the active toggle. Save. Reload / in the
+      public tab. Confirm the banner disappears
+      immediately.
+
+- [ ] **11.2 V9** — Attempt to save with text exceeding
+      280 characters. Confirm a validation error
+      appears — the save does not proceed.
+
+- [ ] **11.2 V10** — Log in as Viewer. Navigate to
+      /crew/settings/announcement directly. Confirm
+      redirect to /crew/settings (Viewer cannot access
+      sub-pages). *(Requires Viewer account — A1)*
+
+**Hearing options:**
+
+- [ ] **11.2 V11** — Navigate to /crew/settings/
+      hearing-options. Confirm all seeded options are
+      listed with their current sort order and
+      active/inactive status.
+
+- [ ] **11.2 V12** — Add a new option (e.g. "Newsletter").
+      Confirm it appears at the bottom of the list.
+
+- [ ] **11.2 V13** — Click the edit icon on an existing
+      option. Change the label. Save. Confirm the new
+      label persists on the list.
+
+- [ ] **11.2 V14** — Use the ↑↓ arrows to reorder an
+      option. Confirm the visual order changes. Reload
+      the page. Confirm the new order persists.
+
+- [ ] **11.2 V15** — Deactivate an active hearing option.
+      Confirm its status changes to inactive. Navigate
+      to / (public signup form) and confirm the
+      deactivated option no longer appears in the
+      "How did you hear about us?" dropdown.
+
+- [ ] **11.2 V16** — Reactivate a previously deactivated
+      option. Confirm it reappears in the public signup
+      form dropdown.
+
+**Signup form toggles:**
+
+- [ ] **11.2 V17** — Navigate to /crew/settings/
+      signup-form. Confirm both toggles (School field,
+      Age Range field) are present and reflect current
+      settings.
+
+- [ ] **11.2 V18** — Uncheck the School field toggle.
+      Save. Navigate to / (public signup form). Confirm
+      the School field is no longer visible.
+
+- [ ] **11.2 V19** — Re-enable the School toggle. Save.
+      Confirm School field reappears on / immediately.
+
+- [ ] **11.2 V20** — Uncheck Age Range. Save. Confirm
+      the Age Range dropdown and under-18 guardian
+      fields are hidden on the public form.
+
+**General defaults:**
+
+- [ ] **11.2 V21** — Navigate to /crew/settings/general.
+      Confirm default hours for Mainstage, Studio X,
+      and One-Off are displayed and editable. Confirm
+      Default Reply-To shows the current value.
+
+- [ ] **11.2 V22** — Change the Mainstage default hours
+      value. Save. Navigate to /crew/shows/new. Select
+      show type "Mainstage." Confirm the Default Hours
+      field pre-fills with the new value.
+
+- [ ] **11.2 V23** — Change the Default Reply-To email.
+      Save. Confirm the value persists on reload of
+      /crew/settings/general.
+
+- [ ] **11.2 V24** — Attempt to save Default Reply-To
+      with an invalid email format. Confirm a validation
+      error appears — save does not proceed.
+
+**Audit logging:**
+
+- [ ] **11.2 V25** — After saving any settings change
+      (banner, hearing option, toggle, hours, reply-to),
+      navigate to /crew/settings/audit-log. Confirm a
+      settings.update (or hearing_options.*) entry
+      appears with correct before/after values.
+
+**Dark mode:**
+
+- [ ] **11.2 V26** — Toggle to dark mode. Navigate to
+      /crew/settings, /crew/settings/announcement,
+      /crew/settings/hearing-options, /crew/settings/
+      signup-form, and /crew/settings/general. Confirm
+      all pages render correctly — no light backgrounds
+      or invisible text on any sub-page.
+
+---
+
+## ADMIN.21 — Phone Normalization
+
+**Signup flow:**
+
+- [ ] **ADMIN.21 V1** — Submit the volunteer signup
+      form at / using a formatted phone number
+      (e.g. "(985) 555-0001"). After submission, check
+      the volunteer record in Supabase (or the admin
+      profile). Confirm phone is stored as digits-only
+      ("9855550001"). *(Supabase cross-check)*
+
+- [ ] **ADMIN.21 V2** — Attempt to sign up again with
+      the same number in a different format
+      (e.g. "985-555-0001"). Confirm the duplicate
+      detection fires — not treated as a new volunteer.
+
+**Call Board lookup:**
+
+- [ ] **ADMIN.21 V3** — On /callboard, enter a phone
+      number with formatting (e.g. "(985) 555-0001")
+      in the volunteer lookup field. Confirm the
+      correct volunteer card appears (lookup works
+      against digits-only stored value).
+
+**Slot claim duplicate detection:**
+
+- [ ] **ADMIN.21 V4** — Attempt to claim a slot on
+      /shows/[id] using the same phone number in a
+      different format than was used on the original
+      claim. Confirm the duplicate detection fires
+      correctly (not treated as a new claim).
+
+**Admin display:**
+
+- [ ] **ADMIN.21 V5** — Navigate to /crew/volunteers.
+      Confirm the phone column shows formatted values
+      (e.g. "(985) 555-0001") not raw digits.
+
+- [ ] **ADMIN.21 V6** — Navigate to a volunteer profile.
+      In view mode, confirm the phone field shows
+      the formatted display (e.g. "(985) 555-0001").
+      Click Edit. Confirm the edit-mode input shows
+      the raw digits-only value ("9855550001"), not
+      the formatted display.
+
+---
+
+## ADMIN.22 — Post-Show Reporting
+
+*Prerequisite: a show must have status = 'past' for
+these to be testable. Set a test show to 'past' via
+the Settings tab on the show detail page.*
+
+- [ ] **ADMIN.22 V1** — Navigate to /crew/shows/[id]
+      for a show with status = 'past'. Confirm a
+      "Report" tab appears in the tab bar between
+      "Dates" and "Settings."
+
+- [ ] **ADMIN.22 V2** — Navigate to /crew/shows/[id]
+      for a show with status = 'live', 'draft', or
+      'archived'. Confirm no "Report" tab appears in
+      the tab bar.
+
+- [ ] **ADMIN.22 V3** — Click the Report tab on a
+      past show. Confirm six stat tiles appear:
+      Claimed Appearances, Showed Up, No-Shows,
+      Excused, Total Hours, Attendance Rate.
+
+- [ ] **ADMIN.22 V4** — On a past show with claimed
+      volunteers but no attendance marked yet: confirm
+      the Attendance Rate tile shows "—" and a notice
+      appears: "Attendance has not been marked yet."
+      Confirm claimed appearance count is still visible.
+
+- [ ] **ADMIN.22 V5** — On a past show with some
+      attendance marked: confirm Showed Up, No-Show,
+      and Excused counts sum to the total attendance
+      marked. Confirm Attendance Rate calculates
+      correctly (showed ÷ total marked × 100).
+
+- [ ] **ADMIN.22 V6** — Confirm the per-date breakdown
+      table appears below the tiles with one row per
+      show date. Confirm Date, Claimed, Showed, No-Show,
+      Excused, Unmarked, and Hours columns are present.
+
+- [ ] **ADMIN.22 V7** — If any showed attendance
+      records have hours_confirmed = false: confirm
+      a subtext "N appearances pending hours
+      confirmation" appears on the Total Hours tile.
+
+- [ ] **ADMIN.22 V8** — Toggle to dark mode. Navigate
+      to the Report tab. Confirm tiles and table render
+      correctly — no light backgrounds or invisible text.
+
+- [ ] **ADMIN.22 V9** — Confirm all existing tabs
+      (Overview, Volunteers, Waitlist, Dates, Settings)
+      still load correctly and are visually unchanged
+      after ADMIN.22 was deployed.
+
+---
+
+## ADMIN.23 — Bulk Email from Show Detail
+
+*Prerequisite: the test show must have at least one
+claimed volunteer (slot_claims.status = 'claimed').*
+
+**Button visibility and empty state:**
+
+- [ ] **ADMIN.23 V1** — Navigate to /crew/shows/[id]
+      Overview tab as Editor or Super Admin. Confirm a
+      "Message Volunteers (N)" button appears, where N
+      is the count of unique claimed volunteer emails.
+
+- [ ] **ADMIN.23 V2** — Log in as Viewer. Navigate to
+      the same show Overview tab. Confirm the "Message
+      Volunteers" button is absent entirely.
+      *(Requires Viewer account — A1)*
+
+- [ ] **ADMIN.23 V3** — Navigate to a show with zero
+      claimed volunteers. Confirm the "Message
+      Volunteers" button is replaced by muted text:
+      "No volunteers are currently rostered for
+      this show."
+
+**Compose flow:**
+
+- [ ] **ADMIN.23 V4** — Click "Message Volunteers (N)."
+      Confirm a compose form appears with Subject,
+      Reply-To, and Message fields. Confirm Subject
+      pre-fills with "Message from 30 By Ninety Theatre"
+      and Reply-To pre-fills with the default_reply_to
+      value from app_settings.
+
+- [ ] **ADMIN.23 V5** — Clear the subject field. Confirm
+      the "Send Message" button is disabled. Clear the
+      message body. Confirm the button remains disabled.
+      Populate both fields. Confirm the button becomes
+      enabled.
+
+- [ ] **ADMIN.23 V6** — Click "Send Message" with both
+      fields populated. Confirm an inline confirmation
+      prompt appears showing the recipient count:
+      "Send this message to N volunteer(s)?"
+
+- [ ] **ADMIN.23 V7** — Click "Cancel" on the
+      confirmation prompt. Confirm the form stays
+      open with the composed message intact — the
+      prompt dismisses but the form does not close.
+
+**Send and logging:**
+
+- [ ] **ADMIN.23 V8** — Click "Yes, Send" on the
+      confirmation. Confirm a success message appears
+      showing the sent count. Confirm the form closes
+      after a brief delay.
+
+- [ ] **ADMIN.23 V9** — After a successful send, check
+      Supabase: confirm one email_log row was created
+      with recipient_type = 'category', recipient_filter
+      = 'show:[showId]', and recipient_count matching
+      the unique email count. Confirm email_log_recipients
+      rows exist — one per unique claimed email.
+      *(Supabase)*
+
+- [ ] **ADMIN.23 V10** — If the test show has a
+      volunteer with two claimed slots (different dates
+      of the same show), verify email_log_recipients
+      has only one row for that volunteer's email —
+      not two. *(Supabase — deduplication check)*
+
+- [ ] **ADMIN.23 V11** — *(Requires real email delivery)*
+      After a successful send, confirm the email arrives
+      at a real inbox with the correct subject, body,
+      and show name reference in the footer.
+
+**Dark mode:**
+
+- [ ] **ADMIN.23 V12** — Toggle to dark mode. Navigate
+      to a show Overview tab. Confirm the "Message
+      Volunteers" button and opened compose form
+      render correctly — no light backgrounds or
+      invisible text.
+
+---
+
+## ADMIN.24 — Communication History on Volunteer Profile
+
+- [ ] **ADMIN.24 V1** — Navigate to any volunteer
+      profile. Confirm a "Communication History"
+      section appears below the Milestone History
+      section. Confirm it is collapsed by default,
+      showing only the heading and a count
+      (e.g. "Communication History (3)" or
+      "Communication History (None)").
+
+- [ ] **ADMIN.24 V2** — Click the heading or chevron
+      to expand the section. Confirm the section
+      expands to show either the email table or the
+      empty state message.
+
+- [ ] **ADMIN.24 V3** — Click the heading or chevron
+      again. Confirm the section collapses back.
+
+- [ ] **ADMIN.24 V4** — For a volunteer with no logged
+      emails: confirm the expanded state shows "No
+      emails on record for this volunteer." with a
+      second line: "Only emails sent and logged through
+      this platform appear here."
+
+- [ ] **ADMIN.24 V5** — For a volunteer with at least
+      one logged email (e.g. a slot claim confirmation
+      that was logged, or a show message sent via
+      ADMIN.23): confirm the table shows the correct
+      entry with Date, Subject, Type, Sent By, and
+      Preview columns.
+
+- [ ] **ADMIN.24 V6** — Confirm the Date column shows
+      a full date and time (not just a date — sent_at
+      is a timestamptz, e.g. "Jul 8, 2026 at 2:30 PM").
+
+- [ ] **ADMIN.24 V7** — Confirm the Type column shows
+      a human-readable label: "Transactional" for
+      system emails, "Show Message" for bulk emails
+      sent via ADMIN.23 (recipient_filter starts with
+      'show:').
+
+- [ ] **ADMIN.24 V8** — Confirm the Sent By column
+      shows an admin name for admin-initiated emails
+      and "System" for automated/transactional emails
+      (where sent_by is null in email_log).
+
+- [ ] **ADMIN.24 V9** — For an entry with a long body
+      preview: confirm the Preview column truncates
+      at ~80 characters with "…" appended. For an
+      entry with no body preview: confirm "—" appears.
+
+- [ ] **ADMIN.24 V10** — Log in as Viewer. Navigate to
+      a volunteer profile. Confirm the Communication
+      History section is visible and can be expanded.
+      *(Viewer sees this section — no role restriction.
+      Requires Viewer account — A1)*
+
+- [ ] **ADMIN.24 V11** — Toggle to dark mode. Navigate
+      to a volunteer profile and expand the
+      Communication History section. Confirm the
+      section renders correctly in dark mode — no
+      light backgrounds or invisible text.
+
+---
+
+## PHASE 12.1 — Mobile Optimization, Honeypot &
+              Deferred Fixes
+
+**Mobile sidebar:**
+
+- [ ] **12.1 V1** — On a phone-width browser (≤ 767px)
+      or by narrowing the browser window below the md
+      breakpoint: confirm the sidebar is hidden and a
+      hamburger menu button (☰) appears in the top bar.
+      On desktop/tablet (≥ 768px): confirm the sidebar
+      is visible as a fixed column and the hamburger
+      button is absent.
+
+- [ ] **12.1 V2** — At phone width: tap/click the
+      hamburger button. Confirm the sidebar slides in
+      from the left as a drawer with a semi-transparent
+      overlay behind it.
+
+- [ ] **12.1 V3** — With the drawer open: tap/click the
+      overlay area. Confirm the drawer closes.
+
+- [ ] **12.1 V4** — With the drawer open: tap/click the
+      X button inside the drawer. Confirm the drawer
+      closes.
+
+- [ ] **12.1 V5** — With the drawer open: click a
+      navigation link (e.g., "Volunteers"). Confirm the
+      drawer closes automatically and the new page loads.
+
+- [ ] **12.1 V6** — Toggle to dark mode. Open the mobile
+      drawer. Confirm it renders with the correct dark
+      background and all nav links are readable — no
+      invisible text.
+
+- [ ] **12.1 V7** — At phone width (< 768px): confirm
+      the top bar adapts correctly — admin name and
+      "Change Password" link are hidden, Sign Out becomes
+      icon-only. The hamburger button and Sign Out icon
+      should both be visible without horizontal overflow.
+
+**Honeypot spam prevention:**
+
+- [ ] **12.1 V8** — Open the volunteer signup form at /.
+      Using browser dev tools (Elements panel), locate
+      the hidden `<input name="website">` field. Its
+      CSS should position it far off-screen (left: -9999px
+      or similar) — NOT display:none. Confirm it is not
+      visible to a normal user.
+
+- [ ] **12.1 V9** — Using dev tools, manually set the
+      value of the `name="website"` input to any non-empty
+      string (e.g. "bot"). Submit the form. Confirm a
+      success message appears BUT check Supabase — confirm
+      NO new volunteer row was created.
+      *(Supabase cross-check)*
+
+- [ ] **12.1 V10** — Submit the volunteer signup form
+      normally (website field empty). Confirm the
+      submission works exactly as before — volunteer
+      created, confirmation shown.
+
+- [ ] **12.1 V11** — Repeat the honeypot test (12.1 V9)
+      on the slot claiming form at /shows/[id]. Set the
+      hidden website field to a non-empty value, submit,
+      confirm fake success with no slot_claims row
+      created. *(Supabase cross-check)*
+
+- [ ] **12.1 V12** — Repeat on the opportunity submission
+      form at /opportunities/[id]. Same: fake success,
+      no opportunity_submissions row created.
+      *(Supabase cross-check)*
+
+- [ ] **12.1 V13** — Repeat on a public form at
+      /forms/[id]. Same: fake success, no form_responses
+      row created. *(Supabase cross-check)*
+
+**Small deferred fixes:**
+
+- [ ] **12.1 V14** — Navigate to /crew/settings/categories.
+      Rename a category using the inline edit. Confirm
+      the category list updates in place immediately
+      (no full page reload — uses router.refresh()
+      rather than window.location.href).
+
+- [ ] **12.1 V15** — Reorder a category using the ↑↓
+      arrows. Confirm the list reorders in place without
+      a full page reload.
+
+- [ ] **12.1 V16** — In dark mode, navigate to
+      /crew/volunteers. Confirm the "Active" and
+      "Archived" status badges in the status column
+      are readable — not invisible against the dark
+      background.
+
+---
+
+## PHASE 12.2a — Performance & Security Audit
+
+*Note: Most 12.2a items were verified by Claude Code
+directly via database queries and lint/build checks.
+The items below require owner-side confirmation.*
+
+- [ ] **12.2a V1** — Navigate to /crew/dashboard.
+      Confirm the page loads noticeably faster than
+      before (subjective check — the dashboard now
+      runs 5 queries in parallel instead of sequentially).
+      Most noticeable on slower connections or devices.
+
+- [ ] **12.2a V2** — *(Supabase cross-check)* In the
+      Supabase dashboard SQL editor, run:
+        SELECT * FROM volunteer_notes LIMIT 1;
+      while NOT logged in as an admin (use an anon or
+      public context). Confirm the query returns 0 rows
+      (RLS restriction). Alternatively, confirm via
+      Supabase → Authentication → Policies that
+      volunteer_notes has no anon SELECT policy.
+
+---
+
+## PHASE 12.2b — In-App Help Page
+
+- [ ] **12.2b V1** — Navigate to /crew/help as Super
+      Admin. Confirm the page loads without error and
+      displays the heading "Help & How-To Guide."
+
+- [ ] **12.2b V2** — Log in as Editor. Confirm /crew/help
+      loads. Log in as Viewer. Confirm /crew/help loads.
+      *(All roles should have access)*
+
+- [ ] **12.2b V3** — Confirm a "Help" nav link appears
+      at the bottom of the crew sidebar with a question-
+      mark circle icon (HelpCircle). Confirm it
+      highlights as active when on /crew/help.
+
+- [ ] **12.2b V4** — On a desktop viewport (≥ 1024px):
+      confirm a sticky table of contents column appears
+      on the left side of the page, and the content
+      occupies the right side.
+
+- [ ] **12.2b V5** — On a mobile/tablet viewport
+      (< 1024px): confirm the TOC sidebar is hidden and
+      a "Jump to section" block appears at the top of
+      the page instead.
+
+- [ ] **12.2b V6** — Click a table of contents link
+      (e.g. "Shows"). Confirm the page scrolls smoothly
+      to the correct section heading.
+
+- [ ] **12.2b V7** — Confirm at least one Tip callout
+      (blue left border) and one Warning callout
+      (orange left border) are visible on the page.
+
+- [ ] **12.2b V8** — Toggle to dark mode. Navigate to
+      /crew/help. Confirm the page renders correctly —
+      section headings, body text, and callout boxes
+      are readable. No light backgrounds or invisible
+      text.
+
+- [ ] **12.2b V9** — On a 375px viewport, confirm
+      /crew/help has no horizontal scroll and all text
+      is readable.
+
+- [ ] **12.2b V10** — Verify all 8 major section
+      headings are present: "Your Volunteers", "Shows",
+      "Attendance and Hours", "The Volunteer Signup
+      Form", "Settings", "The Volunteer Call Board",
+      "Standing Opportunities", "Getting Help."
+
+---
+
+## PHASE 12.2c — Tooltip System
+
+*Spot-check a representative sample of the 16 tooltip
+placements. All follow the same pattern — spot-checking
+4–5 confirms the system works.*
+
+- [ ] **12.2c V1** — Navigate to /crew/dashboard.
+      Confirm a small question-mark circle icon (?) is
+      visible inline with the "Hours Review" card
+      heading and the "Milestone Acknowledgments" card
+      heading. Confirm the icon is small and muted —
+      not obtrusive.
+
+- [ ] **12.2c V2** — Click the ? icon next to "Hours
+      Review" on the dashboard. Confirm it navigates to
+      /crew/help#hours and lands on the "How Hours Work"
+      section.
+
+- [ ] **12.2c V3** — Navigate to a volunteer profile.
+      Confirm a ? icon appears inline with the "Editor
+      Notes" section heading. Click it — confirm it
+      navigates to /crew/help#volunteer-profile.
+
+- [ ] **12.2c V4** — Navigate to /crew/shows/[id]
+      Waitlist tab. Confirm a "Waitlist" h2 heading
+      appears at the top of the tab content (added in
+      12.4) with a ? icon inline. Click it — confirm
+      it navigates to /crew/help#waitlist.
+
+- [ ] **12.2c V5** — Toggle to dark mode. Navigate to
+      any page with tooltip icons. Confirm the ? icons
+      are visible (muted color, not invisible against
+      dark background) and brighten on hover.
+
+---
+
+## PHASE 12.3 — Call Board Hours Breakdown
+
+*Prerequisites: volunteer must have at least one show
+appearance (slot claim + attendance marked Showed) to
+test the grouped breakdown. A volunteer with only
+manual hours tests the "Other Hours" section.*
+
+- [ ] **12.3 V1** — Navigate to /callboard. Look up a
+      volunteer who has show appearances. Confirm the
+      hours summary line reads "[X] hours across [Y]
+      shows" — NOT the old format "[X] hours from [Y]
+      shows • [Z] manual hours."
+
+- [ ] **12.3 V2** — For a volunteer with no show
+      appearances (only manual hours or zero): confirm
+      the summary line reads "[X] total hours" — not
+      "hours across 0 shows."
+
+- [ ] **12.3 V3** — Expand the volunteer card's history
+      section (tap/click the expand button). Confirm
+      the content is now grouped by show — each show
+      has its name as a bold heading, with individual
+      call sub-rows beneath it.
+
+- [ ] **12.3 V4** — For each call sub-row, confirm it
+      shows: the show date (formatted, not raw), the
+      role name, the attendance status with color coding
+      (green for Showed, red for No-Show, amber for
+      Excused), and hours (shown only for Showed rows).
+
+- [ ] **12.3 V5** — Confirm a "X hrs total" line
+      appears below each show's call rows (showing
+      only hours from Showed calls).
+
+- [ ] **12.3 V6** — For a volunteer who has had manual
+      hours added by an Editor (e.g. "Set build — 4
+      hours"): confirm an "Other Hours" section appears
+      after the show groups, with the note text, date,
+      and hours displayed.
+
+- [ ] **12.3 V7** — For a volunteer with no manual
+      hours: confirm no "Other Hours" section appears
+      at all.
+
+- [ ] **12.3 V8** — For a new volunteer with no call
+      history and no manual hours: expand the section
+      and confirm the empty state reads "No calls on
+      record yet."
+
+- [ ] **12.3 V9** — Confirm there is no "manual hours"
+      label anywhere visible on the volunteer card —
+      not in the summary line, not in any section
+      heading.
+
+---
+
+## PHASE 12.4 — Automated Thank-You Email & Fixes
+
+**Automated thank-you email cron:**
+
+- [ ] **12.4 V1** — *(Supabase cross-check)* Confirm the
+      `thank_you_sent_at` column exists on the
+      `show_dates` table:
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_name = 'show_dates'
+          AND column_name = 'thank_you_sent_at';
+      Must return one row: nullable timestamptz.
+
+- [ ] **12.4 V2** — In Vercel dashboard → Settings →
+      Cron Jobs: confirm two cron entries exist —
+      `/api/cron/reminders` (0 5 * * *) and
+      `/api/cron/thankyou` (0 7 * * *).
+
+- [ ] **12.4 V3** — Confirm the cron route is protected:
+      make an HTTP request to
+      /api/cron/thankyou without the Authorization
+      header (or with a wrong value). Confirm a 401
+      response is returned.
+
+- [ ] **12.4 V4** — *(Requires waiting for a real cron
+      run OR triggering manually from Vercel dashboard)*
+      After the cron runs against a show date that was
+      2+ days ago with showed attendance: confirm in
+      Supabase that `show_dates.thank_you_sent_at` is
+      now populated for that date, and that an email_log
+      row exists with recipient_filter = 'show_date:
+      [dateId]' and recipient_type = 'transactional'.
+      *(Supabase cross-check)*
+
+- [ ] **12.4 V5** — *(Requires real email delivery)*
+      After the thank-you cron runs: confirm a
+      thank-you email arrives in a real inbox with
+      subject "Thank you for volunteering — [show name]",
+      the correct show name and date in the body, and
+      the /callboard CTA link.
+
+**Waitlist tab heading (E3 fix from 12.2c):**
+
+- [ ] **12.4 V6** — Navigate to /crew/shows/[id] and
+      click the Waitlist tab. Confirm a "Waitlist"
+      heading (h2) appears at the top of the tab
+      content area — even when the waitlist is empty.
+      This heading should be visible alongside a ?
+      tooltip icon.
+
+**Editor Notes heading deduplication (Q1 fix
+from 12.2c):**
+
+- [ ] **12.4 V7** — Navigate to any volunteer profile.
+      Confirm the "Editor Notes" heading appears exactly
+      ONCE — not twice. (Previously one heading was in
+      page.tsx and one inside the EditorNotes component;
+      the page.tsx duplicate was removed.)
+
+- [ ] **12.4 V8** — On the same volunteer profile, confirm
+      the ? tooltip icon is still present next to the
+      "Editor Notes" heading (it was moved to the
+      component's internal heading in 12.4).
+

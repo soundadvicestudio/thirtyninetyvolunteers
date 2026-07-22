@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v1.8
-### Created: July 2026 | Last Updated: July 2026 — v1.8 (9.2 and 10.1 build corrections)
+## 30BN_PROCESS_v1.md — v2.1
+### Created: July 2026 | Last Updated: July 2026 — v2.1 (Alpha build complete — Phase 12)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -216,6 +216,22 @@ and CDT (-05:00) seasonally. A hardcoded offset is wrong for approximately 8 mon
 the year. This is the same principle as R23 — use the date-fns-tz primitives, never raw
 offsets. Confirmed failure mode avoided in 10.1 Q3.
 
+**Phone normalization at all write paths (established
+ADMIN.21):**
+All phone values written to or compared against the
+database must be passed through `normalizePhone()` from
+`lib/utils/phone.ts` before the DB operation. This
+applies to: volunteer signup (submitVolunteerForm()),
+volunteer update (updateVolunteerInfo()), slot claiming
+(submitClaim()), admin profile edit (updateVolunteer()),
+and the Call Board lookup (lookupVolunteer() in both
+lib/actions/callboard.ts and lib/actions/volunteers.ts).
+Never use an inline `.replace(/\D/g, '')` call in any
+of these paths — the shared utility is the single source
+of truth. Display formatting uses `formatPhone()` from
+the same file. Both functions are pure (no DB calls, no
+imports) and safe to call from any context.
+
 **Never create a client inside a loop.** Create once per function, reuse.
 
 ---
@@ -263,6 +279,12 @@ in this project (ADMIN.17 Q1 — four files were hidden by truncation). A lint b
 zero errors and zero warnings was achieved in ADMIN.17 and must be maintained. Any new lint
 issue introduced by a build is a build defect.
 
+**Content-heavy pages and the react/no-unescaped-entities lint rule (established 12.2b Q1):**
+When writing JSX for content-heavy pages (help pages, documentation, long prose sections) that contain apostrophes or quotes, use template literal expressions rather than raw JSX text to avoid lint errors:
+- Wrong: `Don't forget to save.` (apostrophe in raw JSX text triggers lint error)
+- Correct: `{"Don't forget to save."}`
+This is not a content change — the rendered output is identical. It's a JSX authoring convention required to maintain the zero-error lint baseline. The `react/no-unescaped-entities` ESLint rule enforces this. Applies to any page with significant prose content. See §11 checklist.
+
 **Read/audit/diagnose session build report format:**
 When a prompt is a read-only audit session (no code written, no files modified), the build
 report uses this abbreviated format:
@@ -299,19 +321,22 @@ F1. [Critical finding needing immediate attention, or None]
 
 **Database-state verification in build reports:** Some quality gate items can be confirmed by Claude Code directly via live database queries rather than deferred to manual owner verification. When a build report includes a live query result that confirms a fix (e.g., a `pg_proc.proacl` check confirming privilege state, or a row count confirming a migration applied), that item is listed in the Verified section as confirmed — not as pending owner verification. The build report must include the actual query result, not just a claim that it was checked. Established ADMIN.13.
 
-**Step Tracker Convention (required from v1.3 onward):**
-Every build prompt must declare a step tracker block after the SCOPE section. The tracker lists all planned steps at the start of the session. Claude Code updates it in place as work proceeds — marking each step ✓ (complete) or ✗ (blocked) when done.
+**Live Task Tracking Convention (required from v1.3 onward, updated Phase 12):**
+Every build prompt must enable live task tracking. Use the following instruction in the prompt after the SCOPE section:
 
-Format:
 ```
-Step tracker:
-✓ Step 1: [completed]
-☐ Step 2: [in progress]
-☐ Step 3: [pending]
-☐ Step 4: [pending]
+Enable live task tracking for this build:
+
+Task A: [first task]
+Task B: [second task]
+Task C: [third task]
 ```
 
-**The tracker is a single persistent element.** It must not be re-emitted or repeated after individual steps — doing so produces multiple copies that obscure build progress rather than clarifying it. Claude Code manages live-update behavior natively when given an initial declaration. Prompts must not include the instruction to "re-emit the tracker after each step." See R27.
+Tasks use letters (A, B, C...) rather than numbers to avoid confusion with numbered steps elsewhere in the prompt. Claude Code updates the tracker natively as work proceeds — no "declare at session start" or "update in place" instruction needed.
+
+**The tracker is a single persistent element.** It must not be re-emitted or repeated after individual tasks. Claude Code manages live-update behavior natively. Prompts must not include instructions to re-emit the tracker. See R27.
+
+Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work; the lettered task format is the current standard.
 
 ---
 
@@ -347,10 +372,11 @@ grep -rn "window.location" \
   app/crew/\(app\)/volunteers/ \
   components/crew/volunteers/ \
   --include="*.tsx" --include="*.ts"
-# Must return zero results on the profile page.
-# window.location is still valid for navigation
-# away to a different URL (e.g. categories page
-# reload() — different context, not a mutation).
+# Must return zero results. window.location is only
+# valid for navigation away to an external URL —
+# never for in-place re-renders after mutations.
+# The CategoriesTable.tsx reload() was the last
+# known use case; fixed in 12.1 (router.refresh()).
 
 # Check for router.push after mutations (R12)
 # router.push() does not re-run Server Component
@@ -474,6 +500,18 @@ grep -rn "window.location" \
 # Must return zero results
 ```
 
+```bash
+# Confirm no inline phone stripping outside
+# lib/utils/phone.ts (ADMIN.21 — R pattern)
+# All normalization must use normalizePhone()
+grep -rn "replace(/\\D" \
+  lib/actions/ app/actions/ \
+  --include="*.ts" --include="*.tsx"
+# Must return zero results. Any hit means a write
+# path is normalizing inline instead of using the
+# shared utility — fix before committing.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -520,6 +558,42 @@ Run before every Vercel deployment:
 □ Any new SECURITY DEFINER function: verify pg_proc.proacl AND confirm
   lib/milestones.ts MILESTONE_THRESHOLDS is the single source of truth —
   no local threshold arrays in any component (9.2 pattern, Q3 from 8.1)
+□ Any new write path that stores or compares phone values:
+  confirm normalizePhone() from lib/utils/phone.ts is
+  called before every DB insert, update, or query
+  comparison. No inline .replace(/\D/g, '') anywhere
+  outside phone.ts itself. (ADMIN.21 pattern)
+□ Any new page containing internal navigation links
+  (e.g. links to /, /crew/dashboard, or any in-app
+  route): use next/link, never plain <a> tags. Plain
+  <a> on internal routes triggers the
+  @next/next/no-html-link-for-pages lint rule and breaks
+  the zero-error lint baseline. R19's concern
+  (tailwind-merge / Button component) does not apply to
+  next/link. (Pattern established 30BN-11.1 F1)
+□ Any new bulk email send (more than one recipient): use
+  the shared sendBatchEmails() helper in lib/email.ts
+  rather than duplicating the chunk-100 loop directly
+  in the server action. Both sendShowNotifications() and
+  sendShowBulkEmail() delegate to this helper.
+  (Pattern confirmed ADMIN.23 — see R8 for the
+  underlying resend.batch.send() requirement)
+□ Any new public-facing form that creates or updates
+  data: confirm a honeypot hidden input is present in
+  the form component (name="website", positioned
+  off-screen via CSS — NOT display:none, uncontrolled
+  ref pattern) and the server action silently returns
+  a fake success response when the field is non-empty,
+  before any validation or DB work. Never reveal the
+  honeypot's existence in error messages. (Pattern
+  established 30BN-12.1 — applied to all 4 public
+  form surfaces)
+□ Any new page or component with significant prose
+  content containing apostrophes or quotes in JSX
+  text: use template literal expressions ({"text"})
+  rather than raw JSX text to avoid the
+  react/no-unescaped-entities lint error and maintain
+  the zero-error lint baseline. (Established 12.2b Q1)
 ```
 
 ---
@@ -656,6 +730,55 @@ Document & Admin Prompts
                    profile header/status badge.
   30BN-DOC.13    ✓ Brief Update v1.8 (Phases 8–10,
                    ADMIN.15–19, comprehensive corrections)
+  30BN-DOC.14    ✓ Process Update v1.7 (Phases 8–10,
+                   ADMIN.15–19 — see v1.7 history entry)
+  30BN-DOC.15    ✓ Brief Update v1.9 (9.2 and 10.1
+                   build corrections)
+  30BN-DOC.16    ✓ Process Update v1.8 (9.2 and 10.1
+                   build corrections)
+  30BN-ADMIN.20  ✓ Dashboard Season at a Glance, Quick
+                   Stats, Super Admin season selector
+                   (dashboard_season_id), PDF export
+                   filter fix (milestoneTier +
+                   service_hours). lib/actions/settings.ts
+                   created (setPinnedSeason()).
+  30BN-ADMIN.21  ✓ Phone normalization — Migration 014,
+                   lib/utils/phone.ts (normalizePhone() +
+                   formatPhone()), all write paths updated.
+  30BN-ADMIN.22  ✓ Post-show Report tab on show detail
+                   (status = 'past' only).
+                   lib/data/showReport.ts +
+                   getPostShowReportData(). PostShowReport
+                   .tsx component.
+  30BN-ADMIN.23  ✓ Bulk email from show detail —
+                   sendShowBulkEmail() + BulkEmailSection
+                   .tsx. Dedup by email, logs to
+                   email_log (recipient_type = 'category',
+                   recipient_filter = 'show:{showId}').
+  30BN-ADMIN.24  ✓ Communication history on volunteer
+                   profile — CommunicationHistory.tsx,
+                   collapsible, all roles. Migration 015
+                   skipped (index pre-existed).
+  30BN-DOC.17    ✓ Brief Update v2.0 (Phase 11,
+                   ADMIN.20–24, comprehensive corrections)
+  30BN-DOC.18    ✓ Deferred Verification Document v5
+                   (Phase 11 + ADMIN.20–24 items added,
+                   89 new verification items)
+  30BN-DOC.19    ✓ Process Update v2.0 (Phase 11,
+                   ADMIN.20–24, comprehensive corrections)
+  30BN-DOC.20    ✓ Header version sync — Brief + Process
+                   headers updated to v2.0 (DOC.20)
+  30BN-DOC.21    ✓ Brief Update v2.1 (Phase 12 complete,
+                   Alpha build complete)
+  30BN-12.1      ✓ (see Phase 12 above)
+  30BN-12.2a     ✓ (see Phase 12 above)
+  30BN-12.2b     ✓ (see Phase 12 above)
+  30BN-12.2c     ✓ (see Phase 12 above)
+  30BN-12.3      ✓ (see Phase 12 above)
+  30BN-12.4      ✓ (see Phase 12 above)
+  30BN-DOC.22    ✓ Process Update v2.1 (Phase 12
+                   complete, Alpha build complete —
+                   this prompt)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -749,13 +872,57 @@ Phase 10 — Audit Log ✓ Complete
               guard; Audit Log card added to
               /crew/settings hub)
 
-Phase 11 — Stubs, 404 & App Settings
-  30BN-11.1   Beta Stub Pages & Custom 404
-  30BN-11.2   App Settings & Announcement Banner
+Phase 11 — Stubs, 404 & App Settings ✓ Complete
+  30BN-11.1 ✓ Beta Stub Pages & Custom 404
+              (three admin stub pages: /crew/communication,
+              /crew/tools/checkin, /crew/settings/documents;
+              Check-In sidebar nav link; app/not-found.tsx
+              branded 404; app/error.tsx global error
+              boundary with 'use client' + reset())
+  30BN-11.2 ✓ App Settings & Announcement Banner
+              (/crew/settings hub with 8 LinkedCard/
+              LockedCard cards; /crew/settings/announcement,
+              /hearing-options, /signup-form, /general
+              sub-pages; lib/actions/settings.ts server
+              actions; Phase 11 AuditAction types wired)
 
-Phase 12 — Polish, Mobile & Performance
-  30BN-12.1   Mobile Optimization & Empty States
-  30BN-12.2   Performance, Security & In-App Help
+Phase 12 — Polish, Mobile & Performance ✓ Complete
+  30BN-12.1   ✓ Mobile optimization: 7 public pages
+                responsive audit, 2 tap-target fixes,
+                honeypot on 4 public forms, mobile
+                sidebar (MobileSidebarContext + hamburger
+                + drawer), CategoriesTable router.refresh()
+                fix, VolunteersTable dark: badge fix,
+                opportunity_submissions phone confirmed
+                clean.
+  30BN-12.2a  ✓ Performance/security audit + fixes:
+                dashboard Promise.all parallelization,
+                email escaping gap fixed, R18 fixes
+                (4× ?? → || in volunteer.ts), length
+                caps on sendShowBulkEmail(), RLS all
+                clean, idx_attendance_slot_claim_id
+                confirmed and documented.
+  30BN-12.2b  ✓ In-app help page (/crew/help): 8
+                sections, 23 subsections, 31 anchors,
+                sticky TOC, tip/warning callouts, Help
+                nav link (HelpCircle, all roles).
+  30BN-12.2c  ✓ HelpTooltip component (Server Component,
+                next/link, named export). 16 placements
+                across Production Crew.
+  30BN-12.3   ✓ Call Board volunteer card per-show
+                hours breakdown. Hours summary simplified
+                ("[X] hours across [Y] shows"). Show-
+                grouped expandable section + "Other
+                Hours" for manual entries. manualHoursTotal
+                prop replaced with manualHoursEntries.
+  30BN-12.4   ✓ Automated post-show thank-you email
+                cron (app/api/cron/thankyou/route.ts,
+                07:00 UTC daily, 48h after show). Migration
+                015 (show_dates.thank_you_sent_at).
+                buildThankYouEmailPayload() in lib/email.ts.
+                E3 Waitlist heading + tooltip fix.
+                Duplicate Editor Notes heading removed;
+                HelpTooltip moved into EditorNotes.tsx.
 ```
 
 ### Beta Build
@@ -767,15 +934,20 @@ Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (detail in v2)
 
 New Beta features confirmed during Alpha build:
-Phase 18 — Additional Alpha Features (moved to Alpha scope)
+Phase 18 — Additional Alpha Features ✓ Complete
   - Volunteer communication history on profile
+    ✓ Built ADMIN.24 (CommunicationHistory.tsx)
   - Show-level post-show reporting
+    ✓ Built ADMIN.22 (Report tab, status='past' only)
   - Volunteer self-service hours history on Call Board
+    ✓ Built 30BN-12.3 (per-show grouped breakdown,
+    "Other Hours" section, simplified summary line)
   - Bulk email from show detail
+    ✓ Built ADMIN.23 (BulkEmailSection.tsx)
 Phase 19 — Waitlist notification preferences
   (volunteer opt-in for notification method)
 Phase 20 — Automated thank-you email after a show
-  (24–48h post-show, sent to all Showed volunteers)
+  ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
 ```
 
 ---
@@ -835,10 +1007,12 @@ Documented in Brief §13 R25. Referenced here for R-number continuity. Core rule
 ### R26 — Roles Belong to show_dates, Not shows (cross-reference)
 Documented in Brief §13 R26. Referenced here for R-number continuity. Core rule: volunteer_roles.show_date_id is the FK parent as of Migration 006. Any query for "all roles for a show" must join through show_dates. See grep check in §10.
 
-### R27 — Step Tracker Is a Single Persistent Widget
-The step tracker declared at the start of a build session is a single element updated in place as work proceeds. It must not be re-emitted or repeated after individual steps. Claude Code manages the live-update behavior natively when given an initial declaration. Prompts must not include the instruction to "re-emit the tracker after each step" — this causes multiple tracker copies to appear, obscuring rather than clarifying progress. The correct instruction is to declare the tracker once in the SCOPE section and allow Claude Code to update it. Established Phase 4 build session.
+### R27 — Live Task Tracking Is a Single Persistent Element
+The task tracker enabled at the start of a build session is a single element updated in place as work proceeds. It must not be re-emitted or repeated after individual tasks. Claude Code manages the live-update behavior natively. Prompts must not include the instruction to "re-emit the tracker after each step."
 
-Note on placement: R27 governs session conduct (how the tracker widget behaves during a Claude Code session), not a product or schema decision. It lives here in §14 rather than Brief §13 for the same reason as R16 and R22. Brief §13 carries a cross-reference to this entry.
+Current convention (Phase 12 onward): prompts use "Enable live task tracking for this build:" followed by lettered tasks (Task A, Task B...). Earlier prompts used "Step tracker: ☐ Step 1..." format. Both work; the lettered task format is standard going forward. The core rule is unchanged: one tracker, updated in place, never re-emitted. Established Phase 4 build session.
+
+Note on placement: R27 governs session conduct, not a product or schema decision. It lives here in §14 for the same reason as R16 and R22. Brief §13 carries a cross-reference.
 
 ### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute (cross-reference)
 Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule: after creating any SECURITY DEFINER function, immediately REVOKE EXECUTE from PUBLIC and anon; GRANT EXECUTE to authenticated only. Verify via pg_proc.proacl check. Confirmed failure mode found in 30BN-5.3 and fixed retroactively in ADMIN.13. See §6 for the required verification query and §10 for the grep/query check.
@@ -863,6 +1037,37 @@ layout must target document.body explicitly. The ThemeProvider effect must inclu
 theme in its dependency array. Confirmed failure mode: dark→light toggle required a hard reload
 (VERIFY-1 A4). Fixed in ADMIN.14.
 
+### next/link for Internal Navigation (established 30BN-11.1)
+In Next.js App Router, plain `<a>` tags used for internal navigation (links to routes within
+the app, e.g. `/`, `/crew/dashboard`) trigger the `@next/next/no-html-link-for-pages` ESLint
+rule, which breaks the maintained zero-error lint baseline. Always use `next/link` for internal
+routes. Plain `<a>` tags are correct only for external URLs (links leaving the app domain). This
+is distinct from R19 (which concerns the shadcn Button/cva component and tailwind-merge) —
+`next/link` is not a cva component and has no tailwind-merge conflict. Confirmed when 11.1 spec
+specified plain `<a>` tags for the 404 and error pages; Claude Code correctly substituted
+`next/link` to maintain lint baseline (DOC.17 F1 note in Brief). Add to §11 checklist and §10
+grep if needed.
+
+### DOC Prompt Completeness Verification (established DOC.17)
+Document update prompts (DOC.xx) that contain many discrete edits are vulnerable to a specific
+failure mode: Claude Code applies a subset of the edits without flagging the omissions.
+Confirmed in DOC.17, where Edits 1–21 were silently skipped and only Edits 22–26 were applied.
+To prevent this:
+- Every DOC prompt must assign a sequential edit number to every discrete str_replace operation.
+- The step tracker must list every edit by number.
+- After each str_replace, Claude Code must view the affected lines and report the line numbers
+  confirmed before proceeding to the next edit.
+- The build report Completed section must list every edit by number — any gap in the numbering
+  is a defect that must be flagged.
+- The owner must verify the build report covers all edit numbers before marking the DOC prompt
+  complete.
+This rule applies to all DOC prompts regardless of length. The view-after-each-edit step is
+mandatory, not optional. A DOC prompt with 26 edits that reports only 5 in its build report is
+incomplete, full stop.
+
+### escapeHtml() in Email Templates (established 12.2a)
+All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only. If escaping is needed in a new file, extract to lib/utils/string.ts at that time.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -876,4 +1081,6 @@ theme in its dependency array. Confirmed failure mode: dark→light toggle requi
 *v1.6 (July 2026 — Phases 6 and 7 complete: revalidatePath grep check added to §10 (R29), drag-library guard grep check added to §10 (Phase 6 decision), R29/drag-library checklist items added to §11, Phases 6 and 7 marked complete in §13, ADMIN.14/DOC.9/DOC.10 added to prompt log in §13, R16 clarified with verification session pattern in §14, R29/R30 cross-references added to §14)*
 *v1.7 (July 2026 — Phases 8–10 complete, ADMIN.15–19: §1 unchanged; §4 migration example corrected (002 filename); §5 read/audit session and FIX prompt patterns added; §6 Call Board RLS exception + "RLS Always True" advisory note added; §7 Call Board third client context documented; §8 lint capture rule and read-only build report format added; §10 R12 grep updated, lint baseline check added, window.location check added, hours_confirmed check added; §11 four new checklist items added; §12 batching pattern documented; §13 ADMIN.15–19 + DOC.11–13 logged, Phases 8–10 marked complete, Beta phases 18–20 added; §14 R12 cross-reference stub added, R29 additional failure modes added; DOC.14 logged)*
 *v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
-*Cross-reference: 30BN_BRIEF_v1.md v1.9*
+*v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
+*v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
+*Cross-reference: 30BN_BRIEF_v1.md v2.1*
