@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendOpportunityEOIEmail, sendOpportunitySlotClaimEmail } from '@/lib/email'
 import { logAction } from '@/lib/audit'
+import { normalizePhone } from '@/lib/utils/phone'
 
 const submitOpportunitySchema = z.object({
   opportunityId: z.string().uuid(),
@@ -22,12 +23,19 @@ export async function submitOpportunity(formData: {
   volunteerName: string
   volunteerEmail: string
   volunteerPhone?: string
+  honeypot?: string
 }): Promise<SubmitOpportunityResult> {
+  // Honeypot: bots fill hidden fields humans never see. Silent fake success.
+  if (formData.honeypot) {
+    return { success: true, claimType: 'eoi' }
+  }
+
   const parsed = submitOpportunitySchema.safeParse(formData)
   if (!parsed.success) {
     return { error: 'Please check your name and email and try again.' }
   }
-  const { opportunityId, volunteerName, volunteerEmail, volunteerPhone } = parsed.data
+  const { opportunityId, volunteerName, volunteerEmail } = parsed.data
+  const volunteerPhone = parsed.data.volunteerPhone ? normalizePhone(parsed.data.volunteerPhone) : undefined
 
   const client = getAdminClient()
 
@@ -98,7 +106,7 @@ export async function submitOpportunity(formData: {
       volunteer_id: volunteerId,
       volunteer_name: volunteerName.trim(),
       volunteer_email: volunteerEmail.trim(),
-      volunteer_phone: volunteerPhone?.trim() || null,
+      volunteer_phone: volunteerPhone || null,
       status: 'submitted',
     })
     .select('id')

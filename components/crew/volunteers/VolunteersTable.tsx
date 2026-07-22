@@ -262,7 +262,9 @@ export default function VolunteersTable({
                 <td className="px-4 py-3">
                   <span
                     className={`text-xs font-semibold rounded px-2 py-0.5 ${
-                      v.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-mid-gray text-white'
+                      v.status === 'active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-mid-gray/20 text-mid-gray dark:bg-dark-border dark:text-dark-muted'
                     }`}
                   >
                     {v.status === 'active' ? 'Active' : 'Archived'}

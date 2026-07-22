@@ -34,7 +34,7 @@ export default function CallboardLookupForm() {
         </p>
         <Link
           href="/"
-          className="inline-block bg-navy text-white font-semibold py-2 px-5 rounded hover:bg-opacity-90 transition-colors mb-3"
+          className="inline-block bg-navy text-white font-semibold py-3 px-5 rounded hover:bg-opacity-90 transition-colors mb-3"
         >
           Sign Up
         </Link>

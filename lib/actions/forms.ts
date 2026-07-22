@@ -244,9 +244,15 @@ export async function getForm(id: string): Promise<FullForm | null> {
 // cover the actual inserts.
 export async function submitFormResponse(
   formId: string,
-  values: Record<string, string | string[]>
+  values: Record<string, string | string[]>,
+  honeypot?: string
 ): Promise<{ success: true } | { error: string }> {
   try {
+    // Honeypot: bots fill hidden fields humans never see. Silent fake success.
+    if (honeypot) {
+      return { success: true }
+    }
+
     const client = getAdminClient()
 
     // A. Verify form is live

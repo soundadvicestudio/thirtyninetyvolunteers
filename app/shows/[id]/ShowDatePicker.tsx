@@ -56,10 +56,10 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                   onClick={() => handleSelectDate(date.id)}
                   className={
                     full
-                      ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-2.5 cursor-not-allowed'
+                      ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-3 cursor-not-allowed'
                       : isSelected
-                        ? 'rounded-full bg-navy text-white text-sm font-semibold px-4 py-2.5 transition-colors'
-                        : 'rounded-full border border-navy text-navy text-sm font-semibold px-4 py-2.5 hover:bg-light-navy transition-colors'
+                        ? 'rounded-full bg-navy text-white text-sm font-semibold px-4 py-3 transition-colors'
+                        : 'rounded-full border border-navy text-navy text-sm font-semibold px-4 py-3 hover:bg-light-navy transition-colors'
                   }
                 >
                   {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy')}
@@ -94,8 +94,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                     onClick={() => handleToggleRole(role.id)}
                     className={
                       role.is_full
-                        ? 'bg-steel text-white font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-opacity-90 transition-colors'
-                        : 'bg-orange text-white font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-opacity-90 transition-colors'
+                        ? 'bg-steel text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
+                        : 'bg-orange text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
                     }
                   >
                     {role.is_full ? 'Join Waitlist' : 'Claim This Spot'}

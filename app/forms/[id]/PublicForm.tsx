@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm, Controller, type Resolver, type Control } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -172,6 +172,7 @@ function FieldInput({
 export default function PublicForm({ form }: { form: FullForm }) {
   const [status, setStatus] = useState<'idle' | 'success'>('idle')
   const [formError, setFormError] = useState<string | null>(null)
+  const honeypotRef = useRef<HTMLInputElement>(null)
 
   const schema = useMemo(() => buildSchema(form.fields), [form.fields])
   const defaultValues = useMemo(() => buildDefaultValues(form.fields), [form.fields])
@@ -188,7 +189,7 @@ export default function PublicForm({ form }: { form: FullForm }) {
 
   async function onSubmit(values: PublicFormValues) {
     setFormError(null)
-    const result = await submitFormResponse(form.id, values)
+    const result = await submitFormResponse(form.id, values, honeypotRef.current?.value)
 
     if ('error' in result) {
       setFormError(result.error)
@@ -211,7 +212,21 @@ export default function PublicForm({ form }: { form: FullForm }) {
   }
 
   return (
+    // honeypotRef.current is only read inside onSubmit, which handleSubmit()
+    // only invokes on an actual submit event — not during this render call.
+    // eslint-disable-next-line react-hooks/refs
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-xl">
+      {/* Honeypot — hidden from real users, bots tend to fill every input */}
+      <input
+        type="text"
+        name="website"
+        ref={honeypotRef}
+        tabIndex={-1}
+        aria-hidden="true"
+        autoComplete="off"
+        style={{ position: 'absolute', left: '-9999px' }}
+      />
+
       {form.fields.map((field) => {
         const fieldId = field.id!
         const error = errors[fieldId]

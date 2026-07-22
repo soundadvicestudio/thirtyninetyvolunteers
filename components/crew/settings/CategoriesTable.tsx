@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronUp, ChevronDown, Pencil, Check, X } from 'lucide-react'
 import {
   addCategory,
@@ -17,10 +18,6 @@ type Category = {
   is_visible: boolean
 }
 
-function reload() {
-  window.location.href = window.location.href
-}
-
 function CategoryRow({
   category,
   isFirst,
@@ -30,6 +27,7 @@ function CategoryRow({
   isFirst: boolean
   isLast: boolean
 }) {
+  const router = useRouter()
   const [editMode, setEditMode] = useState(false)
   const [draftName, setDraftName] = useState(category.name)
   const [draftDescription, setDraftDescription] = useState(category.description ?? '')
@@ -40,7 +38,7 @@ function CategoryRow({
     setError(null)
     const result = await reorderCategory(category.id, direction)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
     setError(result.error)
@@ -50,7 +48,7 @@ function CategoryRow({
     setError(null)
     const result = await toggleVisibility(category.id, category.is_visible)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
     setError(result.error)
@@ -61,7 +59,7 @@ function CategoryRow({
     setIsSubmitting(true)
     const result = await renameCategory(category.id, draftName, draftDescription)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
     setIsSubmitting(false)
@@ -175,6 +173,7 @@ function CategoryRow({
 }
 
 function AddCategoryForm() {
+  const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -191,7 +190,7 @@ function AddCategoryForm() {
     if ('success' in result) {
       setName('')
       setDescription('')
-      reload()
+      router.refresh()
       return
     }
     setIsSubmitting(false)

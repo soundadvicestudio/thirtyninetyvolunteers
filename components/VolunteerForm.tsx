@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -113,9 +113,11 @@ export default function VolunteerForm({
   const [errorMessage, setErrorMessage] =
     useState<string | null>(null)
 
+  const honeypotRef = useRef<HTMLInputElement>(null)
+
   const onSubmit = async (data: VolunteerFormData) => {
     setErrorMessage(null)
-    const result = await submitVolunteerForm(data)
+    const result = await submitVolunteerForm(data, honeypotRef.current?.value)
 
     if (result.status === 'success') {
       setFormState('success')
@@ -219,6 +221,17 @@ export default function VolunteerForm({
           {errorMessage}
         </div>
       )}
+
+      {/* Honeypot — hidden from real users, bots tend to fill every input */}
+      <input
+        type="text"
+        name="website"
+        ref={honeypotRef}
+        tabIndex={-1}
+        aria-hidden="true"
+        autoComplete="off"
+        style={{ position: 'absolute', left: '-9999px' }}
+      />
 
       {/* Full Name */}
       <div>

@@ -11,9 +11,15 @@ export type SubmitResult =
   | { status: 'error'; message: string }
 
 export async function submitVolunteerForm(
-  data: VolunteerFormData
+  data: VolunteerFormData,
+  honeypot?: string
 ): Promise<SubmitResult> {
   try {
+    // Honeypot: bots fill hidden fields humans never see. Silent fake success.
+    if (honeypot) {
+      return { status: 'success' }
+    }
+
     const supabase = getAdminClient()
     const normalizedPhone = normalizePhone(data.phone)
 

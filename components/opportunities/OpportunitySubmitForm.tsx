@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -34,6 +34,7 @@ export default function OpportunitySubmitForm({
 }) {
   const [status, setStatus] = useState<'idle' | 'success'>('idle')
   const [formError, setFormError] = useState<string | null>(null)
+  const honeypotRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -51,6 +52,7 @@ export default function OpportunitySubmitForm({
       volunteerName: data.name,
       volunteerEmail: data.email,
       volunteerPhone: data.phone || undefined,
+      honeypot: honeypotRef.current?.value,
     })
 
     if ('error' in result) {
@@ -83,7 +85,21 @@ export default function OpportunitySubmitForm({
   }
 
   return (
+    // honeypotRef.current is only read inside onSubmit, which handleSubmit()
+    // only invokes on an actual submit event — not during this render call.
+    // eslint-disable-next-line react-hooks/refs
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-xl">
+      {/* Honeypot — hidden from real users, bots tend to fill every input */}
+      <input
+        type="text"
+        name="website"
+        ref={honeypotRef}
+        tabIndex={-1}
+        aria-hidden="true"
+        autoComplete="off"
+        style={{ position: 'absolute', left: '-9999px' }}
+      />
+
       <div>
         <label className={labelClasses}>
           Full Name<span className="text-orange ml-0.5">*</span>

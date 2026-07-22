@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -44,6 +44,7 @@ export default function ClaimForm({
   const [force, setForce] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const [result, setResult] = useState<ResultState>({ kind: 'idle' })
+  const honeypotRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -81,6 +82,7 @@ export default function ClaimForm({
       volunteerPhone: values.phone,
       isWaitlist,
       force: forceFlag,
+      honeypot: honeypotRef.current?.value,
     })
 
     if (response.status === 'duplicate_show') {
@@ -144,7 +146,21 @@ export default function ClaimForm({
   }
 
   return (
+    // honeypotRef.current is only read inside onSubmit (via runSubmit), which
+    // handleSubmit() only invokes on an actual submit event — not during this render call.
+    // eslint-disable-next-line react-hooks/refs
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Honeypot — hidden from real users, bots tend to fill every input */}
+      <input
+        type="text"
+        name="website"
+        ref={honeypotRef}
+        tabIndex={-1}
+        aria-hidden="true"
+        autoComplete="off"
+        style={{ position: 'absolute', left: '-9999px' }}
+      />
+
       <p className="text-mid-gray text-sm">
         {roleName} — {showName}
       </p>

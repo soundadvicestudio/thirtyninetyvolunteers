@@ -20,6 +20,7 @@ export type SubmitClaimInput = {
   volunteerPhone: string
   isWaitlist: boolean
   force?: boolean
+  honeypot?: string
 }
 
 export type SubmitClaimResult =
@@ -31,6 +32,11 @@ export type SubmitClaimResult =
 
 export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimResult> {
   try {
+    // Honeypot: bots fill hidden fields humans never see. Silent fake success.
+    if (data.honeypot) {
+      return { status: 'claimed', claimToken: crypto.randomUUID() }
+    }
+
     const roleId = data.roleId
     const showDateId = data.showDateId
     const volunteerName = data.volunteerName.trim()

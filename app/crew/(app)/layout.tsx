@@ -7,6 +7,7 @@ import Sidebar from '@/components/crew/Sidebar'
 import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
 import { ThemeProvider } from '@/components/crew/ThemeProvider'
+import { MobileSidebarProvider } from '@/components/crew/MobileSidebarContext'
 
 export const metadata: Metadata = {
   manifest: '/manifest.json',
@@ -64,13 +65,15 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
         }}
       />
       <ThemeProvider>
-        <div className="flex h-screen">
-          <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} />
-          <div className="flex-1 flex flex-col">
-            <TopBar admin={admin} />
-            <main className="flex-1 overflow-y-auto bg-light-navy dark:bg-dark-bg p-6">{children}</main>
+        <MobileSidebarProvider>
+          <div className="flex h-screen">
+            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} />
+            <div className="flex-1 flex flex-col min-w-0">
+              <TopBar admin={admin} />
+              <main className="flex-1 overflow-y-auto bg-light-navy dark:bg-dark-bg p-6">{children}</main>
+            </div>
           </div>
-        </div>
+        </MobileSidebarProvider>
         <ServiceWorkerRegistration />
       </ThemeProvider>
     </>
