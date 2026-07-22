@@ -83,6 +83,9 @@ export default async function ShowsListingPage() {
           <p className="text-dark text-base leading-relaxed max-w-xl mx-auto mt-4">
             Pick a show below and claim your spot — every role helps make the production happen.
           </p>
+          <Link href="/calendar" className="inline-block text-sm text-navy hover:underline mt-4">
+            📅 View Calendar →
+          </Link>
         </div>
       </section>
 

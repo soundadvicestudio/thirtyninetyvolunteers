@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, ChevronDown, CalendarSearch } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarSearch, Download } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getWeekGridDays } from '@/lib/utils/calendar-availability'
 import CalendarFilterBar from './CalendarFilterBar'
@@ -15,6 +15,7 @@ import CalendarDayPanel from './CalendarDayPanel'
 import CalendarEventForm, { type CalendarBookingPrefill } from './CalendarEventForm'
 import CalendarBulkRehearsalForm from './CalendarBulkRehearsalForm'
 import CalendarBookSpacePanel from './CalendarBookSpacePanel'
+import CalendarExportModal from './CalendarExportModal'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -64,6 +65,7 @@ export default function CalendarShell({
   bufferData,
   adminRole,
   calendarEditor,
+  subscriptionToken,
   pendingCount,
   initialView,
   initialDate,
@@ -78,6 +80,7 @@ export default function CalendarShell({
   bufferData: ShowDateBuffer[]
   adminRole: AdminRole
   calendarEditor: boolean
+  subscriptionToken: string
   pendingCount: number
   initialView: string
   initialDate: string
@@ -101,6 +104,7 @@ export default function CalendarShell({
   const [actionMenuOpen, setActionMenuOpen] = useState(false)
   const [bulkFormOpen, setBulkFormOpen] = useState(false)
   const [bookSpaceOpen, setBookSpaceOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const [prefilledBooking, setPrefilledBooking] = useState<CalendarBookingPrefill | null>(null)
   const actionMenuRef = useRef<HTMLDivElement>(null)
 
@@ -292,6 +296,15 @@ export default function CalendarShell({
               </Link>
             )}
 
+            <button
+              type="button"
+              onClick={() => setExportModalOpen(true)}
+              className="flex items-center gap-1.5 border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+            >
+              <Download size={16} />
+              Export
+            </button>
+
             {canDirectCreate && (
               <button
                 type="button"
@@ -445,6 +458,13 @@ export default function CalendarShell({
             setBookSpaceOpen(false)
             setFormOpen(true)
           }}
+        />
+      )}
+
+      {exportModalOpen && (
+        <CalendarExportModal
+          subscriptionToken={subscriptionToken}
+          onClose={() => setExportModalOpen(false)}
         />
       )}
     </div>

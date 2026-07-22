@@ -581,6 +581,17 @@ function cancelLinkHtml(cancelUrl: string): string {
   `
 }
 
+function addToCalendarLinkHtml(claimToken: string): string {
+  const icsUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/calendar/claim.ics?token=${claimToken}`
+  return `
+    <p style="margin:16px 0;">
+      <a href="${icsUrl}" style="color:#293994;text-decoration:underline;">
+        📅 Add to your calendar
+      </a>
+    </p>
+  `
+}
+
 function browseShowsButtonHtml(): string {
   return `
     <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
@@ -604,6 +615,8 @@ type SlotClaimEmailParams = {
   cancelUrl: string
 }
 
+type SendSlotClaimEmailParams = SlotClaimEmailParams & { claimToken: string }
+
 export async function sendSlotClaimEmail({
   to,
   volunteerName,
@@ -613,7 +626,8 @@ export async function sendSlotClaimEmail({
   roleName,
   volunteerInstructions,
   cancelUrl,
-}: SlotClaimEmailParams): Promise<void> {
+  claimToken,
+}: SendSlotClaimEmailParams): Promise<void> {
   const html = emailShell(`
     <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
       You're signed up, ${escapeHtml(volunteerName)}!
@@ -625,6 +639,7 @@ export async function sendSlotClaimEmail({
     ${instructionsBlockHtml(volunteerInstructions)}
     ${browseShowsButtonHtml()}
     ${cancelLinkHtml(cancelUrl)}
+    ${addToCalendarLinkHtml(claimToken)}
   `)
 
   await resend.emails.send({

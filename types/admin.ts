@@ -7,6 +7,7 @@ export type AdminUser = {
   role: AdminRole
   is_active: boolean
   calendar_editor: boolean
+  calendar_subscription_token: string
   last_login: string | null
   activity_cleared_at: string | null
 }

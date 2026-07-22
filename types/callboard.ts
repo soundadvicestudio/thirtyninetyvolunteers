@@ -38,6 +38,7 @@ export type CallboardCallHistoryRow = {
   id: string
   claimed_at: string
   status: 'claimed' | 'cancelled'
+  claim_token: string | null
   role_name: string
   show_id: string | null
   show_name: string

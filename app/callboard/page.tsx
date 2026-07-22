@@ -87,6 +87,7 @@ type RawCallHistoryRow = {
   id: string
   claimed_at: string
   status: 'claimed' | 'cancelled'
+  claim_token: string | null
   volunteer_role: {
     role_name: string
     show_date: {
@@ -100,7 +101,7 @@ type RawCallHistoryRow = {
 async function getCallHistory(volunteerId: string, email: string): Promise<CallboardCallHistoryRow[]> {
   const client = getAdminClient()
   const selectCols = `
-    id, claimed_at, status,
+    id, claimed_at, status, claim_token,
     volunteer_role:volunteer_roles(
       role_name,
       show_date:show_dates(
@@ -139,6 +140,7 @@ async function getCallHistory(volunteerId: string, email: string): Promise<Callb
       id: row.id,
       claimed_at: row.claimed_at,
       status: row.status,
+      claim_token: row.claim_token,
       role_name: row.volunteer_role.role_name,
       show_id: row.volunteer_role.show_date.show?.id ?? null,
       show_name: row.volunteer_role.show_date.show?.name ?? 'Unknown Show',

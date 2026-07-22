@@ -59,6 +59,7 @@ function CallHistoryBreakdown({
           <div className="space-y-1.5">
             {group.calls.map((call) => {
               const statusKey = call.attendance_status ?? call.status
+              const showsCalendarLink = call.status === 'claimed' && call.attendance_status === null
               return (
                 <div
                   key={call.id}
@@ -73,6 +74,17 @@ function CallHistoryBreakdown({
                     </span>
                     {call.attendance_status === 'showed' && call.hours_logged !== null && (
                       <span className="text-mid-gray">{formatHoursValue(call.hours_logged)} hrs</span>
+                    )}
+                    {showsCalendarLink && call.claim_token && (
+                      <a
+                        href={`/api/calendar/claim.ics?token=${call.claim_token}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-navy text-xs hover:underline"
+                        title="Add to calendar"
+                      >
+                        📅 Add to calendar
+                      </a>
                     )}
                   </span>
                 </div>

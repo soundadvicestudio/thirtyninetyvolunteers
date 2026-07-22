@@ -519,3 +519,28 @@ export async function findAvailableSlots(
 
   return { success: true, slots }
 }
+
+export async function rotateCalendarToken(): Promise<{
+  success: boolean
+  newToken?: string
+  error?: string
+}> {
+  const admin = await getAdminUser()
+  if (!admin) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const newToken = crypto.randomUUID()
+  const supabase = await getServerClient()
+
+  const { error } = await supabase
+    .from('admin_users')
+    .update({ calendar_subscription_token: newToken })
+    .eq('id', admin.id)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, newToken }
+}

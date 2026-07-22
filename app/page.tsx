@@ -117,6 +117,12 @@ export default async function HomePage() {
             >
               View Opportunities
             </Link>
+            <Link
+              href="/calendar"
+              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+            >
+              View Calendar
+            </Link>
           </div>
 
           <h4 className="font-semibold text-navy text-lg text-center mb-4">

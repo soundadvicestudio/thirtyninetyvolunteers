@@ -211,6 +211,7 @@ export default async function CalendarPage({
       bufferData={bufferData}
       adminRole={adminUser.role}
       calendarEditor={adminUser.calendar_editor}
+      subscriptionToken={adminUser.calendar_subscription_token}
       pendingCount={pendingCount}
       initialView={view}
       initialDate={date}

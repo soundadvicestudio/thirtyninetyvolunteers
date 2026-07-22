@@ -244,6 +244,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
           roleName: role.role_name,
           volunteerInstructions: show.volunteer_instructions,
           cancelUrl,
+          claimToken: inserted.claim_token,
         })
       }
 
