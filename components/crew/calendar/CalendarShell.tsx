@@ -10,6 +10,7 @@ import CalendarMonthView from './CalendarMonthView'
 import CalendarWeekView from './CalendarWeekView'
 import CalendarAgendaView from './CalendarAgendaView'
 import CalendarDayPanel from './CalendarDayPanel'
+import CalendarEventForm from './CalendarEventForm'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -58,6 +59,7 @@ export default function CalendarShell({
   seasons,
   bufferData,
   adminRole,
+  calendarEditor,
   initialView,
   initialDate,
   initialLocationFilter,
@@ -88,6 +90,8 @@ export default function CalendarShell({
   const [seasonFilter, setSeasonFilter] = useState<string | null>(initialSeason)
   const [showLocations, setShowLocations] = useState(initialShowLocations)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
 
   const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
 
@@ -177,6 +181,11 @@ export default function CalendarShell({
     }
   }
 
+  function handleEditEvent(event: CalendarEvent) {
+    setEditingEvent(event)
+    setFormOpen(true)
+  }
+
   const filteredEvents = events.filter((e) => {
     if (locationFilter.length > 0 && (!e.location_id || !locationFilter.includes(e.location_id))) return false
     if (typeFilter.length > 0 && !typeFilter.includes(e.event_type)) return false
@@ -244,6 +253,14 @@ export default function CalendarShell({
             Today
           </button>
           <span className="text-sm font-semibold text-dark dark:text-dark-text ml-2">{periodLabel}</span>
+
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            className="ml-auto bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors cursor-pointer"
+          >
+            {adminRole === 'super_admin' ? 'Add Event' : 'Submit Request'}
+          </button>
         </div>
       </div>
 
@@ -300,6 +317,26 @@ export default function CalendarShell({
           locations={locations}
           adminRole={adminRole}
           onClose={() => setSelectedDate(null)}
+          onEditEvent={handleEditEvent}
+        />
+      )}
+
+      {formOpen && (
+        <CalendarEventForm
+          adminRole={adminRole}
+          calendarEditor={calendarEditor}
+          locations={locations}
+          initialData={editingEvent}
+          initialDate={selectedDate ?? undefined}
+          onClose={() => {
+            setFormOpen(false)
+            setEditingEvent(null)
+          }}
+          onSuccess={() => {
+            setFormOpen(false)
+            setEditingEvent(null)
+            router.refresh()
+          }}
         />
       )}
     </div>

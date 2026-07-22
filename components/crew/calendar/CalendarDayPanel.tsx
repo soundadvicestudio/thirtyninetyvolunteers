@@ -16,12 +16,14 @@ export default function CalendarDayPanel({
   locations,
   adminRole,
   onClose,
+  onEditEvent,
 }: {
   date: string
   events: CalendarEvent[]
   locations: Location[]
   adminRole: AdminRole
   onClose: () => void
+  onEditEvent: (event: CalendarEvent) => void
 }) {
   const headerDate = formatInTimeZone(fromZonedTime(`${date} 07:00:00`, CT), CT, 'EEEE, MMMM d, yyyy')
 
@@ -60,7 +62,7 @@ export default function CalendarDayPanel({
                       className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
                       style={{ backgroundColor: event.location?.color ?? '#555555' }}
                     />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm text-mid-gray dark:text-dark-muted">
                         {formatCT(event.start_time, 'h:mm a')} – {formatCT(event.end_time, 'h:mm a')}
                       </p>
@@ -76,6 +78,15 @@ export default function CalendarDayPanel({
                         <p className="text-sm text-mid-gray dark:text-dark-muted">{event.location.name}</p>
                       )}
                     </div>
+                    {adminRole === 'super_admin' && (
+                      <button
+                        type="button"
+                        onClick={() => onEditEvent(event)}
+                        className="text-xs text-navy hover:underline dark:text-steel ml-auto shrink-0 cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
