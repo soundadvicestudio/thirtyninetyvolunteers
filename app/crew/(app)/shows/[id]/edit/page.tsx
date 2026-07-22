@@ -53,7 +53,7 @@ export default async function EditShowPage({
         .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
       supabase
         .from('locations')
-        .select('id, name, color')
+        .select('id, name, color, default_hours')
         .eq('is_active', true)
         .order('sort_order', { ascending: true }),
     ])

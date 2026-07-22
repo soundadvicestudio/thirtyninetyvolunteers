@@ -40,8 +40,14 @@ export const showFormSchema = z
           show_date: z.string().min(1, 'Date is required'),
           show_time: z.string().min(1, 'Time is required'),
           end_time: z.string().optional().nullable(),
-          buffer_before_minutes: z.number().int().min(0).default(0),
-          buffer_after_minutes: z.number().int().min(0).default(0),
+          buffer_before_minutes: z.preprocess((val) => {
+            const n = Number(val)
+            return isNaN(n) ? 0 : n
+          }, z.number().int().min(0)),
+          buffer_after_minutes: z.preprocess((val) => {
+            const n = Number(val)
+            return isNaN(n) ? 0 : n
+          }, z.number().int().min(0)),
           roles: z.array(roleFormSchema).min(1, 'At least one role is required for this date'),
         })
       )
@@ -86,8 +92,14 @@ export const showSubmitSchema = z.object({
         show_date: z.string().min(1),
         show_time: z.string().min(1),
         end_time: z.string().nullable(),
-        buffer_before_minutes: z.number().int().min(0).default(0),
-        buffer_after_minutes: z.number().int().min(0).default(0),
+        buffer_before_minutes: z.preprocess((val) => {
+          const n = Number(val)
+          return isNaN(n) ? 0 : n
+        }, z.number().int().min(0)),
+        buffer_after_minutes: z.preprocess((val) => {
+          const n = Number(val)
+          return isNaN(n) ? 0 : n
+        }, z.number().int().min(0)),
         roles: z.array(roleSubmitSchema).min(1),
       })
     )

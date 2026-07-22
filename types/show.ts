@@ -8,6 +8,13 @@ export type Location = {
   color: string
 }
 
+// Extends the base Location with the optional per-location default-hours
+// override (30BN-ADMIN.25) — only fetched by the show form pages, which
+// need it for the auto-fill effect. Not part of the shared Location shape
+// since most Location consumers (show display, calendar views, etc.)
+// never select this column.
+export type LocationWithDefaultHours = Location & { default_hours: number | null }
+
 export type Show = {
   id: string
   season_id: string | null

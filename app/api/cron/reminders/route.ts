@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { data: showDates } = await client
       .from('show_dates')
-      .select('id, show_id, show_date, show_time')
+      .select('id, show_id, show_date, show_time, end_time')
       .eq('show_date', targetDate)
 
     if (!showDates || showDates.length === 0) {
@@ -64,12 +64,16 @@ export async function GET(request: Request) {
         const role = roleById.get(claim.volunteer_role_id)
         if (!showDate || !show || !role) return null
 
+        const showTime = showDate.end_time
+          ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a')}`
+          : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
+
         return buildReminderEmailPayload({
           to: claim.volunteer_email,
           volunteerName: claim.volunteer_name,
           showName: show.name,
           showDate: formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy'),
-          showTime: formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a'),
+          showTime,
           roleName: role.role_name,
           volunteerInstructions: show.volunteer_instructions,
         })

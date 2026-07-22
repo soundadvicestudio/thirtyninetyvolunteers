@@ -69,7 +69,7 @@ export default async function CancelPage({
 
   const { data: showDate } = await client
     .from('show_dates')
-    .select('id, show_id, show_date, show_time')
+    .select('id, show_id, show_date, show_time, end_time')
     .eq('id', claim.show_date_id)
     .maybeSingle()
 
@@ -85,7 +85,9 @@ export default async function CancelPage({
   }
 
   const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy')
-  const formattedTime = formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
+  const formattedTime = showDate.end_time
+    ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a')}`
+    : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
   const maskedEmail = maskEmail(claim.volunteer_email)
   const claimStatus = claim.status as 'claimed' | 'waitlisted'
 

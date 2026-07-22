@@ -61,7 +61,7 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
     const [{ data: show, error: showError }, { data: role }] = await Promise.all([
       supabase
         .from('shows')
-        .select('name, default_hours, location:locations(name)')
+        .select('name, default_hours, location_id, location:locations(name)')
         .eq('id', showId)
         .single(),
       supabase.from('volunteer_roles').select('role_name').eq('id', claim.volunteer_role_id).single(),
@@ -77,14 +77,26 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
     if (show.default_hours != null) {
       hours = Number(show.default_hours)
     } else {
-      const showLocation = (show as unknown as { location: { name: string } | null }).location
-      const bucket = getLocationHoursBucket(showLocation?.name)
-      const { data: setting } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', `default_hours_${bucket}`)
+      const { data: location } = await supabase
+        .from('locations')
+        .select('default_hours')
+        .eq('id', show.location_id)
         .maybeSingle()
-      hours = setting?.value ? Number(setting.value) : 0
+
+      if (location?.default_hours != null) {
+        hours = Number(location.default_hours)
+      } else {
+        // No per-location default set yet — fall back to the legacy
+        // name->bucket app_settings lookup (30BN-ADMIN.25 Item 1).
+        const showLocation = (show as unknown as { location: { name: string } | null }).location
+        const bucket = getLocationHoursBucket(showLocation?.name)
+        const { data: setting } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', `default_hours_${bucket}`)
+          .maybeSingle()
+        hours = setting?.value ? Number(setting.value) : 0
+      }
     }
   }
 

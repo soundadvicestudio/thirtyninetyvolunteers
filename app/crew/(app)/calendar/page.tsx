@@ -89,6 +89,26 @@ export default async function CalendarPage({
 
   const supabase = await getServerClient()
 
+  // Season filter requires a join through shows (calendar_events carries no
+  // season_id directly) — resolved before the main event query so the
+  // literal show_date_id list can be inlined into an .or() filter. Manual
+  // events always show regardless of season (Item 4, 30BN-ADMIN.25).
+  let seasonShowDateIds: string[] | null = null
+  if (season) {
+    const { data: seasonShows } = await supabase.from('shows').select('id').eq('season_id', season)
+    const seasonShowIds = (seasonShows ?? []).map((s) => s.id as string)
+
+    if (seasonShowIds.length > 0) {
+      const { data: seasonShowDates } = await supabase
+        .from('show_dates')
+        .select('id')
+        .in('show_id', seasonShowIds)
+      seasonShowDateIds = (seasonShowDates ?? []).map((d) => d.id as string)
+    } else {
+      seasonShowDateIds = []
+    }
+  }
+
   let eventsQuery = supabase
     .from('calendar_events')
     .select(
@@ -111,6 +131,15 @@ export default async function CalendarPage({
     adminUser.role !== 'super_admin'
       ? eventsQuery.eq('status', 'approved')
       : eventsQuery.in('status', ['approved', 'pending'])
+
+  if (season) {
+    eventsQuery =
+      seasonShowDateIds && seasonShowDateIds.length > 0
+        ? eventsQuery.or(
+            `source.eq.manual,and(source.eq.show,source_show_date_id.in.(${seasonShowDateIds.join(',')}))`
+          )
+        : eventsQuery.eq('source', 'manual')
+  }
 
   const [{ data: eventRows }, { data: locationRows }, { data: seasonRows }] = await Promise.all([
     eventsQuery,

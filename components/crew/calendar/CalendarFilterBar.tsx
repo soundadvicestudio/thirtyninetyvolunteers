@@ -98,30 +98,38 @@ function MultiSelectDropdown({
 
 export default function CalendarFilterBar({
   locations,
+  seasons,
   currentLocationFilter,
   currentTypeFilter,
+  currentSeasonFilter,
   showLocations,
   activeView,
   onLocationFilterChange,
   onTypeFilterChange,
+  onSeasonFilterChange,
   onShowLocationsChange,
   onClearFilters,
   hasActiveFilters,
 }: {
   locations: Location[]
+  seasons: { id: string; name: string }[]
   currentLocationFilter: string[]
   currentTypeFilter: string[]
+  currentSeasonFilter: string | null
   showLocations: string
   activeView: string
   onLocationFilterChange: (ids: string[]) => void
   onTypeFilterChange: (types: string[]) => void
+  onSeasonFilterChange: (id: string | null) => void
   onShowLocationsChange: (val: string) => void
   onClearFilters: () => void
   hasActiveFilters: boolean
 }) {
   const [mobileExpanded, setMobileExpanded] = useState(false)
   const activeFilterCount =
-    (currentLocationFilter.length > 0 ? 1 : 0) + (currentTypeFilter.length > 0 ? 1 : 0)
+    (currentLocationFilter.length > 0 ? 1 : 0) +
+    (currentTypeFilter.length > 0 ? 1 : 0) +
+    (currentSeasonFilter ? 1 : 0)
 
   return (
     <div>
@@ -154,6 +162,20 @@ export default function CalendarFilterBar({
           selected={currentTypeFilter}
           onChange={onTypeFilterChange}
         />
+
+        <select
+          aria-label="Filter by season"
+          value={currentSeasonFilter ?? ''}
+          onChange={(e) => onSeasonFilterChange(e.target.value || null)}
+          className="px-3 py-2 rounded-lg border border-divider dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-dark dark:text-dark-text hover:border-steel transition-colors cursor-pointer"
+        >
+          <option value="">All Seasons</option>
+          {seasons.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
 
         {activeView === 'week' && (
           <div className="flex items-center rounded-lg border border-navy dark:border-steel overflow-hidden">

@@ -55,12 +55,14 @@ function getPeriodLabel(view: CalendarView, focusedDate: string): string {
 export default function CalendarShell({
   events,
   locations,
+  seasons,
   bufferData,
   adminRole,
   initialView,
   initialDate,
   initialLocationFilter,
   initialTypeFilter,
+  initialSeason,
   initialShowLocations,
 }: {
   events: CalendarEvent[]
@@ -83,54 +85,66 @@ export default function CalendarShell({
   const [focusedDate, setFocusedDate] = useState(initialDate)
   const [locationFilter, setLocationFilter] = useState<string[]>(initialLocationFilter)
   const [typeFilter, setTypeFilter] = useState<string[]>(initialTypeFilter)
+  const [seasonFilter, setSeasonFilter] = useState<string | null>(initialSeason)
   const [showLocations, setShowLocations] = useState(initialShowLocations)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
 
-  function buildUrl(nextView: CalendarView, nextDate: string, locs: string[], types: string[], showLocs: string) {
+  function buildUrl(
+    nextView: CalendarView,
+    nextDate: string,
+    locs: string[],
+    types: string[],
+    season: string | null,
+    showLocs: string
+  ) {
     const params = new URLSearchParams()
     params.set('view', nextView)
     params.set('date', nextDate)
     if (locs.length) params.set('locations', locs.join(','))
     if (types.length) params.set('types', types.join(','))
+    if (season) params.set('season', season)
     if (showLocs !== 'all') params.set('show_locations', showLocs)
     return `/crew/calendar?${params.toString()}`
   }
 
-  // View/date changes need a real server re-fetch (the date range changes),
-  // so these use router.push(). Filter changes below intentionally do not.
-  function navigate(nextView: CalendarView, nextDate: string) {
+  // View/date/season changes need a real server re-fetch — season requires
+  // a DB join through shows (resolved server-side in page.tsx), unlike
+  // location/type which are pure client-side filters — so these use
+  // router.push(). Location/type filter changes below intentionally do not.
+  function navigate(nextView: CalendarView, nextDate: string, nextSeason: string | null) {
     setView(nextView)
     setFocusedDate(nextDate)
-    router.push(buildUrl(nextView, nextDate, locationFilter, typeFilter, showLocations))
+    setSeasonFilter(nextSeason)
+    router.push(buildUrl(nextView, nextDate, locationFilter, typeFilter, nextSeason, showLocations))
   }
 
-  // Filter changes are applied client-side only — the already-fetched
-  // events array is filtered in place. The URL is still updated (for
-  // shareable links) via direct history manipulation, bypassing the
-  // Next.js router so no server re-fetch is triggered.
+  // Location/type/showLocations changes are applied client-side only — the
+  // already-fetched events array is filtered in place. The URL is still
+  // updated (for shareable links) via direct history manipulation,
+  // bypassing the Next.js router so no server re-fetch is triggered.
   function syncFilterUrl(locs: string[], types: string[], showLocs: string) {
-    const url = buildUrl(view, focusedDate, locs, types, showLocs)
+    const url = buildUrl(view, focusedDate, locs, types, seasonFilter, showLocs)
     window.history.replaceState(null, '', url)
   }
 
   function handleViewChange(nextView: CalendarView) {
-    navigate(nextView, focusedDate)
+    navigate(nextView, focusedDate, seasonFilter)
   }
 
   function handlePrev() {
     const nextDate = view === 'week' ? addDaysToDateStr(focusedDate, -7) : addMonthsToDateStr(focusedDate, -1)
-    navigate(view, nextDate)
+    navigate(view, nextDate, seasonFilter)
   }
 
   function handleNext() {
     const nextDate = view === 'week' ? addDaysToDateStr(focusedDate, 7) : addMonthsToDateStr(focusedDate, 1)
-    navigate(view, nextDate)
+    navigate(view, nextDate, seasonFilter)
   }
 
   function handleToday() {
-    navigate(view, todayCT)
+    navigate(view, todayCT, seasonFilter)
   }
 
   function handleLocationFilterChange(ids: string[]) {
@@ -143,6 +157,10 @@ export default function CalendarShell({
     syncFilterUrl(locationFilter, types, showLocations)
   }
 
+  function handleSeasonFilterChange(id: string | null) {
+    navigate(view, focusedDate, id)
+  }
+
   function handleShowLocationsChange(val: string) {
     setShowLocations(val)
     syncFilterUrl(locationFilter, typeFilter, val)
@@ -151,7 +169,12 @@ export default function CalendarShell({
   function handleClearFilters() {
     setLocationFilter([])
     setTypeFilter([])
-    syncFilterUrl([], [], showLocations)
+    if (seasonFilter) {
+      // Season requires a server re-fetch to actually clear.
+      navigate(view, focusedDate, null)
+    } else {
+      syncFilterUrl([], [], showLocations)
+    }
   }
 
   const filteredEvents = events.filter((e) => {
@@ -167,7 +190,7 @@ export default function CalendarShell({
     : []
 
   const periodLabel = getPeriodLabel(view, focusedDate)
-  const hasActiveFilters = locationFilter.length > 0 || typeFilter.length > 0
+  const hasActiveFilters = locationFilter.length > 0 || typeFilter.length > 0 || seasonFilter !== null
 
   return (
     <div>
@@ -226,12 +249,15 @@ export default function CalendarShell({
 
       <CalendarFilterBar
         locations={locations}
+        seasons={seasons}
         currentLocationFilter={locationFilter}
         currentTypeFilter={typeFilter}
+        currentSeasonFilter={seasonFilter}
         showLocations={showLocations}
         activeView={view}
         onLocationFilterChange={handleLocationFilterChange}
         onTypeFilterChange={handleTypeFilterChange}
+        onSeasonFilterChange={handleSeasonFilterChange}
         onShowLocationsChange={handleShowLocationsChange}
         onClearFilters={handleClearFilters}
         hasActiveFilters={hasActiveFilters}

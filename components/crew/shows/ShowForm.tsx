@@ -31,7 +31,7 @@ import {
   type ShowFormValues,
 } from '@/lib/validations/show'
 import type { ShowSubmitPayload } from '@/lib/validations/show'
-import type { Show, ShowDateWithRoles, ShowStatus, Location } from '@/types/show'
+import type { Show, ShowDateWithRoles, ShowStatus, LocationWithDefaultHours } from '@/types/show'
 import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 
 const DATE_BLOCKED_MESSAGE =
@@ -309,7 +309,7 @@ export default function ShowForm({
   seasons: { id: string; name: string }[]
   adminUsers: { id: string; name: string; email: string }[]
   categories: { id: string; name: string }[]
-  locations: Location[]
+  locations: LocationWithDefaultHours[]
   defaultHours: { mainstage: number; studio_x: number; one_off: number }
   show?: Show & { dates: ShowDateWithRoles[]; editorIds: string[] }
   blockedDateIds?: string[]
@@ -398,9 +398,13 @@ export default function ShowForm({
       return
     }
     if (!defaultHoursDirty) {
-      const locationName = locations.find((l) => l.id === watchedLocationId)?.name
-      const bucket = getLocationHoursBucket(locationName)
-      setValue('default_hours', String(defaultHours[bucket]))
+      const selectedLocation = locations.find((l) => l.id === watchedLocationId)
+      if (selectedLocation?.default_hours != null) {
+        setValue('default_hours', String(selectedLocation.default_hours))
+      } else {
+        const bucket = getLocationHoursBucket(selectedLocation?.name)
+        setValue('default_hours', String(defaultHours[bucket]))
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedLocationId])
