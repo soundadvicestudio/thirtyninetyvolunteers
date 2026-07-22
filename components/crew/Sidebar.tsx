@@ -15,6 +15,7 @@ import {
   Mail,
   Settings,
   UserCog,
+  HelpCircle,
   X,
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/auth'
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { label: 'Check-In', href: '/crew/tools/checkin', icon: ScanLine },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
   { label: 'Settings', href: '/crew/settings', icon: Settings },
+  { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
 
 function isActivePath(pathname: string, href: string) {
