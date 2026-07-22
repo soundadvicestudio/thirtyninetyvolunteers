@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v2.1
-### Created: July 2026 | Last Updated: July 2026 — v2.1 (Alpha build complete — Phase 12)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.0
+### Created: July 2026 | Last Updated: July 2026 — v3.0 (Beta build — Phase CAL active)
 
 ---
 
@@ -944,7 +944,17 @@ default) to `show_dates`. Used by the post-show
 thank-you cron to track whether a thank-you email
 has been sent for each show date.
 
-**Next migration:** 016
+**Migration 016 status:** Applied — `016_locations_show_type_migration.sql` (CAL.1). Creates `locations` table with 5 seeded locations (Mainstage, Mainstage Lobby, Green Room, Studio X, Studio X Office) and their display colors. Removes `shows.show_type` text CHECK constraint column. Adds `shows.location_id uuid NOT NULL REFERENCES locations(id)`. Backfills existing show rows to matching location IDs. Adds `idx_shows_location_id`. RLS on locations: public SELECT (anon + authenticated), super_admin_all FOR ALL.
+
+**Migration 017 status:** Applied — `017_calendar_schema.sql` (CAL.2). Creates four new tables: `rehearsal_batches`, `calendar_events` (with `handle_updated_at()` trigger), `calendar_event_contacts`, `show_date_buffer`. Extends `admin_users`: adds `calendar_editor boolean NOT NULL DEFAULT false`; extends role CHECK constraint to include `'production'`. RLS enabled on all four new tables (10 policies total).
+
+**Migration 018 status:** Applied — `018_calendar_submitted_by_nullable.sql` (CAL.3). Makes `calendar_events.submitted_by` nullable (show-sourced events have no individual submitter). Adds UNIQUE constraint `calendar_events_source_show_date_id_unique` on `source_show_date_id` — required for the upsert conflict anchor in `syncShowDateToCalendar()`.
+
+**Migration 019 status:** Applied — `019_show_dates_end_time.sql` (CAL.4a). Adds `end_time time without time zone` (nullable, no default) to `show_dates`. Null = end time not yet set; sync utility falls back to startTime + 3 hours when null.
+
+**Migration 020 status:** Applied — `020_locations_default_hours.sql` (ADMIN.25). Adds `default_hours numeric(4,2)` (nullable, no default) to `locations`. When set, takes precedence over the `app_settings` name→bucket fallback in `getLocationHoursBucket()`. Per-location UI planned for CAL.8.
+
+**Next migration:** 021
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1031,12 +1041,32 @@ is_current       boolean NOT NULL DEFAULT false
 created_at       timestamptz NOT NULL DEFAULT now()
 ```
 
+### locations
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name             text NOT NULL
+color            text NOT NULL
+sort_order       integer NOT NULL DEFAULT 0
+is_active        boolean NOT NULL DEFAULT true
+default_hours    numeric(4,2)
+created_at       timestamptz NOT NULL DEFAULT now()
+-- Seeded with 5 locations: Mainstage (#293994),
+-- Mainstage Lobby (#0D9488), Green Room (#15803D),
+-- Studio X (#F26522), Studio X Office (#7C3AED)
+-- RLS: public_select_locations (SELECT, anon +
+--   authenticated), super_admin_all (FOR ALL,
+--   authenticated, is_super_admin())
+-- Migration 016 (016_locations_show_type_migration.sql)
+-- Migration 020 adds default_hours (nullable).
+-- Per-location default hours UI planned CAL.8.
+```
+
 ### shows
 ```sql
 id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
 season_id        uuid REFERENCES seasons(id)
 name             text NOT NULL
-show_type        text NOT NULL CHECK (show_type IN ('mainstage','studio_x','one_off'))
+location_id      uuid NOT NULL REFERENCES locations(id)
 description      text
 status           text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','live','past','archived'))
 volunteer_instructions text
@@ -1046,7 +1076,11 @@ notifications_sent_at timestamptz
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_shows_season_id, idx_shows_status
+-- INDEX: idx_shows_location_id (Migration 016)
 -- Trigger: trg_shows_updated_at
+-- NOTE: show_type column removed in Migration 016
+-- (CAL.1). Replaced by location_id FK to locations
+-- table. Show form loads locations from DB (R4).
 -- NOTE: notifications_sent_at added in Migration 008.
 -- Null = notifications never sent; non-null = timestamp
 -- of most recent category-match notification send.
@@ -1058,14 +1092,42 @@ id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
 show_id          uuid NOT NULL REFERENCES shows(id) ON DELETE CASCADE
 show_date        date NOT NULL
 show_time        time NOT NULL
+end_time         time without time zone
 created_at       timestamptz NOT NULL DEFAULT now()
 thank_you_sent_at timestamptz
 -- INDEX: idx_show_dates_show_id
+-- NOTE: end_time added in Migration 019 (CAL.4a).
+-- Nullable — null = end time not yet set. When null,
+-- syncShowDateToCalendar() uses startTime + 3 hours
+-- as a fallback for calendar_events.end_time. Admin
+-- show detail and public pages display as range
+-- ('7:30 PM – 10:00 PM') when present, single time
+-- when null. Buffer time stored separately in
+-- show_date_buffer (not in this table).
 -- NOTE: thank_you_sent_at added in Migration 015 (12.4).
 -- Null = post-show thank-you email not yet sent.
 -- Non-null = timestamp when it was sent. The thank-you
 -- cron checks IS NULL to avoid re-sending on subsequent
 -- daily runs.
+```
+
+### show_date_buffer
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+show_date_id     uuid NOT NULL UNIQUE
+  REFERENCES show_dates(id) ON DELETE CASCADE
+buffer_before_minutes integer NOT NULL DEFAULT 0
+buffer_after_minutes  integer NOT NULL DEFAULT 0
+created_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_show_date_buffer_show_date_id
+-- UNIQUE on show_date_id — one buffer record per date.
+-- Used for conflict detection via hasConflictWithBuffer()
+-- in lib/utils/calendar-conflict.ts. Buffer windows
+-- displayed on the weekly room-booking grid as a
+-- lighter shade of the location color. Not part of
+-- the public performance time display.
+-- RLS: authenticated SELECT, super_admin_all write.
+-- Migration 017 (017_calendar_schema.sql)
 ```
 
 ### volunteer_roles
@@ -1143,8 +1205,11 @@ created_at       timestamptz NOT NULL DEFAULT now()
 id               uuid PRIMARY KEY  -- matches Supabase Auth UUID
 name             text NOT NULL
 email            text NOT NULL UNIQUE
-role             text NOT NULL CHECK (role IN ('super_admin','editor','viewer'))
+role             text NOT NULL CHECK (role IN (
+  'super_admin','editor','viewer','production'
+))
 is_active        boolean NOT NULL DEFAULT true
+calendar_editor  boolean NOT NULL DEFAULT false
 last_login               timestamptz
 activity_cleared_at      timestamptz
 created_at               timestamptz NOT NULL DEFAULT now()
@@ -1152,6 +1217,15 @@ created_at               timestamptz NOT NULL DEFAULT now()
 -- NOTE: activity_cleared_at added in Migration 007.
 -- Null = never cleared; all feed events treated
 -- as new until first clear.
+-- NOTE: 'production' added to role CHECK in Migration
+--   017 (CAL.2). Production accounts have calendar-only
+--   access — see §7 roles table.
+-- NOTE: calendar_editor boolean added in Migration 017
+--   (CAL.2). Default false. When true on an editor or
+--   viewer account: direct write access to calendar
+--   (events approved immediately). DB CHECK constraint
+--   enforces calendar_editor = false on super_admin
+--   and production accounts. UI toggle planned CAL.6.
 ```
 
 ### forms
@@ -1235,6 +1309,90 @@ editor_acknowledged boolean NOT NULL DEFAULT false
 --   milestone_hours) — Migration 013. Race-condition backstop for
 --   checkMilestones() and checkFirstCall(). 23505 errors caught and
 --   handled gracefully in both functions.
+```
+
+### rehearsal_batches
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title            text NOT NULL
+submitted_by     uuid NOT NULL REFERENCES admin_users(id)
+created_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_rehearsal_batches_submitted_by
+-- Groups a bulk rehearsal schedule submission so the
+-- pending queue can display and approve/skip all dates
+-- in a batch together. Each calendar_events row in the
+-- batch carries rehearsal_batch_id FK back to this
+-- table. Single events have rehearsal_batch_id = null.
+-- RLS: authenticated SELECT/INSERT; super_admin write.
+-- Migration 017 (017_calendar_schema.sql)
+```
+
+### calendar_events
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title            text NOT NULL
+event_type       text NOT NULL CHECK (event_type IN (
+  'performance','rehearsal','teaching',
+  'meeting','event','rental','other'
+))
+custom_type_label text
+location_id      uuid REFERENCES locations(id)
+start_time       timestamptz NOT NULL
+end_time         timestamptz NOT NULL
+description      text
+requirements     text
+status           text NOT NULL DEFAULT 'pending' CHECK (
+  status IN ('pending','approved','cancelled')
+)
+source           text NOT NULL DEFAULT 'manual' CHECK (
+  source IN ('show','manual')
+)
+source_show_date_id uuid REFERENCES show_dates(id)
+  ON DELETE CASCADE
+rehearsal_batch_id  uuid REFERENCES rehearsal_batches(id)
+  ON DELETE SET NULL
+submitted_by     uuid REFERENCES admin_users(id)
+approved_by      uuid REFERENCES admin_users(id)
+created_at       timestamptz NOT NULL DEFAULT now()
+updated_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_calendar_events_location_id
+-- INDEX: idx_calendar_events_start_time
+-- INDEX: idx_calendar_events_status
+-- INDEX: idx_calendar_events_source_show_date_id
+-- INDEX: idx_calendar_events_submitted_by
+-- INDEX: idx_calendar_events_rehearsal_batch_id
+-- UNIQUE: calendar_events_source_show_date_id_unique
+--   on source_show_date_id (Migration 018) —
+--   required upsert conflict anchor for
+--   syncShowDateToCalendar().
+-- Trigger: handle_updated_at() on updated_at.
+-- NOTE: submitted_by is nullable (Migration 018) —
+--   show-sourced events (source='show') have no
+--   individual submitter; submitted_by = null.
+-- NOTE: performance events (event_type='performance')
+--   are auto-generated from shows via
+--   syncShowDateToCalendar() — never created manually.
+--   Rental type restricted to Super Admin in UI.
+-- RLS: authenticated SELECT all; authenticated INSERT;
+--   super_admin UPDATE/DELETE.
+-- Migration 017 (017_calendar_schema.sql)
+```
+
+### calendar_event_contacts
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+calendar_event_id uuid NOT NULL
+  REFERENCES calendar_events(id) ON DELETE CASCADE
+name             text NOT NULL
+phone            text NOT NULL
+sort_order       integer NOT NULL DEFAULT 0
+created_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_calendar_event_contacts_event_id
+-- Phone stored as digits-only (normalizePhone() applied
+-- in createCalendarEvent() and createRehearsalBatch()
+-- before insert, per ADMIN.21 pattern).
+-- RLS: authenticated all operations.
+-- Migration 017 (017_calendar_schema.sql)
 ```
 
 ### email_log
@@ -1695,6 +1853,125 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
 30BN-12.4      ✓ (see Phase 12 above)
 30BN-DOC.21    ✓ Brief Update v2.1 (Phase 12 complete,
                  Alpha build complete — this prompt)
+30BN-ADMIN.25  ✓ Deferred item sweep (Q1/Q4/Q3+Q6/Q5):
+                 getLocationHoursBucket() updated to use
+                 locations.default_hours as primary path,
+                 app_settings bucket map as fallback only
+                 (Migration 020). Buffer NaN Zod preprocess
+                 fix (z.preprocess NaN→0). End time range
+                 display on cancel page + reminder cron.
+                 Season filter enabled in CalendarFilterBar
+                 + server-side fetch in calendar/page.tsx.
+30BN-CAL.1     ✓ show_type → location_id migration
+                 (Migration 016). Full audit of 19 files.
+                 locations table created + seeded (5 rows).
+                 ShowType union removed; Location type
+                 added. Show form loads locations from DB.
+                 getLocationHoursBucket() added to
+                 lib/utils/showDisplay.ts as temporary
+                 name→bucket fallback (later superseded
+                 by ADMIN.25 primary lookup).
+30BN-CAL.2     ✓ Calendar schema foundation (Migration
+                 017): rehearsal_batches, calendar_events,
+                 calendar_event_contacts, show_date_buffer.
+                 admin_users: production role + calendar_
+                 editor boolean. Middleware production
+                 route restriction. Sidebar Calendar nav
+                 link (all roles). Login + OAuth redirect
+                 for production role. types/admin.ts
+                 created as shared AdminRole source;
+                 lib/auth.ts re-exports it.
+30BN-CAL.3     ✓ Show-to-calendar auto-sync + conflict
+                 detection. Migration 018 (submitted_by
+                 nullable + source_show_date_id unique
+                 constraint). syncShowDateToCalendar() in
+                 lib/actions/calendar-sync.ts (DST-safe
+                 CT→UTC, 3hr fallback when end_time null).
+                 hasConflict() + hasConflictWithBuffer()
+                 in lib/utils/calendar-conflict.ts.
+                 Buffer time UI on DateRow (show_date_buffer
+                 upsert). Google OAuth callback production
+                 role redirect fix.
+30BN-CAL.4a    ✓ end_time on show_dates (Migration 019).
+                 DateRow End Time field (optional, no
+                 required indicator). Time range display
+                 ("7:30 PM – 10:00 PM") on admin show
+                 detail (Volunteers tab + Dates tab),
+                 public /shows/[id], /callboard.
+                 syncShowDateToCalendar() updated to use
+                 end_time when present. Edge case guard:
+                 end_time ≤ show_time falls back to 3hr
+                 default with console.warn.
+30BN-CAL.4b    ✓ Full /crew/calendar page: month view
+                 (35/42-day grid, 3-chip limit + overflow),
+                 weekly room-booking grid (absolute-
+                 positioned event + buffer blocks, current-
+                 time indicator), agenda view (90-day,
+                 date-grouped). Filter bar (location +
+                 type client-side; season server re-fetch).
+                 Location legend (CalendarLegend.tsx).
+                 Day detail panel (booked + available
+                 windows via getAvailableWindows()).
+                 lib/utils/calendar-availability.ts created
+                 (UTC-anchored grid helpers).
+30BN-CAL.5a    ✓ Event creation + submission forms.
+                 CalendarEventForm (role-adaptive: type
+                 list, location required/optional, conflict
+                 check + override for direct-create, contacts
+                 useFieldArray, dark: variants). lib/actions/
+                 calendar.ts created: checkEventConflict(),
+                 createCalendarEvent(), updateCalendarEvent().
+                 lib/validations/calendar.ts created:
+                 calendarEventSchema (client) +
+                 calendarEventSubmitSchema (server, cross-
+                 field end > start). "Add Event"/"Submit
+                 Request" dropdown in CalendarShell. Edit
+                 button on day panel (Super Admin only).
+30BN-CAL.5b    ✓ Seed data (8 calendar_events). Calendar-
+                 Legend wired. CalendarShell header: action
+                 dropdown (Single Event / Rehearsal
+                 Schedule), Pending Requests link + badge,
+                 Book Space button. rehearsalBatchSchema
+                 added. New server actions: createRehearsal-
+                 Batch(), approveCalendarEvent(), approveBatch
+                 (), cancelCalendarEvent(), findAvailableSlots
+                 (). CalendarBulkRehearsalForm (default
+                 times, per-date override, contacts).
+                 Pending queue at /crew/calendar/pending +
+                 PendingQueueClient. CalendarBookSpacePanel
+                 (left panel, pre-fills event form).
+                 calendarEditor flag fully wired in
+                 createCalendarEvent().
+30BN-CAL.5b-AUDIT ✓ Post-build read-only audit (84 items
+                 checked, 60 PASS, 17 PARTIAL, 7 FAIL).
+                 Identified 7 items requiring fix prompt.
+30BN-CAL.5b-FIX ✓ 6 fixes from audit: CalendarLegend
+                 "Locations:" label; initialDate prop on
+                 bulk form + mount useEffect pre-populate;
+                 defaultStartTime/defaultEndTime state +
+                 pre-fill on add + auto-sort (manual sort
+                 button removed); initialConflicts +
+                 adminRole props on PendingQueueClient +
+                 conflictStatus state + handleLocationChange
+                 with live checkEventConflict + conflict
+                 column in batch table + individual cards;
+                 pending/page.tsx hasConflict pre-check
+                 loop; findAvailableSlots results → slots.
+30BN-CAL.5b-FIX2 ✓ handleApproveSingle() fallback:
+                 accepts fallbackLocationId param, resolves
+                 locationSelections[eventId] ??
+                 fallbackLocationId ?? ''. Individual event
+                 Approve button disabled condition updated.
+30BN-DOC.25a   ✓ Brief Update v3.0 Part A (§1, §2, §7,
+                 §8): current phase, public surfaces,
+                 Production role + Calendar Editor in
+                 terminology, roles table updated,
+                 calendar_editor flag documented, show
+                 type → location in show management,
+                 end time + buffer time in show dates,
+                 full Master Calendar section added,
+                 General Defaults fallback note updated,
+                 Location Management card added to settings.
 ```
 
 ---
@@ -2016,7 +2293,60 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Full Beta prompt detail to be written in 30BN_BRIEF_v2.md upon Alpha completion and board approval.*
+*Phase CAL is the active Beta phase. CAL.1–CAL.5b are complete. CAL.6–CAL.8 remain.*
+
+### Phase CAL — Master Calendar System
+*CAL.1–CAL.5b complete. CAL.6–CAL.8 remaining.*
+
+**CAL.1 ✓** show_type → location_id migration.
+**CAL.2 ✓** Calendar schema + Production role.
+**CAL.3 ✓** Show-to-calendar sync + conflict detection
+  + buffer time UI.
+**CAL.4a ✓** end_time on show_dates.
+**CAL.4b ✓** Full /crew/calendar UI (month, week,
+  agenda, legend, day panel, filter bar).
+**CAL.5a ✓** Event creation and submission forms.
+**CAL.5b ✓** Seed data, bulk rehearsal form, pending
+  approval queue, Book Space panel.
+
+**CAL.6 — Production Role User Management (~1 prompt)**
+- `calendar_editor` toggle on Editor/Viewer accounts
+  (on the Super Admin user management page,
+  `/crew/settings/users`)
+- Production role account creation via existing
+  Request Access flow — Super Admin assigns
+  `role = 'production'` on approval
+- Google OAuth Q2 fix: `app/auth/callback/route.ts`
+  already fixed in CAL.3; confirm no remaining gaps
+- Batch Approve button disabled condition fallback
+  (Q8 from CAL.5b-FIX2 — batch-context Approve does
+  not fall back to event.location_id the way
+  individual-events Approve does; fix alongside
+  calendar_editor toggle)
+
+**CAL.7 — Public /calendar Page (~1 prompt)**
+- Read-only. Performance events only
+  (event_type='performance', status='approved').
+- Month view. "Needs volunteers" indicator on dates
+  with at least one open slot (any volunteer_role with
+  claimed < slots_available). Click → show name, time,
+  "Sign up to volunteer →" link to /shows/[id].
+- No room detail, no filters, no booking.
+
+**CAL.8 — Location Management Settings (~1 prompt)**
+- New settings card: Location Management at
+  `/crew/settings/locations` (Super Admin only)
+- Add, rename, reorder (↑↓ arrows), deactivate/
+  reactivate locations. Color picker for each location.
+- Per-location `default_hours` field (numeric, optional
+  — takes precedence over app_settings bucket fallback
+  per ADMIN.25 pattern).
+- Update General Defaults settings page to clarify
+  that the three existing keys are fallbacks only.
+- Batch Approve Q7: batch-level location assignment
+  button should trigger conflict checks for each
+  affected date (same as per-row selector behavior).
+  Fold into CAL.8 alongside location management.
 
 ### Phase 13 — Email Blast System (~4 prompts)
 - Resend full integration: branded HTML templates for all email types
@@ -2245,3 +2575,4 @@ DOC.20–DOC.21 + 12.1–12.4 added to prompt log; §11
 Beta thank-you email marked built in Alpha; §12 Open
 Decision #7 resolved; DOC.21 logged)*
 *Cross-reference: 30BN_PROCESS_v1.md v2.1*
+*v3.0 (July 2026 — Beta Phase CAL active: §1 current phase updated (Beta underway, Phase CAL active); §1 public surfaces updated (/calendar added); §2 terminology table updated (Production role, Calendar Editor flag); §7 roles table updated (Production row, calendar_editor flag paragraph, middleware note); §8 Show Management updated (show_type → location, end time, buffer time); §8 Master Calendar section added (full feature spec: locations, auto-sync, event types, role access, calendar views, event creation, bulk rehearsal, pending queue, Book Space, public calendar); §8 General Defaults fallback note updated; §8 Location Management card added (planned CAL.8); §9 Migrations 016–020 status added, next migration 021; §9 locations table added; §9 shows.show_type replaced by location_id; §9 show_dates.end_time added; §9 show_date_buffer table added; §9 rehearsal_batches, calendar_events, calendar_event_contacts tables added; §9 admin_users.role extended + calendar_editor added; §10 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a added to prompt log; §11 Phase CAL added with CAL.1–CAL.5b marked complete + CAL.6–CAL.8 planned; DOC.25a/25b logged)*
