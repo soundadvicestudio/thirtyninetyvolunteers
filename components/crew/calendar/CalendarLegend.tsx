@@ -5,6 +5,7 @@ export default function CalendarLegend({ locations }: { locations: Location[] })
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2">
+      <span className="text-xs font-medium text-mid-gray dark:text-dark-muted mr-2">Locations:</span>
       {locations.map((location) => (
         <div key={location.id} className="flex items-center gap-1.5">
           <span

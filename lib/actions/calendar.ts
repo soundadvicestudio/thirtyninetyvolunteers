@@ -455,7 +455,7 @@ export type LocationAvailability = {
 export type FindAvailableSlotsResult = {
   success: boolean
   error?: string
-  results?: LocationAvailability[]
+  slots?: LocationAvailability[]
 }
 
 export async function findAvailableSlots(
@@ -489,7 +489,7 @@ export async function findAvailableSlots(
 
   const { startUTC, endUTC } = buildEventTimes(date, startTime, endTime)
 
-  const results: LocationAvailability[] = []
+  const slots: LocationAvailability[] = []
   for (const loc of targetLocations) {
     const { data: conflicts } = await supabase
       .from('calendar_events')
@@ -502,7 +502,7 @@ export async function findAvailableSlots(
 
     const conflictingEvent = (conflicts ?? [])[0]
 
-    results.push({
+    slots.push({
       locationId: loc.id,
       locationName: loc.name,
       color: loc.color,
@@ -517,5 +517,5 @@ export async function findAvailableSlots(
     })
   }
 
-  return { success: true, results }
+  return { success: true, slots }
 }

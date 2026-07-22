@@ -427,6 +427,7 @@ export default function CalendarShell({
           adminRole={adminRole}
           calendarEditor={calendarEditor}
           locations={locations}
+          initialDate={selectedDate ?? undefined}
           onClose={() => setBulkFormOpen(false)}
           onSuccess={() => {
             setBulkFormOpen(false)

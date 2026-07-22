@@ -25,7 +25,7 @@ export default function CalendarBookSpacePanel({
   const [locationId, setLocationId] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [results, setResults] = useState<LocationAvailability[] | null>(null)
+  const [slots, setSlots] = useState<LocationAvailability[] | null>(null)
 
   const canSearch = !!date && !!startTime && !!endTime
 
@@ -33,7 +33,7 @@ export default function CalendarBookSpacePanel({
     if (!canSearch) return
     if (endTime <= startTime) {
       setSearchError('End time must be after start time')
-      setResults(null)
+      setSlots(null)
       return
     }
     setSearching(true)
@@ -44,7 +44,7 @@ export default function CalendarBookSpacePanel({
       setSearchError(res.error ?? 'Something went wrong. Please try again.')
       return
     }
-    setResults(res.results ?? [])
+    setSlots(res.slots ?? [])
   }
 
   function handleBook(loc: LocationAvailability) {
@@ -119,12 +119,12 @@ export default function CalendarBookSpacePanel({
 
           {searchError && <p className="text-sm text-orange">{searchError}</p>}
 
-          {results && (
+          {slots && (
             <div className="space-y-2 pt-2">
-              {results.length === 0 && (
+              {slots.length === 0 && (
                 <p className="text-sm text-mid-gray dark:text-dark-muted">No locations found.</p>
               )}
-              {results.map((r) => (
+              {slots.map((r) => (
                 <div
                   key={r.locationId}
                   className="rounded-lg border border-divider dark:border-dark-border p-3 flex items-start justify-between gap-3"

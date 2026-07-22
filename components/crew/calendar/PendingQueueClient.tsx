@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
-import { approveCalendarEvent, approveBatch, cancelCalendarEvent } from '@/lib/actions/calendar'
+import { ChevronDown, ChevronRight, Loader2, AlertTriangle, Check } from 'lucide-react'
+import { approveCalendarEvent, approveBatch, cancelCalendarEvent, checkEventConflict } from '@/lib/actions/calendar'
 import { formatCT } from '@/lib/utils/date'
 import { formatInTimeZone } from 'date-fns-tz'
 import type { PendingEvent, PendingBatch } from '@/app/crew/(app)/calendar/pending/page'
 import type { Location } from '@/types/show'
+import type { AdminRole } from '@/types/admin'
 
 const CT = 'America/Chicago'
 
@@ -53,6 +54,26 @@ function LocationSelect({
   )
 }
 
+function ConflictIndicator({ conflict, locationSelected }: { conflict: boolean | undefined; locationSelected: boolean }) {
+  if (conflict === true) {
+    return (
+      <span className="text-xs font-medium text-orange dark:text-orange flex items-center gap-1">
+        <AlertTriangle size={12} />
+        Conflict
+      </span>
+    )
+  }
+  if (conflict === false && locationSelected) {
+    return (
+      <span className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+        <Check size={12} />
+        Available
+      </span>
+    )
+  }
+  return <span className="text-xs text-mid-gray dark:text-dark-muted">—</span>
+}
+
 function EventDetails({ event }: { event: PendingEvent }) {
   return (
     <div className="text-sm text-mid-gray dark:text-dark-muted space-y-1">
@@ -73,10 +94,21 @@ export default function PendingQueueClient({
   batches,
   individualEvents,
   locations,
+  initialConflicts,
+  // Accepted for interface consistency with sibling calendar components
+  // (CalendarShell, CalendarDayPanel, etc., all of which take adminRole) and
+  // for any future role-gated UI here. Not consumed today — this page is
+  // already super_admin-only via the redirect guard in pending/page.tsx, and
+  // every mutating action (approveCalendarEvent/approveBatch/cancelCalendarEvent)
+  // independently re-verifies the role server-side.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  adminRole,
 }: {
   batches: PendingBatch[]
   individualEvents: PendingEvent[]
   locations: Location[]
+  initialConflicts: Record<string, boolean>
+  adminRole: AdminRole
 }) {
   const router = useRouter()
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
@@ -84,6 +116,7 @@ export default function PendingQueueClient({
   const [batchDefaultLocation, setBatchDefaultLocation] = useState<Record<string, string>>({})
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [conflictStatus, setConflictStatus] = useState<Record<string, boolean>>(initialConflicts)
 
   const isEmpty = batches.length === 0 && individualEvents.length === 0
 
@@ -144,6 +177,19 @@ export default function PendingQueueClient({
       return
     }
     router.refresh()
+  }
+
+  async function handleLocationChange(eventId: string, locationId: string, startTime: string, endTime: string) {
+    setLocationSelections((prev) => ({ ...prev, [eventId]: locationId }))
+    if (!locationId) {
+      setConflictStatus((prev) => ({ ...prev, [eventId]: false }))
+      return
+    }
+    const date = formatInTimeZone(new Date(startTime), CT, 'yyyy-MM-dd')
+    const startCT = formatInTimeZone(new Date(startTime), CT, 'HH:mm')
+    const endCT = formatInTimeZone(new Date(endTime), CT, 'HH:mm')
+    const result = await checkEventConflict(locationId, date, startCT, endCT, eventId)
+    setConflictStatus((prev) => ({ ...prev, [eventId]: result.conflict }))
   }
 
   function handleApplyDefaultLocation(batch: PendingBatch) {
@@ -262,12 +308,20 @@ export default function PendingQueueClient({
                           <LocationSelect
                             locations={locations}
                             value={locationSelections[event.id] ?? ''}
-                            onChange={(id) => setLocationSelections((prev) => ({ ...prev, [event.id]: id }))}
+                            onChange={(id) => handleLocationChange(event.id, id, event.start_time, event.end_time)}
+                          />
+                          <ConflictIndicator
+                            conflict={conflictStatus[event.id]}
+                            locationSelected={!!locationSelections[event.id]}
                           />
                           <button
                             type="button"
                             onClick={() => handleApproveSingle(event.id)}
-                            disabled={busyIds.has(event.id)}
+                            disabled={
+                              !locationSelections[event.id] ||
+                              conflictStatus[event.id] === true ||
+                              busyIds.has(event.id)
+                            }
                             className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             Approve
@@ -316,12 +370,20 @@ export default function PendingQueueClient({
                 <LocationSelect
                   locations={locations}
                   value={locationSelections[event.id] ?? event.location_id ?? ''}
-                  onChange={(id) => setLocationSelections((prev) => ({ ...prev, [event.id]: id }))}
+                  onChange={(id) => handleLocationChange(event.id, id, event.start_time, event.end_time)}
+                />
+                <ConflictIndicator
+                  conflict={conflictStatus[event.id]}
+                  locationSelected={!!(locationSelections[event.id] ?? event.location_id)}
                 />
                 <button
                   type="button"
                   onClick={() => handleApproveSingle(event.id)}
-                  disabled={busyIds.has(event.id)}
+                  disabled={
+                    !(locationSelections[event.id] ?? event.location_id) ||
+                    conflictStatus[event.id] === true ||
+                    busyIds.has(event.id)
+                  }
                   className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   Approve

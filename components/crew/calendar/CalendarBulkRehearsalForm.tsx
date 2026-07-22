@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Plus, Trash2 } from 'lucide-react'
@@ -17,12 +17,14 @@ export default function CalendarBulkRehearsalForm({
   adminRole,
   calendarEditor,
   locations,
+  initialDate,
   onClose,
   onSuccess,
 }: {
   adminRole: AdminRole
   calendarEditor: boolean
   locations: Array<{ id: string; name: string; color: string }>
+  initialDate?: string
   onClose: () => void
   onSuccess: () => void
 }) {
@@ -41,7 +43,7 @@ export default function CalendarBulkRehearsalForm({
       location_id: '',
       description: '',
       requirements: '',
-      dates: [{ date: '', start_time: '', end_time: '' }],
+      dates: [],
       contacts: [],
     },
   })
@@ -64,24 +66,37 @@ export default function CalendarBulkRehearsalForm({
   const [result, setResult] = useState<{ createdCount: number; failedDates?: { date: string; error: string }[] } | null>(
     null
   )
+  const [defaultStartTime, setDefaultStartTime] = useState('')
+  const [defaultEndTime, setDefaultEndTime] = useState('')
+  const [applyToAllError, setApplyToAllError] = useState<string | null>(null)
 
-  function sortDatesChronologically() {
-    const current = getValues('dates')
-    const sorted = current
-      .slice()
-      .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
-    replaceDates(sorted)
+  // Mount-only: seed exactly one date row so the form never opens fully
+  // empty — pre-filled with initialDate when the form was launched from a
+  // specific day (e.g. a day panel click).
+  useEffect(() => {
+    if (getValues('dates').length === 0) {
+      appendDate({ date: initialDate ?? '', start_time: defaultStartTime, end_time: defaultEndTime })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function sortDatesByDate(dates: RehearsalBatchFormData['dates']) {
+    return dates.slice().sort((a, b) => a.date.localeCompare(b.date))
   }
 
   function handleAddDate() {
-    appendDate({ date: '', start_time: '', end_time: '' })
+    const next = [...getValues('dates'), { date: '', start_time: defaultStartTime, end_time: defaultEndTime }]
+    replaceDates(sortDatesByDate(next))
   }
 
   function handleApplyTimeToAll() {
+    if (!defaultStartTime || !defaultEndTime) {
+      setApplyToAllError('Set default start and end times above before applying.')
+      return
+    }
+    setApplyToAllError(null)
     const current = getValues('dates')
-    if (current.length === 0) return
-    const { start_time, end_time } = current[0]
-    replaceDates(current.map((d) => ({ ...d, start_time, end_time })))
+    replaceDates(current.map((d) => ({ ...d, start_time: defaultStartTime, end_time: defaultEndTime })))
   }
 
   async function onSubmit(data: RehearsalBatchFormData) {
@@ -178,18 +193,37 @@ export default function CalendarBulkRehearsalForm({
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold text-dark dark:text-dark-text">
-                    Rehearsal Dates<span className="text-orange ml-0.5">*</span>
-                  </h3>
+                <h3 className="text-sm font-bold text-dark dark:text-dark-text mb-2">
+                  Rehearsal Dates<span className="text-orange ml-0.5">*</span>
+                </h3>
+                <div className="flex items-end gap-3 mb-3">
+                  <div className="flex-1">
+                    <label className={labelClasses}>Default Start Time</label>
+                    <input
+                      type="time"
+                      className={inputClasses}
+                      value={defaultStartTime}
+                      onChange={(e) => setDefaultStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className={labelClasses}>Default End Time</label>
+                    <input
+                      type="time"
+                      className={inputClasses}
+                      value={defaultEndTime}
+                      onChange={(e) => setDefaultEndTime(e.target.value)}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={handleApplyTimeToAll}
-                    className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+                    className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer whitespace-nowrap pb-2.5"
                   >
-                    Apply first time to all
+                    Apply to all dates
                   </button>
                 </div>
+                {applyToAllError && <p className={errorClasses}>{applyToAllError}</p>}
                 <div className="space-y-3">
                   {dateFields.map((field, index) => (
                     <div key={field.id} className="flex gap-2 items-end">
@@ -227,7 +261,7 @@ export default function CalendarBulkRehearsalForm({
                   ))}
                 </div>
                 {errors.dates?.root && <p className={errorClasses}>{errors.dates.root.message}</p>}
-                <div className="mt-3 flex items-center gap-4">
+                <div className="mt-3">
                   <button
                     type="button"
                     onClick={handleAddDate}
@@ -235,13 +269,6 @@ export default function CalendarBulkRehearsalForm({
                   >
                     <Plus size={14} />
                     Add Date
-                  </button>
-                  <button
-                    type="button"
-                    onClick={sortDatesChronologically}
-                    className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
-                  >
-                    Sort Chronologically
                   </button>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { hasConflict } from '@/lib/utils/calendar-conflict'
 import PendingQueueClient from '@/components/crew/calendar/PendingQueueClient'
 import type { CalendarEventType } from '@/types/calendar'
 import type { Location } from '@/types/show'
@@ -86,5 +87,24 @@ export default async function PendingQueuePage() {
   const individualEvents = events.filter((e) => !e.rehearsal_batch_id)
   const locations = (locationRows ?? []) as unknown as Location[]
 
-  return <PendingQueueClient batches={batches} individualEvents={individualEvents} locations={locations} />
+  // O(N pending events with preferred locations) — acceptable for expected queue size.
+  const initialConflicts: Record<string, boolean> = {}
+  for (const event of events) {
+    if (event.location_id) {
+      const startTime = new Date(event.start_time)
+      const endTime = new Date(event.end_time)
+      const conflict = await hasConflict(event.location_id, startTime, endTime, supabase, event.id)
+      initialConflicts[event.id] = conflict
+    }
+  }
+
+  return (
+    <PendingQueueClient
+      batches={batches}
+      individualEvents={individualEvents}
+      locations={locations}
+      initialConflicts={initialConflicts}
+      adminRole={adminUser.role}
+    />
+  )
 }
