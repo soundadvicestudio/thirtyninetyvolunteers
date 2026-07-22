@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatCT } from '@/lib/utils/date'
 import { acknowledgeMilestone } from '@/lib/actions/milestones'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export type PendingMilestoneRow = {
   id: string
@@ -71,9 +72,10 @@ export default function PendingMilestonesCard({ rows }: { rows: PendingMilestone
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-8">
-      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1">
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
         Milestone Acknowledgments{' '}
         <span className="text-mid-gray dark:text-dark-muted font-normal">({rows.length})</span>
+        <HelpTooltip anchor="milestones" label="Milestone Acknowledgments" />
       </h2>
       <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
         These volunteers recently hit a milestone — a personal thank-you goes a long way.

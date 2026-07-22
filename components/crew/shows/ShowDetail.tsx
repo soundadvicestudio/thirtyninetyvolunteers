@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
 import BulkEmailSection from '@/components/crew/shows/BulkEmailSection'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { AdminUser } from '@/lib/auth'
 import type {
   Show,
@@ -210,7 +211,10 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Volunteer Notifications</h2>
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3 flex items-center gap-1.5">
+        Volunteer Notifications
+        <HelpTooltip anchor="publish-show" label="Show Notifications" />
+      </h2>
 
       {alreadySent && (
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
@@ -400,8 +404,9 @@ function VolunteersTab({
                             <td className="px-4 py-2 text-dark dark:text-dark-text align-top">
                               {claim.volunteer_name}
                               {!claim.volunteer_id && (
-                                <span className="block text-xs text-orange">
+                                <span className="flex items-center gap-1 text-xs text-orange">
                                   ⚠ No linked volunteer — hours won&apos;t tally
+                                  <HelpTooltip anchor="hours" label="Hours Tallying" />
                                 </span>
                               )}
                             </td>

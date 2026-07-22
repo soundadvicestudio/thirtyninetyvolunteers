@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { PostShowReportData } from '@/types/show'
 
 function StatTile({
@@ -9,7 +11,7 @@ function StatTile({
 }: {
   label: string
   value: string | number
-  subtext?: string
+  subtext?: ReactNode
   colorClass?: string
 }) {
   return (
@@ -50,9 +52,12 @@ export default function PostShowReport({ data }: { data: PostShowReportData }) {
           label="Total Hours"
           value={data.totalHours.toFixed(1)}
           subtext={
-            data.totalPendingHoursCount > 0
-              ? `${data.totalPendingHoursCount} appearances pending hours confirmation`
-              : undefined
+            data.totalPendingHoursCount > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                {`${data.totalPendingHoursCount} appearances pending hours confirmation`}
+                <HelpTooltip anchor="hours" label="Hours Confirmation" />
+              </span>
+            ) : undefined
           }
         />
         <StatTile

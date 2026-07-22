@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { createShow, updateShow, sendShowNotifications } from '@/lib/actions/shows'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import {
   showFormSchema,
   NO_SEASON,
@@ -531,7 +532,10 @@ export default function ShowForm({
         </div>
 
         <div>
-          <label className={labelClasses}>Default Hours per Call</label>
+          <label className={`${labelClasses} flex items-center gap-1.5`}>
+            Default Hours per Call
+            <HelpTooltip anchor="default-hours" label="Default Hours" />
+          </label>
           <input
             type="number"
             step={0.5}
@@ -614,15 +618,18 @@ export default function ShowForm({
       )}
 
       <div className="space-y-2">
-        <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
-          <input
-            type="checkbox"
-            checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
-            className="mt-0.5"
-          />
-          Notify matching volunteers about this show
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
+            <input
+              type="checkbox"
+              checked={notify}
+              onChange={(e) => setNotify(e.target.checked)}
+              className="mt-0.5"
+            />
+            Notify matching volunteers about this show
+          </label>
+          <HelpTooltip anchor="publish-show" label="Send Notifications" />
+        </div>
         {notify && show?.notifications_sent_at && (
           <p className="text-sm text-orange">
             Notifications were previously sent for this show. Checking this will send again to all matching

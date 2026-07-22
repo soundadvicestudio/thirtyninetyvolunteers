@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { CommunicationHistoryEntry } from '@/types/volunteer'
 
 function getEmailTypeLabel(recipientType: string, recipientFilter: string | null): string {
@@ -26,21 +27,24 @@ export default function CommunicationHistory({ history }: { history: Communicati
 
   return (
     <section className="mt-10">
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="flex items-center gap-2 w-full text-left cursor-pointer"
-      >
-        <h2 className="text-lg font-semibold text-dark dark:text-dark-text">Communication History</h2>
-        <span className="text-sm text-mid-gray dark:text-dark-muted">
-          {history.length > 0 ? `(${history.length})` : '(None)'}
-        </span>
-        {isExpanded ? (
-          <ChevronUp size={18} className="text-mid-gray dark:text-dark-muted ml-auto" />
-        ) : (
-          <ChevronDown size={18} className="text-mid-gray dark:text-dark-muted ml-auto" />
-        )}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="flex items-center gap-2 flex-1 text-left cursor-pointer"
+        >
+          <h2 className="text-lg font-semibold text-dark dark:text-dark-text">Communication History</h2>
+          <span className="text-sm text-mid-gray dark:text-dark-muted">
+            {history.length > 0 ? `(${history.length})` : '(None)'}
+          </span>
+          {isExpanded ? (
+            <ChevronUp size={18} className="text-mid-gray dark:text-dark-muted ml-auto" />
+          ) : (
+            <ChevronDown size={18} className="text-mid-gray dark:text-dark-muted ml-auto" />
+          )}
+        </button>
+        <HelpTooltip anchor="volunteer-communication" label="Communication History" />
+      </div>
 
       {isExpanded && (
         <div className="mt-4">

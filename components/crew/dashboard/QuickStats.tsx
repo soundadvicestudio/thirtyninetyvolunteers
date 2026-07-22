@@ -2,6 +2,7 @@ import { Users, CalendarDays, ClipboardList, UserPlus } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getServerClient } from '@/lib/supabase/server'
 import { getActiveVolunteerCount } from '@/lib/volunteers/list'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const CT = 'America/Chicago'
 
@@ -84,10 +85,12 @@ function StatTile({
   icon: Icon,
   value,
   label,
+  helpAnchor,
 }: {
   icon: typeof Users
   value: number
   label: string
+  helpAnchor?: string
 }) {
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-5 flex items-center gap-4">
@@ -96,7 +99,10 @@ function StatTile({
       </div>
       <div>
         <p className="text-2xl font-bold text-dark dark:text-dark-text leading-tight">{value}</p>
-        <p className="text-xs text-mid-gray dark:text-dark-muted">{label}</p>
+        <p className="text-xs text-mid-gray dark:text-dark-muted flex items-center gap-1.5">
+          {label}
+          {helpAnchor && <HelpTooltip anchor={helpAnchor} label={label} />}
+        </p>
       </div>
     </div>
   )
@@ -116,7 +122,12 @@ export default async function QuickStats() {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <StatTile icon={Users} value={activeVolunteers} label="Total Active Volunteers" />
       <StatTile icon={CalendarDays} value={upcomingShows} label="Upcoming Shows This Month" />
-      <StatTile icon={ClipboardList} value={volunteersNeeded} label="Volunteers Needed" />
+      <StatTile
+        icon={ClipboardList}
+        value={volunteersNeeded}
+        label="Volunteers Needed"
+        helpAnchor="show-volunteers"
+      />
       <StatTile icon={UserPlus} value={recentSignups} label="New Volunteers (7 Days)" />
     </div>
   )

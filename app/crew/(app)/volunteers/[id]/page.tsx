@@ -9,6 +9,7 @@ import EditorNotes from '@/components/crew/volunteers/EditorNotes'
 import StatusToggle from '@/components/crew/volunteers/StatusToggle'
 import ManualHoursForm from '@/components/crew/volunteers/ManualHoursForm'
 import CommunicationHistory from '@/components/crew/volunteers/CommunicationHistory'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { VolunteerProfile, CommunicationHistoryEntry } from '@/types/volunteer'
 
 type RawCallRow = {
@@ -286,8 +287,9 @@ export default async function VolunteerProfilePage({
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold text-dark dark:text-dark-text mb-1">
+        <h2 className="text-lg font-semibold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
           Hours
+          <HelpTooltip anchor="hours" label="Total Hours" />
         </h2>
         <p className="text-2xl font-bold text-navy dark:text-steel mb-4">
           {volunteer.total_hours}
@@ -376,7 +378,10 @@ export default async function VolunteerProfilePage({
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold text-dark dark:text-dark-text mb-4">Milestone History</h2>
+        <h2 className="text-lg font-semibold text-dark dark:text-dark-text mb-4 flex items-center gap-1.5">
+          Milestone History
+          <HelpTooltip anchor="milestones" label="Milestone History" />
+        </h2>
         {milestones.length === 0 ? (
           <p className="text-mid-gray dark:text-dark-muted text-sm">No milestones yet.</p>
         ) : (
@@ -398,7 +403,10 @@ export default async function VolunteerProfilePage({
 
       {admin.role !== 'viewer' && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-dark mb-4">Editor Notes</h2>
+          <h2 className="text-lg font-semibold text-dark mb-4 flex items-center gap-1.5">
+            Editor Notes
+            <HelpTooltip anchor="volunteer-profile" label="Editor Notes" />
+          </h2>
           <EditorNotes
             volunteerId={volunteer.id}
             notes={notes}

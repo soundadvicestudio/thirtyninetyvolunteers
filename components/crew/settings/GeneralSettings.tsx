@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { saveDefaultHours, saveDefaultReplyTo } from '@/lib/actions/settings'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const inputClasses =
   'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
@@ -72,8 +73,9 @@ export default function GeneralSettings({
   return (
     <div className="max-w-xl space-y-8">
       <section>
-        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1">
+        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
           Default Volunteer Hours
+          <HelpTooltip anchor="default-hours" label="Default Volunteer Hours" />
         </h2>
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
           These values are applied when creating a new show. Changing them does not affect

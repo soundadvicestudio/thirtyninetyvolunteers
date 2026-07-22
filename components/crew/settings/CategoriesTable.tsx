@@ -9,6 +9,7 @@ import {
   toggleVisibility,
   reorderCategory,
 } from '@/lib/actions/categories'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 type Category = {
   id: string
@@ -253,7 +254,10 @@ export default function CategoriesTable({ categories }: { categories: Category[]
                 Description
               </th>
               <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
-                Visibility
+                <span className="flex items-center gap-1.5">
+                  Visibility
+                  <HelpTooltip anchor="categories" label="Category Visibility" />
+                </span>
               </th>
               <th className="px-4 py-3 text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">Actions</th>
             </tr>

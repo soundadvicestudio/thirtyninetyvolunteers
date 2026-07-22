@@ -7,6 +7,7 @@ import {
   isNonDefaultFilter,
   type VolunteersUrlState,
 } from '@/lib/volunteers/url'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 type Category = { id: string; name: string }
 
@@ -178,7 +179,10 @@ export default function FilterPanel({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Milestone Tier</label>
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">
+            Milestone Tier
+            <HelpTooltip anchor="milestones" label="Milestone Tier Filter" />
+          </label>
           <select
             value={state.milestoneTier}
             onChange={(e) => navigate({ milestoneTier: e.target.value as VolunteersUrlState['milestoneTier'] })}

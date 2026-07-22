@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { confirmHours } from '@/lib/actions/attendance'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export type PendingHoursRow = {
   id: string
@@ -105,8 +106,9 @@ export default function PendingHoursCard({ rows }: { rows: PendingHoursRow[] }) 
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-8">
-      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-4">
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-4 flex items-center gap-1.5">
         Hours Review <span className="text-mid-gray dark:text-dark-muted font-normal">({rows.length})</span>
+        <HelpTooltip anchor="hours" label="Pending Hours Review" />
       </h2>
 
       <div className="space-y-6">

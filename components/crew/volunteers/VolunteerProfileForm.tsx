@@ -8,6 +8,7 @@ import { Pencil } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { formatPhone } from '@/lib/utils/phone'
 import { updateVolunteer } from '@/lib/actions/volunteers'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import { volunteerProfileSchema, type VolunteerProfileFormValues } from '@/lib/validations/volunteerProfile'
 import type { VolunteerProfile } from '@/types/volunteer'
 import type { AdminUser } from '@/lib/auth'
@@ -151,7 +152,10 @@ export default function VolunteerProfileForm({
             <Field label="Age Range" value={ageRangeLabel(volunteer.age_range)} />
             <Field label="School / Organization" value={volunteer.school} />
             <div>
-              <p className="text-sm text-mid-gray dark:text-dark-muted">Service Hours Required</p>
+              <p className="text-sm text-mid-gray dark:text-dark-muted flex items-center gap-1.5">
+                Service Hours Required
+                <HelpTooltip anchor="volunteer-profile" label="Service Hours Badge" />
+              </p>
               {volunteer.requires_service_hours ? (
                 <p className="text-orange font-medium">Yes</p>
               ) : volunteer.school ? (
