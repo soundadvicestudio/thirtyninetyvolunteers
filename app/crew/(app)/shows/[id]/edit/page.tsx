@@ -90,11 +90,26 @@ export default async function EditShowPage({
     redirect('/crew/shows')
   }
 
+  const dateIds = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => d.id)
+  const { data: bufferRows } =
+    dateIds.length > 0
+      ? await supabase
+          .from('show_date_buffer')
+          .select('show_date_id, buffer_before_minutes, buffer_after_minutes')
+          .in('show_date_id', dateIds)
+      : { data: [] as { show_date_id: string; buffer_before_minutes: number; buffer_after_minutes: number }[] }
+
+  const bufferByDateId = new Map(
+    (bufferRows ?? []).map((b) => [b.show_date_id, b])
+  )
+
   const dates: ShowDateWithRoles[] = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => ({
     id: d.id,
     show_id: d.show_id,
     show_date: d.show_date,
     show_time: d.show_time,
+    buffer_before_minutes: bufferByDateId.get(d.id)?.buffer_before_minutes ?? 0,
+    buffer_after_minutes: bufferByDateId.get(d.id)?.buffer_after_minutes ?? 0,
     roles: (d.volunteer_roles ?? []).map((r) => ({ ...r, show_date_id: d.id })),
   }))
 

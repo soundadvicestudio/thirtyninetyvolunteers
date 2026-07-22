@@ -63,6 +63,8 @@ function buildPayload(data: ShowFormValues, status: 'draft' | 'live'): ShowSubmi
       dbId: d.dbId,
       show_date: d.show_date,
       show_time: d.show_time,
+      buffer_before_minutes: d.buffer_before_minutes,
+      buffer_after_minutes: d.buffer_after_minutes,
       roles: d.roles.map((r) => ({
         dbId: r.dbId,
         role_name: r.role_name.trim(),
@@ -162,6 +164,35 @@ function DateRow({
         </button>
       </div>
       {dateWarning && <p className="text-sm text-orange">{dateWarning}</p>}
+
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <div className="flex-1">
+          <label className={labelClasses}>Reserve before (minutes)</label>
+          <input
+            type="number"
+            min={0}
+            step={15}
+            className={inputClasses}
+            {...register(`dates.${dateIndex}.buffer_before_minutes`, { valueAsNumber: true })}
+          />
+          {dateErrors?.buffer_before_minutes && (
+            <p className={errorClasses}>{dateErrors.buffer_before_minutes.message}</p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label className={labelClasses}>Reserve after (minutes)</label>
+          <input
+            type="number"
+            min={0}
+            step={15}
+            className={inputClasses}
+            {...register(`dates.${dateIndex}.buffer_after_minutes`, { valueAsNumber: true })}
+          />
+          {dateErrors?.buffer_after_minutes && (
+            <p className={errorClasses}>{dateErrors.buffer_after_minutes.message}</p>
+          )}
+        </div>
+      </div>
 
       <div className="border-t border-divider dark:border-dark-border pt-4">
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -301,6 +332,8 @@ export default function ShowForm({
             dbId: d.id,
             show_date: d.show_date,
             show_time: d.show_time.slice(0, 5),
+            buffer_before_minutes: d.buffer_before_minutes,
+            buffer_after_minutes: d.buffer_after_minutes,
             roles: d.roles.length
               ? d.roles.map((r) => ({
                   dbId: r.id,
@@ -310,7 +343,16 @@ export default function ShowForm({
                 }))
               : [],
           }))
-        : [{ dbId: null, show_date: '', show_time: '', roles: [{ ...BLANK_ROLE }] }],
+        : [
+            {
+              dbId: null,
+              show_date: '',
+              show_time: '',
+              buffer_before_minutes: 0,
+              buffer_after_minutes: 0,
+              roles: [{ ...BLANK_ROLE }],
+            },
+          ],
       editorIds: show?.editorIds ?? [],
     },
   })
@@ -578,7 +620,14 @@ export default function ShowForm({
         <button
           type="button"
           onClick={() =>
-            appendDate({ dbId: null, show_date: '', show_time: '', roles: [{ ...BLANK_ROLE }] })
+            appendDate({
+              dbId: null,
+              show_date: '',
+              show_time: '',
+              buffer_before_minutes: 0,
+              buffer_after_minutes: 0,
+              roles: [{ ...BLANK_ROLE }],
+            })
           }
           className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
         >

@@ -86,6 +86,10 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     show_id: d.show_id,
     show_date: d.show_date,
     show_time: d.show_time,
+    // Buffer times aren't displayed on this page (only on the edit form) —
+    // defaulted here purely to satisfy the shared ShowDate type.
+    buffer_before_minutes: 0,
+    buffer_after_minutes: 0,
     roles: (d.volunteer_roles ?? []).map((r) => ({ ...r, show_date_id: d.id })),
   }))
 

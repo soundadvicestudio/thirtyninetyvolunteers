@@ -28,6 +28,8 @@ export type ShowDate = {
   show_id: string
   show_date: string
   show_time: string
+  buffer_before_minutes: number
+  buffer_after_minutes: number
 }
 
 export type ShowRole = {

@@ -39,6 +39,8 @@ export const showFormSchema = z
           dbId: z.string().nullable(),
           show_date: z.string().min(1, 'Date is required'),
           show_time: z.string().min(1, 'Time is required'),
+          buffer_before_minutes: z.number().int().min(0).default(0),
+          buffer_after_minutes: z.number().int().min(0).default(0),
           roles: z.array(roleFormSchema).min(1, 'At least one role is required for this date'),
         })
       )
@@ -82,6 +84,8 @@ export const showSubmitSchema = z.object({
         dbId: z.string().uuid().nullable(),
         show_date: z.string().min(1),
         show_time: z.string().min(1),
+        buffer_before_minutes: z.number().int().min(0).default(0),
+        buffer_after_minutes: z.number().int().min(0).default(0),
         roles: z.array(roleSubmitSchema).min(1),
       })
     )

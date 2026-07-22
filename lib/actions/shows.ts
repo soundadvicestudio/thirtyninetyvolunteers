@@ -7,6 +7,41 @@ import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { showSubmitSchema, type ShowSubmitPayload } from '@/lib/validations/show'
 import { buildCategoryMatchNotificationPayload, buildShowBulkEmailPayload, sendBatchEmails } from '@/lib/email'
+import { syncShowDateToCalendar } from '@/lib/actions/calendar-sync'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Buffer upsert shared by createShow() and updateShow(). Skips the write
+// entirely for a brand-new date with both values at 0 (no row needed);
+// for an existing date being zeroed out, checks whether a row already
+// exists so it can be updated back to 0 rather than left stale.
+async function upsertShowDateBuffer(
+  supabase: SupabaseClient,
+  showDateId: string,
+  isNewDate: boolean,
+  bufferBeforeMinutes: number,
+  bufferAfterMinutes: number
+) {
+  const hasNonZeroBuffer = bufferBeforeMinutes > 0 || bufferAfterMinutes > 0
+
+  if (!hasNonZeroBuffer) {
+    if (isNewDate) return
+    const { data: existingBuffer } = await supabase
+      .from('show_date_buffer')
+      .select('id')
+      .eq('show_date_id', showDateId)
+      .maybeSingle()
+    if (!existingBuffer) return
+  }
+
+  await supabase.from('show_date_buffer').upsert(
+    {
+      show_date_id: showDateId,
+      buffer_before_minutes: bufferBeforeMinutes,
+      buffer_after_minutes: bufferAfterMinutes,
+    },
+    { onConflict: 'show_date_id' }
+  )
+}
 
 export type ShowActionResult =
   | { success: true; showId: string; warnings?: { blockedDates: string[]; blockedRoles: string[] } }
@@ -78,6 +113,24 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
       return {
         error: 'The show was created, but dates failed to save. Edit the show to add dates.',
       }
+    }
+
+    try {
+      await syncShowDateToCalendar(insertedDate.id, supabase)
+    } catch (err) {
+      console.error('createShow calendar sync error:', err)
+    }
+
+    try {
+      await upsertShowDateBuffer(
+        supabase,
+        insertedDate.id,
+        true,
+        d.buffer_before_minutes,
+        d.buffer_after_minutes
+      )
+    } catch (err) {
+      console.error('createShow buffer upsert error:', err)
     }
 
     const { error: rolesError } = await supabase.from('volunteer_roles').insert(
@@ -227,6 +280,24 @@ export async function updateShow(
         continue
       }
       dateId = insertedDate.id
+    }
+
+    try {
+      await syncShowDateToCalendar(dateId, supabase)
+    } catch (err) {
+      console.error('updateShow calendar sync error:', err)
+    }
+
+    try {
+      await upsertShowDateBuffer(
+        supabase,
+        dateId,
+        !d.dbId,
+        d.buffer_before_minutes,
+        d.buffer_after_minutes
+      )
+    } catch (err) {
+      console.error('updateShow buffer upsert error:', err)
     }
 
     for (const r of d.roles) {

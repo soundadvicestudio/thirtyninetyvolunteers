@@ -42,6 +42,16 @@ export async function GET(request: Request) {
         } catch (err) {
           console.error('Failed to update last_login:', err)
         }
+
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (adminUser?.role === 'production') {
+          return NextResponse.redirect(`${origin}/crew/calendar`)
+        }
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
