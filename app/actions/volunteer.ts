@@ -58,13 +58,13 @@ export async function submitVolunteerForm(
     // FIELD MAPPING: collapse Other sub-fields
     const pronounsValue =
       data.pronouns === 'Other'
-        ? (data.pronouns_other ?? null)
-        : (data.pronouns ?? null)
+        ? (data.pronouns_other || null)
+        : (data.pronouns || null)
 
     const referralSourceValue =
       data.referral_source_label === 'Other'
-        ? (data.referral_source_other ?? null)
-        : (data.referral_source_label ?? null)
+        ? (data.referral_source_other || null)
+        : (data.referral_source_label || null)
 
     // INSERT VOLUNTEER
     const { data: newVolunteer, error: insertError } = await supabase
@@ -155,13 +155,13 @@ export async function mergeVolunteer(
 
     const pronounsValue =
       data.pronouns === 'Other'
-        ? (data.pronouns_other ?? null)
-        : (data.pronouns ?? null)
+        ? (data.pronouns_other || null)
+        : (data.pronouns || null)
 
     const referralSourceValue =
       data.referral_source_label === 'Other'
-        ? (data.referral_source_other ?? null)
-        : (data.referral_source_label ?? null)
+        ? (data.referral_source_other || null)
+        : (data.referral_source_label || null)
 
     const { error: updateError } = await supabase
       .from('volunteers')

@@ -35,7 +35,7 @@ export async function sendVolunteerConfirmationEmail({
          </p>
          <ul style="color:#555;margin:0;padding-left:20px;">
            ${categoryNames.map(n =>
-             `<li style="margin-bottom:4px;">${n}</li>`
+             `<li style="margin-bottom:4px;">${escapeHtml(n)}</li>`
            ).join('')}
          </ul>`
       : ''

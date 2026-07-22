@@ -1,5 +1,6 @@
 'use server'
 
+import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
@@ -644,6 +645,15 @@ export type SendShowBulkEmailResult = { success: boolean; sentCount: number; err
 
 const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const MAX_BULK_EMAIL_SUBJECT_LENGTH = 200
+const MAX_BULK_EMAIL_BODY_LENGTH = 10000
+
+const sendShowBulkEmailSchema = z.object({
+  subject: z.string().trim().min(1, 'Subject required').max(MAX_BULK_EMAIL_SUBJECT_LENGTH, 'Subject is too long.'),
+  body: z.string().trim().min(1, 'Message required').max(MAX_BULK_EMAIL_BODY_LENGTH, 'Message is too long.'),
+  replyTo: z.string().trim().regex(BASIC_EMAIL_PATTERN, 'Invalid reply-to address'),
+})
+
 // Admin-authenticated action — called from the show detail Overview tab's
 // "Message Volunteers" quick action (Editor/Super Admin only). Uses
 // getServerClient() + getAdminUser(), matching every other export in this
@@ -654,19 +664,15 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
     return { success: false, sentCount: 0, error: 'unauthorized' }
   }
 
-  const subject = params.subject.trim()
-  const body = params.body.trim()
-  const replyTo = params.replyTo.trim()
-
-  if (!subject) {
-    return { success: false, sentCount: 0, error: 'Subject required' }
+  const parsed = sendShowBulkEmailSchema.safeParse({
+    subject: params.subject,
+    body: params.body,
+    replyTo: params.replyTo,
+  })
+  if (!parsed.success) {
+    return { success: false, sentCount: 0, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
   }
-  if (!body) {
-    return { success: false, sentCount: 0, error: 'Message required' }
-  }
-  if (!BASIC_EMAIL_PATTERN.test(replyTo)) {
-    return { success: false, sentCount: 0, error: 'Invalid reply-to address' }
-  }
+  const { subject, body, replyTo } = parsed.data
 
   try {
     const supabase = await getServerClient()

@@ -43,14 +43,51 @@ export default async function DashboardPage() {
   }
 
   const supabase = await getServerClient()
-  const { data: events } = await supabase.rpc('get_activity_feed', { p_limit: 10, p_offset: 0 })
 
-  const [{ data: pinnedSetting }, { data: seasons }] = await Promise.all([
+  // All five queries below are mutually independent — none depends on
+  // another's result (the two role-gated ones only need admin.role, already
+  // available) — so they run in a single Promise.all instead of up to four
+  // sequential await stages.
+  const [
+    { data: events },
+    { data: pinnedSetting },
+    { data: seasons },
+    { data: pendingMilestones },
+    { data: pendingRows },
+  ] = await Promise.all([
+    supabase.rpc('get_activity_feed', { p_limit: 10, p_offset: 0 }),
     supabase.from('app_settings').select('value').eq('key', 'dashboard_season_id').maybeSingle(),
     supabase
       .from('seasons')
       .select('id, name')
       .order('start_date', { ascending: false, nullsFirst: false }),
+    admin.role !== 'viewer'
+      ? supabase
+          .from('milestone_log')
+          .select(
+            `
+            id, milestone_hours, milestone_label, triggered_at,
+            volunteer:volunteers(id, full_name)
+            `
+          )
+          .eq('editor_acknowledged', false)
+          .order('triggered_at', { ascending: false })
+      : Promise.resolve({ data: [] as RawPendingMilestoneRow[] }),
+    admin.role !== 'viewer'
+      ? supabase
+          .from('attendance')
+          .select(
+            `
+            id, hours_logged, volunteer_id, show_id, show_date_id,
+            volunteer:volunteers(id, full_name),
+            show_date:show_dates(show_date, show_id, show:shows(id, name, show_type, default_hours)),
+            slot_claim:slot_claims(volunteer_role:volunteer_roles(role_name))
+            `
+          )
+          .eq('status', 'showed')
+          .eq('hours_confirmed', false)
+          .order('show_date_id', { ascending: false })
+      : Promise.resolve({ data: [] as RawPendingHoursRow[] }),
   ])
 
   const pinnedSeasonId = pinnedSetting?.value ? pinnedSetting.value : null
@@ -59,50 +96,22 @@ export default async function DashboardPage() {
     ? (seasonList.find((s) => s.id === pinnedSeasonId)?.name ?? null)
     : null
 
-  let pendingMilestoneRows: PendingMilestoneRow[] = []
-  if (admin.role !== 'viewer') {
-    const { data: pendingMilestones } = await supabase
-      .from('milestone_log')
-      .select(
-        `
-        id, milestone_hours, milestone_label, triggered_at,
-        volunteer:volunteers(id, full_name)
-        `
-      )
-      .eq('editor_acknowledged', false)
-      .order('triggered_at', { ascending: false })
+  const pendingMilestoneRows: PendingMilestoneRow[] = (
+    (pendingMilestones ?? []) as unknown as RawPendingMilestoneRow[]
+  ).map((row) => ({
+    id: row.id,
+    milestoneLabel: row.milestone_label,
+    triggeredAt: row.triggered_at,
+    volunteerId: row.volunteer?.id ?? null,
+    volunteerName: row.volunteer?.full_name ?? 'Unknown Volunteer',
+  }))
 
-    pendingMilestoneRows = ((pendingMilestones ?? []) as unknown as RawPendingMilestoneRow[]).map((row) => ({
-      id: row.id,
-      milestoneLabel: row.milestone_label,
-      triggeredAt: row.triggered_at,
-      volunteerId: row.volunteer?.id ?? null,
-      volunteerName: row.volunteer?.full_name ?? 'Unknown Volunteer',
-    }))
-  }
-
-  let pendingHoursRows: PendingHoursRow[] = []
-  if (admin.role !== 'viewer') {
-    const { data: pendingRows } = await supabase
-      .from('attendance')
-      .select(
-        `
-        id, hours_logged, volunteer_id, show_id, show_date_id,
-        volunteer:volunteers(id, full_name),
-        show_date:show_dates(show_date, show_id, show:shows(id, name, show_type, default_hours)),
-        slot_claim:slot_claims(volunteer_role:volunteer_roles(role_name))
-        `
-      )
-      .eq('status', 'showed')
-      .eq('hours_confirmed', false)
-      .order('show_date_id', { ascending: false })
-
-    const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
-    const pastRows = ((pendingRows ?? []) as unknown as RawPendingHoursRow[]).filter(
-      (row) => row.show_date && row.show_date.show_date < todayCT
-    )
-
-    pendingHoursRows = pastRows.map((row) => ({
+  const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+  const pendingHoursRows: PendingHoursRow[] = (
+    (pendingRows ?? []) as unknown as RawPendingHoursRow[]
+  )
+    .filter((row) => row.show_date && row.show_date.show_date < todayCT)
+    .map((row) => ({
       id: row.id,
       hoursLogged: Number(row.hours_logged),
       volunteerId: row.volunteer_id,
@@ -112,7 +121,6 @@ export default async function DashboardPage() {
       showName: row.show_date?.show?.name ?? 'Unknown Show',
       showDate: row.show_date?.show_date ?? '',
     }))
-  }
 
   return (
     <div>
