@@ -165,8 +165,8 @@ export default function CalendarEventForm({
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-[60]" onClick={onClose} aria-hidden="true" />
-      <div className="fixed inset-0 z-[61] flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-white dark:bg-dark-surface rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col pointer-events-auto">
+      <div className="fixed inset-0 z-[61] flex items-end md:items-center justify-center md:p-4 pointer-events-none">
+        <div className="bg-white dark:bg-dark-surface rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-lg max-h-[90vh] flex flex-col pointer-events-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-divider dark:border-dark-border shrink-0">
             <h2 className="text-lg font-bold text-dark dark:text-dark-text">
               {isEdit ? 'Edit Event' : canDirectCreate ? 'Add to Calendar' : 'Submit for Approval'}
@@ -347,7 +347,7 @@ export default function CalendarEventForm({
             </div>
           </form>
 
-          <div className="px-5 py-4 border-t border-divider dark:border-dark-border shrink-0 space-y-3">
+          <div className="sticky bottom-0 bg-white dark:bg-dark-surface px-5 pt-3 pb-4 border-t border-divider dark:border-dark-border shrink-0 space-y-3">
             {serverError && (
               <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
                 {serverError}

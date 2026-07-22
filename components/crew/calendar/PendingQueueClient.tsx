@@ -317,7 +317,7 @@ export default function PendingQueueClient({
                       {batch.events.map((event) => (
                         <div
                           key={event.id}
-                          className="flex items-center gap-3 flex-wrap rounded-lg border border-divider dark:border-dark-border p-3"
+                          className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-divider dark:border-dark-border p-3"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>

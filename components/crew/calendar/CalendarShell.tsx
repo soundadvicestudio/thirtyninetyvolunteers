@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, ChevronDown, CalendarSearch, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarSearch, Download, MoreHorizontal } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getWeekGridDays } from '@/lib/utils/calendar-availability'
 import CalendarFilterBar from './CalendarFilterBar'
@@ -72,7 +72,6 @@ export default function CalendarShell({
   initialLocationFilter,
   initialTypeFilter,
   initialSeason,
-  initialShowLocations,
 }: {
   events: CalendarEvent[]
   locations: Location[]
@@ -87,7 +86,6 @@ export default function CalendarShell({
   initialLocationFilter: string[]
   initialTypeFilter: string[]
   initialSeason: string | null
-  initialShowLocations: string
 }) {
   const router = useRouter()
   const [view, setView] = useState<CalendarView>(
@@ -97,7 +95,6 @@ export default function CalendarShell({
   const [locationFilter, setLocationFilter] = useState<string[]>(initialLocationFilter)
   const [typeFilter, setTypeFilter] = useState<string[]>(initialTypeFilter)
   const [seasonFilter, setSeasonFilter] = useState<string | null>(initialSeason)
-  const [showLocations, setShowLocations] = useState(initialShowLocations)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -105,8 +102,10 @@ export default function CalendarShell({
   const [bulkFormOpen, setBulkFormOpen] = useState(false)
   const [bookSpaceOpen, setBookSpaceOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [prefilledBooking, setPrefilledBooking] = useState<CalendarBookingPrefill | null>(null)
   const actionMenuRef = useRef<HTMLDivElement>(null)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
 
   const canDirectCreate = adminRole === 'super_admin' || calendarEditor
 
@@ -115,6 +114,9 @@ export default function CalendarShell({
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
         setActionMenuOpen(false)
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false)
+      }
     }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
@@ -122,21 +124,13 @@ export default function CalendarShell({
 
   const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
 
-  function buildUrl(
-    nextView: CalendarView,
-    nextDate: string,
-    locs: string[],
-    types: string[],
-    season: string | null,
-    showLocs: string
-  ) {
+  function buildUrl(nextView: CalendarView, nextDate: string, locs: string[], types: string[], season: string | null) {
     const params = new URLSearchParams()
     params.set('view', nextView)
     params.set('date', nextDate)
     if (locs.length) params.set('locations', locs.join(','))
     if (types.length) params.set('types', types.join(','))
     if (season) params.set('season', season)
-    if (showLocs !== 'all') params.set('show_locations', showLocs)
     return `/crew/calendar?${params.toString()}`
   }
 
@@ -148,15 +142,15 @@ export default function CalendarShell({
     setView(nextView)
     setFocusedDate(nextDate)
     setSeasonFilter(nextSeason)
-    router.push(buildUrl(nextView, nextDate, locationFilter, typeFilter, nextSeason, showLocations))
+    router.push(buildUrl(nextView, nextDate, locationFilter, typeFilter, nextSeason))
   }
 
-  // Location/type/showLocations changes are applied client-side only — the
-  // already-fetched events array is filtered in place. The URL is still
-  // updated (for shareable links) via direct history manipulation,
-  // bypassing the Next.js router so no server re-fetch is triggered.
-  function syncFilterUrl(locs: string[], types: string[], showLocs: string) {
-    const url = buildUrl(view, focusedDate, locs, types, seasonFilter, showLocs)
+  // Location/type changes are applied client-side only — the already-fetched
+  // events array is filtered in place. The URL is still updated (for
+  // shareable links) via direct history manipulation, bypassing the
+  // Next.js router so no server re-fetch is triggered.
+  function syncFilterUrl(locs: string[], types: string[]) {
+    const url = buildUrl(view, focusedDate, locs, types, seasonFilter)
     window.history.replaceState(null, '', url)
   }
 
@@ -180,21 +174,16 @@ export default function CalendarShell({
 
   function handleLocationFilterChange(ids: string[]) {
     setLocationFilter(ids)
-    syncFilterUrl(ids, typeFilter, showLocations)
+    syncFilterUrl(ids, typeFilter)
   }
 
   function handleTypeFilterChange(types: string[]) {
     setTypeFilter(types)
-    syncFilterUrl(locationFilter, types, showLocations)
+    syncFilterUrl(locationFilter, types)
   }
 
   function handleSeasonFilterChange(id: string | null) {
     navigate(view, focusedDate, id)
-  }
-
-  function handleShowLocationsChange(val: string) {
-    setShowLocations(val)
-    syncFilterUrl(locationFilter, typeFilter, val)
   }
 
   function handleClearFilters() {
@@ -204,7 +193,7 @@ export default function CalendarShell({
       // Season requires a server re-fetch to actually clear.
       navigate(view, focusedDate, null)
     } else {
-      syncFilterUrl([], [], showLocations)
+      syncFilterUrl([], [])
     }
   }
 
@@ -282,39 +271,97 @@ export default function CalendarShell({
           <span className="text-sm font-semibold text-dark dark:text-dark-text ml-2">{periodLabel}</span>
 
           <div className="ml-auto flex items-center gap-2">
-            {adminRole === 'super_admin' && (
-              <Link
-                href="/crew/calendar/pending"
-                className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline"
-              >
-                Pending Requests
-                {pendingCount > 0 && (
-                  <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setExportModalOpen(true)}
-              className="flex items-center gap-1.5 border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
-            >
-              <Download size={16} />
-              Export
-            </button>
-
-            {canDirectCreate && (
+            {/* Mobile: Pending Requests, Export, and Book Space collapse into a
+                "More" menu — the main action button below always stays visible. */}
+            <div className="md:hidden relative" ref={moreMenuRef}>
               <button
                 type="button"
-                onClick={() => setBookSpaceOpen(true)}
-                className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                onClick={() => setMoreMenuOpen((o) => !o)}
+                aria-label="More calendar actions"
+                className="p-2 rounded-md border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
               >
-                <CalendarSearch size={16} />
-                Book Space
+                <MoreHorizontal size={18} />
               </button>
-            )}
+              {moreMenuOpen && (
+                <div className="absolute right-0 z-20 mt-1 w-52 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg py-1">
+                  {adminRole === 'super_admin' && (
+                    <Link
+                      href="/crew/calendar/pending"
+                      onClick={() => setMoreMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg"
+                    >
+                      Pending Requests
+                      {pendingCount > 0 && (
+                        <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false)
+                      setExportModalOpen(true)
+                    }}
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                  >
+                    <Download size={14} />
+                    Export
+                  </button>
+                  {canDirectCreate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreMenuOpen(false)
+                        setBookSpaceOpen(true)
+                      }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                    >
+                      <CalendarSearch size={14} />
+                      Book Space
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: full button row */}
+            <div className="hidden md:flex items-center gap-2">
+              {adminRole === 'super_admin' && (
+                <Link
+                  href="/crew/calendar/pending"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline"
+                >
+                  Pending Requests
+                  {pendingCount > 0 && (
+                    <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+                      {pendingCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setExportModalOpen(true)}
+                className="flex items-center gap-1.5 border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+              >
+                <Download size={16} />
+                Export
+              </button>
+
+              {canDirectCreate && (
+                <button
+                  type="button"
+                  onClick={() => setBookSpaceOpen(true)}
+                  className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                >
+                  <CalendarSearch size={16} />
+                  Book Space
+                </button>
+              )}
+            </div>
 
             <div className="relative" ref={actionMenuRef}>
               <button
@@ -360,12 +407,9 @@ export default function CalendarShell({
         currentLocationFilter={locationFilter}
         currentTypeFilter={typeFilter}
         currentSeasonFilter={seasonFilter}
-        showLocations={showLocations}
-        activeView={view}
         onLocationFilterChange={handleLocationFilterChange}
         onTypeFilterChange={handleTypeFilterChange}
         onSeasonFilterChange={handleSeasonFilterChange}
-        onShowLocationsChange={handleShowLocationsChange}
         onClearFilters={handleClearFilters}
         hasActiveFilters={hasActiveFilters}
       />
@@ -385,9 +429,7 @@ export default function CalendarShell({
           <CalendarWeekView
             events={filteredEvents}
             bufferData={bufferData}
-            locations={locations}
             focusedDate={focusedDate}
-            showAllLocations={showLocations === 'all'}
             onDayClick={setSelectedDate}
             adminRole={adminRole}
           />

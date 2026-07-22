@@ -48,7 +48,6 @@ export default async function CalendarPage({
     locations?: string
     types?: string
     season?: string
-    show_locations?: string
   }>
 }) {
   const adminUser = await getAdminUser()
@@ -63,7 +62,6 @@ export default async function CalendarPage({
   const locationsFilter = params.locations ? params.locations.split(',').filter(Boolean) : []
   const typesFilter = params.types ? params.types.split(',').filter(Boolean) : []
   const season = params.season ?? null
-  const showLocationsParam = params.show_locations ?? 'all'
 
   // Fetch date range in UTC, computed per view. Filters (location/type)
   // are applied client-side in CalendarShell — the server fetch always
@@ -218,7 +216,6 @@ export default async function CalendarPage({
       initialLocationFilter={locationsFilter}
       initialTypeFilter={typesFilter}
       initialSeason={season}
-      initialShowLocations={showLocationsParam}
     />
   )
 }

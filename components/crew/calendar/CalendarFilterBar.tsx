@@ -102,12 +102,9 @@ export default function CalendarFilterBar({
   currentLocationFilter,
   currentTypeFilter,
   currentSeasonFilter,
-  showLocations,
-  activeView,
   onLocationFilterChange,
   onTypeFilterChange,
   onSeasonFilterChange,
-  onShowLocationsChange,
   onClearFilters,
   hasActiveFilters,
 }: {
@@ -116,12 +113,9 @@ export default function CalendarFilterBar({
   currentLocationFilter: string[]
   currentTypeFilter: string[]
   currentSeasonFilter: string | null
-  showLocations: string
-  activeView: string
   onLocationFilterChange: (ids: string[]) => void
   onTypeFilterChange: (types: string[]) => void
   onSeasonFilterChange: (id: string | null) => void
-  onShowLocationsChange: (val: string) => void
   onClearFilters: () => void
   hasActiveFilters: boolean
 }) {
@@ -176,33 +170,6 @@ export default function CalendarFilterBar({
             </option>
           ))}
         </select>
-
-        {activeView === 'week' && (
-          <div className="flex items-center rounded-lg border border-navy dark:border-steel overflow-hidden">
-            <button
-              type="button"
-              onClick={() => onShowLocationsChange('all')}
-              className={`px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                showLocations === 'all'
-                  ? 'bg-navy text-white'
-                  : 'bg-white dark:bg-dark-surface text-navy dark:text-steel'
-              }`}
-            >
-              All Locations
-            </button>
-            <button
-              type="button"
-              onClick={() => onShowLocationsChange('booked')}
-              className={`px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                showLocations === 'booked'
-                  ? 'bg-navy text-white'
-                  : 'bg-white dark:bg-dark-surface text-navy dark:text-steel'
-              }`}
-            >
-              Booked Only
-            </button>
-          </div>
-        )}
 
         {hasActiveFilters && (
           <button

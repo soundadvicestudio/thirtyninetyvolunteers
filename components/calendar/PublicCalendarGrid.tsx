@@ -99,12 +99,15 @@ export default function PublicCalendarGrid({
                   <Link
                     key={event.id}
                     href={`/shows/${event.show_id}`}
-                    className="block rounded px-1.5 py-1 text-white text-xs leading-tight truncate hover:opacity-90 transition-opacity"
+                    className="block rounded px-1.5 py-1 text-white text-xs leading-tight truncate hover:opacity-90 transition-opacity text-center sm:text-left"
                     style={{ backgroundColor: event.location?.color ?? '#555555' }}
                     title={event.title}
                   >
-                    {event.needsVolunteers && <span className="mr-1">●</span>}
-                    {event.title}
+                    <span className="hidden sm:inline">
+                      {event.needsVolunteers && <span className="mr-1">●</span>}
+                      {event.title}
+                    </span>
+                    <span className="sm:hidden">{event.needsVolunteers ? '●' : '•'}</span>
                   </Link>
                 ))}
               </div>
