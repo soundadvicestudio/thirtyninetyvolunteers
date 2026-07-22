@@ -39,8 +39,15 @@ export type CallboardCallHistoryRow = {
   claimed_at: string
   status: 'claimed' | 'cancelled'
   role_name: string
+  show_id: string | null
   show_name: string
   show_date: string
   attendance_status: 'showed' | 'no_show' | 'excused' | null
   hours_logged: number | null
+}
+
+export type CallboardManualHoursEntry = {
+  hours: number
+  note: string | null
+  logged_date: string
 }

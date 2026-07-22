@@ -8,7 +8,12 @@ import { SHOW_TYPE_LABEL, SHOW_TYPE_BADGE } from '@/lib/utils/showDisplay'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
 import VolunteerCard from '@/components/callboard/VolunteerCard'
 import type { PublicShow } from '@/types/show-public'
-import type { CallboardMilestone, CallboardCallHistoryRow, CallboardActiveClaim } from '@/types/callboard'
+import type {
+  CallboardMilestone,
+  CallboardCallHistoryRow,
+  CallboardActiveClaim,
+  CallboardManualHoursEntry,
+} from '@/types/callboard'
 
 type StandingOpportunityRow = {
   id: string
@@ -87,7 +92,7 @@ type RawCallHistoryRow = {
     role_name: string
     show_date: {
       show_date: string
-      show: { name: string } | null
+      show: { id: string; name: string } | null
     } | null
   } | null
   attendance: { status: 'showed' | 'no_show' | 'excused'; hours_logged: number }[] | null
@@ -101,7 +106,7 @@ async function getCallHistory(volunteerId: string, email: string): Promise<Callb
       role_name,
       show_date:show_dates(
         show_date,
-        show:shows(name)
+        show:shows(id, name)
       )
     ),
     attendance(status, hours_logged)
@@ -136,6 +141,7 @@ async function getCallHistory(volunteerId: string, email: string): Promise<Callb
       claimed_at: row.claimed_at,
       status: row.status,
       role_name: row.volunteer_role.role_name,
+      show_id: row.volunteer_role.show_date.show?.id ?? null,
       show_name: row.volunteer_role.show_date.show?.name ?? 'Unknown Show',
       show_date: row.volunteer_role.show_date.show_date,
       attendance_status: attendance?.status ?? null,
@@ -243,7 +249,7 @@ export default async function CallboardPage() {
   let categories: string[] = []
   let milestones: CallboardMilestone[] = []
   let callHistory: CallboardCallHistoryRow[] = []
-  let manualHoursTotal = 0
+  let manualHoursEntries: CallboardManualHoursEntry[] = []
   const signedUpMap = new Map<string, SignedUpEntry[]>()
 
   if (volunteer) {
@@ -258,9 +264,10 @@ export default async function CallboardPage() {
           .order('triggered_at', { ascending: true }),
         client
           .from('volunteer_hours_log')
-          .select('hours')
+          .select('hours, note, logged_date')
           .eq('volunteer_id', volunteer.id)
-          .eq('source_type', 'manual'),
+          .eq('source_type', 'manual')
+          .order('logged_date', { ascending: false }),
         getActiveClaims(volunteer.id, volunteer.email),
         getCallHistory(volunteer.id, volunteer.email),
       ])
@@ -271,7 +278,7 @@ export default async function CallboardPage() {
 
     milestones = (milestoneRows ?? []) as CallboardMilestone[]
     callHistory = history
-    manualHoursTotal = (manualHoursRows ?? []).reduce((sum, r) => sum + Number(r.hours), 0)
+    manualHoursEntries = manualHoursRows ?? []
 
     for (const claim of activeClaims) {
       const list = signedUpMap.get(claim.show_id) ?? []
@@ -331,7 +338,7 @@ export default async function CallboardPage() {
                 categories={categories}
                 milestones={milestones}
                 callHistory={callHistory}
-                manualHoursTotal={manualHoursTotal}
+                manualHoursEntries={manualHoursEntries}
               />
             ) : (
               <CallboardLookupForm />
