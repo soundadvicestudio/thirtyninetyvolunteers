@@ -403,10 +403,6 @@ export default async function VolunteerProfilePage({
 
       {admin.role !== 'viewer' && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-dark mb-4 flex items-center gap-1.5">
-            Editor Notes
-            <HelpTooltip anchor="volunteer-profile" label="Editor Notes" />
-          </h2>
           <EditorNotes
             volunteerId={volunteer.id}
             notes={notes}

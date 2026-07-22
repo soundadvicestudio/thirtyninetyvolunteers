@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCT } from '@/lib/utils/date'
 import { addNote, editNote, deleteNote } from '@/lib/actions/volunteers'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 type Note = {
   id: string
@@ -175,7 +176,10 @@ export default function EditorNotes({
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6">
-      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-4">Editor Notes</h2>
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-4 flex items-center gap-1.5">
+        Editor Notes
+        <HelpTooltip anchor="volunteer-profile" label="Editor Notes" />
+      </h2>
 
       {notes.length === 0 ? (
         <p className="text-mid-gray dark:text-dark-muted text-sm mb-4">No notes yet.</p>

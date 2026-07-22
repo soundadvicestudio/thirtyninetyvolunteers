@@ -810,6 +810,56 @@ export function buildReminderEmailPayload({
   }
 }
 
+type ThankYouEmailParams = {
+  recipientEmail: string
+  recipientName: string
+  showName: string
+  showDate: string
+  siteUrl: string
+}
+
+// Exported so the post-show thank-you cron (app/api/cron/thankyou) can build
+// payload objects for sendBatchEmails() — same batching reasoning as
+// buildReminderEmailPayload.
+export function buildThankYouEmailPayload({
+  recipientEmail,
+  recipientName,
+  showName,
+  showDate,
+  siteUrl,
+}: ThankYouEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
+  const html = emailShell(`
+    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+      Thank you, ${escapeHtml(recipientName)}!
+    </h1>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+      Thank you so much for volunteering for <strong>${escapeHtml(showName)}</strong> on ${showDate}. Your time
+      and dedication make 30 By Ninety Theatre possible.
+    </p>
+    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+      You can view your updated volunteer hours and milestones on the Volunteer Call Board.
+    </p>
+    <a href="${siteUrl}/callboard"
+       style="display:inline-block;background:#F26522;
+              color:#ffffff;text-decoration:none;
+              padding:14px 28px;border-radius:8px;
+              font-weight:700;font-size:15px;">
+      View My Volunteer Card
+    </a>
+    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+      With gratitude,<br />30 By Ninety Theatre
+    </p>
+  `)
+
+  return {
+    from: FROM_ADDRESS,
+    replyTo: REPLY_TO,
+    to: recipientEmail,
+    subject: `Thank you for volunteering — ${showName}`,
+    html,
+  }
+}
+
 type BatchEmailPayload = { from: string; replyTo?: string; to: string; subject: string; html: string }
 
 const BATCH_CHUNK_SIZE = 100

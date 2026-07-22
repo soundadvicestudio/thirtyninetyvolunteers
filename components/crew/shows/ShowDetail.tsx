@@ -468,13 +468,18 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
     }))
     .filter((r) => r.claims.length > 0)
 
-  if (rolesWithWaitlist.length === 0) {
-    return <p className="text-sm text-mid-gray dark:text-dark-muted">No volunteers on the waitlist.</p>
-  }
-
   return (
-    <div className="space-y-6">
-      {rolesWithWaitlist.map(({ role, claims }) => (
+    <div>
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3 flex items-center gap-1.5">
+        Waitlist
+        <HelpTooltip anchor="waitlist" label="Waitlist" />
+      </h2>
+
+      {rolesWithWaitlist.length === 0 ? (
+        <p className="text-sm text-mid-gray dark:text-dark-muted">No volunteers on the waitlist.</p>
+      ) : (
+        <div className="space-y-6">
+          {rolesWithWaitlist.map(({ role, claims }) => (
         <div key={role.id} className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
           <div className="px-4 py-3 bg-light-navy dark:bg-dark-nav">
             <h3 className="font-bold text-dark dark:text-dark-text">{role.role_name}</h3>
@@ -507,7 +512,9 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
             </table>
           </div>
         </div>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   )
 }
