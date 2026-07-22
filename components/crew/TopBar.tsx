@@ -10,12 +10,14 @@ const ROLE_LABELS: Record<AdminUser['role'], string> = {
   super_admin: 'Super Admin',
   editor: 'Editor',
   viewer: 'Viewer',
+  production: 'Production',
 }
 
 const ROLE_BADGE_CLASSES: Record<AdminUser['role'], string> = {
   super_admin: 'bg-navy text-white',
   editor: 'bg-steel text-white',
   viewer: 'bg-mid-gray text-white',
+  production: 'bg-orange text-white',
 }
 
 export default function TopBar({

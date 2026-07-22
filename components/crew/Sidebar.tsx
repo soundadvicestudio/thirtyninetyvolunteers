@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
+  CalendarDays,
   Users,
   Theater,
   Briefcase,
@@ -24,6 +25,7 @@ import { useMobileSidebar } from './MobileSidebarContext'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
+  { label: 'Calendar', href: '/crew/calendar', icon: CalendarDays },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
@@ -48,6 +50,10 @@ export default function Sidebar({
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
+  const isProduction = admin.role === 'production'
+  const visibleNavItems = isProduction
+    ? NAV_ITEMS.filter((item) => item.href === '/crew/calendar')
+    : NAV_ITEMS
 
   useEffect(() => {
     close()
@@ -82,7 +88,7 @@ export default function Sidebar({
         </Link>
 
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+        {visibleNavItems.map(({ label, href, icon: Icon }) => {
           const active = isActivePath(pathname, href)
           return (
             <Link

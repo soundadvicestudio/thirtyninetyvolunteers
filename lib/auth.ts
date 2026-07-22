@@ -1,15 +1,8 @@
 import 'server-only'
 import { getServerClient } from '@/lib/supabase/server'
+import type { AdminRole, AdminUser } from '@/types/admin'
 
-export type AdminUser = {
-  id: string
-  name: string
-  email: string
-  role: 'super_admin' | 'editor' | 'viewer'
-  is_active: boolean
-  last_login: string | null
-  activity_cleared_at: string | null
-}
+export type { AdminRole, AdminUser }
 
 export async function getAdminUser(): Promise<AdminUser | null> {
   try {
@@ -22,7 +15,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
 
     const { data: adminUser, error } = await supabase
       .from('admin_users')
-      .select('id, name, email, role, is_active, last_login, activity_cleared_at')
+      .select('id, name, email, role, is_active, calendar_editor, last_login, activity_cleared_at')
       .eq('id', user.id)
       .eq('is_active', true)
       .single()

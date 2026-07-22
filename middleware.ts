@@ -52,6 +52,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl)
   }
 
+  // Production role: restricted to /crew/calendar only. Additive check —
+  // runs after all existing logic and only queries admin_users when a
+  // signed-in user is headed somewhere under /crew that isn't already
+  // /crew/calendar, so it never affects other roles' existing behavior.
+  if (
+    user &&
+    pathname.startsWith('/crew') &&
+    pathname !== '/crew/login' &&
+    !pathname.startsWith('/crew/calendar')
+  ) {
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (adminUser?.role === 'production') {
+      const calendarUrl = request.nextUrl.clone()
+      calendarUrl.pathname = '/crew/calendar'
+      return NextResponse.redirect(calendarUrl)
+    }
+  }
+
   return supabaseResponse
 }
 

@@ -1,3 +1,5 @@
+import type { AdminRole } from '@/types/admin'
+
 export type ShowStatus = 'draft' | 'live' | 'past' | 'archived'
 
 export type Location = {
@@ -84,14 +86,14 @@ export type ShowEditor = {
   admin_id: string
   name: string
   email: string
-  role: 'super_admin' | 'editor' | 'viewer'
+  role: AdminRole
 }
 
 export type AdminUserSummary = {
   id: string
   name: string
   email: string
-  role: 'super_admin' | 'editor' | 'viewer'
+  role: AdminRole
 }
 
 export type PostShowDateStats = {

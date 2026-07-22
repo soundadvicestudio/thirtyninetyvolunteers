@@ -39,5 +39,9 @@ export async function emailLogin(formData: FormData) {
     console.error('Failed to update last_login:', err)
   }
 
+  if (adminUser.role === 'production') {
+    redirect('/crew/calendar')
+  }
+
   redirect('/crew/dashboard')
 }
