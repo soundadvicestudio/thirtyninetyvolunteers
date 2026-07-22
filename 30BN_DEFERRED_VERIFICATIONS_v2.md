@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 6 | July 2026 | Through Phase 12 (Alpha complete)
+## Version 7 | July 2026 | Through Phase CAL (Beta build active)
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -101,6 +101,48 @@ populated during test cron runs:
   UPDATE show_dates
   SET thank_you_sent_at = NULL
   WHERE thank_you_sent_at IS NOT NULL;
+
+Also clean up the 8 calendar_events seeded in CAL.5b
+before launch (these are test events on next-week dates):
+
+  DELETE FROM calendar_event_contacts
+  WHERE calendar_event_id IN (
+    SELECT id FROM calendar_events
+    WHERE source = 'manual'
+      AND title IN (
+        'Late Summer Showcase',
+        'Fall Play Rehearsal',
+        'Ensemble Workshop Rehearsal',
+        'Youth Acting Class',
+        'Board Meeting',
+        'Directors Blocking Session',
+        'Space Rental — Birthday Party',
+        'Community Workshop'
+      )
+  );
+
+  DELETE FROM calendar_events
+  WHERE source = 'manual'
+    AND title IN (
+      'Late Summer Showcase',
+      'Fall Play Rehearsal',
+      'Ensemble Workshop Rehearsal',
+      'Youth Acting Class',
+      'Board Meeting',
+      'Directors Blocking Session',
+      'Space Rental — Birthday Party',
+      'Community Workshop'
+    );
+
+Also clean up any show_date_buffer rows created during
+testing (buffer values of 0 are harmless but rows with
+test values should be reset):
+
+  UPDATE show_date_buffer
+  SET buffer_before_minutes = 0,
+      buffer_after_minutes = 0
+  WHERE buffer_before_minutes > 0
+     OR buffer_after_minutes > 0;
 
 ---
 
@@ -1159,6 +1201,46 @@ ADMIN.23 V9, V10 (email_log + deduplication)
 ### ADMIN.23 — requires real email delivery:
 ADMIN.23 V11
 
+### ADMIN.25 — requires Supabase cross-check:
+ADMIN.25 V2 (location default_hours test)
+
+### CAL.1 — requires show management access:
+CAL.1 V1–V7 (all browser, some Supabase optional)
+
+### CAL.2 — requires Production account:
+CAL.2 V3, V4, V5, V6 (Production role login)
+
+### CAL.3 — requires Supabase cross-check:
+CAL.3 V2, V3, V4 (calendar_events sync), V6, V8
+(show_date_buffer rows)
+
+### CAL.3 — requires Google SSO Production account:
+CAL.3 V1
+
+### CAL.4a — requires Supabase cross-check:
+CAL.4a V7, V8 (calendar_events end_time)
+
+### CAL.4b — requires calendar event data:
+CAL.4b V7–V17 (event chips, week grid, agenda —
+require approved events to exist; use seeded data
+from CAL.5b or create via event form)
+
+### CAL.5a — requires conflict setup:
+CAL.5a V15 (create two overlapping events)
+
+### CAL.5a — requires Viewer account (A1) for
+negative check:
+CAL.5a V12 (Viewer should NOT see Edit buttons)
+
+### CAL.5b — requires Supabase cross-check:
+CAL.5b V20 (calendar_editor flag toggle)
+
+### CAL.5b — requires Editor account:
+CAL.5b V16 (Book Space button visibility check)
+
+### CAL.5b-FIX2 — batch-context Q8 note:
+CAL.5b-FIX2 V4 (known limitation — document result)
+
 ---
 
 ## NOTES ON VERIFY-5 ITEMS
@@ -1173,17 +1255,21 @@ If any FAIL, add them to the fixes queue.
 
 ---
 
-*Total items in this carry-forward list: 314*
-*Prior (v5): 246 items through ADMIN.24*
-*New (v6): 50 items — 16 Phase 12.1, 2 Phase 12.2a,*
-*10 Phase 12.2b, 5 Phase 12.2c, 9 Phase 12.3,*
-*8 Phase 12.4*
+*Total items in this carry-forward list: 424*
+*Prior (v6): 314 items through Phase 12 (Alpha)*
+*New (v7): 110 items —*
+*8 ADMIN.25, 7 CAL.1, 6 CAL.2, 8 CAL.3, 8 CAL.4a,*
+*23 CAL.4b, 16 CAL.5a, 21 CAL.5b, 9 CAL.5b-FIX,*
+*4 CAL.5b-FIX2*
+*Quick Reference re-categorized and Seed Data Cleanup*
+*SQL updated with calendar seed data (not counted as*
+*verification items)*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v6 (Phase 12 complete,*
-*Alpha build complete)*
-*Previous version covered through ADMIN.24*
-*(pre-Phase 12)*
+*Last updated: July 2026 — v7 (Phase CAL active —*
+*CAL.1–CAL.5b complete, CAL.6–CAL.8 remaining)*
+*Previous version covered through Phase 12*
+*(Alpha build complete)*
 
 ---
 
@@ -2076,4 +2162,785 @@ from 12.2c):**
       the ? tooltip icon is still present next to the
       "Editor Notes" heading (it was moved to the
       component's internal heading in 12.4).
+
+---
+
+## ADMIN.25 — Deferred Item Sweep
+
+**Default hours fallback (location-aware lookup):**
+
+- [ ] **ADMIN.25 V1** — Mark a volunteer as Showed on a
+      show that has no per-show default_hours override,
+      at a location that has no default_hours set in the
+      locations table. Confirm hours still populate
+      automatically from the app_settings bucket fallback
+      (e.g. Mainstage → 3 hours). *(Requires attendance
+      marking on a show)*
+
+- [ ] **ADMIN.25 V2** — *(Supabase cross-check)* In the
+      Supabase dashboard SQL editor, set default_hours on
+      one location directly:
+        UPDATE locations
+        SET default_hours = 2.5
+        WHERE name = 'Studio X';
+      Then mark attendance Showed on a Studio X show with
+      no per-show override. Confirm hours logged = 2.5
+      (the location default), not the app_settings value.
+      Reset after testing:
+        UPDATE locations SET default_hours = NULL
+        WHERE name = 'Studio X';
+
+**Buffer minute NaN fix:**
+
+- [ ] **ADMIN.25 V3** — Navigate to /crew/shows/[id]/edit.
+      On any show date row, clear the "Reserve before
+      (minutes)" field completely (backspace until blank).
+      Click Save. Confirm the form submits successfully
+      and the field is saved as 0. No Zod validation
+      error about NaN should appear.
+
+**End time range on cancel page:**
+
+- [ ] **ADMIN.25 V4** — On a show date that has end_time
+      set: have a volunteer cancel their slot claim by
+      visiting the cancel page (/cancel?token=...).
+      Confirm the show time displays as a range
+      (e.g. "7:30 PM – 10:00 PM") rather than just
+      a start time. *(Requires a real cancellation flow)*
+
+- [ ] **ADMIN.25 V5** — On a show date with no end_time
+      set: visit the cancel page. Confirm only the start
+      time appears (no range, no empty dash).
+
+**Season filter on calendar:**
+
+- [ ] **ADMIN.25 V6** — Navigate to /crew/calendar.
+      Open the filter bar. Confirm a Season filter
+      dropdown is present. Select a specific season
+      (e.g. "Season 13"). Confirm only show-sourced
+      performance events belonging to that season appear.
+      Manual events (rehearsals, meetings, etc.) should
+      remain visible regardless of season filter.
+
+- [ ] **ADMIN.25 V7** — With the season filter applied,
+      confirm that switching to a different season updates
+      the calendar without a full page reload (URL param
+      updates, server re-fetch occurs).
+
+- [ ] **ADMIN.25 V8** — Clear the season filter
+      (select "All Seasons" or equivalent). Confirm all
+      approved events return to view.
+
+---
+
+## CAL.1 — Show Type → Location Migration
+
+*After CAL.1, all shows use a location (from the locations
+table) instead of a show_type text field. The show form
+must load locations from the database.*
+
+- [ ] **CAL.1 V1** — Navigate to /crew/shows/new. Confirm
+      the location field renders as a dropdown (not a
+      text input or hardcoded select). Confirm all 5
+      seeded locations appear: Mainstage, Mainstage Lobby,
+      Green Room, Studio X, Studio X Office.
+
+- [ ] **CAL.1 V2** — Create a new show and select a
+      location from the dropdown. Save. Confirm the show
+      saves successfully. Navigate to the show detail
+      page. Confirm the location name appears where show
+      type previously appeared.
+
+- [ ] **CAL.1 V3** — Edit an existing show. Confirm the
+      location dropdown pre-fills with the show's current
+      location. Change it to a different location. Save.
+      Confirm the new location is reflected on the show
+      detail and show list pages.
+
+- [ ] **CAL.1 V4** — Navigate to /crew/shows. Confirm
+      the show list displays location names (e.g.
+      "Mainstage") with a colored badge where show
+      type previously appeared. Confirm the filter
+      dropdown for type/location shows location names
+      (not show_type values like 'mainstage').
+
+- [ ] **CAL.1 V5** — Navigate to /shows (public page).
+      Confirm show location labels render correctly
+      alongside each show card (location name, not a
+      raw key like 'studio_x').
+
+- [ ] **CAL.1 V6** — Navigate to /crew/shows/[id] (show
+      detail). Confirm the location name appears in the
+      Overview tab where the show type previously appeared.
+      Confirm the Season at a Glance dashboard section
+      still renders location badges correctly for live shows.
+
+- [ ] **CAL.1 V7** — Mark a volunteer as Showed on the
+      existing "Test" Mainstage show (which has 9 show
+      dates and 9 slot claims). Confirm attendance is
+      marked normally. Confirm default hours populate
+      from the app_settings Mainstage fallback (3 hours)
+      since no per-show or per-location override exists.
+      *(Exercises the getLocationHoursBucket fallback
+      added in CAL.1 and updated in ADMIN.25)*
+
+---
+
+## CAL.2 — Calendar Schema & Production Role
+
+*CAL.2 added the Production role and Calendar nav link.
+Production accounts can only access /crew/calendar.*
+
+- [ ] **CAL.2 V1** — Log in as an existing Editor account.
+      Confirm a "Calendar" nav link appears in the
+      sidebar. Confirm all other nav items (Dashboard,
+      Volunteers, Shows, etc.) are still present and
+      functional.
+
+- [ ] **CAL.2 V2** — Log in as Super Admin. Confirm the
+      Calendar nav link appears in the sidebar. Confirm
+      full navigation is intact.
+
+- [ ] **CAL.2 V3** — Create a new admin account via the
+      Request Access flow. As Super Admin, approve it
+      with role = "Production." Log in as that account.
+      Confirm login redirects to /crew/calendar (not
+      /crew/dashboard). Confirm the sidebar shows ONLY
+      the Calendar link (no Volunteers, Shows, Settings,
+      Dashboard, etc.).
+
+- [ ] **CAL.2 V4** — While logged in as a Production
+      account: navigate directly to /crew/dashboard.
+      Confirm you are redirected to /crew/calendar
+      immediately — the dashboard is inaccessible.
+
+- [ ] **CAL.2 V5** — While logged in as a Production
+      account: navigate directly to /crew/volunteers.
+      Confirm redirect to /crew/calendar.
+
+- [ ] **CAL.2 V6** — In the TopBar, confirm the role
+      badge displays "Production" (not "Viewer" or
+      blank) for a Production-role account.
+
+---
+
+## CAL.3 — Show-to-Calendar Sync & Buffer Time
+
+*CAL.3 wires show dates to calendar_events automatically
+and adds buffer time fields to the show date form.*
+
+**Google OAuth production role redirect:**
+
+- [ ] **CAL.3 V1** — Sign in to a Production-role account
+      via Google SSO (not email/password). Confirm the
+      OAuth callback redirects to /crew/calendar — not
+      /crew/dashboard. *(Requires a Production account
+      with Google OAuth linked)*
+
+**Show-to-calendar auto-sync:**
+
+- [ ] **CAL.3 V2** — Create a new show date on an existing
+      show (or create a new show with a date). After
+      saving: check Supabase — confirm a calendar_events
+      row now exists with source = 'show', status =
+      'approved', event_type = 'performance', and
+      start_time matching the show date's date + time
+      in UTC. *(Supabase cross-check)*
+
+- [ ] **CAL.3 V3** — Edit an existing show date — change
+      its show_time. Save. Check Supabase — confirm the
+      corresponding calendar_events row's start_time
+      updated to match the new time. *(Supabase)*
+
+- [ ] **CAL.3 V4** — Delete a show date (if the show has
+      multiple dates). Check Supabase — confirm the
+      calendar_events row with that source_show_date_id
+      is gone (CASCADE delete). *(Supabase)*
+
+**Buffer time fields:**
+
+- [ ] **CAL.3 V5** — Navigate to /crew/shows/[id]/edit.
+      On any show date row, confirm two new fields appear:
+      "Reserve before (minutes)" and "Reserve after
+      (minutes)". Both should default to 0 and be
+      optional (no required indicator).
+
+- [ ] **CAL.3 V6** — Set "Reserve before" to 60 and
+      "Reserve after" to 30 on a show date. Save.
+      Confirm in Supabase that a show_date_buffer row
+      was created with the correct values for that
+      show_date_id. *(Supabase)*
+
+- [ ] **CAL.3 V7** — Edit the same show again. Confirm
+      the buffer fields pre-fill with the saved values
+      (60 before, 30 after) rather than resetting to 0.
+
+- [ ] **CAL.3 V8** — Set both buffer fields back to 0
+      and save. Confirm in Supabase the show_date_buffer
+      row now shows 0/0 (not deleted). *(Supabase)*
+
+---
+
+## CAL.4a — End Time on Show Dates
+
+*CAL.4a adds an optional End Time field to each show date.
+When set, times display as a range throughout the app.*
+
+- [ ] **CAL.4a V1** — Navigate to /crew/shows/[id]/edit.
+      On any date row, confirm an "End Time" field
+      appears immediately after the "Show Time" field.
+      Confirm it is optional — no asterisk or required
+      indicator. Confirm a placeholder or helper text
+      reads "End time (optional)" or similar.
+
+- [ ] **CAL.4a V2** — Set an end time on a show date
+      (e.g. 10:00 PM for a 7:30 PM show). Save. Navigate
+      to /crew/shows/[id] (admin show detail). Confirm
+      the Dates tab shows the time as a range:
+      "7:30 PM – 10:00 PM" for that date.
+
+- [ ] **CAL.4a V3** — On the same show detail page,
+      navigate to the Volunteers tab. Select the date
+      with an end time. Confirm the date picker dropdown
+      label also shows the time range format.
+
+- [ ] **CAL.4a V4** — Leave a different show date's end
+      time blank. Confirm only the start time appears
+      for that date — no dash, no empty range, no error.
+
+- [ ] **CAL.4a V5** — Navigate to /shows/[id] (public
+      show page). Find the date with end time set.
+      Confirm the time range displays correctly for
+      public visitors. Confirm the date without end time
+      shows only the start time.
+
+- [ ] **CAL.4a V6** — Identify as a volunteer on
+      /callboard. Find a show card for a show with end
+      time set. Confirm the time range appears in the
+      show card display. Confirm the date without end
+      time shows only the start time.
+
+- [ ] **CAL.4a V7** — *(Supabase cross-check)* After
+      setting an end time: confirm the calendar_events
+      row for that show date now has a correct end_time
+      in UTC (matching the CT end time entered in the
+      form). Confirm a show date with no end time has
+      a calendar_events end_time approximately 3 hours
+      after start_time (the fallback).
+
+- [ ] **CAL.4a V8** — Edit the show date and remove the
+      end time (clear the field). Save. Confirm the
+      admin show detail returns to showing only the
+      start time. Confirm in Supabase the calendar_events
+      end_time reverts to the 3-hour fallback. *(Supabase)*
+
+---
+
+## CAL.4b — Master Calendar UI
+
+*CAL.4b delivers the full /crew/calendar page with three
+views, filter bar, location legend, and day detail panel.
+Verify with real calendar_events data (seeded in CAL.5b
+or created via the event form in CAL.5a).*
+
+**Page load and navigation:**
+
+- [ ] **CAL.4b V1** — Navigate to /crew/calendar as
+      Editor. Confirm the page loads with the month
+      view active. Confirm a "Calendar" nav link is
+      highlighted as active in the sidebar.
+
+- [ ] **CAL.4b V2** — Navigate to /crew/calendar as
+      Super Admin. Confirm a "Pending Requests" link
+      appears in the calendar header (Super Admin only).
+
+- [ ] **CAL.4b V3** — Navigate to /crew/calendar as
+      Production-role account. Confirm the calendar
+      loads. Confirm no other nav items appear in the
+      sidebar.
+
+**Month view:**
+
+- [ ] **CAL.4b V4** — In month view: confirm a 7-column
+      grid renders for the current month. Confirm today's
+      date is highlighted. Confirm days outside the
+      current month are visually dimmed.
+
+- [ ] **CAL.4b V5** — Click the "Previous" and "Next"
+      navigation buttons. Confirm the calendar advances
+      by one month each click. Confirm the period label
+      (e.g. "July 2026") updates accordingly.
+
+- [ ] **CAL.4b V6** — Click the "Today" button.
+      Confirm the calendar returns to the current month
+      and today's date is visible.
+
+- [ ] **CAL.4b V7** — If approved calendar events exist:
+      confirm colored event chips appear on the correct
+      dates in the month grid. Confirm chip color matches
+      the location's assigned color.
+
+- [ ] **CAL.4b V8** — Click any day that has events.
+      Confirm the day detail panel slides in from the
+      right (desktop) or appears as a bottom sheet
+      (mobile). Confirm booked events are listed in
+      time order.
+
+- [ ] **CAL.4b V9** — In the day detail panel: confirm
+      an "Available Windows" section appears below the
+      booked events. Confirm it lists each location with
+      its free time slots within 7 AM–10 PM.
+
+- [ ] **CAL.4b V10** — Close the day panel using the X
+      button. Confirm it closes. Click the backdrop
+      behind the panel. Confirm it also closes.
+
+**Week view (room-booking grid):**
+
+- [ ] **CAL.4b V11** — Switch to the Week view tab.
+      Confirm the room-booking grid renders with rows
+      for active locations and columns for Mon–Sun.
+      Confirm the time axis shows 7 AM through 10 PM
+      in 1-hour increments.
+
+- [ ] **CAL.4b V12** — Confirm the "All Locations"
+      toggle shows all 5 location rows. Toggle to
+      "Booked Only." Confirm only locations with
+      at least one event this week appear. Toggle back
+      to "All Locations." Confirm all 5 rows return.
+
+- [ ] **CAL.4b V13** — If approved events exist in
+      the current week: confirm event blocks appear as
+      colored rectangles positioned at the correct time
+      within the grid. Confirm block height is
+      proportional to event duration.
+
+- [ ] **CAL.4b V14** — Click "Previous" and "Next"
+      in the week view. Confirm the grid advances by
+      one week. Confirm the period label updates
+      (e.g. "Jul 13 – 19, 2026").
+
+**Agenda view:**
+
+- [ ] **CAL.4b V15** — Switch to the Agenda view tab.
+      Confirm events are grouped by date with a date
+      heading per day. Confirm events within each day
+      are sorted by start time.
+
+- [ ] **CAL.4b V16** — Confirm each event row shows:
+      colored left border (location color), title,
+      time range, and location name.
+
+- [ ] **CAL.4b V17** — With no events in the next 90
+      days (or after filtering to show no results):
+      confirm a "No events" empty state message
+      appears.
+
+**Location legend:**
+
+- [ ] **CAL.4b V18** — Confirm a location legend bar
+      appears below the filter bar across all three
+      views. Confirm it shows a colored circle and
+      name for each active location. Confirm a
+      "Locations:" label prefix appears before the
+      chips.
+
+**Filter bar:**
+
+- [ ] **CAL.4b V19** — Open the location filter
+      dropdown. Select one location. Confirm only
+      events at that location appear on the calendar.
+      Confirm the filter works without a page reload
+      (client-side).
+
+- [ ] **CAL.4b V20** — Open the event type filter.
+      Select "Rehearsal." Confirm only rehearsal
+      events appear. Clear the filter. Confirm all
+      event types return.
+
+- [ ] **CAL.4b V21** — Click "Clear filters" (or
+      equivalent). Confirm all active filters reset
+      simultaneously.
+
+- [ ] **CAL.4b V22** — On a mobile viewport (< 768px):
+      confirm the filter bar collapses to a "Filters"
+      button. Tap it. Confirm the filters expand.
+
+**Dark mode:**
+
+- [ ] **CAL.4b V23** — Toggle to dark mode. Navigate
+      to /crew/calendar. Confirm all three views render
+      correctly — no light backgrounds or invisible text.
+      Confirm event chips and filter dropdowns are
+      readable in dark mode.
+
+---
+
+## CAL.5a — Event Creation & Submission Forms
+
+*CAL.5a adds the event creation form for Super Admins
+(direct-create) and submission flow for other roles
+(pending approval).*
+
+**Header button:**
+
+- [ ] **CAL.5a V1** — Navigate to /crew/calendar as
+      Super Admin. Confirm a dropdown button labeled
+      "Add Event" appears in the calendar header.
+      Click it. Confirm a dropdown opens with two
+      options: "Single Event" and "Rehearsal
+      Schedule."
+
+- [ ] **CAL.5a V2** — Navigate to /crew/calendar as
+      Editor. Confirm the button is labeled "Submit
+      Request" (not "Add Event"). Confirm the same
+      two dropdown options appear.
+
+**Single event form — Super Admin:**
+
+- [ ] **CAL.5a V3** — As Super Admin: click "Single
+      Event." Confirm a modal form opens labeled
+      "Add to Calendar." Confirm all fields are
+      present: Title, Event Type, Location (required),
+      Date, Start Time, End Time, Description,
+      Requirements, Contacts section.
+
+- [ ] **CAL.5a V4** — In the Event Type dropdown:
+      confirm "Performance" is NOT listed as an
+      option. Confirm "Rental" IS listed for Super
+      Admin.
+
+- [ ] **CAL.5a V5** — Select a Location, Date, Start
+      Time, and End Time. Click "Check Availability."
+      Confirm a result appears: either green
+      "Available" or amber "Conflict detected"
+      with the option to proceed anyway.
+
+- [ ] **CAL.5a V6** — Fill all required fields and
+      submit. Confirm the event appears immediately
+      on the calendar as an approved event with the
+      correct location color. Confirm no pending queue
+      involvement.
+
+**Single event form — non-Super-Admin:**
+
+- [ ] **CAL.5a V7** — As Editor: click "Submit Request"
+      → "Single Event." Confirm the form opens labeled
+      "Submit for Approval." Confirm Location is
+      labeled "Preferred Location (optional)" — not
+      required. Confirm "Rental" is NOT in the event
+      type dropdown.
+
+- [ ] **CAL.5a V8** — Confirm a role note appears near
+      the top of the form: "Your request will be
+      reviewed by an admin who will assign a location
+      and add it to the calendar."
+
+- [ ] **CAL.5a V9** — Submit the form as Editor (with
+      or without a preferred location). Confirm the
+      event is NOT visible on the calendar to other
+      roles. Log in as Super Admin — confirm the event
+      IS visible on the calendar with dashed-border
+      pending styling. Confirm the "Pending Requests"
+      badge count incremented.
+
+**Custom type label:**
+
+- [ ] **CAL.5a V10** — In the event form, select
+      "Other" as the Event Type. Confirm a "Custom
+      Type Label" text field appears. Change to a
+      different type. Confirm the field disappears.
+
+**Contacts:**
+
+- [ ] **CAL.5a V11** — In the Contacts section, click
+      "Add Contact." Confirm a Name and Phone row
+      appears. Add up to 5 contacts. Confirm the
+      "Add Contact" button is hidden after the 5th
+      contact is added. Remove one contact. Confirm
+      the button reappears.
+
+**Edit flow (Super Admin only):**
+
+- [ ] **CAL.5a V12** — As Super Admin: click a day on
+      the calendar to open the day panel. Find an
+      approved event. Confirm an "Edit" button
+      appears next to it. *(Viewer, Editor, Production
+      should NOT see Edit buttons)*
+
+- [ ] **CAL.5a V13** — Click "Edit" on an event in
+      the day panel. Confirm the event form opens
+      pre-filled with all existing data (title, type,
+      location, date, times, description, contacts).
+
+- [ ] **CAL.5a V14** — Change the title and save.
+      Confirm the calendar updates immediately to
+      show the new title.
+
+**Conflict detection:**
+
+- [ ] **CAL.5a V15** — Create an approved event
+      (e.g. Mainstage, Monday 7 PM – 9 PM). Then
+      open the event form again and try to create
+      another event at Mainstage, Monday 8 PM – 10 PM.
+      Click "Check Availability." Confirm a conflict
+      warning appears. Confirm the Super Admin can
+      still proceed and save anyway.
+
+**Dark mode:**
+
+- [ ] **CAL.5a V16** — Toggle to dark mode. Open the
+      event creation form. Confirm it renders correctly
+      — no light backgrounds or invisible text in the
+      modal.
+
+---
+
+## CAL.5b — Bulk Rehearsal, Pending Queue & Book Space
+
+*CAL.5b adds bulk rehearsal submission, the pending
+approval queue, and the Book Space panel.*
+
+**Seed data:**
+
+- [ ] **CAL.5b V1** — Navigate to /crew/calendar
+      (month or week view). Confirm the 8 seeded test
+      events appear on the calendar on the correct dates
+      (next week). Confirm events are color-coded by
+      location. Confirm the 3 pending events are only
+      visible to Super Admin with dashed-border styling.
+
+**Bulk rehearsal form:**
+
+- [ ] **CAL.5b V2** — Click the action dropdown →
+      "Rehearsal Schedule." Confirm the bulk form
+      opens labeled "Add Rehearsal Schedule" (Super
+      Admin) or "Submit Rehearsal Schedule" (other
+      roles).
+
+- [ ] **CAL.5b V3** — Enter a Production Title and
+      set Default Start Time (e.g. 7:00 PM) and
+      Default End Time (e.g. 10:00 PM). Use the date
+      picker to add 3 dates. Confirm each new date row
+      auto-pre-fills with the default times.
+
+- [ ] **CAL.5b V4** — Add dates in non-chronological
+      order (e.g. Monday, then Saturday, then Wednesday).
+      Confirm the date list auto-sorts chronologically
+      after each add — no manual sort button needed.
+
+- [ ] **CAL.5b V5** — Change the Default Start Time
+      to 2:00 PM. Click "Apply to all dates." Confirm
+      all existing date rows update their Start Time to
+      2:00 PM.
+
+- [ ] **CAL.5b V6** — Override one individual date's
+      time by editing its Start/End Time fields directly
+      in the table. Click "Apply to all dates" again.
+      Confirm ALL rows update to the default (including
+      the manually edited one).
+
+- [ ] **CAL.5b V7** — Click "Apply to all dates" with
+      the Default Start Time field empty. Confirm an
+      inline validation message appears rather than
+      silently resetting all times to blank.
+
+- [ ] **CAL.5b V8** — Submit the rehearsal batch as
+      Editor. Confirm all dates are saved as pending
+      events. Navigate to /crew/calendar/pending as
+      Super Admin. Confirm the batch appears grouped
+      under the submitted title.
+
+**Pending approval queue:**
+
+- [ ] **CAL.5b V9** — As Super Admin: navigate to
+      /crew/calendar/pending. Confirm the page loads
+      (not a 404). Confirm the 3 seeded pending events
+      appear. Confirm any pending event with a preferred
+      location shows a conflict indicator (⚠ or ✓
+      based on whether that location is booked at that
+      time).
+
+- [ ] **CAL.5b V10** — For a pending event with a
+      preferred location already set: confirm the
+      Approve button is enabled without touching the
+      location dropdown. Click Approve. Confirm the
+      event is approved, appears on the calendar, and
+      is removed from the queue.
+
+- [ ] **CAL.5b V11** — For a pending event with no
+      preferred location: confirm the Approve button
+      is disabled until a location is selected from
+      the dropdown.
+
+- [ ] **CAL.5b V12** — Change the location selector
+      for a pending event to a different location.
+      Confirm the conflict indicator updates immediately
+      (without page reload) to reflect availability at
+      the new location.
+
+- [ ] **CAL.5b V13** — On a rehearsal batch in the
+      pending queue: click "Approve All Available."
+      Confirm all non-conflicted dates with a location
+      assigned are approved. Confirm any conflicted or
+      no-location dates remain in the queue.
+
+- [ ] **CAL.5b V14** — After approving events from the
+      queue: navigate to /crew/calendar. Confirm the
+      newly approved events appear on the calendar with
+      correct location colors and times.
+
+- [ ] **CAL.5b V15** — Confirm the "Pending Requests"
+      badge count in the calendar header decrements
+      correctly as events are approved. Badge should
+      hide when count reaches 0.
+
+**Book Space panel:**
+
+- [ ] **CAL.5b V16** — As Super Admin: confirm a
+      "Book Space" button is visible in the calendar
+      header. Log in as Editor (with calendar_editor =
+      false by default). Confirm the Book Space button
+      is NOT visible. *(Requires editor account)*
+
+- [ ] **CAL.5b V17** — As Super Admin: click "Book
+      Space." Confirm a panel slides in from the LEFT
+      side of the viewport (not the right — day panel
+      opens from the right).
+
+- [ ] **CAL.5b V18** — In the Book Space panel: enter
+      a date, start time, and end time. Click "Find
+      Available Spaces" (or "Search Availability").
+      Confirm results appear showing which locations
+      are available (green) and which are booked (amber/
+      red with conflicting event info).
+
+- [ ] **CAL.5b V19** — Click "Book This Slot" on an
+      available location. Confirm the Book Space panel
+      closes and the single event creation form opens
+      pre-filled with the selected date, time, and
+      location.
+
+**calendarEditor flag:**
+
+- [ ] **CAL.5b V20** — *(Supabase cross-check)* In
+      Supabase, set calendar_editor = true on an Editor
+      account:
+        UPDATE admin_users
+        SET calendar_editor = true
+        WHERE email = '[editor email]';
+      Log in as that Editor. Confirm the header button
+      now reads "Add Event" (not "Submit Request").
+      Submit a single event. Confirm it appears on the
+      calendar immediately as approved (not pending).
+      Reset after testing:
+        UPDATE admin_users
+        SET calendar_editor = false
+        WHERE email = '[editor email]';
+
+**Dark mode:**
+
+- [ ] **CAL.5b V21** — Toggle to dark mode. Confirm the
+      bulk rehearsal form, pending queue page, and Book
+      Space panel all render correctly — no light
+      backgrounds or invisible text.
+
+---
+
+## CAL.5b-FIX — Post-Audit Targeted Fixes
+
+*These items verify specific gaps identified in the
+CAL.5b-AUDIT findings report and fixed in CAL.5b-FIX.*
+
+- [ ] **CAL.5b-FIX V1** — Navigate to /crew/calendar.
+      Confirm the location legend bar shows a "Locations:"
+      text label before the first colored chip. Confirm
+      this label is visible in all three views (Month,
+      Week, Agenda).
+
+- [ ] **CAL.5b-FIX V2** — Click a specific day in the
+      month or week view to open the day panel. Then
+      click the action dropdown → "Rehearsal Schedule."
+      Confirm the bulk form opens with one date row
+      already pre-filled with the day you clicked.
+
+- [ ] **CAL.5b-FIX V3** — Open the bulk rehearsal form.
+      Set Default Start Time to 7:00 PM and Default End
+      Time to 10:00 PM. Use the date picker to add a
+      date. Confirm the new date row auto-pre-fills with
+      7:00 PM start and 10:00 PM end. Add another date.
+      Confirm it also pre-fills automatically.
+
+- [ ] **CAL.5b-FIX V4** — Confirm there is NO "Sort
+      Chronologically" button anywhere on the bulk
+      rehearsal form. Dates should sort automatically
+      after each add — no manual sort trigger needed.
+
+- [ ] **CAL.5b-FIX V5** — Add dates in non-chronological
+      order and confirm they auto-sort after every add.
+      This confirms the auto-sort-on-add behavior.
+
+- [ ] **CAL.5b-FIX V6** — In the pending queue, for a
+      pending event that has a preferred location set:
+      confirm the conflict indicator (⚠ / ✓ / —) is
+      pre-populated on page load based on a server-side
+      conflict check. You should not need to touch the
+      location dropdown to see the initial conflict
+      status.
+
+- [ ] **CAL.5b-FIX V7** — In the pending queue: change
+      the location selector for a pending event. Confirm
+      the conflict indicator updates immediately (within
+      1–2 seconds) to reflect the new location's
+      availability.
+
+- [ ] **CAL.5b-FIX V8** — In the pending queue: for a
+      pending event where the selected location has a
+      conflict: confirm the Approve button is visually
+      disabled (greyed out, not clickable).
+
+- [ ] **CAL.5b-FIX V9** — In the Book Space panel:
+      search for availability. Confirm results appear
+      correctly (this verifies the findAvailableSlots
+      return key fix — previously the panel showed
+      no results due to a .results vs .slots mismatch).
+
+---
+
+## CAL.5b-FIX2 — Approve Fallback Fix
+
+*CAL.5b-FIX2 fixes the handleApproveSingle() function
+so that individual pending events with a preferred
+location can be approved without touching the dropdown.*
+
+- [ ] **CAL.5b-FIX2 V1** — In the pending queue: find
+      an individual pending event (not part of a batch)
+      that was submitted with a preferred location_id
+      set. WITHOUT touching the location selector
+      dropdown: confirm the Approve button is ENABLED
+      (not greyed out). The preferred location should
+      pre-fill the selector visually.
+
+- [ ] **CAL.5b-FIX2 V2** — Click Approve on that event
+      without touching the dropdown. Confirm the event
+      is approved successfully into the preferred
+      location. Confirm it appears on the calendar at
+      that location.
+
+- [ ] **CAL.5b-FIX2 V3** — Find a pending event with
+      NO preferred location_id set. Confirm the Approve
+      button is DISABLED until a location is manually
+      selected from the dropdown. Select a location.
+      Confirm the button becomes enabled.
+
+- [ ] **CAL.5b-FIX2 V4** — *(Q8 note — expected
+      behavior to document)* For a BATCH date that was
+      submitted with a preferred location: the Approve
+      button for batch-date rows may still appear
+      disabled until the dropdown is touched (Q8 from
+      CAL.5b-FIX2 build report — the batch-context
+      disable condition was not updated in FIX2). Note
+      whether the button is enabled or disabled without
+      touching the dropdown. This is a known limitation
+      to be addressed in CAL.8.
 
