@@ -482,3 +482,233 @@ export async function toggleHearingOptionActive(
 
   return { success: true }
 }
+
+const LOCATION_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/
+
+function validateLocationInput(
+  name: string,
+  color: string,
+  defaultHours: number | null
+): string | null {
+  if (!name.trim()) return 'Name is required.'
+  if (name.length > 100) return 'Name must be 100 characters or fewer.'
+  if (!LOCATION_COLOR_PATTERN.test(color)) return 'Color must be a 6-digit hex value (e.g. #293994).'
+  if (defaultHours !== null && (defaultHours < 0 || defaultHours > 24)) {
+    return 'Default hours must be between 0 and 24.'
+  }
+  return null
+}
+
+function revalidateLocationPaths() {
+  revalidatePath('/crew/settings/locations')
+  revalidatePath('/crew/calendar')
+  revalidatePath('/crew/shows')
+}
+
+export async function createLocation(
+  name: string,
+  color: string,
+  defaultHours: number | null
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const validationError = validateLocationInput(name, color, defaultHours)
+  if (validationError) {
+    return { error: validationError }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: maxRow } = await supabase
+    .from('locations')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const newSortOrder = (maxRow?.sort_order ?? 0) + 1
+
+  const { data: location, error } = await supabase
+    .from('locations')
+    .insert({
+      name: name.trim(),
+      color,
+      sort_order: newSortOrder,
+      is_active: true,
+      default_hours: defaultHours,
+    })
+    .select('id')
+    .single()
+
+  if (error || !location) {
+    return { error: error?.message ?? 'Something went wrong adding the location.' }
+  }
+
+  await logAction(admin.id, 'location.create', 'location', location.id, undefined, {
+    name: name.trim(),
+    color,
+    default_hours: defaultHours,
+  })
+
+  revalidateLocationPaths()
+
+  return { success: true }
+}
+
+export async function updateLocation(
+  id: string,
+  name: string,
+  color: string,
+  defaultHours: number | null
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const validationError = validateLocationInput(name, color, defaultHours)
+  if (validationError) {
+    return { error: validationError }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('locations')
+    .select('name, color, default_hours')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !current) {
+    return { error: 'Could not find this location.' }
+  }
+
+  const { error } = await supabase
+    .from('locations')
+    .update({
+      name: name.trim(),
+      color,
+      default_hours: defaultHours,
+    })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(
+    admin.id,
+    'location.update',
+    'location',
+    id,
+    { name: current.name, color: current.color, default_hours: current.default_hours },
+    { name: name.trim(), color, default_hours: defaultHours }
+  )
+
+  revalidateLocationPaths()
+
+  return { success: true }
+}
+
+export async function reorderLocation(
+  id: string,
+  direction: 'up' | 'down'
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: locations, error: fetchError } = await supabase
+    .from('locations')
+    .select('id, name, sort_order')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+
+  if (fetchError || !locations) {
+    return { error: 'Could not load locations.' }
+  }
+
+  const index = locations.findIndex((l) => l.id === id)
+  if (index === -1) {
+    return { error: 'Could not find this location.' }
+  }
+
+  const swapIndex = direction === 'up' ? index - 1 : index + 1
+  if (swapIndex < 0 || swapIndex >= locations.length) {
+    return { success: true }
+  }
+
+  const current = locations[index]
+  const swapTarget = locations[swapIndex]
+
+  const { error: updateCurrentError } = await supabase
+    .from('locations')
+    .update({ sort_order: swapTarget.sort_order })
+    .eq('id', current.id)
+
+  if (updateCurrentError) {
+    return { error: 'Something went wrong reordering locations. Please try again.' }
+  }
+
+  const { error: updateSwapError } = await supabase
+    .from('locations')
+    .update({ sort_order: current.sort_order })
+    .eq('id', swapTarget.id)
+
+  if (updateSwapError) {
+    return { error: 'Something went wrong reordering locations. Please try again.' }
+  }
+
+  await logAction(admin.id, 'location.reorder', 'location', id, undefined, {
+    direction,
+    swapped_with: swapTarget.name,
+  })
+
+  revalidateLocationPaths()
+
+  return { success: true }
+}
+
+export async function toggleLocationActive(id: string, isActive: boolean): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('locations')
+    .select('is_active')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !current) {
+    return { error: 'Could not find this location.' }
+  }
+
+  const { error } = await supabase.from('locations').update({ is_active: isActive }).eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(
+    admin.id,
+    'location.deactivate',
+    'location',
+    id,
+    { is_active: current.is_active },
+    { is_active: isActive }
+  )
+
+  revalidateLocationPaths()
+
+  return { success: true }
+}

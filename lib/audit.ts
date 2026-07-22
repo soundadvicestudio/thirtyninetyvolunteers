@@ -63,6 +63,12 @@ export type AuditAction =
   | 'hearing_options.reorder'
   | 'hearing_options.deactivate'
 
+  // Locations
+  | 'location.create'
+  | 'location.update'
+  | 'location.reorder'
+  | 'location.deactivate'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

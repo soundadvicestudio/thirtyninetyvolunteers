@@ -117,6 +117,7 @@ export default function PendingQueueClient({
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [conflictStatus, setConflictStatus] = useState<Record<string, boolean>>(initialConflicts)
+  const [batchConflictChecking, setBatchConflictChecking] = useState(false)
 
   const isEmpty = batches.length === 0 && individualEvents.length === 0
 
@@ -192,7 +193,7 @@ export default function PendingQueueClient({
     setConflictStatus((prev) => ({ ...prev, [eventId]: result.conflict }))
   }
 
-  function handleApplyDefaultLocation(batch: PendingBatch) {
+  async function handleApplyDefaultLocation(batch: PendingBatch) {
     const defaultLoc = batchDefaultLocation[batch.id]
     if (!defaultLoc) return
     setLocationSelections((prev) => {
@@ -202,6 +203,16 @@ export default function PendingQueueClient({
       }
       return next
     })
+
+    setBatchConflictChecking(true)
+    for (const event of batch.events) {
+      const date = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+      const startCT = formatInTimeZone(new Date(event.start_time), CT, 'HH:mm')
+      const endCT = formatInTimeZone(new Date(event.end_time), CT, 'HH:mm')
+      const result = await checkEventConflict(defaultLoc, date, startCT, endCT, event.id)
+      setConflictStatus((prev) => ({ ...prev, [event.id]: result.conflict }))
+    }
+    setBatchConflictChecking(false)
   }
 
   async function handleApproveAllAvailable(batch: PendingBatch) {
@@ -279,14 +290,21 @@ export default function PendingQueueClient({
                       <button
                         type="button"
                         onClick={() => handleApplyDefaultLocation(batch)}
-                        className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+                        disabled={batchConflictChecking}
+                        className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Apply to all dates
                       </button>
+                      {batchConflictChecking && (
+                        <span className="flex items-center gap-1.5 text-xs text-mid-gray dark:text-dark-muted">
+                          <Loader2 size={12} className="animate-spin" />
+                          Checking availability…
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleApproveAllAvailable(batch)}
-                        disabled={isBusy}
+                        disabled={isBusy || batchConflictChecking}
                         className="ml-auto flex items-center gap-2 bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         {isBusy && <Loader2 size={14} className="animate-spin" />}

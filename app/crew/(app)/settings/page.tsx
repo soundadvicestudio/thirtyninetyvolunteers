@@ -152,6 +152,19 @@ export default async function SettingsPage() {
           />
         )}
 
+        {isSuperAdmin ? (
+          <LinkedCard
+            href="/crew/settings/locations"
+            title="Location Management"
+            description="Manage bookable spaces used by the master calendar, show booking form, and event creation."
+          />
+        ) : (
+          <LockedCard
+            title="Location Management"
+            description="Manage bookable spaces used by the master calendar, show booking form, and event creation."
+          />
+        )}
+
         {isEditorOrAbove ? (
           <LinkedCard
             href="/crew/settings/audit-log"

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { saveDefaultHours, saveDefaultReplyTo } from '@/lib/actions/settings'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
@@ -74,12 +75,20 @@ export default function GeneralSettings({
     <div className="max-w-xl space-y-8">
       <section>
         <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
-          Default Volunteer Hours
+          Default Hours (Global Fallbacks)
           <HelpTooltip anchor="default-hours" label="Default Volunteer Hours" />
         </h2>
-        <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
+        <p className="text-sm text-mid-gray dark:text-dark-muted mb-1">
           These values are applied when creating a new show. Changing them does not affect
           existing shows.
+        </p>
+        <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
+          These values are used as fallbacks when a location has no specific default hours set.
+          Per-location defaults can be configured in{' '}
+          <Link href="/crew/settings/locations" className="text-navy dark:text-steel hover:underline font-medium">
+            Location Management
+          </Link>{' '}
+          and take precedence over these values.
         </p>
         <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
