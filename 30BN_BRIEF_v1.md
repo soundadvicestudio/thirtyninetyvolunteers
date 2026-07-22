@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative
-### Created: July 2026 | Last Updated: July 2026 — v1.9 (9.2 and 10.1 build corrections)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v2.1
+### Created: July 2026 | Last Updated: July 2026 — v2.1 (Alpha build complete — Phase 12)
 
 ---
 
@@ -11,7 +11,7 @@
 **Built and maintained by:** Jonathan Sturcken (YLC member) — sole point of contact for questions, updates, and future development.
 
 **Two user-facing surfaces:**
-- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal
+- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`)
 - **Private (Production Crew):** Full admin backend for Super Admins, Editors, and Viewers
 
 **Supabase project:** `thirtyninetyvolunteers` (ID: `nutvjkplbtobcmymqtzx`, org: `thirtybyninety`)
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Alpha build in progress — Phases 1–10 complete, Phase 11 pending
+**Current phase:** Beta build underway. Alpha Phases 1–12 complete. Phase CAL (Master Calendar system) active — CAL.1–CAL.5b complete, CAL.6–CAL.8 remaining.
 
 ---
 
@@ -37,6 +37,8 @@
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
+| **Production** | New admin role (CAL.2). Calendar-only access. Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. |
+| **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor and Viewer accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Production Crew** | The admin backend. Labeled "Production Crew" in navigation. |
 
 ---
@@ -59,6 +61,9 @@
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
 | **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
+
+**Mobile Sidebar State Pattern (established 12.1):**
+The crew layout (`app/crew/(app)/layout.tsx`) is a Server Component. To share sidebar open/close state between Sidebar.tsx and TopBar.tsx without converting the layout to a Client Component, a thin Context provider (`components/crew/MobileSidebarContext.tsx`) wraps only the sidebar + topbar + main area. The layout itself stays a Server Component. This pattern should be used for any future shared UI state in the crew layout.
 
 **React Hook Form — Nested Arrays:**
 Nested `useFieldArray` calls (arrays of arrays, e.g. dates each containing their own roles list) must be placed in their own named sub-component. React's rules of hooks prohibit calling `useFieldArray` inside a render loop over a parent field array. Pattern established in ADMIN.11 (DateRow sub-component inside ShowForm). See R24.
@@ -173,13 +178,18 @@ Mid Gray:             #555555  --color-mid-gray
 | Role | Route Access | Can Edit | Can Email | Notes |
 |---|---|---|---|---|
 | Super Admin | All `/crew/*` + `/crew/settings/users` | Yes | Yes | Creates/manages all admin accounts |
-| Editor | All `/crew/*` except user management | Yes | Yes (Beta) | Full operational access |
+| Editor | All `/crew/*` except user management | Yes | Yes | Full operational access. Bulk email from show detail built in ADMIN.23. Full blast system in Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` | No | No | Read-only. No edit controls rendered. |
+| Production | `/crew/calendar` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar only. Redirected to `/crew/calendar` on login. Built CAL.2. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
-| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*` | No | No | No auth required |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/calendar` | No | No | No auth required |
+
+**`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor or Viewer account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this). UI toggle for setting this flag planned for CAL.6. Currently settable via Supabase dashboard only.
 
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they identify themselves via email or phone lookup on the Call Board; a match sets a 7-day cookie session with no magic link or email step required.
-**Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request.
+**Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts use the same Request Access flow — assigned `role = 'production'` by the Super Admin on approval. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
+
+**Middleware (CAL.2):** Production-role users are restricted at middleware level — any `/crew/*` route other than `/crew/calendar` and `/crew/calendar/*` redirects to `/crew/calendar`. Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request.
 
 ---
 
@@ -207,6 +217,12 @@ Mid Gray:             #555555  --color-mid-gray
   - Volunteer interest areas: multi-select from active `volunteer_categories`
   - How did you hear about us: dropdown from `hearing_options` table + "Other" with text input
   - Referred by: free text (optional)
+- Honeypot spam prevention (built 12.1): hidden
+  uncontrolled `<input name="website">` field
+  (off-screen via CSS, not display:none). If populated
+  on submit → silent fake-success returned, no DB
+  write. Bots fill all inputs; real users never see
+  or interact with it.
 - On submit: duplicate detection by email OR phone
   - No match → insert, send confirmation email
   - Match found → friendly merge prompt ("We found an existing record — update it?")
@@ -233,6 +249,9 @@ Mid Gray:             #555555  --color-mid-gray
 - Displays: show name, description, dates/times, volunteer roles with open slot counts
 - Waitlist option appears when a role is fully claimed
 - Claim form: Name, Email, Phone (pre-fill if email/phone found in DB)
+- Honeypot spam prevention (built 12.1): same hidden
+  field pattern as signup form. Silent rejection if
+  populated.
 - On claim:
   - Same role + same date duplicate (same email/phone) → reassurance message inline; no second insert
   - Different date of same show (same email/phone) → friendly cross-date heads-up prompt with Confirm / No thanks; Confirm proceeds to insert a second claim for the new date
@@ -268,14 +287,34 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Sign out: clear cookie → card dismisses, page remains showing all opportunities
 
 **Volunteer card (visible when session active):**
-- Name, categories, total hours, next milestone + hours remaining
-- Hours summary line: "[X] hours from [Y] shows • [Z] manual hours" (manual hours omitted if 0)
+- Name, categories, total hours, next milestone +
+  hours remaining
+- Hours summary line (built 12.3): "[X] hours across
+  [Y] shows" where Y = count of distinct shows with
+  at least one Showed attendance. Shows "[X] total
+  hours" when Y = 0 (only manual hours or zero history).
+  No "manual hours" label — hours are hours.
 - Milestone badges (earned milestones displayed visually)
-- Expandable call history: past calls (show, date via `formatWallClockCT()`, role, attendance
-  status, hours logged). Sorted by `show_date` DESC. Collapsed by default.
-- "Edit my info" → `/update?token=[update_token]` (existing update flow)
-- "Sign out" button → calls `signOutCallboard()` then `router.refresh()`
-- Active claims flagged inline on opportunity cards ("You're signed up" indicator)
+- Expandable section (built 12.3 — replaces flat list):
+  Per-show grouped breakdown. Each show: show name
+  (bold), sub-rows per call (date via
+  `formatWallClockCT()`, role, colored status badge
+  — green/red/amber, hours if Showed), per-show
+  "X hrs total" line. After all show groups: "Other
+  Hours" section for manual entries (note + date +
+  hours) — omitted if no manual entries. Empty state:
+  "No calls on record yet." Collapsed by default.
+- "Edit my info" → `/update?token=[update_token]`
+- "Sign out" → calls `signOutCallboard()` then
+  `router.refresh()`
+- Active claims flagged inline on opportunity cards
+  ("You're signed up" indicator)
+- Key types: `CallboardCallHistoryRow` (includes
+  `show_id` added in 12.3), `CallboardManualHoursEntry`
+  — both in `types/callboard.ts`.
+- Data: `manualHoursEntries` prop (full entries with
+  hours, note, logged_date) replaced the prior
+  `manualHoursTotal: number` prop.
 
 **Session mechanics:**
 - Cookie name: `callboard_session` — stores volunteer id, expires 7 days
@@ -283,7 +322,8 @@ optional and additive: entering email or phone personalizes the view with a volu
 - `lib/callboard/session.ts` — `getCallboardSession()`: reads cookie, fetches volunteer
   via `getAdminClient()`, returns volunteer or null
 - `lib/actions/callboard.ts` — `lookupVolunteer(input)`: sequential email-then-phone
-  maybeSingle() lookup, strips non-digits for phone comparison. Sets cookie on match.
+  maybeSingle() lookup, normalizes phone via `normalizePhone()` from `lib/utils/phone.ts` before
+  comparison. Sets cookie on match.
   `signOutCallboard()`: deletes cookie.
 - Middleware: `/callboard` excluded from admin session checks. Anonymous access intentional.
 - No migration needed — no schema changes for the Call Board session.
@@ -297,21 +337,84 @@ optional and additive: entering email or phone personalizes the view with a volu
 
 **General:**
 - **Light/Dark Mode:** The admin UI supports a Light/Dark mode toggle in the crew sidebar (sun/moon icon, bottom of sidebar). Preference persisted to localStorage. System preference (`prefers-color-scheme`) used as default when no saved preference exists. Implemented via Tailwind v4 `@variant dark` scoped to `[data-theme="dark"]` on the admin layout wrapper. Dark palette uses static hex values in `@theme` (dark-bg, dark-surface, dark-border, dark-nav, dark-text, dark-muted). Public pages unaffected.
-- **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`. Mobile sidebar (collapsible/hamburger) deferred to Phase 12 — PWA is most usable on tablet (768px+) until then.
+- **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`.
+- **Mobile sidebar** (built 12.1): Hamburger button (Menu icon) in TopBar, visible only below the `md` breakpoint (768px). Opens a full-height slide-in drawer with overlay. Three close methods: tap overlay, tap X button inside drawer, or navigate to any route (auto-close via `usePathname()` effect). State managed via `MobileSidebarContext` (see §3). Sidebar renders as a fixed left column on tablet+ (768px+) — unchanged from original desktop behavior.
+
+- **Help page** (`/crew/help`, built 12.2b, all roles): Single-page how-to guide. Two-column layout on desktop (sticky TOC on left, content on right). Mobile: "Jump to section" block at top collapses to full-width content. Sections: Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · The Volunteer Call Board · Standing Opportunities · Getting Help. 8 h2 sections, 23 h3 subsections, all with named anchor IDs. Tip callouts (blue left border) and Warning callouts (orange left border). Server Component, no data fetching. scroll-behavior: smooth. "Help" nav link added to `components/crew/Sidebar.tsx` (HelpCircle icon, all roles, bottom of nav list).
+- **Tooltip system** (`components/crew/HelpTooltip.tsx`, built 12.2c): Shared Server Component wrapping a `next/link` to `/crew/help#[anchor]`. Renders a small HelpCircle icon (muted, hover-brightens). Named export. No 'use client'. 16 placements across Production Crew on non-obvious UI elements: dashboard card headings, volunteer profile sections (hours, milestones, editor notes, SH badge, communication history), show detail (notifications, waitlist, report), show form (default hours, notifications toggle), volunteer list (milestone tier filter), settings (category visibility, general defaults). Each links directly to the relevant help page anchor — no popovers.
 
 **Login (`/crew/login`):**
 - Email/password form
-- Google SSO: deferred to Beta
+- Google SSO: live in Alpha (30BN-1.3)
 - On success: redirect to `/crew/dashboard` if valid `admin_users` record
 - Invalid credentials or unregistered email: clear error, no redirect
 - **Request Access** — "Request Access" toggle below the login form reveals a registration panel (Full Name, Email, Password, Confirm Password). On submit: creates Supabase Auth user, inserts `pending_registrations` row (status = 'pending'), sends notification email to all active Super Admins. Success state: in-page message, no redirect. Duplicate checks: existing `admin_users` email → "already registered"; existing pending row → "request already pending."
 
 **Dashboard (`/crew/dashboard`):**
-- **Season at a Glance + Quick Stats:** Planned but not yet built. ADMIN.20 will deliver: per-show staffing fill status (red/yellow/green per role), Super Admin-configurable season selector (stored in `app_settings` as `dashboard_season_id`), and stat tiles (Total Active Volunteers, Upcoming Shows This Month, Volunteers Needed, Recent Signups 7 days). Falls back to all live shows when no season is pinned.
-- **Pending Hours Review** (Editor/Super Admin only): all past `attendance` records with `status = 'showed'` and `hours_confirmed = false`, grouped by show + date. Per-volunteer row: name, role, editable hours input (pre-filled with current `hours_logged`), Confirm button. On confirm: `confirmHours()` applies delta to `volunteers.total_hours`, inserts correction entry in `volunteer_hours_log` if delta ≠ 0, sets `hours_confirmed = true`. Card hidden when empty. Built in 30BN-9.1 (PendingHoursCard).
-- **Pending Milestone Acknowledgments** (Editor/Super Admin only): all `milestone_log` rows with `editor_acknowledged = false`, per volunteer. "Mark Acknowledged" button prompts Editors to give a personal thank-you. Clears on acknowledge. Built in 30BN-9.2 (PendingMilestonesCard).
-- **Activity feed:** paginated feed of platform events — volunteer signups, slot claims, cancellations, opportunity submissions — in reverse chronological order. Loads 10 at a time; "Load more" button appends the next 10. Per-user read state: each admin has an `activity_cleared_at` timestamp; events newer than this are highlighted "NEW." "Mark all as read" updates the timestamp without a page reload. Events include volunteer name (linked to profile) and context (show name linked to show detail, opportunity title linked to opportunity detail). Implemented via `get_activity_feed()` Supabase RPC (UNION of four event sources, SECURITY DEFINER).
-- **Add to Home Screen card** (mobile only, dismissible): device-aware PWA install prompt. iOS: numbered steps with Share icon. Android: "Install App" button triggering native `beforeinstallprompt`. Hidden when already installed or dismissed (localStorage key). Built in ADMIN.16.
+- **Quick Stats** (built ADMIN.20, all roles): four stat
+  tiles at the top of the dashboard. Total Active
+  Volunteers (count WHERE status = 'active'); Upcoming
+  Shows This Month (live shows with at least one
+  show_date in the current CT calendar month, computed
+  via `date-fns-tz` with 'America/Chicago' — DST-safe);
+  Volunteers Needed (sum of open slots across all live
+  shows); New Volunteers (7 Days) (created_at in last
+  7 days). Uses `getServerClient()`. Components:
+  `components/crew/dashboard/QuickStats.tsx`.
+- **Season at a Glance** (built ADMIN.20, all roles):
+  per-show staffing view for the pinned season, or all
+  live shows as fallback when no season is pinned. Each
+  show card lists roles with a staffing indicator per
+  role: red (0 claimed), yellow (partial), green (fully
+  claimed). Super Admin-only season selector dropdown
+  in section header — selecting a season upserts
+  `app_settings.dashboard_season_id` via
+  `setPinnedSeason()` in `lib/actions/settings.ts` and
+  revalidates the dashboard in place. Editors and
+  Viewers see the pinned season data but have no
+  selector. Fallback: when `dashboard_season_id` is
+  null or unset, shows all live shows. Components:
+  `components/crew/dashboard/SeasonAtAGlance.tsx`,
+  `components/crew/dashboard/SeasonSelector.tsx`.
+- **Pending Hours Review** (Editor/Super Admin only):
+  all past `attendance` records with `status = 'showed'`
+  and `hours_confirmed = false`, grouped by show + date.
+  Per-volunteer row: name, role, editable hours input
+  (pre-filled with current `hours_logged`), Confirm
+  button. On confirm: `confirmHours()` applies delta to
+  `volunteers.total_hours`, inserts correction entry in
+  `volunteer_hours_log` if delta ≠ 0, sets
+  `hours_confirmed = true`. Card hidden when empty.
+  Built in 30BN-9.1 (PendingHoursCard).
+- **Pending Milestone Acknowledgments** (Editor/Super
+  Admin only): all `milestone_log` rows with
+  `editor_acknowledged = false`, per volunteer. "Mark
+  Acknowledged" button prompts Editors to give a
+  personal thank-you. Clears on acknowledge. Built in
+  30BN-9.2 (PendingMilestonesCard).
+- **Activity feed:** paginated feed of platform events —
+  volunteer signups, slot claims, cancellations,
+  opportunity submissions — in reverse chronological
+  order. Loads 10 at a time; "Load more" button appends
+  the next 10. Per-user read state: each admin has an
+  `activity_cleared_at` timestamp; events newer than
+  this are highlighted "NEW." "Mark all as read" updates
+  the timestamp without a page reload. Events include
+  volunteer name (linked to profile) and context (show
+  name linked to show detail, opportunity title linked
+  to opportunity detail). Implemented via
+  `get_activity_feed()` Supabase RPC (UNION of four
+  event sources, SECURITY DEFINER).
+- **Add to Home Screen card** (mobile only, dismissible):
+  device-aware PWA install prompt. iOS: numbered steps
+  with Share icon. Android: "Install App" button
+  triggering native `beforeinstallprompt`. Hidden when
+  already installed or dismissed (localStorage key).
+  Built in ADMIN.16.
+- **Dashboard section render order** (top to bottom):
+  Quick Stats → Season at a Glance → Pending Milestones
+  → Pending Hours → Add to Home Screen (mobile only)
+  → Activity Feed.
 
 **Volunteers (`/crew/volunteers`):**
 - Searchable, filterable, sortable list (full-text: name/email/phone)
@@ -319,15 +422,29 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Volunteer list is filterable by category (role)
 - SH badge on list rows indicating `requires_service_hours`
 - Sort: name, date joined, total hours, last call date
-- Columns: Name, Email, Phone, Categories, Total Hours, Calls, Status, Joined
+- Columns: Name, Email, Phone, Categories, Total Hours,
+  Calls, Status, Joined. Phone column displays formatted
+  via `formatPhone()` from `lib/utils/phone.ts`
+  (e.g. "(985) 555-1234" — ADMIN.21).
 - Bulk select: export selected to CSV. `requires_service_hours` included in CSV export.
 - **Export Matching (CSV):** filter-aware all-pages CSV export — exports all volunteers matching the current active filters, not just the current page. Built in ADMIN.19 (replaced the prior all-volunteers-ignoring-filters export).
-- PDF export available (Editor/Super Admin) via server-side route handler at `/crew/volunteers/export`. Landscape A4, branded header, 9-column table (added "Svc Hrs" column in ADMIN.17). **Known gap:** the PDF route handler manually reconstructs URL params rather than reusing the full page-level state object, so it does not respect all active filters — specifically `milestoneTier` is not honored. The CSV "Export Matching" export is unaffected (it reuses the page-level state end-to-end). PDF filter gap is a pre-launch fix candidate.
+- PDF export available (Editor/Super Admin) via
+  server-side route handler at `/crew/volunteers/export`.
+  Landscape A4, branded header, 9-column table (added
+  "Svc Hrs" column in ADMIN.17). Filter fix applied in
+  ADMIN.20: both `milestoneTier` and `service_hours`
+  params were previously dropped by the route handler;
+  both now pass through correctly. The CSV "Export
+  Matching" export was unaffected and remains correct.
 - Milestone Tier filter: active as of 30BN-9.2. Filter options: Any milestone earned, First Call, 10+ Hours, 20+ Hours, 50+ Hours, 100+ Hours. Filter runs a pre-query against `milestone_log` then applies `.in('id', matchingIds)` on the main volunteer query.
 - Row click → volunteer profile
 
 **Volunteer Profile (`/crew/volunteers/[id]`):**
-- All submitted fields (editable by Editors, read-only for Viewers)
+- All submitted fields (editable by Editors, read-only
+  for Viewers). Phone displays formatted in view mode
+  (e.g. "(985) 555-1234") via `formatPhone()` from
+  `lib/utils/phone.ts`; edit-mode input shows raw
+  digits-only value as stored (ADMIN.21).
 - Service Hours Required field in Personal section: "Yes" (orange) / "No" (mid-gray) / "—" if no school on file. Editable in edit mode.
 - Category tags (editable)
 - Call history table (show, date, role, attendance, hours). Sorted by `show_date` descending via JS sort after fetch — fixed in ADMIN.19. The `.order('claimed_at')` PostgREST call was removed since `show_date` is fetched in the nested select and sorted client-side.
@@ -340,11 +457,30 @@ optional and additive: entering email or phone personalizes the view with a volu
 - All profile mutation components standardized to `router.refresh()` in ADMIN.19 (EditorNotes, StatusToggle, VolunteerProfileForm). `setIsEditing(false)` added alongside refresh in VolunteerProfileForm to prevent stale form state.
 - **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors and Super Admins only. Never visible to volunteer (RLS enforced). Editors and Super Admins can add notes (append-only for Editors). Super Admins can also edit and delete existing notes. Implemented via Migration 004 RLS policies. For preferences, scheduling considerations, history, sensitive info.
 - Status toggle: Active / Archived (Editors only, confirmation prompt)
-- Audit entries for this volunteer (read-only, Editors only)
+- **Communication History** (built ADMIN.24, all roles):
+  collapsible section below Milestone History. Shows all
+  emails logged to this volunteer via
+  `email_log_recipients` JOIN `email_log`. Collapsed by
+  default; expand/collapse via chevron toggle. Columns:
+  Date (`formatCT` — `sent_at` is timestamptz), Subject,
+  Type (human-readable: "Transactional", "Show Message"
+  for `recipient_filter` starting with 'show:',
+  "Category Email", "Direct", "All Volunteers"), Sent By
+  (admin name or "System" for null `sent_by`), Preview
+  (body_preview truncated to 80 chars; "—" if null).
+  Empty state: "No emails on record for this volunteer"
+  with clarifying note that only platform-logged emails
+  appear. Visible to all admin roles including Viewers.
+  Component:
+  `components/crew/volunteers/CommunicationHistory.tsx`.
+  Note: only emails explicitly logged via `email_log` /
+  `email_log_recipients` appear here — not all
+  transactional emails are currently logged
+  (pre-Phase 13 gap).
 
 **Category Management (`/crew/settings/categories`):**
 - Super Admin only (not Editor or Viewer)
-- Add, rename, reorder (drag-and-drop or arrows), visibility toggle
+- Add, rename, reorder (↑↓ arrow buttons — no drag library), visibility toggle
 - Visibility toggle: hides from public signup form. Does NOT affect existing DB assignments. Can be re-enabled at any time.
 - Category description is editable inline from the category list (ADMIN.19) — same edit session as the name, submitted together. A `<textarea rows={2}>` appears in the row's edit mode. Server-side cap: 500 characters. The creation-time description field also uses a `<textarea>` (ADMIN.19). `renameCategory()` extended to accept optional `description` param.
 - Default categories (seeded): Ushers/Front of House · Band Members · Concessions · Backstage Crew · Wardrobe/Costumes · Hair/Make-Up · Lighting Design · Lighting Operator · Sound Design · Sound Operator · Set Build · Set Design · Stage Manager · Tech · Cleaning/Organization
@@ -361,11 +497,14 @@ optional and additive: entering email or phone personalizes the view with a volu
 - **Change Password** — `/crew/settings/password` page accessible to all logged-in admins via "Change Password" link in the top bar. New Password + Confirm New Password fields (min 8 chars). Uses Supabase Auth `updateUser({ password })`. No current password field required (relies on valid session). Logged to `audit_log` as `user.password_change`. Built in ADMIN.15.
 
 **Show Management (`/crew/shows`):**
-- Show list organized by season, filter by type/status
-- Create/edit show: name, show type (Mainstage/Studio X/One-Off), season, dates+times with per-date volunteer roles (each date has its own independent role configuration — role name, category, slot count), assigned editors, custom show instructions (included in slot claim confirmation email), status (draft/live/past/archived). "Copy roles from previous date" convenience copies the role structure from the preceding date row.
+- Show list organized by season, filter by location/status
+- Create/edit show: name, location (loaded from `locations` table — never hardcoded, R4), season, dates+times (start time + optional end time — added CAL.4a, Migration 019) with per-date volunteer roles (each date has its own independent role configuration — role name, category, slot count), assigned editors, custom show instructions (included in slot claim confirmation email), status (draft/live/past/archived). "Copy roles from previous date" convenience copies the role structure from the preceding date row.
+- **Buffer time per show date** (built CAL.3): each show date has optional "Reserve before" and "Reserve after" fields (in minutes, default 0). Stored in `show_date_buffer` table. Buffer windows appear on the master calendar in a lighter shade of the location color; they are NOT part of the public performance time display. Used for conflict detection when booking other events into the same space.
 - Draft/Live toggle: live = visible to public immediately
 - Per-show detail page (`/crew/shows/[id]`):
-  - Tabs: Overview / Volunteers / Waitlist / Dates / Settings
+  - Tabs: Overview / Volunteers / Waitlist / Dates /
+  Report / Settings. The Report tab renders only when
+  show.status = 'past' (hidden on all other statuses).
   - Volunteers tab: per-role roster, attendance status, per-date filter
   - Waitlist tab: ordered list per role, volunteer name + time added
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
@@ -373,7 +512,47 @@ optional and additive: entering email or phone personalizes the view with a volu
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
   - Bulk mark: per-role "Mark All Showed" button (one button per role section, not a global button for all roles at once)
-- Attendance re-marking: changing a volunteer from Showed to No-Show or Excused subtracts the previously logged hours from `volunteers.total_hours` and inserts a negative `volunteer_hours_log` entry. Changing from a non-Showed status to Showed adds hours. The hours delta is computed server-side and applied atomically. If `slot_claims.volunteer_id` is null (non-registered volunteer), the attendance record is still inserted but hours are not tallied.
+- Attendance re-marking: changing a volunteer from
+  Showed to No-Show or Excused subtracts the previously
+  logged hours from `volunteers.total_hours` and inserts
+  a negative `volunteer_hours_log` entry. Changing from
+  a non-Showed status to Showed adds hours. The hours
+  delta is computed server-side and applied atomically.
+  If `slot_claims.volunteer_id` is null (non-registered
+  volunteer), the attendance record is still inserted but
+  hours are not tallied.
+- **Post-Show Report tab** (built ADMIN.22, all roles,
+  status = 'past' only): aggregate stats for the full
+  show. Six stat tiles: Claimed Appearances (distinct
+  claimed slot_claims), Showed Up, No-Shows, Excused,
+  Total Hours (sum of hours_logged WHERE status =
+  'showed'), Attendance Rate (showed ÷ total marked
+  × 100; null when no records marked). Per-date
+  breakdown table: Date | Claimed | Showed | No-Show |
+  Excused | Unmarked | Hours. Empty states: "No
+  volunteers rostered" and "Attendance not marked yet"
+  notice. Hours pending confirmation subtext when any
+  showed records have `hours_confirmed = false`. Data
+  fetched via `getPostShowReportData(showId, supabase)`
+  in `lib/data/showReport.ts`. Component:
+  `components/crew/shows/PostShowReport.tsx`.
+- **Bulk Email from Show Detail** (built ADMIN.23,
+  Editor/Super Admin only): "Message Volunteers (N)"
+  button on Overview tab, where N = unique claimed
+  volunteer emails. Inline compose form: Subject,
+  Reply-To (pre-fills from `default_reply_to`),
+  Message. Two-step: compose → confirm → send.
+  Deduplication by lowercased email server-side.
+  Sends via shared `sendBatchEmails()` helper in
+  `lib/email.ts` (chunks of 100, R8). Logs to
+  `email_log` (recipient_type = 'category',
+  recipient_filter = 'show:{showId}') and
+  `email_log_recipients`. Server action:
+  `sendShowBulkEmail()` in `lib/actions/shows.ts`.
+  Component:
+  `components/crew/shows/BulkEmailSection.tsx`.
+
+- **Automated Post-Show Thank-You Email** (built 12.4): Vercel Cron Job at `app/api/cron/thankyou/route.ts`, runs daily at 07:00 UTC (02:00 CT). Finds show_dates where `show_date = CURRENT_DATE - 2` (48 hours after the show, giving Editors time to mark attendance) AND `thank_you_sent_at IS NULL`. For each date: fetches all slot_claims with status = 'claimed' that have an attendance record with status = 'showed'. Deduplicates by lowercased email. Sends via `sendBatchEmails()` helper (R8). Logs to `email_log` (recipient_type = 'transactional', sent_by = null, recipient_filter = 'show_date:{dateId}') + `email_log_recipients`. Sets `show_dates.thank_you_sent_at = now()` after successful send+log. Dates with zero showed volunteers: marked sent immediately, no emails sent. CRON_SECRET auth. Email function: `buildThankYouEmailPayload()` in `lib/email.ts`. `escapeHtml()` applied to recipientName and showName. Migration 015 adds `thank_you_sent_at timestamptz` (nullable) to `show_dates`.
 
 **Standing Volunteer Opportunities (30BN-4.4a/4.4b):**
 - Non-show volunteer opportunities for intern positions, long-term roles, and organizational interest. Public URL: `/opportunities/[id]`. Linked from `/shows` public page above productions (wired in Phase 5).
@@ -382,7 +561,7 @@ optional and additive: entering email or phone personalizes the view with a volu
   - Title and optional description
   - Claim type: Expression of Interest (EOI) OR Slot Claim. EOI = volunteer submits interest, Editor follows up manually. Slot Claim = same cap enforcement as show slot claiming.
   - Slot cap: optional toggle. If off, open-ended. If on, enter a slot count. Cap applies to both EOI and Slot Claim types.
-- Public submission page (`/opportunities/[id]`): name, email, phone form. Duplicate detection by email (friendly message, not an error). Cap enforcement: if Slot Claim and cap hit, "full" message rendered, no form shown.
+- Public submission page (`/opportunities/[id]`): name, email, phone form. Duplicate detection by email (friendly message, not an error). Cap enforcement: if Slot Claim and cap hit, "full" message rendered, no form shown. Honeypot spam prevention (built 12.1): same hidden field pattern. Silent rejection if populated.
 - Confirmation email copy is distinct by claim type: EOI — warm, "we'll be in touch." Slot Claim — confirms the position.
 - Admin detail page (`/crew/shows/opportunities/[id]`): public URL copy/view, edit link, submissions table (name, email, phone, linked volunteer profile if email/phone matches a `volunteers` record, submitted date, status).
 - Submissions logged to `opportunity_submissions`. All submissions (including public) logged to `audit_log` with `admin_id = null` (see R25).
@@ -427,7 +606,8 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Published form → unique public URL (`/forms/[id]`) — accessible publicly only when live.
   Draft and closed forms show a generic "not available" or "no longer accepting" state.
 - Public form (`/forms/[id]`): dynamic zod schema built from field configuration at runtime,
-  keyed by field id. Checkbox fields use Controller (not register) for string[] value management.
+  keyed by field id. Honeypot spam prevention (built 12.1): same hidden field pattern as other
+  public forms. Silent rejection if populated. Checkbox fields use Controller (not register) for string[] value management.
   Rating field rendered as 5 plain <button> elements (R19). Volunteer profile linking scans
   submitted values for email (@) and phone (digits) patterns — best-effort, not field-typed.
 - Response viewer at `/crew/forms/[id]/responses`: client-side date range and match/unmatch
@@ -516,30 +696,159 @@ optional and additive: entering email or phone personalizes the view with a volu
 - All admin actions logged: see complete AuditAction union in lib/audit.ts.
 - Permanent, tamper-proof.
 
-**Communication (Beta stubs in Alpha):**
-- Email blasts: all volunteers / by category / individual
-- Reply-to: editable per send, default `info@30byninety.com`
-- Rich text composer, recipient preview, confirm before send
-- Communication history log: every email logged
+**Master Calendar (`/crew/calendar` + public `/calendar`):**
+
+**Overview:** A theater-wide room-booking and event calendar system. Two surfaces: a full Production Crew admin calendar at `/crew/calendar` and a public read-only Events Calendar at `/calendar` (shows performance dates and volunteer-needs indicators only).
+
+**Locations (`locations` table, Migration 016):** Locations replace the old `show_type` concept (CAL.1 migration). All bookable spaces are rows in the `locations` table: Mainstage (#293994 navy), Mainstage Lobby (#0D9488 teal), Green Room (#15803D green), Studio X (#F26522 orange), Studio X Office (#7C3AED purple). Each location has a display color used for event chips, the room-booking grid, and the legend. Location management UI (add/edit/reorder/deactivate, color picker, per-location `default_hours`) planned for CAL.8. Shows now carry a `location_id` FK instead of a `show_type` text column.
+
+**Show-to-Calendar Auto-Sync (CAL.3):** When a show date is created or updated, a `calendar_events` row is automatically upserted via `syncShowDateToCalendar(showDateId, supabase)` in `lib/actions/calendar-sync.ts`. Key behavior:
+- `event_type = 'performance'`, `source = 'show'`, `status = 'approved'`, `submitted_by = null`
+- `start_time` / `end_time` built from `show_date` + `show_time` / `end_time` via `fromZonedTime()` with CT — DST-safe (R23 pattern). Falls back to `start_time + 3 hours` when `end_time` is null.
+- Upserted on `source_show_date_id` unique constraint. UPDATE (not insert) when show date is edited.
+- CASCADE DELETE: when a show date is deleted, its linked `calendar_events` row is deleted automatically.
+- Show-sourced events are always `approved` — no pending queue.
+- Buffer time stored in `show_date_buffer`; used for conflict detection but does not affect the calendar event's stored start/end times.
+- `hasConflict()` and `hasConflictWithBuffer()` in `lib/utils/calendar-conflict.ts` — shared conflict detection utility used by sync, approval queue, and Book Space panel.
+
+**Event Types (manual events):** Performance events are auto-generated from shows only — never created manually. All other types are available for manual creation: Rehearsal, Teaching, Meeting, Event, Rental (Super Admin only), Other (with custom label). Type drives color-coded filtering and legend display. Rental is restricted to Super Admin; all other types available to all roles (subject to approval flow).
+
+**Roles and Access on the Calendar:**
+- Super Admin: full read/write. Direct-create (events approved immediately). Can approve, edit, cancel any event. Only role that can create Rentals.
+- Editor/Viewer (calendar_editor = false, default): can view all approved events, submit single events or rehearsal batches for approval. Events saved as `pending`.
+- Editor/Viewer (calendar_editor = true): direct-create access (events approved immediately). Book Space button visible.
+- Production: can view the calendar and submit events/rehearsal schedules for approval. Same pending flow as default Editor/Viewer.
+
+**`/crew/calendar` — Admin Calendar Page (CAL.4b):** Three switchable views, all in one page:
+- **Month view:** 7-column calendar grid. Up to 3 colored event chips per day (overflow: "+N more"). Day click opens day detail panel.
+- **Week view (room-booking grid):** Rows = active locations (toggle: All Locations / Booked Only). Columns = Mon–Sun. Time axis 7 AM–10 PM at 1-hour increments. Event blocks absolutely positioned by start/end time. Buffer windows shown as lighter shade of location color. Current-time indicator (red line) when viewing current week.
+- **Agenda view:** Chronological list, grouped by date. Colored left border per event. 90-day forward window. Empty dates omitted.
+- **Location Legend (`CalendarLegend.tsx`):** Horizontal color-chip row visible across all views and all roles, below the filter bar. Shows all active locations with their assigned colors.
+- **Filter bar:** Location multi-select, Event Type multi-select, Season (server-side re-fetch). Location/type filters applied client-side; season filter triggers server re-fetch (requires show→season join). Week-view only: "All Locations / Booked Only" toggle. Mobile: collapses to "Filters" button.
+- **Day detail panel:** Slide-in from right (desktop) / bottom sheet (mobile). Two sections: Booked (events in time order) and Available Windows (free time slots per location within 7 AM–10 PM, computed via `getAvailableWindows()` from `lib/utils/calendar-availability.ts`).
+- **Pending Requests link** (Super Admin only): in calendar header. Badge shows count of pending events.
+- **"Add Event" / "Submit Request" dropdown:** Opens either single-event form or bulk rehearsal form. Label adapts to role.
+- **Book Space panel** (`CalendarBookSpacePanel.tsx`): slides in from the LEFT (not right — avoids day panel conflict). Date + time range + location search → returns per-location availability. "Book This Slot" pre-fills CalendarEventForm. Visible to Super Admin and `calendar_editor` users only.
+- **URL params:** `view`, `date`, `locations`, `types`, `season`, `show_locations`. Shareable, survive navigation.
+
+**Event Creation / Submission (CAL.5a):** Single form `CalendarEventForm.tsx` with role-adaptive behavior:
+- Fields: Title, Event Type, Custom Type Label (if Other), Location (required for Super Admin / calendar_editor; optional "Preferred Location" for others), Date, Start Time, End Time, Description, Requirements, Contacts (up to 5, name + phone, normalized via `normalizePhone()`).
+- Super Admin / calendar_editor: conflict detection ("Check Availability" button before submit). Can override conflicts. Events saved as `approved`.
+- Other roles: no conflict check at submission. Events saved as `pending`. Preferred location stored for reference but not enforced.
+- Performance type excluded from manual creation (auto-generated from shows only).
+- Contacts stored in `calendar_event_contacts` (CASCADE DELETE from calendar_events).
+- Edit flow: "Edit" button on day panel event rows (Super Admin only). Pre-fills form with existing data.
+- Server actions: `createCalendarEvent()`, `updateCalendarEvent()`, `checkEventConflict()` in `lib/actions/calendar.ts`.
+- Zod schemas: `calendarEventSchema` (client) + `calendarEventSubmitSchema` (server, with cross-field end > start check) in `lib/validations/calendar.ts`.
+
+**Bulk Rehearsal Submission (CAL.5b):** `CalendarBulkRehearsalForm.tsx` — dedicated modal for submitting a full rehearsal schedule:
+- Batch details: Production Title (stored in `rehearsal_batches` table), Preferred Location, Default Start Time, Default End Time, Description, Requirements, Contacts.
+- Date management: date picker adds dates to a list. New dates auto-pre-fill from Default Start/End Time. "Apply to all dates" button updates all existing rows to current defaults. Per-row start/end time override. Dates auto-sort chronologically after every add.
+- Contacts repeated across all events in the batch.
+- Server action: `createRehearsalBatch()` in `lib/actions/calendar.ts`. Each date becomes a separate `calendar_events` row with `rehearsal_batch_id` set.
+- For direct-create (Super Admin / calendar_editor): per-date conflict detection runs server-side. Partial success — non-conflicting dates approved, conflicting dates reported.
+- For pending flow: all dates saved as pending, no conflict check at submission.
+
+**Pending Approval Queue (`/crew/calendar/pending`, CAL.5b):** Super Admin only. Server-side conflict pre-check at page load for events with a preferred location set. Two sections:
+- Rehearsal Batches: grouped by batch, collapsible cards. Per-date table: Date, Requested Time, Location Selector, Conflict Indicator (⚠ / ✓ / —), Approve / Skip actions. "Approve All Available" button approves non-conflicted dates with a location selected via `approveBatch()`.
+- Individual Requests: per-event cards with same location selector and conflict logic.
+Location selector onChange triggers live `checkEventConflict()` re-check. Approve button disabled when conflict confirmed. `approveCalendarEvent(eventId, locationId)` runs a final server-side conflict check before approving.
+Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent()` in `lib/actions/calendar.ts`.
+
+**Public Events Calendar (`/calendar`, CAL.7 — planned):** Read-only. Shows `event_type = 'performance'` and `status = 'approved'` events only. Month view. "Needs volunteers" indicator on show dates with at least one open slot. Click → show name, time, "Sign up to volunteer →" link to show slot-claiming page. No room detail, no filters, no booking.
+
+**Key files (CAL phase):**
+- `lib/actions/calendar-sync.ts` — `syncShowDateToCalendar()`
+- `lib/actions/calendar.ts` — all calendar server actions (checkEventConflict, createCalendarEvent, updateCalendarEvent, createRehearsalBatch, approveCalendarEvent, approveBatch, cancelCalendarEvent, findAvailableSlots)
+- `lib/utils/calendar-conflict.ts` — `hasConflict()`, `hasConflictWithBuffer()`
+- `lib/utils/calendar-availability.ts` — `getAvailableWindows()`, grid helpers
+- `lib/validations/calendar.ts` — `calendarEventSchema`, `calendarEventSubmitSchema`, `rehearsalBatchSchema`
+- `types/calendar.ts` — `CalendarEvent`, `CalendarEventType`, `CalendarEventContact`, `RehearsalBatch`, `ShowDateBuffer`, etc.
+- `types/admin.ts` — `AdminRole` type (consolidated from inline definitions in CAL.2; `lib/auth.ts` re-exports it)
+- `components/crew/calendar/` — CalendarShell, CalendarMonthView, CalendarWeekView, CalendarWeekGrid, CalendarAgendaView, CalendarDayPanel, CalendarFilterBar, CalendarEventChip, CalendarLegend, CalendarEventForm, CalendarBulkRehearsalForm, PendingQueueClient, CalendarBookSpacePanel
+
+**ADMIN.25 — Default Hours Fallback Update:** `getLocationHoursBucket()` in `lib/actions/attendance.ts` (and the parallel auto-fill in `ShowForm.tsx`) was updated to check `locations.default_hours` (Migration 020 — numeric, nullable) as the primary source before falling back to the `app_settings` name→bucket map. This means per-location default hours can be set directly on the `locations` record. The three existing `app_settings` keys (`default_hours_mainstage`, `default_hours_studio_x`, `default_hours_one_off`) remain as fallbacks when `locations.default_hours` is null. Per-location `default_hours` UI planned for CAL.8 — currently settable via Supabase dashboard only.
+
+**Communication (`/crew/communication`):**
+Stub page built in Phase 11.1. Navigation link active.
+Displays "Coming Soon" state with feature description.
+Full email blast system (all volunteers / by category /
+individual; rich text composer; recipient preview;
+confirm before send; communication history log) deferred
+to Phase 13 (Beta).
 
 **Announcement Banner (`/crew/settings/announcement`):**
-- Text input, on/off toggle, save → takes effect on public landing page immediately
+Built in Phase 11.2. Text input (280 char limit with
+live character count), on/off toggle, save → takes
+effect on public landing page immediately via
+`revalidatePath('/')`. Light-mode preview of how the
+banner will appear on the public page (always light
+regardless of admin dark mode). Server action:
+`saveAnnouncementBanner()` in `lib/actions/settings.ts`.
 
 **App Settings (`/crew/settings`):**
-- Announcement banner
-- Hearing options management (add/rename/reorder/deactivate)
-- Signup form field toggles (school visible, age range visible)
-- Default hours per show type
-- Default reply-to email address
+Built in Phase 11.2. Settings hub at `/crew/settings`
+displays 8 section cards using the `LinkedCard` /
+`LockedCard` role-gating pattern (established in
+30BN-10.1 for the Audit Log card).
+
+| Card | Route | Access |
+|---|---|---|
+| Announcement Banner | `/crew/settings/announcement` | Editor + Super Admin (LinkedCard); Viewer (LockedCard) |
+| Hearing Options | `/crew/settings/hearing-options` | Editor + Super Admin (LinkedCard); Viewer (LockedCard) |
+| Signup Form | `/crew/settings/signup-form` | Editor + Super Admin (LinkedCard); Viewer (LockedCard) |
+| General Defaults | `/crew/settings/general` | Editor + Super Admin (LinkedCard); Viewer (LockedCard) |
+| Category Management | `/crew/settings/categories` | Super Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
+| User Management | `/crew/settings/users` | Super Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
+| Audit Log | `/crew/settings/audit-log` | Editor + Super Admin (LinkedCard); Viewer (LockedCard "Editor & Super Admin only") |
+| Document Management | `/crew/settings/documents` | Editor + Super Admin (LinkedCard, "Beta" badge); Viewer (LockedCard) |
+| Location Management | `/crew/settings/locations` | Super Admin only (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **planned CAL.8, not yet built** |
+
+Sub-pages built in Phase 11.2:
+- `/crew/settings/announcement` — see Announcement
+  Banner above.
+- `/crew/settings/hearing-options` — Add, rename
+  (inline edit), reorder (↑↓ arrows — no drag library),
+  deactivate/reactivate. Uses `is_active` column.
+  Deactivated options hidden from public signup form.
+  `revalidatePath('/')` on all mutations. Actions:
+  `addHearingOption()`, `updateHearingOption()`,
+  `reorderHearingOption()`, `toggleHearingOptionActive()`.
+  Audit types: `hearing_options.create/update/reorder/
+  deactivate` (deactivate used for both directions).
+- `/crew/settings/signup-form` — Two toggles:
+  `signup_show_school`, `signup_show_age_range`. Single
+  save. `revalidatePath('/')`. Action:
+  `saveSignupFormToggles()`.
+- `/crew/settings/general` — Default hours (fallback by location bucket: Mainstage/Studio X/One-Off, min 0 max 24, step 0.5) and default reply-to email. These keys are now fallbacks only — per-location `default_hours` on the `locations` table takes precedence when set (ADMIN.25). Per-location UI planned for CAL.8. Two
+  independently-saving sections. Actions:
+  `saveDefaultHours()`, `saveDefaultReplyTo()`.
+
+All settings mutations use `getServerClient()`, upsert
+via `ON CONFLICT (key) DO UPDATE`, log to `audit_log`
+as `settings.update` with before/after values, and live
+in `lib/actions/settings.ts` (created in ADMIN.20 for
+`setPinnedSeason()`; Phase 11.2 actions added then).
+Viewers redirected to `/crew/settings` hub if they
+navigate directly to any sub-page.
 
 **Document Management (`/crew/settings/documents`) — Beta:**
-- Upload/swap consent form PDF
-- One active document per type
-- Public landing page link auto-updates
+Stub page built in Phase 11.1. Displays "Coming Soon"
+state with feature description. Linked from the
+Settings hub with a "Beta" badge. Full system
+(upload/swap consent form PDF, one active per type,
+landing page link auto-updates using P-DC pattern)
+deferred to Phase 15 (Beta).
 
 **Check-In System (Beta — stub in Alpha):**
-- Per-show-date check-in QR generated from show detail
-- Public check-in page at `/checkin/[token]`
+Admin tool stub page built in Phase 11.1 at
+`/crew/tools/checkin`. "Check-In" sidebar nav link
+added (Phase 11.1 — appears after QR Generator in the
+sidebar). Displays "Coming Soon" state with feature
+description. Full system (per-show-date check-in QR
+from show detail, public check-in page at
+`/checkin/[token]`, email/phone entry → auto-mark
+attendance) deferred to Phase 14 (Beta).
 
 ---
 
@@ -619,7 +928,29 @@ Changes `form_response_values.field_id` FK from NO ACTION to ON DELETE CASCADE.
 Adds UNIQUE constraint `milestone_log_volunteer_threshold_unique` on
 `(volunteer_id, milestone_hours)`.
 
-**Next migration:** 014
+**Migration 014 status:** Applied — `014_normalize_phone.sql`
+(ADMIN.21) Data-only migration — no schema changes.
+Normalizes existing phone values to digits-only:
+`UPDATE volunteers SET phone = regexp_replace(phone,
+'[^0-9]', '', 'g') WHERE phone != regexp_replace(...)`
+and the equivalent for `slot_claims.volunteer_phone`.
+Both updates are idempotent (WHERE guard ensures rows
+already normalized are not touched).
+
+**Migration 015 status:** Applied —
+`015_show_date_thank_you.sql` (12.4).
+Adds `thank_you_sent_at timestamptz` (nullable, no
+default) to `show_dates`. Used by the post-show
+thank-you cron to track whether a thank-you email
+has been sent for each show date.
+
+**Next migration:** 016
+
+Historical note: the email_log_recipients volunteer_id
+index (`idx_email_log_recipients_volunteer_id`) was
+confirmed pre-existing on the live DB during ADMIN.24
+pre-work. No migration file was needed or created for
+it.
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -646,8 +977,13 @@ status           text NOT NULL DEFAULT 'active' CHECK (status IN ('active','arch
 total_hours      numeric(6,2) NOT NULL DEFAULT 0
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
-requires_service_hours  boolean NOT NULL DEFAULT false
+requires_service_hours boolean NOT NULL DEFAULT false
 -- Constraint: UNIQUE (email), UNIQUE (phone)
+-- NOTE: phone stored as digits-only (no formatting)
+-- as of Migration 014 (ADMIN.21). All write paths
+-- normalize via normalizePhone() from
+-- lib/utils/phone.ts before insert/update/compare.
+-- Display via formatPhone() in admin UI.
 -- Trigger: trg_volunteers_updated_at on UPDATE
 ```
 
@@ -723,7 +1059,13 @@ show_id          uuid NOT NULL REFERENCES shows(id) ON DELETE CASCADE
 show_date        date NOT NULL
 show_time        time NOT NULL
 created_at       timestamptz NOT NULL DEFAULT now()
+thank_you_sent_at timestamptz
 -- INDEX: idx_show_dates_show_id
+-- NOTE: thank_you_sent_at added in Migration 015 (12.4).
+-- Null = post-show thank-you email not yet sent.
+-- Non-null = timestamp when it was sent. The thank-you
+-- cron checks IS NULL to avoid re-sending on subsequent
+-- daily runs.
 ```
 
 ### volunteer_roles
@@ -750,6 +1092,8 @@ volunteer_id     uuid REFERENCES volunteers(id)
 volunteer_name   text NOT NULL
 volunteer_email  text NOT NULL
 volunteer_phone  text
+-- NOTE: stored as digits-only as of Migration 014
+-- (ADMIN.21). Same normalization as volunteers.phone.
 claim_token      uuid NOT NULL DEFAULT gen_random_uuid()
 status           text NOT NULL DEFAULT 'claimed' CHECK (status IN ('claimed','cancelled','waitlisted'))
 waitlist_position integer
@@ -777,6 +1121,8 @@ source           text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','chec
 marked_by        uuid REFERENCES admin_users(id)
 marked_at        timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_attendance_volunteer_id, idx_attendance_show_id
+-- INDEX: idx_attendance_slot_claim_id (confirmed present
+--   on live DB in 12.2a audit — not in original Brief §9)
 -- INDEX: idx_attendance_hours_confirmed(hours_confirmed, status) — Migration 011
 -- NOTE: hours_confirmed added in Migration 011. Set to false on every
 -- Showed mark. Editors confirm/adjust via dashboard Pending Hours Review card.
@@ -911,6 +1257,9 @@ email_log_id     uuid NOT NULL REFERENCES email_log(id) ON DELETE CASCADE
 volunteer_id     uuid REFERENCES volunteers(id)
 email_address    text NOT NULL
 -- INDEX: idx_email_log_recipients_log_id
+-- INDEX: idx_email_log_recipients_volunteer_id
+-- (pre-existed on live DB prior to ADMIN.24;
+-- Migration 015 was not needed or created)
 ```
 
 ### audit_log
@@ -1006,6 +1355,15 @@ default_hours_mainstage     → '3'
 default_hours_studio_x      → '2'
 default_hours_one_off       → '2'
 ```
+
+Runtime-added key (not seeded in Migration 001):
+```
+dashboard_season_id → uuid | null
+```
+
+Added by `setPinnedSeason()` via ON CONFLICT upsert
+when a Super Admin first selects a season on the
+dashboard. Null or absent = fallback to all live shows.
 
 **Default `hearing_options` seed:**
 Social Media (Instagram/Facebook/TikTok) · Word of Mouth · Program/QR Code · Our Website · Previous Patron/Audience Member · Another Volunteer · Other
@@ -1278,6 +1636,65 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
                  public Zod schemas, profile standardized
                  to router.refresh(), dark: gaps fixed on
                  profile header/status badge
+30BN-ADMIN.20  ✓ Dashboard Season at a Glance,
+                 Quick Stats, Super Admin season
+                 selector (dashboard_season_id in
+                 app_settings), PDF export filter fix
+                 (milestoneTier + service_hours both
+                 now honored). lib/actions/settings.ts
+                 created with setPinnedSeason().
+                 Components: QuickStats.tsx,
+                 SeasonAtAGlance.tsx, SeasonSelector.tsx.
+30BN-ADMIN.21  ✓ Phone normalization — Migration 014
+                 (digits-only storage in volunteers.phone
+                 and slot_claims.volunteer_phone),
+                 lib/utils/phone.ts (normalizePhone() +
+                 formatPhone()), all write paths updated
+                 (submitVolunteerForm, updateVolunteerInfo,
+                 submitClaim, updateVolunteer, both
+                 lookupVolunteer functions). Admin display
+                 formatted (list column + profile view).
+30BN-ADMIN.22  ✓ Post-show reporting — "Report" tab on
+                 show detail (status = 'past' only).
+                 lib/data/showReport.ts +
+                 getPostShowReportData(). Component:
+                 PostShowReport.tsx. Types added to
+                 types/show.ts.
+30BN-ADMIN.23  ✓ Bulk email from show detail —
+                 "Message Volunteers (N)" on Overview tab
+                 (Editor/Super Admin only). Deduplication
+                 by lowercased email. sendShowBulkEmail()
+                 + buildShowBulkEmailPayload() added.
+                 Logs to email_log (recipient_type =
+                 'category', recipient_filter =
+                 'show:{showId}') + email_log_recipients.
+                 Component: BulkEmailSection.tsx.
+30BN-ADMIN.24  ✓ Communication history on volunteer
+                 profile — collapsible section below
+                 Milestone History, all roles. Fetches
+                 email_log_recipients JOIN email_log.
+                 Component: CommunicationHistory.tsx.
+                 Type: CommunicationHistoryEntry in
+                 types/volunteer.ts. Migration 015
+                 skipped (index already existed).
+30BN-DOC.17    ✓ Brief Update v2.0 (this prompt —
+                 Phases 11.1, 11.2, ADMIN.20–24,
+                 comprehensive corrections)
+30BN-DOC.18    ✓ Deferred Verification Document v5
+                 (Phase 11 + ADMIN.20–24 items added,
+                 89 new verification items)
+30BN-DOC.19    ✓ Process Update v2.0 (Phase 11,
+                 ADMIN.20–24, comprehensive corrections)
+30BN-DOC.20    ✓ Header version sync (Brief + Process
+                 headers updated to v2.0)
+30BN-12.1      ✓ (see Phase 12 above)
+30BN-12.2a     ✓ (see Phase 12 above)
+30BN-12.2b     ✓ (see Phase 12 above)
+30BN-12.2c     ✓ (see Phase 12 above)
+30BN-12.3      ✓ (see Phase 12 above)
+30BN-12.4      ✓ (see Phase 12 above)
+30BN-DOC.21    ✓ Brief Update v2.1 (Phase 12 complete,
+                 Alpha build complete — this prompt)
 ```
 
 ---
@@ -1464,22 +1881,21 @@ Claim flow:
 
 ### Phase 11 — Stub Pages, 404 & App Settings
 
-**30BN-11.1 — Beta Stub Pages & Custom 404**
-- Communication page (`/crew/communication`): stub shell with "Email blast system coming soon" state. Navigation link active. No dead ends.
-- Check-in tool page (`/crew/tools/checkin`): stub shell with description of feature + "Coming soon" state.
-- Document management (`/crew/settings/documents`): stub shell with "Document upload management coming soon" state.
-- Custom 404 page (`app/not-found.tsx`): branded 30 By Ninety design, friendly message, links back to `/` (public) and `/crew/dashboard` (admin)
-- Global error boundary (`app/error.tsx`): branded error page, option to retry or return home
-- Quality gate: all stub pages render without error; 404 displays correctly on unknown routes; error boundary catches runtime errors
+**30BN-11.1 — Beta Stub Pages & Custom 404 ✓**
+- Three admin stub pages (Server Components, dark: variants, R20-compliant paths): `/crew/communication`, `/crew/tools/checkin`, `/crew/settings/documents`. Each has a "Coming Soon" badge, centered lucide-react icon, and a one-sentence feature description. No data fetching, no mutations.
+- "Check-In" sidebar nav link added to `components/crew/Sidebar.tsx` immediately after QR Generator (ScanLine icon, all roles, isActivePath() active state).
+- `app/not-found.tsx` — branded Server Component 404 page. Light-mode only (no dark: variants — public-facing). 30 By Ninety logo, "Page Not Found" heading, two `next/link` navigation links: `/` and `/crew/dashboard`. Note: spec originally said plain `<a>` tags; `next/link` was substituted to maintain zero-error lint baseline (`@next/next/no-html-link-for-pages` rule). R19's concern (Button/cva tailwind-merge) does not apply to Link.
+- `app/error.tsx` — branded Client Component ('use client' required by Next.js). Light-mode only. AlertTriangle icon (text-orange), "Something went wrong" heading, "Try again" plain `<button>` (calls `reset()`), "Go home" `next/link`. Error message/digest never displayed to user.
 
-**30BN-11.2 — App Settings & Announcement Banner**
-- `/crew/settings`: settings hub with section cards linking to sub-pages
-- Announcement banner: `/crew/settings/announcement` — text input (280 char limit), on/off toggle, save. Preview renders banner as it will appear on landing page. Takes effect immediately (no cache delay).
-- Hearing options: `/crew/settings/hearing-options` — same UX pattern as category management (add, rename, reorder, deactivate)
-- Signup form toggles: `/crew/settings/signup-form` — school field visible toggle, age range visible toggle
-- Default hours per show type: Mainstage / Studio X / One-Off — numeric inputs
-- Default reply-to address: email input, validated, saved to `app_settings`
-- Quality gate: banner appears/disappears on landing page immediately after toggle; hearing options changes reflect on signup form; all settings persist on page reload
+**30BN-11.2 — App Settings & Announcement Banner ✓**
+- `/crew/settings` hub replaced — placeholder from Phase 3 replaced with full 8-card grid using LinkedCard/LockedCard role gating. See §8 App Settings for complete spec.
+- `/crew/settings/announcement` — full implementation. See §8 Announcement Banner.
+- `/crew/settings/hearing-options` — full implementation. See §8 App Settings.
+- `/crew/settings/signup-form` — full implementation. See §8 App Settings.
+- `/crew/settings/general` — full implementation. See §8 App Settings.
+- `lib/actions/settings.ts` — server actions added: `saveAnnouncementBanner()`, `saveSignupFormToggles()`, `saveDefaultHours()`, `saveDefaultReplyTo()`, `addHearingOption()`, `updateHearingOption()`, `reorderHearingOption()`, `toggleHearingOptionActive()`. `setPinnedSeason()` (ADMIN.20) preserved.
+- New components: `components/crew/settings/AnnouncementBannerForm.tsx`, `HearingOptionsManager.tsx`, `SignupFormSettings.tsx`, `GeneralSettings.tsx`.
+- Phase 11 AuditAction types (`settings.update`, `hearing_options.*`) now have call sites wired.
 
 ---
 
@@ -1491,21 +1907,21 @@ Claim flow:
   vulnerability class as caught and fixed in 5.3 for
   `get_show_notification_targets()`. See R28.
 
-**Deferred polish items:**
-- Mobile sidebar (collapsible/hamburger for PWA on phone-sized screens)
-- Waitlist renumbering in `cancelClaim()` — sequential JS updates. Postgres function
-  candidate for Phase 12 if concurrent cancellations become a concern at scale.
-- `slot_claims.show_date_id` denormalization — Phase 12 schema review.
-- Phone normalization — `lookupVolunteer()` strips non-digits but signup/update/claims use
-  exact-string phone matching. Cross-cutting fix needs own ADMIN prompt before launch
-  (ADMIN.20 or later). Requires DB data-quality assessment.
-- Dashboard "Season at a Glance" + "Quick Stats" widgets — planned for ADMIN.20. Super Admin
-  configurable season selector stored in `app_settings` as `dashboard_season_id`.
-- `window.location.href` pattern still present in `CategoriesTable.tsx` reload() — Phase 12
-  or small ADMIN prompt.
-- Dark: variant gaps on `VolunteersTable.tsx` status badge and some section `<h2>` headings
-  on volunteer profile — Phase 12.
-- Step tracker prompt convention note — R27, process rule, not a code item.
+**Deferred polish items (carry to Beta):**
+- Waitlist renumbering in `cancelClaim()` — sequential
+  JS updates. Postgres function candidate if concurrent
+  cancellations become a concern at scale.
+- `slot_claims.show_date_id` denormalization — schema
+  review deferred to Beta.
+- Phone search: volunteer list search uses
+  `phone.ilike.%term%` against raw search input. With
+  phone stored digits-only, formatted searches
+  (e.g. "985-555-1234") won't match. Beta fix candidate.
+- Reminder cron (`app/api/cron/reminders/route.ts`)
+  uses raw UTC Date math rather than the DST-safe CT
+  approach used in the thank-you cron and QuickStats.
+  Low practical impact (reminder window is forgiving)
+  but inconsistent. Beta fix candidate.
 
 **Completed since v1.2 (removed from deferred list):**
 - ~~PDF export column for `requires_service_hours`~~ — Added in ADMIN.17 (9-column table).
@@ -1519,21 +1935,82 @@ Claim flow:
 - ~~`form_response_values.field_id` no CASCADE~~ — Fixed in Migration 012 + ADMIN.17-FIX.
 - ~~ThemeProvider.tsx ESLint warning~~ — Suppressed with documented comment in ADMIN.17.
 
-**30BN-12.1 — Mobile Optimization & Empty States**
-- Full responsive audit: `/` (landing), `/shows`, `/shows/[id]`, `/callboard`, `/forms/[id]`, `/update`, `/cancel`
-- Test at 375px (iPhone SE), 390px (iPhone 14), 768px (tablet)
-- Admin: basic tablet support for `/crew/*` (usable on iPad for day-of coordination)
-- Empty states for: volunteer list (no results), show list (no shows this season), form responses (no submissions), waitlist (no waitlisted), call history (no calls yet), dashboard (no upcoming shows)
-- Rate limiting on public form submissions (basic — prevent bot spam without blocking real users)
-- Quality gate: all public pages usable on 375px; no horizontal scroll; tap targets ≥44px
+**Completed since v1.9 (removed from deferred list):**
+- ~~Phone normalization across signup/update/claims~~
+  — Fixed in ADMIN.21 (Migration 014 + lib/utils/phone.ts).
+- ~~Dashboard "Season at a Glance" + "Quick Stats"~~
+  — Built in ADMIN.20.
+- ~~PDF export filter gap (milestoneTier, service_hours)~~
+  — Fixed in ADMIN.20.
+- ~~Dark: profile header/status badge gap~~ — Fixed ADMIN.19.
 
-**30BN-12.2 — Performance, Security & In-App Help**
-- Supabase query optimization: add any missing indexes identified during build; review N+1 query patterns
-- Image optimization: `<Image>` component for logo; proper `alt` text throughout
-- Input sanitization audit: all text inputs in public forms sanitized before DB insert
-- RLS policy final review: confirm `volunteer_notes` inaccessible via public routes; confirm `admin_users` inaccessible without valid session
-- `/crew/help`: in-app help page with clear sections covering all Editor workflows (mirrors Editor How-To from proposal). Tooltip icons (`?`) on non-obvious UI elements throughout Production Crew linking to relevant help sections.
-- Quality gate: no exposed sensitive data via Supabase RLS test queries; help page complete and accurate; all tooltips functional
+**Completed since v2.0 (removed from deferred list):**
+- ~~Mobile sidebar (collapsible/hamburger)~~ — Built
+  in 12.1 (MobileSidebarContext, hamburger in TopBar,
+  slide-in drawer with overlay + auto-close).
+- ~~window.location.href in CategoriesTable.tsx~~ —
+  Fixed in 12.1 (router.refresh() pattern).
+- ~~Dark: variant on VolunteersTable.tsx status badge~~
+  — Fixed in 12.1.
+- ~~opportunity_submissions.volunteer_phone~~ —
+  normalizePhone() confirmed applied in 12.1; live DB
+  data confirmed clean.
+
+**Phase 12 ✓ Complete**
+
+**30BN-12.1 ✓** Mobile optimization: responsive audit
+of 7 public pages (375/390/768px), 2 real tap-target
+fixes (ShowDatePicker, CallboardLookupForm). Admin
+tablet audit: spec-compliant, no changes needed. All 6
+empty states confirmed present. Honeypot spam prevention
+on all 4 public form surfaces (uncontrolled ref pattern).
+Mobile sidebar (MobileSidebarContext + hamburger +
+drawer). CategoriesTable router.refresh() fix.
+VolunteersTable dark: status badge fix.
+opportunity_submissions phone normalization confirmed
+clean. TopBar phone-width responsive collapse.
+
+**30BN-12.2a ✓** Performance/security audit (Phase A
+read-only + Phase B targeted fixes): dashboard
+Promise.all parallelization (5 independent queries →
+one batch, HIGH impact). Email template escaping gap
+fixed (categoryNames in sendVolunteerConfirmationEmail).
+R18 fix: 4× ?? null → || null in app/actions/volunteer.ts.
+Length caps added to sendShowBulkEmail() (subject 200,
+body 10000). Index audit: all FK columns confirmed
+indexed (idx_attendance_slot_claim_id pre-existing but
+undocumented). RLS: all 8 tables confirmed clean.
+dangerouslySetInnerHTML: 4 hits, all safe.
+
+**30BN-12.2b ✓** In-app help page at /crew/help. Help
+nav link in sidebar. Two-column layout with sticky TOC.
+8 sections, 23 subsections, 31 anchor IDs. Tip/Warning
+callout patterns. Server Component, boomer-proof plain
+English content written in the prompt spec verbatim.
+
+**30BN-12.2c ✓** HelpTooltip shared component (Server
+Component, next/link, named export). 16 placements
+across Production Crew (of 17 planned — E3 Waitlist
+heading fixed in 12.4). Covers: dashboard cards,
+volunteer profile (5 locations), show detail (3),
+show form (2), volunteer list (1), settings (2).
+
+**30BN-12.3 ✓** Call Board volunteer card per-show
+hours breakdown. manualHoursTotal prop replaced with
+manualHoursEntries (full entries). Hours summary line
+simplified to "[X] hours across [Y] shows." Expandable
+section: flat list replaced with show-grouped breakdown
+(show name → call sub-rows → per-show total) + "Other
+Hours" section for manual entries. show_id added to
+CallboardCallHistoryRow type. CallboardManualHoursEntry
+type added.
+
+**30BN-12.4 ✓** Automated post-show thank-you email
+cron (see §8 Show Management). Waitlist tab "Waitlist"
+h2 heading added (E3 fix from 12.2c). Duplicate Editor
+Notes heading removed from page.tsx; HelpTooltip moved
+to EditorNotes.tsx internal heading (Q1 fix from 12.2c).
+Migration 015 applied.
 
 ---
 
@@ -1573,23 +2050,26 @@ Claim flow:
 - Production environment audit
 - End-to-end flow testing on production domain
 
-### Phase 18 — Additional Alpha Features (confirmed)
-These features were added to Alpha scope during the build session:
-- **Volunteer communication history on volunteer profile** — tab showing all emails sent
-  to a volunteer (transactional now; blast emails added when Phase 13 ships)
-- **Show-level post-show reporting** — summary tab on show detail (total volunteers, total
-  hours, attendance rate, no-show count) available when status = 'past'
+### Phase 18 — Additional Alpha Features ✓ Complete
+These features were added to Alpha scope and are now built:
+- **Volunteer communication history on volunteer profile** ✓ Built ADMIN.24. Collapsible
+  section on volunteer profile page; shows emails logged via email_log. See §8 Volunteer
+  Profile.
+- **Show-level post-show reporting** ✓ Built ADMIN.22. "Report" tab on show detail
+  (status = 'past' only). See §8 Show Management.
 - **Volunteer self-service hours history on Call Board** — per-show breakdown in expanded
-  card section (built partially in 9.2; full breakdown prompt TBD)
-- **Bulk email from show detail** — "Message volunteers for this show" quick action;
-  sends to all claimed volunteers for a show; simpler than Phase 13 blast system
+  card section (built partially in 9.2; hours summary line present; full per-show breakdown
+  table deferred to Phase 12 polish).
+- **Bulk email from show detail** ✓ Built ADMIN.23. "Message Volunteers" on Overview tab.
+  See §8 Show Management.
 
 ### New Beta features (confirmed)
-- **Waitlist → claim promotion notification preferences** — volunteer opt-in for
-  notification method (email vs. future SMS). Requires infrastructure decision.
-- **Automated thank-you email after a show** — triggered 24–48 hours after show date
-  passes, sent to everyone marked Showed. Community-building. Similar infrastructure
-  to existing reminder cron job.
+- **Waitlist → claim promotion notification preferences**
+  — volunteer opt-in for notification method (email vs.
+  future SMS). Requires infrastructure decision.
+
+~~**Automated thank-you email after a show**~~ —
+✓ Built in Alpha (30BN-12.4). See §8 Show Management.
 
 ---
 
@@ -1603,7 +2083,7 @@ These features were added to Alpha scope during the build session:
 | 4 | Jonathan's surname | ✅ Resolved | Sturcken — Jonathan Sturcken |
 | 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one needed at Beta launch. |
 | 6 | Multiple Super Admins | ✅ Resolved | Multiple Super Admins are expected and supported. Deactivate disabled for all Super Admin rows. Role change blocked for Super Admin rows. |
-| 7 | Mobile PWA sidebar | 🔄 Pending | Collapsible sidebar for phone-sized screens deferred to Phase 12. PWA usable on tablet (768px+) until then. |
+| 7 | Mobile PWA sidebar | ✅ Resolved | Built in 30BN-12.1. Hamburger button + slide-in drawer at <768px. MobileSidebarContext pattern. Fixed-column sidebar unchanged at 768px+. |
 
 ---
 
@@ -1744,5 +2224,24 @@ on mount. Established ADMIN.14.
 *v1.6 (July 2026 — Phases 6 and 7 complete: form builder with arrow reorder (not drag), public form with dynamic zod schema, response viewer with client-side filters and CSV export, form detail page with embed code and QR, standalone QR generator tool, per-form QR pulled forward into 6.3, lib/data/forms.ts and lib/actions/qr.ts added, ADMIN.14 (cache revalidation sweep, theme toggle hydration fix, dialog hover fix, blank-role trap fix, opportunity reactivate), R28 retroactive note corrected, R29 (revalidatePath required) and R30 (theme toggle targets document.body) added, duplicate deferred item removed, new deferred items added (form_response_values FK, ThemeProvider ESLint), DOC.8/ADMIN.14/DOC.9 logged)*
 *v1.7 (July 2026 — Call Board redesign: single-page opportunities hub replacing multi-page portal; magic link / token email flow eliminated; email-or-phone lookup sets cookie session directly with no email step; no callboard_token columns on volunteers table; volunteer card renders inline on /callboard; sub-routes /callboard/profile, /callboard/history, /callboard/opportunities eliminated; §7 auth note updated; §8 Call Board spec replaced; §10 Phase 8 prompt specs replaced; DOC.11 logged)*
 *v1.9 (July 2026 — 9.2 and 10.1 build corrections: PDF export filter gap noted (milestoneTier not honored); audit log settings hub card documented (LinkedCard/LockedCard); Slot Claims audit group bolded with distinct-group note; submitVolunteerForm() logging gap documented; Phase 13 email CTA consistency note added; §8 Milestone System corrections from DOC.13 confirmed already accurate (lib/milestones-shared.ts, acknowledgeMilestone 10.1 attribution, sendMilestoneEmail CTA) — no further change needed there; DOC.15 logged)*
-*v1.8 (July 2026 — Phases 8–10 complete, ADMIN.15–19: §1 current phase updated; §3 auth row corrected for self-registration; §5 auth settings corrected; §7 Volunteer row + auth model updated; §8 landing page CTA → /callboard; §8 login page self-registration added; §8 dashboard hours/milestone widgets + honest Season at a Glance status; §8 volunteers list CSV/PDF/milestone filter updated; §8 volunteer profile sort/hours/milestones/refresh corrected; §8 category description editing corrected; §8 user management approval flow + change password added; §8 forms updateForm() diff-based sync documented; §8 Hours Review and Milestone System sections added (including the lib/milestones-shared.ts split pattern); §8 Call Board confirmed redesign + hours breakdown; §8 audit log viewer details added (DST-aware filtering, Slot Claims group, changePassword getAdminUser fix); §9 Migrations 010–013 added, attendance + volunteer_hours_log + form_response_values + milestone_log schemas updated; §10 DOC.4 fixed, ADMIN.15–19 + DOC.11–12 logged, Phases 8–10 marked complete (9.2/10.1 entries corrected to match Process v1.8 — acknowledgeMilestone audit call attributed to 10.1, not 9.2), Phase 12 deferred list cleaned; §11 Phase 18 + new Beta features added; §13 R12 updated; DOC.13 logged)*
-*Cross-reference: 30BN_PROCESS_v1.md v1.8*
+*v1.8 (July 2026 — Phases 8–10 complete, ADMIN.15–19: see previous entry — v1.8 was applied after v1.9 in document history; ordering preserved as-is for audit trail integrity)*
+*v2.0 (July 2026 — Alpha feature-complete: §1 current phase updated (11 complete, 12 pending); §7 Editor email updated; §8 Dashboard rewritten (ADMIN.20 complete); §8 Volunteers phone display + PDF filter fix noted; §8 Volunteer Profile stale audit bullet removed, Communication History added (ADMIN.24), phone display note added; §8 Show Management Report tab + post-show report (ADMIN.22) + bulk email (ADMIN.23) documented; §8 Announcement Banner marked built; §8 App Settings expanded to full spec (11.2); §8 Communication/Check-In/Document Management stub status updated (11.1); §9 Migration 014 status + next migration updated; §9 volunteers + slot_claims phone normalization notes; §9 email_log_recipients volunteer_id index noted; §9 app_settings dashboard_season_id runtime key noted; §10 Phase 11.1 and 11.2 marked complete; §10 Phase 12 deferred list updated (3 items completed, 2 new gaps noted); §10 ADMIN.20–24 + DOC.17 added to prompt log; §11 Phase 18 items marked complete; DOC.17 logged)*
+*v2.1 (July 2026 — Alpha build complete: §1 phase
+updated (complete); §3 MobileSidebarContext pattern
+added; §7 Login Google SSO stale line corrected; §8
+Call Board volunteer card updated (12.3 hours summary
++ grouped breakdown); §8 Admin mobile sidebar marked
+built (12.1); §8 honeypot noted on all 4 public form
+surfaces (12.1); §8 help page + HelpTooltip system
+documented (12.2b/c); §8 automated thank-you email
+documented (12.4); §8 category management drag-and-drop
+removed from reorder description; §9 show_dates
+thank_you_sent_at column added (Migration 015); §9
+attendance slot_claim_id index noted; §9 Migration 015
+status + next migration 016; §10 Phase 12 deferred
+list updated (4 items resolved, 4 carried to Beta); §10
+Phase 12 prompts all marked complete (12.1–12.4); §10
+DOC.20–DOC.21 + 12.1–12.4 added to prompt log; §11
+Beta thank-you email marked built in Alpha; §12 Open
+Decision #7 resolved; DOC.21 logged)*
+*Cross-reference: 30BN_PROCESS_v1.md v2.1*
