@@ -206,8 +206,8 @@ export default function PendingQueueClient({
 
   async function handleApproveAllAvailable(batch: PendingBatch) {
     const approvals = batch.events
-      .filter((e) => !!locationSelections[e.id])
-      .map((e) => ({ eventId: e.id, locationId: locationSelections[e.id] }))
+      .filter((e) => !!(locationSelections[e.id] ?? e.location_id))
+      .map((e) => ({ eventId: e.id, locationId: (locationSelections[e.id] ?? e.location_id) as string }))
 
     if (approvals.length === 0) {
       setError(batch.id, 'Select a location for at least one date first')
@@ -318,7 +318,7 @@ export default function PendingQueueClient({
                             type="button"
                             onClick={() => handleApproveSingle(event.id, event.location_id)}
                             disabled={
-                              !locationSelections[event.id] ||
+                              !(locationSelections[event.id] ?? event.location_id) ||
                               conflictStatus[event.id] === true ||
                               busyIds.has(event.id)
                             }

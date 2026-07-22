@@ -27,7 +27,7 @@ export default async function UsersPage({
   const supabase = await getServerClient()
   const { data: users } = await supabase
     .from('admin_users')
-    .select('id, name, email, role, is_active, last_login, created_at')
+    .select('id, name, email, role, is_active, calendar_editor, last_login, created_at')
     .order('created_at', { ascending: true })
 
   const { data: pendingRegistrations } = await supabase

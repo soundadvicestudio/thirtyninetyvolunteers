@@ -2,8 +2,10 @@
 
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { getAdminUser } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getServerClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 import { sendWelcomeEmail } from '@/lib/email'
 
@@ -224,6 +226,57 @@ export async function changeRole(
     { role: target.role },
     { role: newRole }
   )
+
+  return { success: true }
+}
+
+export async function toggleCalendarEditor(
+  targetUserId: string,
+  enabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: target } = await supabase
+    .from('admin_users')
+    .select('role, calendar_editor')
+    .eq('id', targetUserId)
+    .maybeSingle()
+
+  if (!target) {
+    return { success: false, error: 'User not found' }
+  }
+
+  if (!['editor', 'viewer'].includes(target.role)) {
+    return {
+      success: false,
+      error: 'Calendar editor access can only be granted to Editor or Viewer accounts.',
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('admin_users')
+    .update({ calendar_editor: enabled })
+    .eq('id', targetUserId)
+
+  if (updateError) {
+    return { success: false, error: updateError.message }
+  }
+
+  await logAction(
+    admin.id,
+    'user.calendar_editor_change',
+    'admin_user',
+    targetUserId,
+    { calendar_editor: !enabled },
+    { calendar_editor: enabled }
+  )
+
+  revalidatePath('/crew/settings/users')
 
   return { success: true }
 }

@@ -1,15 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatCT } from '@/lib/utils/date'
-import { changeRole, deactivateUser, reactivateUser } from '@/lib/actions/users'
+import { changeRole, deactivateUser, reactivateUser, toggleCalendarEditor } from '@/lib/actions/users'
+import type { AdminRole } from '@/types/admin'
 
 type AdminUserRow = {
   id: string
   name: string
   email: string
-  role: 'super_admin' | 'editor' | 'viewer'
+  role: AdminRole
   is_active: boolean
+  calendar_editor: boolean
   last_login: string | null
   created_at: string
 }
@@ -18,6 +21,7 @@ const ROLE_BADGE: Record<AdminUserRow['role'], { label: string; className: strin
   super_admin: { label: 'Super Admin', className: 'bg-navy text-white' },
   editor: { label: 'Editor', className: 'bg-steel text-white' },
   viewer: { label: 'Viewer', className: 'bg-mid-gray text-white' },
+  production: { label: 'Production', className: 'bg-orange text-white' },
 }
 
 function reload() {
@@ -25,7 +29,9 @@ function reload() {
 }
 
 function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTogglingCalendarEditor, setIsTogglingCalendarEditor] = useState(false)
 
   async function handleRoleChange(newRole: 'editor' | 'viewer') {
     setIsSubmitting(true)
@@ -46,6 +52,17 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
       return
     }
     setIsSubmitting(false)
+    alert(result.error)
+  }
+
+  async function handleToggleCalendarEditor(enabled: boolean) {
+    setIsTogglingCalendarEditor(true)
+    const result = await toggleCalendarEditor(user.id, enabled)
+    setIsTogglingCalendarEditor(false)
+    if (result.success) {
+      router.refresh()
+      return
+    }
     alert(result.error)
   }
 
@@ -75,7 +92,7 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
       <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {user.role === 'super_admin' ? (
+          {user.role === 'super_admin' || user.role === 'production' ? (
             <span className="text-sm text-mid-gray dark:text-dark-muted">—</span>
           ) : (
             <select
@@ -87,6 +104,20 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
             </select>
+          )}
+
+          {(user.role === 'editor' || user.role === 'viewer') && (
+            <label className="flex items-center gap-2 text-sm text-mid-gray dark:text-dark-muted cursor-pointer">
+              <input
+                type="checkbox"
+                checked={user.calendar_editor}
+                onChange={(e) => handleToggleCalendarEditor(e.target.checked)}
+                disabled={isTogglingCalendarEditor}
+                className="rounded"
+              />
+              Calendar Editor{' '}
+              <span className="text-xs">(direct calendar write access)</span>
+            </label>
           )}
 
           {isSelf || user.role === 'super_admin' ? (
