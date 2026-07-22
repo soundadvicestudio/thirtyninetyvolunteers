@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v2.1
-### Created: July 2026 | Last Updated: July 2026 — v2.1 (Alpha build complete — Phase 12)
+## 30BN_PROCESS_v1.md — v3.0
+### Created: July 2026 | Last Updated: July 2026 — v3.0 (Beta build — Phase CAL active)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -232,7 +232,44 @@ of truth. Display formatting uses `formatPhone()` from
 the same file. Both functions are pure (no DB calls, no
 imports) and safe to call from any context.
 
+**Calendar server actions use `getServerClient()` (established CAL.5a):**
+All server actions in `lib/actions/calendar.ts` (`createCalendarEvent()`, `updateCalendarEvent()`,
+`approveCalendarEvent()`, etc.) use `getServerClient()` — they are always invoked from
+authenticated admin sessions. The same rule applies as `sendShowNotifications()`: calendar
+actions are Production Crew actions, not public-facing actions, so the session exists and RLS
+should apply.
+
+**Utility functions accept supabase client as parameter (established CAL.3):**
+`syncShowDateToCalendar(showDateId, supabase)` in `lib/actions/calendar-sync.ts` and
+`hasConflict()` / `hasConflictWithBuffer()` in `lib/utils/calendar-conflict.ts` all receive the
+Supabase client as a parameter from the calling action rather than constructing their own. This
+is the correct pattern for utility functions that need DB access — the caller constructs the
+client once and passes it in. Never create a Supabase client inside a utility function called
+from a server action.
+
+**`lib/utils/calendar-availability.ts` is pure client-safe (established CAL.4b):**
+`getAvailableWindows()`, `getMonthGridDays()`, and `getWeekGridDays()` make no DB calls and have
+no server-only imports. They are safe to import from Client Components — same pattern as
+`lib/milestones-shared.ts`. The grid helpers use UTC-anchored date math to avoid timezone-
+dependent behavior from `date-fns` primitives like `startOfMonth()` which silently depend on
+the runtime's local timezone.
+
 **Never create a client inside a loop.** Create once per function, reuse.
+
+**FK replacement migration pattern (established CAL.1):**
+When a text CHECK constraint column is replaced by a FK to a new lookup table (e.g.,
+`show_type` text → `location_id` FK to `locations`), the migration must follow this order:
+1. Create the lookup table and seed its rows.
+2. Add the FK column as nullable.
+3. Backfill via `UPDATE ... SET fk_col = (SELECT id FROM lookup WHERE name = CASE old_col
+   WHEN ... END)`.
+4. Verify zero nulls remain: `SELECT COUNT(*) FROM table WHERE fk_col IS NULL` — abort with
+   `RAISE EXCEPTION` if any are found.
+5. Set NOT NULL on the FK column.
+6. Add FK index.
+7. Drop the old text column.
+The RAISE EXCEPTION safety guard in step 4 is mandatory — it prevents silent data loss if any
+rows had an unmapped value. Confirmed in CAL.1 Migration 016.
 
 ---
 
@@ -264,6 +301,12 @@ Q2. [Another item, or "None"]
 ### Flags
 F1. [Anything that needs attention before shipping, or "None"]
 ```
+
+**Commit and push before delivering the build report (established CAL.5b):**
+Every build prompt must commit and push to origin/main before delivering the build report. The
+build report describes what was actually deployed, not what was planned. Every prompt's closing
+instruction block must include: "After completing all tasks, commit and push before delivering
+the build report."
 
 **Build report timing:** The build report is delivered at the conclusion of the build session — after code is pushed and the deploy is triggered — without waiting for manual verification steps. Manual verification items (owner-performed per R16) are listed in the Verified section as:
 `⏳ Pending owner verification — [step reference]`
@@ -501,6 +544,18 @@ grep -rn "window.location" \
 ```
 
 ```bash
+# Confirm show_type has been fully removed from the
+# codebase (CAL.1 — column dropped in Migration 016)
+# Any hit after CAL.1 is a regression
+grep -rn "show_type\|ShowType\|showType" \
+  app/ components/ lib/ types/ \
+  --include="*.ts" --include="*.tsx" \
+  --exclude-dir=node_modules --exclude-dir=.next
+# Must return zero results (except historical comments
+# in 001_core_schema.sql which need not be changed)
+```
+
+```bash
 # Confirm no inline phone stripping outside
 # lib/utils/phone.ts (ADMIN.21 — R pattern)
 # All normalization must use normalizePhone()
@@ -510,6 +565,19 @@ grep -rn "replace(/\\D" \
 # Must return zero results. Any hit means a write
 # path is normalizing inline instead of using the
 # shared utility — fix before committing.
+```
+
+```bash
+# Confirm normalizePhone() called before all
+# calendar_event_contacts inserts (CAL.5a pattern —
+# contacts store phone as digits-only, same as
+# volunteers.phone and slot_claims.volunteer_phone)
+grep -n "calendar_event_contacts" \
+  lib/actions/calendar.ts
+# Review every INSERT path — confirm normalizePhone()
+# is applied to the phone value before insert.
+# (Confirmed: createCalendarEvent() and
+# createRehearsalBatch() both normalize via .map())
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -594,6 +662,24 @@ Run before every Vercel deployment:
   rather than raw JSX text to avoid the
   react/no-unescaped-entities lint error and maintain
   the zero-error lint baseline. (Established 12.2b Q1)
+□ Any calendar event mutation (createCalendarEvent,
+  updateCalendarEvent, approveCalendarEvent,
+  cancelCalendarEvent, createRehearsalBatch): confirm
+  revalidatePath('/crew/calendar') AND
+  revalidatePath('/crew/calendar/pending') are both
+  called. Both routes display calendar data and both
+  must be invalidated after every calendar mutation.
+  (CAL.5a pattern — two routes, not one)
+□ Any new calendar contact insert (calendar_event_contacts
+  rows): confirm normalizePhone() from lib/utils/phone.ts
+  is called on the phone value before insert. Same
+  digits-only storage rule as volunteers.phone and
+  slot_claims.volunteer_phone. (CAL.5a pattern)
+□ Any new event type selector in the calendar UI:
+  confirm 'performance' is excluded from the available
+  options. Performance events are auto-generated from
+  shows via syncShowDateToCalendar() and must never
+  be created manually. (CAL.5a confirmed behavior)
 ```
 
 ---
@@ -779,6 +865,78 @@ Document & Admin Prompts
   30BN-DOC.22    ✓ Process Update v2.1 (Phase 12
                    complete, Alpha build complete —
                    this prompt)
+  30BN-ADMIN.25  ✓ Deferred item sweep: location-aware
+                   default_hours lookup (Migration 020 +
+                   locations.default_hours primary path,
+                   app_settings bucket fallback); buffer
+                   NaN Zod preprocess fix; end time range
+                   on cancel page + reminder cron; season
+                   filter in CalendarFilterBar + server-
+                   side fetch in calendar/page.tsx.
+  30BN-CAL.1     ✓ show_type → location_id (Migration
+                   016). 19-file codebase sweep. locations
+                   table seeded. ShowType union removed.
+                   Show form loads locations from DB (R4).
+                   FK replacement migration pattern
+                   established.
+  30BN-CAL.2     ✓ Calendar schema foundation (Migration
+                   017): rehearsal_batches, calendar_events,
+                   calendar_event_contacts, show_date_buffer.
+                   admin_users: production role + calendar_
+                   editor. Middleware production restriction.
+                   Sidebar Calendar link. types/admin.ts
+                   consolidated AdminRole type.
+  30BN-CAL.3     ✓ Show-to-calendar auto-sync + conflict
+                   detection (Migration 018). syncShowDate-
+                   ToCalendar() in lib/actions/calendar-sync
+                   .ts. hasConflict()/hasConflictWithBuffer()
+                   in lib/utils/calendar-conflict.ts.
+                   Buffer time UI on DateRow.
+                   Google OAuth production role fix.
+  30BN-CAL.4a    ✓ end_time on show_dates (Migration 019).
+                   DateRow End Time field. Time range display
+                   on admin show detail, /shows/[id],
+                   /callboard, cancel page, reminder cron.
+  30BN-CAL.4b    ✓ Full /crew/calendar page. Month view,
+                   weekly room-booking grid, agenda view.
+                   Filter bar. CalendarLegend.tsx. Day detail
+                   panel with available windows.
+                   lib/utils/calendar-availability.ts
+                   (pure, UTC-anchored grid helpers).
+  30BN-CAL.5a    ✓ Event creation + submission forms.
+                   CalendarEventForm (role-adaptive, conflict
+                   detection, contacts useFieldArray).
+                   lib/actions/calendar.ts: checkEvent-
+                   Conflict(), createCalendarEvent(),
+                   updateCalendarEvent(). lib/validations/
+                   calendar.ts created.
+  30BN-CAL.5b    ✓ Seed data, CalendarLegend wired,
+                   CalendarShell header restructure (dropdown,
+                   Pending link + badge, Book Space).
+                   rehearsalBatchSchema. New actions:
+                   createRehearsalBatch(), approveCalendar-
+                   Event(), approveBatch(), cancelCalendar-
+                   Event(), findAvailableSlots(). Bulk form.
+                   Pending queue + PendingQueueClient.
+                   CalendarBookSpacePanel. calendarEditor
+                   fully wired. Commit-before-build-report
+                   standard established.
+  30BN-CAL.5b-AUDIT ✓ Post-build read-only audit (84 items:
+                   60 PASS, 17 PARTIAL, 7 FAIL). Post-build
+                   audit session pattern established.
+  30BN-CAL.5b-FIX ✓ 6 fixes: Legend label; initialDate
+                   prop; default-time state + pre-fill +
+                   auto-sort on add; initialConflicts +
+                   adminRole + conflict column in pending
+                   queue; pending/page.tsx hasConflict
+                   pre-check; findAvailableSlots slots key.
+  30BN-CAL.5b-FIX2 ✓ handleApproveSingle() fallback to
+                   event.location_id via second parameter.
+  30BN-DOC.25a   ✓ Brief Update v3.0 Part A (§1, §2, §7,
+                   §8 — roles, Master Calendar feature set)
+  30BN-DOC.25b   ✓ Brief Update v3.0 Part B (§9 schema,
+                   §10 prompt log, §11 Beta phases,
+                   version history)
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -927,6 +1085,25 @@ Phase 12 — Polish, Mobile & Performance ✓ Complete
 
 ### Beta Build
 ```
+Phase CAL — Master Calendar System (active)
+  CAL.1  ✓ show_type → location_id migration (016)
+  CAL.2  ✓ Calendar schema + Production role (017)
+  CAL.3  ✓ Show-to-calendar sync + conflict detection
+           + buffer time UI (018)
+  CAL.4a ✓ end_time on show_dates (019)
+  CAL.4b ✓ Full /crew/calendar UI (month/week/agenda)
+  CAL.5a ✓ Event creation + submission forms
+  CAL.5b ✓ Seed data, bulk rehearsal form, pending
+           approval queue, Book Space panel
+  CAL.6  — Production role user management +
+           calendar_editor toggle on user mgmt page
+  CAL.7  — Public /calendar page (performance events
+           only, needs-volunteers indicator)
+  CAL.8  — Location Management settings
+           (/crew/settings/locations): add/edit/
+           reorder/deactivate, color picker,
+           per-location default_hours UI
+
 Phase 13 — Email Blast System       (detail in v2)
 Phase 14 — Check-In System          (detail in v2)
 Phase 15 — Document Management      (detail in v2)
@@ -1065,6 +1242,56 @@ This rule applies to all DOC prompts regardless of length. The view-after-each-e
 mandatory, not optional. A DOC prompt with 26 edits that reports only 5 in its build report is
 incomplete, full stop.
 
+### Codebase sweep before column removal (established CAL.1)
+Before executing any migration that drops or renames a column, run a full codebase grep to
+identify every file referencing that column. This is mandatory — missing even one reference
+produces a runtime error or silent data mismatch after the migration deploys. The Task A audit
+pattern in CAL.1 found 19 files referencing show_type before it was removed. The correct
+sequence:
+- Task A (audit): grep for all references, report every file and line number.
+- Review findings; identify any that require owner decisions before proceeding (flag as F-items).
+- Task B (migration): write and apply the migration only after all findings are confirmed safe.
+- Tasks C–H (sweep): update every identified file.
+- Final grep: confirm zero remaining references.
+Never skip the pre-migration audit on a column removal. The confirmed failure mode is a build
+that succeeds but crashes at runtime when a file reads a column that no longer exists.
+
+### Commit-before-build-report (established CAL.5b)
+Every build prompt must commit and push to origin/main before delivering the build report. The
+closing instruction block of every prompt must include: "After completing all tasks, commit and
+push before delivering the build report." Rationale: the build report must describe what was
+actually deployed, not what was planned. A build report delivered before pushing can describe
+work that was never committed.
+
+### Post-build audit session pattern (established CAL.5b-AUDIT)
+When a large prompt is executed in a session that was compacted mid-build, or when deliverable
+volume is high enough that all components cannot be verified during the build session itself,
+issue a dedicated read-only audit session immediately after. Naming: `[PROMPT-ID]-AUDIT`.
+Structure:
+- Phase A only (no Phase B — no code changes)
+- Read every new and modified file in full
+- Compare each against its spec in the prompt
+- Rate each check: PASS / PARTIAL / FAIL
+- Report summary: total checked, PASS/PARTIAL/FAIL counts, list of items requiring a fix prompt
+- Any FAIL or significant PARTIAL drives a separate `[PROMPT-ID]-FIX` prompt
+Pattern established: CAL.5b-AUDIT (84 items, 60 PASS, 17 PARTIAL, 7 FAIL) → CAL.5b-FIX (6
+targeted fixes) → CAL.5b-FIX2 (1 residual fix).
+
+### Calendar server action client rule (established CAL.5a)
+All server actions in `lib/actions/calendar.ts` use `getServerClient()`. They are always invoked
+from authenticated admin sessions (Production Crew context — never public-facing). Utility
+functions (`syncShowDateToCalendar()`, `hasConflict()`, `hasConflictWithBuffer()`) accept the
+supabase client as a parameter from the calling action. The caller constructs the client once
+and passes it in; utility functions never construct their own client. `lib/utils/calendar-
+availability.ts` is pure (no DB calls) and safe to import from Client Components.
+
+### DOC prompt task tracker ranges must match actual edits (established DOC.25a/DOC.25b)
+DOC prompts list edits sequentially and track them in the task tracker (e.g., "Task B: Edits
+1–8"). The task tracker ranges must be written after the edits are finalized, not before.
+DOC.25a flagged a mismatch where the tracker said "Edits 14–38" but the prompt only contained
+Edits 1–14; DOC.25b had a similar mismatch. Procedure: finalize all EDIT blocks first, count
+them, then write the task tracker with accurate ranges.
+
 ### escapeHtml() in Email Templates (established 12.2a)
 All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only. If escaping is needed in a new file, extract to lib/utils/string.ts at that time.
 
@@ -1084,3 +1311,4 @@ All user-supplied values interpolated into HTML email strings must be wrapped in
 *v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
 *v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
 *Cross-reference: 30BN_BRIEF_v1.md v2.1*
+*v3.0 (July 2026 — Beta Phase CAL active: §7 calendar client patterns added (getServerClient() for calendar actions, parameter-passing pattern for utility functions, calendar-availability.ts pure client-safe); §7 FK replacement migration pattern added (CAL.1); §8 commit-before-build-report standard added (CAL.5b); §10 show_type regression grep check added (CAL.1); §10 calendar contact phone grep check added (CAL.5a); §11 three new checklist items (calendar mutations + two routes to revalidate, contact phone normalization, performance type exclusion from manual creation); §13 Phase CAL added to Beta Build section (CAL.1–CAL.5b complete, CAL.6–CAL.8 planned); §13 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a/25b added to prompt log; §14 five new rules: codebase sweep before column removal, commit-before-build-report, post-build audit session pattern, calendar server action client rule, DOC prompt task tracker accuracy; DOC.26 logged)*
