@@ -104,7 +104,7 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
   for (const d of value.dates) {
     const { data: insertedDate, error: dateError } = await supabase
       .from('show_dates')
-      .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time })
+      .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time, end_time: d.end_time })
       .select('id')
       .single()
 
@@ -266,12 +266,12 @@ export async function updateShow(
       dateId = d.dbId
       await supabase
         .from('show_dates')
-        .update({ show_date: d.show_date, show_time: d.show_time })
+        .update({ show_date: d.show_date, show_time: d.show_time, end_time: d.end_time })
         .eq('id', dateId)
     } else {
       const { data: insertedDate, error: insertDateError } = await supabase
         .from('show_dates')
-        .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time })
+        .insert({ show_id: showId, show_date: d.show_date, show_time: d.show_time, end_time: d.end_time })
         .select('id')
         .single()
 

@@ -10,6 +10,7 @@ type RawDateRow = {
   show_id: string
   show_date: string
   show_time: string
+  end_time: string | null
   volunteer_roles: { id: string; category_id: string | null; role_name: string; slots_available: number }[] | null
 }
 
@@ -76,7 +77,7 @@ export default async function EditShowPage({
       .from('show_dates')
       .select(
         `
-        id, show_id, show_date, show_time,
+        id, show_id, show_date, show_time, end_time,
         volunteer_roles ( id, category_id, role_name, slots_available )
       `
       )
@@ -108,6 +109,7 @@ export default async function EditShowPage({
     show_id: d.show_id,
     show_date: d.show_date,
     show_time: d.show_time,
+    end_time: d.end_time,
     buffer_before_minutes: bufferByDateId.get(d.id)?.buffer_before_minutes ?? 0,
     buffer_after_minutes: bufferByDateId.get(d.id)?.buffer_after_minutes ?? 0,
     roles: (d.volunteer_roles ?? []).map((r) => ({ ...r, show_date_id: d.id })),

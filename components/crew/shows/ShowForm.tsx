@@ -63,6 +63,7 @@ function buildPayload(data: ShowFormValues, status: 'draft' | 'live'): ShowSubmi
       dbId: d.dbId,
       show_date: d.show_date,
       show_time: d.show_time,
+      end_time: d.end_time?.trim() || null,
       buffer_before_minutes: d.buffer_before_minutes,
       buffer_after_minutes: d.buffer_after_minutes,
       roles: d.roles.map((r) => ({
@@ -152,6 +153,15 @@ function DateRow({
           </label>
           <input type="time" className={inputClasses} {...register(`dates.${dateIndex}.show_time`)} />
           {dateErrors?.show_time && <p className={errorClasses}>{dateErrors.show_time.message}</p>}
+        </div>
+        <div className="flex-1">
+          <label className={labelClasses}>End time (optional)</label>
+          <input
+            type="time"
+            className={inputClasses}
+            {...register(`dates.${dateIndex}.end_time`)}
+          />
+          {dateErrors?.end_time && <p className={errorClasses}>{dateErrors.end_time.message}</p>}
         </div>
         <button
           type="button"
@@ -332,6 +342,7 @@ export default function ShowForm({
             dbId: d.id,
             show_date: d.show_date,
             show_time: d.show_time.slice(0, 5),
+            end_time: d.end_time ? d.end_time.slice(0, 5) : '',
             buffer_before_minutes: d.buffer_before_minutes,
             buffer_after_minutes: d.buffer_after_minutes,
             roles: d.roles.length
@@ -348,6 +359,7 @@ export default function ShowForm({
               dbId: null,
               show_date: '',
               show_time: '',
+              end_time: '',
               buffer_before_minutes: 0,
               buffer_after_minutes: 0,
               roles: [{ ...BLANK_ROLE }],
@@ -624,6 +636,7 @@ export default function ShowForm({
               dbId: null,
               show_date: '',
               show_time: '',
+              end_time: '',
               buffer_before_minutes: 0,
               buffer_after_minutes: 0,
               roles: [{ ...BLANK_ROLE }],

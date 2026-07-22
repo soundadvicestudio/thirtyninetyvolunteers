@@ -14,6 +14,7 @@ export type PublicShowDate = {
   show_id: string
   show_date: string
   show_time: string
+  end_time: string | null
   roles: PublicShowRole[]
 }
 

@@ -347,6 +347,7 @@ function VolunteersTab({
           {showDates.map((d) => (
             <option key={d.id} value={d.id}>
               {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a")}
+              {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
             </option>
           ))}
         </select>
@@ -542,7 +543,10 @@ function DatesTab({ showDates, todayCT }: { showDates: ShowDateWithRoles[]; toda
                 }`}
               >
                 <td className="px-4 py-2">{formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}</td>
-                <td className="px-4 py-2">{formatWallClockCT(d.show_date, d.show_time, 'h:mm a')}</td>
+                <td className="px-4 py-2">
+                  {formatWallClockCT(d.show_date, d.show_time, 'h:mm a')}
+                  {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
+                </td>
                 <td className="px-4 py-2">{formatWallClockCT(d.show_date, null, 'EEEE')}</td>
               </tr>
             )

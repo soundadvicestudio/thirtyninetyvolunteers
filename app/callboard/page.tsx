@@ -189,6 +189,7 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
             <li key={date.id} className="text-sm">
               <span className="font-semibold text-dark">
                 {formatWallClockCT(date.show_date, date.show_time, 'MMM d, yyyy · h:mm a')}
+                {date.end_time && ` – ${formatWallClockCT(date.show_date, date.end_time, 'h:mm a')}`}
               </span>
               {allFull ? (
                 <span className="ml-2 text-mid-gray">Full</span>

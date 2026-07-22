@@ -23,6 +23,7 @@ type RawDateRow = {
   show_id: string
   show_date: string
   show_time: string
+  end_time: string | null
   volunteer_roles: { id: string; category_id: string | null; role_name: string; slots_available: number }[] | null
 }
 
@@ -58,7 +59,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       .from('show_dates')
       .select(
         `
-        id, show_id, show_date, show_time,
+        id, show_id, show_date, show_time, end_time,
         volunteer_roles ( id, category_id, role_name, slots_available )
       `
       )
@@ -86,6 +87,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     show_id: d.show_id,
     show_date: d.show_date,
     show_time: d.show_time,
+    end_time: d.end_time,
     // Buffer times aren't displayed on this page (only on the edit form) —
     // defaulted here purely to satisfy the shared ShowDate type.
     buffer_before_minutes: 0,

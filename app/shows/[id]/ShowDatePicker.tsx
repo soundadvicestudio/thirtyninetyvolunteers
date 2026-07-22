@@ -39,6 +39,7 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
         <p className="text-navy font-bold text-lg">
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'EEEE, MMMM d, yyyy')} at{' '}
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'h:mm a')}
+          {dates[0].end_time && ` – ${formatWallClockCT(dates[0].show_date, dates[0].end_time, 'h:mm a')}`}
         </p>
       ) : (
         <div>

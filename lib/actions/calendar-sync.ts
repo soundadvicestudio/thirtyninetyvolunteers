@@ -8,6 +8,7 @@ type ShowDateWithShowRow = {
   id: string
   show_date: string
   show_time: string
+  end_time: string | null
   show: { id: string; name: string; location_id: string } | null
 }
 
@@ -26,6 +27,7 @@ export async function syncShowDateToCalendar(
         id,
         show_date,
         show_time,
+        end_time,
         show:shows (
           id,
           name,
@@ -49,10 +51,21 @@ export async function syncShowDateToCalendar(
     const wallClock = `${showDate.show_date} ${showDate.show_time}`
     const startTime = fromZonedTime(wallClock, CT)
 
-    // shows have no duration/end-time field yet — 3-hour default is a
-    // placeholder. See Q-item: add show_dates.duration/end_time in a
-    // future prompt and wire it through here.
-    const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000)
+    const FALLBACK_DURATION_MS = 3 * 60 * 60 * 1000
+    let endTime: Date
+    if (showDate.end_time) {
+      endTime = fromZonedTime(`${showDate.show_date} ${showDate.end_time}`, CT)
+      if (endTime.getTime() <= startTime.getTime()) {
+        console.warn(
+          `show_date ${showDateId}: end_time is not after show_time — using 3hr fallback`
+        )
+        endTime = new Date(startTime.getTime() + FALLBACK_DURATION_MS)
+      }
+    } else {
+      // No end_time set yet — 3-hour default is a placeholder until an
+      // admin edits the show date with a real end time.
+      endTime = new Date(startTime.getTime() + FALLBACK_DURATION_MS)
+    }
 
     await supabase.from('calendar_events').upsert(
       {

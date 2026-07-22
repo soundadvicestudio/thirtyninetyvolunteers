@@ -28,6 +28,7 @@ export type ShowDate = {
   show_id: string
   show_date: string
   show_time: string
+  end_time: string | null
   buffer_before_minutes: number
   buffer_after_minutes: number
 }
