@@ -1,16 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, ChevronDown, CalendarSearch } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getWeekGridDays } from '@/lib/utils/calendar-availability'
 import CalendarFilterBar from './CalendarFilterBar'
+import CalendarLegend from './CalendarLegend'
 import CalendarMonthView from './CalendarMonthView'
 import CalendarWeekView from './CalendarWeekView'
 import CalendarAgendaView from './CalendarAgendaView'
 import CalendarDayPanel from './CalendarDayPanel'
-import CalendarEventForm from './CalendarEventForm'
+import CalendarEventForm, { type CalendarBookingPrefill } from './CalendarEventForm'
+import CalendarBulkRehearsalForm from './CalendarBulkRehearsalForm'
+import CalendarBookSpacePanel from './CalendarBookSpacePanel'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -60,6 +64,7 @@ export default function CalendarShell({
   bufferData,
   adminRole,
   calendarEditor,
+  pendingCount,
   initialView,
   initialDate,
   initialLocationFilter,
@@ -73,6 +78,7 @@ export default function CalendarShell({
   bufferData: ShowDateBuffer[]
   adminRole: AdminRole
   calendarEditor: boolean
+  pendingCount: number
   initialView: string
   initialDate: string
   initialLocationFilter: string[]
@@ -92,6 +98,23 @@ export default function CalendarShell({
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [actionMenuOpen, setActionMenuOpen] = useState(false)
+  const [bulkFormOpen, setBulkFormOpen] = useState(false)
+  const [bookSpaceOpen, setBookSpaceOpen] = useState(false)
+  const [prefilledBooking, setPrefilledBooking] = useState<CalendarBookingPrefill | null>(null)
+  const actionMenuRef = useRef<HTMLDivElement>(null)
+
+  const canDirectCreate = adminRole === 'super_admin' || calendarEditor
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setActionMenuOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
 
   const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
 
@@ -254,13 +277,67 @@ export default function CalendarShell({
           </button>
           <span className="text-sm font-semibold text-dark dark:text-dark-text ml-2">{periodLabel}</span>
 
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            className="ml-auto bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors cursor-pointer"
-          >
-            {adminRole === 'super_admin' ? 'Add Event' : 'Submit Request'}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {adminRole === 'super_admin' && (
+              <Link
+                href="/crew/calendar/pending"
+                className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline"
+              >
+                Pending Requests
+                {pendingCount > 0 && (
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {canDirectCreate && (
+              <button
+                type="button"
+                onClick={() => setBookSpaceOpen(true)}
+                className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+              >
+                <CalendarSearch size={16} />
+                Book Space
+              </button>
+            )}
+
+            <div className="relative" ref={actionMenuRef}>
+              <button
+                type="button"
+                onClick={() => setActionMenuOpen((o) => !o)}
+                className="flex items-center gap-1.5 bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors cursor-pointer"
+              >
+                {adminRole === 'super_admin' ? 'Add Event' : 'Submit Request'}
+                <ChevronDown size={14} />
+              </button>
+              {actionMenuOpen && (
+                <div className="absolute right-0 z-20 mt-1 w-48 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionMenuOpen(false)
+                      setFormOpen(true)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                  >
+                    Single Event
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionMenuOpen(false)
+                      setBulkFormOpen(true)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                  >
+                    Rehearsal Schedule
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -279,6 +356,8 @@ export default function CalendarShell({
         onClearFilters={handleClearFilters}
         hasActiveFilters={hasActiveFilters}
       />
+
+      <CalendarLegend locations={locations} />
 
       <div className="mt-4">
         {view === 'month' && (
@@ -328,14 +407,42 @@ export default function CalendarShell({
           locations={locations}
           initialData={editingEvent}
           initialDate={selectedDate ?? undefined}
+          initialBooking={prefilledBooking}
           onClose={() => {
             setFormOpen(false)
             setEditingEvent(null)
+            setPrefilledBooking(null)
           }}
           onSuccess={() => {
             setFormOpen(false)
             setEditingEvent(null)
+            setPrefilledBooking(null)
             router.refresh()
+          }}
+        />
+      )}
+
+      {bulkFormOpen && (
+        <CalendarBulkRehearsalForm
+          adminRole={adminRole}
+          calendarEditor={calendarEditor}
+          locations={locations}
+          onClose={() => setBulkFormOpen(false)}
+          onSuccess={() => {
+            setBulkFormOpen(false)
+            router.refresh()
+          }}
+        />
+      )}
+
+      {bookSpaceOpen && (
+        <CalendarBookSpacePanel
+          locations={locations}
+          onClose={() => setBookSpaceOpen(false)}
+          onBook={(booking) => {
+            setPrefilledBooking(booking)
+            setBookSpaceOpen(false)
+            setFormOpen(true)
           }}
         />
       )}

@@ -192,6 +192,17 @@ export default async function CalendarPage({
 
   const locations = (locationRows ?? []) as unknown as Location[]
 
+  // Pending count is only meaningful (and only visible) to Super Admins,
+  // who are the sole role that can see/act on the approval queue.
+  let pendingCount = 0
+  if (adminUser.role === 'super_admin') {
+    const { count } = await supabase
+      .from('calendar_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    pendingCount = count ?? 0
+  }
+
   return (
     <CalendarShell
       events={events}
@@ -200,6 +211,7 @@ export default async function CalendarPage({
       bufferData={bufferData}
       adminRole={adminUser.role}
       calendarEditor={adminUser.calendar_editor}
+      pendingCount={pendingCount}
       initialView={view}
       initialDate={date}
       initialLocationFilter={locationsFilter}

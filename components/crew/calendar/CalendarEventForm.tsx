@@ -26,11 +26,20 @@ const inputClasses =
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 const errorClasses = 'mt-1 text-sm text-orange'
 
+export type CalendarBookingPrefill = {
+  date: string
+  start_time: string
+  end_time: string
+  location_id: string
+}
+
 export default function CalendarEventForm({
   adminRole,
+  calendarEditor,
   locations,
   initialData,
   initialDate,
+  initialBooking,
   onClose,
   onSuccess,
 }: {
@@ -39,13 +48,15 @@ export default function CalendarEventForm({
   locations: Array<{ id: string; name: string; color: string }>
   initialData?: CalendarEvent | null
   initialDate?: string
+  initialBooking?: CalendarBookingPrefill | null
   onClose: () => void
   onSuccess: () => void
 }) {
   const isEdit = !!initialData
   const isSuperAdmin = adminRole === 'super_admin'
+  const canDirectCreate = isSuperAdmin || calendarEditor
 
-  const AVAILABLE_TYPES = isSuperAdmin
+  const AVAILABLE_TYPES = canDirectCreate
     ? (['rehearsal', 'teaching', 'meeting', 'event', 'rental', 'other'] as const)
     : (['rehearsal', 'teaching', 'meeting', 'event', 'other'] as const)
 
@@ -61,12 +72,16 @@ export default function CalendarEventForm({
       title: initialData?.title ?? '',
       event_type: (initialData?.event_type as CalendarEventFormData['event_type']) ?? 'rehearsal',
       custom_type_label: initialData?.custom_type_label ?? '',
-      location_id: initialData?.location_id ?? '',
+      location_id: initialData?.location_id ?? initialBooking?.location_id ?? '',
       date: initialData
         ? formatInTimeZone(new Date(initialData.start_time), CT, 'yyyy-MM-dd')
-        : (initialDate ?? ''),
-      start_time: initialData ? formatInTimeZone(new Date(initialData.start_time), CT, 'HH:mm') : '',
-      end_time: initialData ? formatInTimeZone(new Date(initialData.end_time), CT, 'HH:mm') : '',
+        : (initialBooking?.date ?? initialDate ?? ''),
+      start_time: initialData
+        ? formatInTimeZone(new Date(initialData.start_time), CT, 'HH:mm')
+        : (initialBooking?.start_time ?? ''),
+      end_time: initialData
+        ? formatInTimeZone(new Date(initialData.end_time), CT, 'HH:mm')
+        : (initialBooking?.end_time ?? ''),
       description: initialData?.description ?? '',
       requirements: initialData?.requirements ?? '',
       contacts:
@@ -113,7 +128,7 @@ export default function CalendarEventForm({
   }, [watchedLocationId, watchedDate, watchedStartTime, watchedEndTime])
 
   const canCheckAvailability =
-    isSuperAdmin && !!watchedLocationId && !!watchedDate && !!watchedStartTime && !!watchedEndTime
+    canDirectCreate && !!watchedLocationId && !!watchedDate && !!watchedStartTime && !!watchedEndTime
 
   async function handleCheckAvailability() {
     if (!watchedLocationId) return
@@ -154,7 +169,7 @@ export default function CalendarEventForm({
         <div className="bg-white dark:bg-dark-surface rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col pointer-events-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-divider dark:border-dark-border shrink-0">
             <h2 className="text-lg font-bold text-dark dark:text-dark-text">
-              {isEdit ? 'Edit Event' : isSuperAdmin ? 'Add to Calendar' : 'Submit for Approval'}
+              {isEdit ? 'Edit Event' : canDirectCreate ? 'Add to Calendar' : 'Submit for Approval'}
             </h2>
             <button
               type="button"
@@ -166,7 +181,7 @@ export default function CalendarEventForm({
             </button>
           </div>
 
-          {!isSuperAdmin && (
+          {!canDirectCreate && (
             <p className="px-5 pt-4 text-sm text-mid-gray dark:text-dark-muted">
               Your request will be reviewed by an admin who will assign a location and add it to the calendar.
             </p>
@@ -205,7 +220,7 @@ export default function CalendarEventForm({
 
             <div>
               <label className={labelClasses}>
-                {isSuperAdmin ? (
+                {canDirectCreate ? (
                   <>
                     Location<span className="text-orange ml-0.5">*</span>
                   </>
@@ -214,7 +229,7 @@ export default function CalendarEventForm({
                 )}
               </label>
               <select className={inputClasses} {...register('location_id')}>
-                <option value="">{isSuperAdmin ? 'Select a location' : 'No preference'}</option>
+                <option value="">{canDirectCreate ? 'Select a location' : 'No preference'}</option>
                 {locations.map((loc) => (
                   <option key={loc.id} value={loc.id}>
                     {loc.name}
@@ -349,7 +364,7 @@ export default function CalendarEventForm({
                   ? 'Saving…'
                   : isEdit
                     ? 'Save Changes'
-                    : isSuperAdmin
+                    : canDirectCreate
                       ? 'Add to Calendar'
                       : 'Submit for Approval'}
               </button>
