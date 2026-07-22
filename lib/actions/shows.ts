@@ -50,7 +50,7 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
     .insert({
       season_id: seasonId,
       name: value.name,
-      show_type: value.show_type,
+      location_id: value.location_id,
       description: value.description || null,
       volunteer_instructions: value.volunteer_instructions || null,
       default_hours: value.default_hours,
@@ -107,7 +107,7 @@ export async function createShow(payload: ShowSubmitPayload): Promise<ShowAction
 
   await logAction(admin.id, 'show.create', 'show', showId, undefined, {
     name: value.name,
-    show_type: value.show_type,
+    location_id: value.location_id,
     status: value.status,
   })
 
@@ -136,7 +136,7 @@ export async function updateShow(
 
   const { data: current, error: fetchError } = await supabase
     .from('shows')
-    .select('season_id, name, show_type, description, volunteer_instructions, default_hours, status')
+    .select('season_id, name, location_id, description, volunteer_instructions, default_hours, status')
     .eq('id', showId)
     .single()
 
@@ -166,7 +166,7 @@ export async function updateShow(
   const afterShow = {
     season_id: seasonId,
     name: value.name,
-    show_type: value.show_type,
+    location_id: value.location_id,
     description: value.description || null,
     volunteer_instructions: value.volunteer_instructions || null,
     default_hours: value.default_hours,

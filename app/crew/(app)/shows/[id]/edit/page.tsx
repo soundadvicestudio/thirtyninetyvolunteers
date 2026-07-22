@@ -33,7 +33,7 @@ export default async function EditShowPage({
 
   const supabase = await getServerClient()
 
-  const [{ data: seasons }, { data: adminUsers }, { data: categories }, { data: settingsRows }] =
+  const [{ data: seasons }, { data: adminUsers }, { data: categories }, { data: settingsRows }, { data: locations }] =
     await Promise.all([
       supabase.from('seasons').select('id, name').order('created_at', { ascending: false }),
       supabase
@@ -50,6 +50,11 @@ export default async function EditShowPage({
         .from('app_settings')
         .select('key, value')
         .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
+      supabase
+        .from('locations')
+        .select('id, name, color')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
     ])
 
   const settingsMap = new Map((settingsRows ?? []).map((r) => [r.key, r.value]))
@@ -63,7 +68,7 @@ export default async function EditShowPage({
     supabase
       .from('shows')
       .select(
-        'id, season_id, name, show_type, description, status, volunteer_instructions, default_hours, notifications_sent_at, created_at, updated_at'
+        'id, season_id, name, location_id, description, status, volunteer_instructions, default_hours, notifications_sent_at, created_at, updated_at'
       )
       .eq('id', id)
       .maybeSingle(),
@@ -115,6 +120,7 @@ export default async function EditShowPage({
         seasons={seasons ?? []}
         adminUsers={adminUsers ?? []}
         categories={categories ?? []}
+        locations={locations ?? []}
         defaultHours={defaultHours}
         show={show}
         blockedDateIds={blockedDates ? blockedDates.split(',') : []}

@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { getServerClient } from '@/lib/supabase/server'
-import { SHOW_TYPE_LABEL, SHOW_TYPE_BADGE } from '@/lib/utils/showDisplay'
-import type { ShowType } from '@/types/show'
+import type { Location } from '@/types/show'
 
 type RoleRow = {
   id: string
@@ -21,7 +20,8 @@ type DateRow = {
 type ShowRow = {
   id: string
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   status: string
   show_dates: DateRow[] | null
 }
@@ -45,7 +45,7 @@ export default async function SeasonAtAGlance({
 
   let query = supabase.from('shows').select(
     `
-    id, name, show_type, status,
+    id, name, location_id, location:locations(id, name, color), status,
     show_dates (
       id, show_date, show_time,
       volunteer_roles ( id, role_name, slots_available, slot_claims ( status ) )
@@ -102,9 +102,10 @@ export default async function SeasonAtAGlance({
                     {show.name}
                   </h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${SHOW_TYPE_BADGE[show.show_type]}`}
+                    className="text-xs px-2 py-0.5 rounded-full shrink-0 text-white"
+                    style={{ backgroundColor: show.location?.color ?? '#555555' }}
                   >
-                    {SHOW_TYPE_LABEL[show.show_type]}
+                    {show.location?.name ?? 'Unknown Location'}
                   </span>
                 </div>
                 <p className="text-xs text-mid-gray dark:text-dark-muted mb-3">{dateRangeLabel}</p>

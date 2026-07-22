@@ -23,7 +23,7 @@ type RawPendingHoursRow = {
   show_date: {
     show_date: string
     show_id: string
-    show: { id: string; name: string; show_type: string; default_hours: number | null } | null
+    show: { id: string; name: string; default_hours: number | null } | null
   } | null
   slot_claim: { volunteer_role: { role_name: string } | null } | null
 }
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
             `
             id, hours_logged, volunteer_id, show_id, show_date_id,
             volunteer:volunteers(id, full_name),
-            show_date:show_dates(show_date, show_id, show:shows(id, name, show_type, default_hours)),
+            show_date:show_dates(show_date, show_id, show:shows(id, name, default_hours)),
             slot_claim:slot_claims(volunteer_role:volunteer_roles(role_name))
             `
           )

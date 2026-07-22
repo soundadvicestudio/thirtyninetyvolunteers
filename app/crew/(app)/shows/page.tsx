@@ -2,12 +2,13 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import ShowList from '@/components/crew/shows/ShowList'
-import type { Season, ShowWithStaffing, ShowType, ShowStatus } from '@/types/show'
+import type { Season, ShowWithStaffing, Location, ShowStatus } from '@/types/show'
 
 type RawShowRow = {
   id: string
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   status: ShowStatus
   season_id: string | null
   created_at: string
@@ -28,14 +29,14 @@ export default async function ShowsPage() {
 
   const supabase = await getServerClient()
 
-  const [{ data: seasonRows }, { data: showRows }, { data: dateRows }] = await Promise.all([
+  const [{ data: seasonRows }, { data: showRows }, { data: dateRows }, { data: locationRows }] = await Promise.all([
     supabase
       .from('seasons')
       .select('id, name, start_date, end_date, is_current')
       .order('created_at', { ascending: false }),
     supabase
       .from('shows')
-      .select('id, name, show_type, status, season_id, created_at, updated_at')
+      .select('id, name, location_id, location:locations(id, name, color), status, season_id, created_at, updated_at')
       .order('created_at', { ascending: false }),
     supabase.from('show_dates').select(
       `
@@ -43,6 +44,7 @@ export default async function ShowsPage() {
       volunteer_roles ( id, slots_available, slot_claims ( status ) )
     `
     ),
+    supabase.from('locations').select('id, name, color').eq('is_active', true).order('sort_order', { ascending: true }),
   ])
 
   const dateRangeByShow = new Map<string, { earliest: string; latest: string }>()
@@ -75,7 +77,8 @@ export default async function ShowsPage() {
     return {
       id: row.id,
       name: row.name,
-      show_type: row.show_type,
+      location_id: row.location_id,
+      location: row.location,
       status: row.status,
       season_id: row.season_id,
       created_at: row.created_at,
@@ -87,5 +90,12 @@ export default async function ShowsPage() {
     }
   })
 
-  return <ShowList seasons={(seasonRows ?? []) as Season[]} shows={shows} adminRole={admin.role} />
+  return (
+    <ShowList
+      seasons={(seasonRows ?? []) as Season[]}
+      shows={shows}
+      locations={locationRows ?? []}
+      adminRole={admin.role}
+    />
+  )
 }

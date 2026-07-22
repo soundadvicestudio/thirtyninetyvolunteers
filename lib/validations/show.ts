@@ -20,7 +20,7 @@ const roleFormSchema = z.object({
 export const showFormSchema = z
   .object({
     name: z.string().min(1, 'Show name is required'),
-    show_type: z.enum(['mainstage', 'studio_x', 'one_off']),
+    location_id: z.string().uuid('Location is required'),
     seasonId: z.string(),
     newSeasonName: z.string().optional(),
     newSeasonStartDate: z.string().optional(),
@@ -67,7 +67,7 @@ const roleSubmitSchema = z.object({
 // Server-side payload schema — validated inside the server action, independent of client trust.
 export const showSubmitSchema = z.object({
   name: z.string().min(1),
-  show_type: z.enum(['mainstage', 'studio_x', 'one_off']),
+  location_id: z.string().uuid(),
   seasonId: z.string().uuid().nullable(),
   newSeasonName: z.string().nullable(),
   newSeasonStartDate: z.string().nullable(),

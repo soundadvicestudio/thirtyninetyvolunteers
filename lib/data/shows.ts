@@ -1,12 +1,13 @@
 import 'server-only'
 import { getAdminClient } from '@/lib/supabase/admin'
 import type { PublicShow, PublicShowDate, PublicShowRole } from '@/types/show-public'
-import type { ShowType, ShowStatus } from '@/types/show'
+import type { Location, ShowStatus } from '@/types/show'
 
 type RawShowRow = {
   id: string
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   status: ShowStatus
   description: string | null
   volunteer_instructions: string | null
@@ -101,7 +102,8 @@ async function attachDatesAndRoles(showRows: RawShowRow[]): Promise<PublicShow[]
   return showRows.map((s) => ({
     id: s.id,
     name: s.name,
-    show_type: s.show_type,
+    location_id: s.location_id,
+    location: s.location,
     status: s.status,
     description: s.description,
     volunteer_instructions: s.volunteer_instructions,
@@ -113,7 +115,7 @@ function hasOpenSlot(show: PublicShow): boolean {
   return show.dates.some((d) => d.roles.some((r) => !r.is_full))
 }
 
-const SHOW_COLUMNS = 'id, name, show_type, status, description, volunteer_instructions'
+const SHOW_COLUMNS = 'id, name, location_id, location:locations(id, name, color), status, description, volunteer_instructions'
 
 export async function getPublicShows(): Promise<PublicShow[]> {
   const client = getAdminClient()
@@ -124,7 +126,7 @@ export async function getPublicShows(): Promise<PublicShow[]> {
     .eq('status', 'live')
     .order('created_at', { ascending: true })
 
-  const shows = await attachDatesAndRoles((showRows ?? []) as RawShowRow[])
+  const shows = await attachDatesAndRoles((showRows ?? []) as unknown as RawShowRow[])
 
   // Shows where every role across every date is full are excluded entirely.
   return shows.filter(hasOpenSlot)
@@ -135,10 +137,10 @@ export async function getPublicShow(id: string): Promise<PublicShow | null> {
 
   const { data: showRow } = await client.from('shows').select(SHOW_COLUMNS).eq('id', id).maybeSingle()
 
-  if (!showRow || (showRow as RawShowRow).status !== 'live') {
+  if (!showRow || (showRow as unknown as RawShowRow).status !== 'live') {
     return null
   }
 
-  const shows = await attachDatesAndRoles([showRow as RawShowRow])
+  const shows = await attachDatesAndRoles([showRow as unknown as RawShowRow])
   return shows[0] ?? null
 }

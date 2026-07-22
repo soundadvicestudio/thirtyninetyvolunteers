@@ -1,11 +1,17 @@
-export type ShowType = 'mainstage' | 'studio_x' | 'one_off'
 export type ShowStatus = 'draft' | 'live' | 'past' | 'archived'
+
+export type Location = {
+  id: string
+  name: string
+  color: string
+}
 
 export type Show = {
   id: string
   season_id: string | null
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   description: string | null
   status: ShowStatus
   volunteer_instructions: string | null
@@ -43,7 +49,8 @@ export type Season = {
 export type ShowWithStaffing = {
   id: string
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   status: ShowStatus
   season_id: string | null
   created_at: string

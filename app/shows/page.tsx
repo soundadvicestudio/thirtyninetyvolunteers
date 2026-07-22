@@ -2,7 +2,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
-import { SHOW_TYPE_LABEL, SHOW_TYPE_BADGE } from '@/lib/utils/showDisplay'
 import type { PublicShow } from '@/types/show-public'
 
 function dateRangeLabel(show: PublicShow): string | null {
@@ -37,9 +36,10 @@ function ShowCard({ show }: { show: PublicShow }) {
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
         <h2 className="text-navy font-bold text-xl">{show.name}</h2>
         <span
-          className={`inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 ${SHOW_TYPE_BADGE[show.show_type]}`}
+          className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 text-white"
+          style={{ backgroundColor: show.location?.color ?? '#555555' }}
         >
-          {SHOW_TYPE_LABEL[show.show_type]}
+          {show.location?.name ?? 'Unknown Location'}
         </span>
       </div>
 

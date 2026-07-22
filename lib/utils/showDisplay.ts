@@ -1,15 +1,22 @@
-import type { ShowType, ShowStatus } from '@/types/show'
+import type { ShowStatus } from '@/types/show'
 
-export const SHOW_TYPE_LABEL: Record<ShowType, string> = {
-  mainstage: 'Mainstage',
-  studio_x: 'Studio X',
-  one_off: 'One-Off',
+// Preserves the legacy default-hours-by-venue-category app_settings
+// lookup (default_hours_mainstage/studio_x/one_off) now that locations
+// (5) replaced the old three-way category as the data model (30BN-CAL.1).
+// Maps each location name to its historical bucket; the 3 new locations
+// without a direct predecessor share the bucket of their sibling venue.
+const LOCATION_HOURS_BUCKET: Record<string, 'mainstage' | 'studio_x' | 'one_off'> = {
+  Mainstage: 'mainstage',
+  'Mainstage Lobby': 'mainstage',
+  'Studio X': 'studio_x',
+  'Studio X Office': 'studio_x',
+  'Green Room': 'one_off',
 }
 
-export const SHOW_TYPE_BADGE: Record<ShowType, string> = {
-  mainstage: 'bg-navy text-white',
-  studio_x: 'bg-steel text-white',
-  one_off: 'bg-orange text-white',
+export function getLocationHoursBucket(
+  locationName: string | null | undefined
+): 'mainstage' | 'studio_x' | 'one_off' {
+  return (locationName && LOCATION_HOURS_BUCKET[locationName]) || 'one_off'
 }
 
 export const SHOW_STATUS_LABEL: Record<ShowStatus, string> = {

@@ -7,12 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { markAttendance, bulkMarkAttendance } from '@/lib/actions/attendance'
 import { addShowEditor, removeShowEditor, updateShowStatus, sendShowNotifications } from '@/lib/actions/shows'
-import {
-  SHOW_TYPE_LABEL,
-  SHOW_TYPE_BADGE,
-  SHOW_STATUS_LABEL,
-  SHOW_STATUS_BADGE,
-} from '@/lib/utils/showDisplay'
+import { SHOW_STATUS_LABEL, SHOW_STATUS_BADGE } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
 import BulkEmailSection from '@/components/crew/shows/BulkEmailSection'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
@@ -93,8 +88,11 @@ function OverviewTab({
       <div>
         <div className="flex flex-wrap items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold text-dark dark:text-dark-text">{show.name}</h1>
-          <span className={`text-xs font-semibold rounded px-2 py-0.5 ${SHOW_TYPE_BADGE[show.show_type]}`}>
-            {SHOW_TYPE_LABEL[show.show_type]}
+          <span
+            className="text-xs font-semibold rounded px-2 py-0.5 text-white"
+            style={{ backgroundColor: show.location?.color ?? '#555555' }}
+          >
+            {show.location?.name ?? 'Unknown Location'}
           </span>
           <span className={`text-xs font-semibold rounded px-2 py-0.5 ${SHOW_STATUS_BADGE[show.status]}`}>
             {SHOW_STATUS_LABEL[show.status]}

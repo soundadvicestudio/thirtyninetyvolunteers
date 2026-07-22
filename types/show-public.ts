@@ -1,4 +1,4 @@
-import type { ShowType, ShowStatus } from '@/types/show'
+import type { Location, ShowStatus } from '@/types/show'
 
 export type PublicShowRole = {
   id: string
@@ -20,7 +20,8 @@ export type PublicShowDate = {
 export type PublicShow = {
   id: string
   name: string
-  show_type: ShowType
+  location_id: string
+  location: Location | null
   status: ShowStatus
   description: string | null
   volunteer_instructions: string | null

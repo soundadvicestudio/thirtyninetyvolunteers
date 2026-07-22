@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPublicShow } from '@/lib/data/shows'
-import { SHOW_TYPE_LABEL, SHOW_TYPE_BADGE } from '@/lib/utils/showDisplay'
 import ShowDatePicker from './ShowDatePicker'
 
 function PublicHeader() {
@@ -52,9 +51,10 @@ export default async function ShowClaimPage({ params }: { params: Promise<{ id: 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
           <span
-            className={`inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 mb-3 ${SHOW_TYPE_BADGE[show.show_type]}`}
+            className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 mb-3 text-white"
+            style={{ backgroundColor: show.location?.color ?? '#555555' }}
           >
-            {SHOW_TYPE_LABEL[show.show_type]}
+            {show.location?.name ?? 'Unknown Location'}
           </span>
           <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{show.name}</h1>
 

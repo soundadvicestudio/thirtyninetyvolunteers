@@ -6,6 +6,7 @@ import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { checkFirstCall, checkMilestones } from '@/lib/milestones'
 import { formatCT } from '@/lib/utils/date'
+import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 
 export type MarkAttendanceParams = {
   slotClaimId: string
@@ -58,7 +59,11 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
 
   if (newStatus === 'showed') {
     const [{ data: show, error: showError }, { data: role }] = await Promise.all([
-      supabase.from('shows').select('name, default_hours, show_type').eq('id', showId).single(),
+      supabase
+        .from('shows')
+        .select('name, default_hours, location:locations(name)')
+        .eq('id', showId)
+        .single(),
       supabase.from('volunteer_roles').select('role_name').eq('id', claim.volunteer_role_id).single(),
     ])
 
@@ -72,10 +77,12 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
     if (show.default_hours != null) {
       hours = Number(show.default_hours)
     } else {
+      const showLocation = (show as unknown as { location: { name: string } | null }).location
+      const bucket = getLocationHoursBucket(showLocation?.name)
       const { data: setting } = await supabase
         .from('app_settings')
         .select('value')
-        .eq('key', `default_hours_${show.show_type}`)
+        .eq('key', `default_hours_${bucket}`)
         .maybeSingle()
       hours = setting?.value ? Number(setting.value) : 0
     }

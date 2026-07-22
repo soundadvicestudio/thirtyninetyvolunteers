@@ -7,13 +7,11 @@ import { ChevronDown } from 'lucide-react'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { createSeason, toggleShowStatus } from '@/lib/actions/shows'
 import {
-  SHOW_TYPE_LABEL as TYPE_LABEL,
-  SHOW_TYPE_BADGE as TYPE_BADGE,
   SHOW_STATUS_LABEL as STATUS_LABEL,
   SHOW_STATUS_BADGE as STATUS_BADGE,
 } from '@/lib/utils/showDisplay'
 import type { AdminUser } from '@/lib/auth'
-import type { Season, ShowWithStaffing, ShowType, ShowStatus } from '@/types/show'
+import type { Season, ShowWithStaffing, Location, ShowStatus } from '@/types/show'
 
 const UNSEASONED_KEY = '__unseasoned__'
 
@@ -82,8 +80,11 @@ function ShowCard({
           >
             {show.name}
           </Link>
-          <span className={`text-xs font-semibold rounded px-2 py-0.5 ${TYPE_BADGE[show.show_type]}`}>
-            {TYPE_LABEL[show.show_type]}
+          <span
+            className="text-xs font-semibold rounded px-2 py-0.5 text-white"
+            style={{ backgroundColor: show.location?.color ?? '#555555' }}
+          >
+            {show.location?.name ?? 'Unknown Location'}
           </span>
         </div>
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-2">
@@ -145,16 +146,18 @@ function ShowCard({
 export default function ShowList({
   seasons,
   shows,
+  locations,
   adminRole,
 }: {
   seasons: Season[]
   shows: ShowWithStaffing[]
+  locations: Location[]
   adminRole: AdminUser['role']
 }) {
   const router = useRouter()
   const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
 
-  const [typeFilter, setTypeFilter] = useState<'all' | ShowType>('all')
+  const [locationFilter, setLocationFilter] = useState<'all' | string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ShowStatus>('all')
 
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => {
@@ -195,7 +198,7 @@ export default function ShowList({
   }
 
   function clearFilters() {
-    setTypeFilter('all')
+    setLocationFilter('all')
     setStatusFilter('all')
   }
 
@@ -256,10 +259,10 @@ export default function ShowList({
 
   const filteredShows = shows.filter(
     (s) =>
-      (typeFilter === 'all' || s.show_type === typeFilter) &&
+      (locationFilter === 'all' || s.location_id === locationFilter) &&
       (statusFilter === 'all' || s.status === statusFilter)
   )
-  const hasActiveFilter = typeFilter !== 'all' || statusFilter !== 'all'
+  const hasActiveFilter = locationFilter !== 'all' || statusFilter !== 'all'
 
   const showsBySeasonAll = new Map<string, ShowWithStaffing[]>()
   for (const show of shows) {
@@ -314,15 +317,17 @@ export default function ShowList({
 
       <div className="flex flex-wrap gap-3 mb-4">
         <select
-          aria-label="Filter by show type"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as 'all' | ShowType)}
+          aria-label="Filter by location"
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
           className={selectClasses}
         >
-          <option value="all">All Types</option>
-          <option value="mainstage">Mainstage</option>
-          <option value="studio_x">Studio X</option>
-          <option value="one_off">One-Off</option>
+          <option value="all">All Locations</option>
+          {locations.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
+            </option>
+          ))}
         </select>
         <select
           aria-label="Filter by status"

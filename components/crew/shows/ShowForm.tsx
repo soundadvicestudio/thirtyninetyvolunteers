@@ -31,7 +31,8 @@ import {
   type ShowFormValues,
 } from '@/lib/validations/show'
 import type { ShowSubmitPayload } from '@/lib/validations/show'
-import type { Show, ShowDateWithRoles, ShowStatus } from '@/types/show'
+import type { Show, ShowDateWithRoles, ShowStatus, Location } from '@/types/show'
+import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 
 const DATE_BLOCKED_MESSAGE =
   'This show date has active claims and cannot be removed. Cancel existing claims first.'
@@ -49,7 +50,7 @@ function buildPayload(data: ShowFormValues, status: 'draft' | 'live'): ShowSubmi
   const isNewSeason = data.seasonId === NEW_SEASON
   return {
     name: data.name.trim(),
-    show_type: data.show_type,
+    location_id: data.location_id,
     seasonId: isNewSeason || data.seasonId === NO_SEASON ? null : data.seasonId,
     newSeasonName: isNewSeason ? data.newSeasonName?.trim() || null : null,
     newSeasonStartDate: isNewSeason ? data.newSeasonStartDate || null : null,
@@ -258,6 +259,7 @@ export default function ShowForm({
   seasons,
   adminUsers,
   categories,
+  locations,
   defaultHours,
   show,
   blockedDateIds = [],
@@ -266,6 +268,7 @@ export default function ShowForm({
   seasons: { id: string; name: string }[]
   adminUsers: { id: string; name: string; email: string }[]
   categories: { id: string; name: string }[]
+  locations: Location[]
   defaultHours: { mainstage: number; studio_x: number; one_off: number }
   show?: Show & { dates: ShowDateWithRoles[]; editorIds: string[] }
   blockedDateIds?: string[]
@@ -285,7 +288,7 @@ export default function ShowForm({
     resolver: zodResolver(showFormSchema) as Resolver<ShowFormValues>,
     defaultValues: {
       name: show?.name ?? '',
-      show_type: show?.show_type ?? 'mainstage',
+      location_id: show?.location_id ?? locations[0]?.id ?? '',
       seasonId: show?.season_id ?? NO_SEASON,
       newSeasonName: '',
       newSeasonStartDate: '',
@@ -330,7 +333,7 @@ export default function ShowForm({
   // field would be a broader refactor across this form's nested date/role field
   // arrays (R24), not a surgical fix.
   // eslint-disable-next-line react-hooks/incompatible-library
-  const watchedShowType = watch('show_type')
+  const watchedLocationId = watch('location_id')
   const watchedSeasonId = watch('seasonId')
   const watchedEditorIds = watch('editorIds') ?? []
   const didMountRef = useRef(false)
@@ -341,15 +344,12 @@ export default function ShowForm({
       return
     }
     if (!defaultHoursDirty) {
-      const map = {
-        mainstage: defaultHours.mainstage,
-        studio_x: defaultHours.studio_x,
-        one_off: defaultHours.one_off,
-      }
-      setValue('default_hours', String(map[watchedShowType]))
+      const locationName = locations.find((l) => l.id === watchedLocationId)?.name
+      const bucket = getLocationHoursBucket(locationName)
+      setValue('default_hours', String(defaultHours[bucket]))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedShowType])
+  }, [watchedLocationId])
 
   function toggleEditor(id: string) {
     const current = getValues('editorIds') ?? []
@@ -457,13 +457,16 @@ export default function ShowForm({
 
         <div>
           <label className={labelClasses}>
-            Show Type<span className="text-orange ml-0.5">*</span>
+            Location<span className="text-orange ml-0.5">*</span>
           </label>
-          <select className={inputClasses} {...register('show_type')}>
-            <option value="mainstage">Mainstage</option>
-            <option value="studio_x">Studio X</option>
-            <option value="one_off">One-Off</option>
+          <select className={inputClasses} {...register('location_id')}>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
           </select>
+          {errors.location_id && <p className={errorClasses}>{errors.location_id.message}</p>}
         </div>
 
         <div>
@@ -545,7 +548,7 @@ export default function ShowForm({
           />
           {errors.default_hours && <p className={errorClasses}>{errors.default_hours.message}</p>}
           <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
-            Leave blank to use the show-type default. Enter a value to override for this show.
+            Leave blank to use the location default. Enter a value to override for this show.
           </p>
         </div>
       </div>
