@@ -24,7 +24,7 @@ export type CalendarEvent = {
   source: CalendarEventSource
   source_show_date_id: string | null
   rehearsal_batch_id: string | null
-  submitted_by: string
+  submitted_by: string | null
   submitted_by_admin: { id: string; name: string } | null
   approved_by: string | null
   created_at: string
