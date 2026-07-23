@@ -13,6 +13,106 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// ─── Shared branded email wrapper (30BN-13.2) ────────────────────
+// Table-based layout, inline styles only — required for Outlook/email
+// client compatibility. subject and preheader are escaped internally
+// since they're plain text dropped into an HTML context (<title> and
+// the hidden preheader div); body is pre-composed HTML supplied by the
+// caller, who is responsible for escaping any dynamic values within it.
+
+function buildEmailHtml({
+  subject,
+  preheader,
+  body,
+  footerNote,
+}: {
+  subject: string
+  preheader: string
+  body: string
+  footerNote?: string
+}): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  const logoHtml = siteUrl
+    ? `<img src="${siteUrl}/logo.png" height="50" width="auto" alt="30 By Ninety Theatre" style="display:block;margin:0 auto;">`
+    : ''
+  const safeTitle = escapeHtml(subject)
+  const safePreheader = escapeHtml(preheader)
+  const note =
+    footerNote ??
+    "You're receiving this email because you signed up to volunteer with 30 By Ninety Theatre."
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${safeTitle}</title>
+    </head>
+    <body style="margin:0;padding:0;background-color:#F5F5F5;font-family:'Open Sans',Arial,sans-serif;">
+
+      <div style="display:none;max-height:0;overflow:hidden;color:#F5F5F5;">
+        ${safePreheader}
+      </div>
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F5;">
+        <tr>
+          <td align="center" style="padding:24px 16px;">
+
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border-radius:8px;overflow:hidden;">
+
+              <tr>
+                <td bgcolor="#293994" style="background-color:#293994;padding:24px 32px;text-align:center;">
+                  ${logoHtml}
+                  <p style="margin:8px 0 0 0;color:#FFFFFF;font-size:13px;font-family:'Open Sans',Arial,sans-serif;letter-spacing:0.5px;">
+                    30 BY NINETY THEATRE
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:32px;color:#1A1A1A;font-size:15px;line-height:1.6;font-family:'Open Sans',Arial,sans-serif;">
+                  ${body}
+                </td>
+              </tr>
+
+              <tr>
+                <td bgcolor="#F5F5F5" style="background-color:#F5F5F5;padding:24px 32px;text-align:center;border-top:1px solid #D0D5E8;">
+                  <p style="margin:0;color:#555555;font-size:12px;line-height:1.5;font-family:'Open Sans',Arial,sans-serif;">
+                    30 By Ninety Theatre &bull; Old Mandeville, LA
+                    <br>
+                    ${note}
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+
+    </body>
+    </html>
+  `
+}
+
+// ─── Reusable CTA button (30BN-13.2) ─────────────────────────────
+// <a>-as-button, not <button> — required for email client rendering.
+
+function buildCtaButton(label: string, url: string, color = '#293994'): string {
+  return `
+    <table cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+      <tr>
+        <td bgcolor="${color}" align="center" style="background-color:${color};border-radius:6px;padding:14px 28px;">
+          <a href="${url}" style="color:#FFFFFF;font-size:15px;font-weight:600;text-decoration:none;font-family:'Open Sans',Arial,sans-serif;display:inline-block;">
+            ${label}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `
+}
+
 type ConfirmationEmailParams = {
   to: string
   name: string
@@ -33,90 +133,35 @@ export async function sendVolunteerConfirmationEmail({
 
   const categoriesHtml =
     categoryNames.length > 0
-      ? `<p style="color:#555;margin:16px 0 8px;">
-           Your areas of interest:
-         </p>
-         <ul style="color:#555;margin:0;padding-left:20px;">
-           ${categoryNames.map(n =>
-             `<li style="margin-bottom:4px;">${escapeHtml(n)}</li>`
-           ).join('')}
-         </ul>`
+      ? `
+        <p style="margin:16px 0 8px;color:#555555;font-size:15px;">Your selected interests:</p>
+        <ul style="margin:0 0 16px;padding-left:20px;color:#555555;font-size:15px;">
+          ${categoryNames.map((n) => `<li style="margin-bottom:4px;">${escapeHtml(n)}</li>`).join('')}
+        </ul>
+      `
       : ''
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-
-        <!-- Header -->
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;
-                    font-weight:700;letter-spacing:0.5px;">
-            30 By Ninety Theatre
-          </p>
-        </div>
-
-        <!-- Body -->
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            Welcome to the family, ${safeName}!
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-            Thank you for signing up to volunteer with 30 By Ninety
-            Theatre. We're so glad you're here — volunteers like you
-            are what make every production possible.
-          </p>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-            We'll reach out when opportunities match your interests.
-            In the meantime, you can update your information any time
-            using the link below.
-          </p>
-          <p style="color:#555;line-height:1.6;margin:16px 0 0;">
-            In the meantime, you can browse current volunteer opportunities
-            on our shows page — new calls are posted throughout the season.
-          </p>
-          <div style="margin:16px 0 0;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
-               style="color:#293994;font-weight:600;text-decoration:underline;">
-              View Volunteer Opportunities →
-            </a>
-          </div>
-
-          ${categoriesHtml}
-
-          <!-- CTA -->
-          <div style="margin:28px 0 0;">
-            <a href="${updateUrl}"
-               style="display:inline-block;background:#F26522;
-                      color:#ffffff;text-decoration:none;
-                      padding:14px 28px;border-radius:8px;
-                      font-weight:700;font-size:15px;">
-              Update My Information
-            </a>
-          </div>
-          <p style="color:#aaa;font-size:12px;margin:16px 0 0;">
-            Or copy this link: ${updateUrl}
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you for signing up to volunteer with 30 By Ninety Theatre. We're excited to have you join our community!
+    </p>
+    ${categoriesHtml}
+    <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You can update your information at any time using the link below.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;">
+      <a href="${updateUrl}" style="color:#293994;">${updateUrl}</a>
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
 
   const subject = `Welcome to 30 By Ninety Theatre, ${name}!`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Welcome to the 30 By Ninety volunteer community!',
+    body,
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
@@ -127,11 +172,7 @@ export async function sendVolunteerConfirmationEmail({
 
   await logEmailSent({
     subject,
-    bodyPreview:
-      `Thank you for signing up to volunteer with 30 By Ninety Theatre. We're so glad you're here — volunteers like you are what make every production possible.`.slice(
-        0,
-        150
-      ),
+    bodyPreview: 'Welcome to 30 By Ninety Theatre volunteers! Your signup is confirmed.',
     recipientType: 'transactional',
     recipientFilter: 'trigger:signup',
     sentBy: null,
@@ -154,57 +195,30 @@ export async function sendUpdateLinkEmail({
 }: UpdateLinkEmailParams): Promise<void> {
   const updateUrl =
     `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
+  const safeName = escapeHtml(name)
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;
-                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;
-                    font-weight:700;">
-            30 By Ninety Theatre
-          </p>
-        </div>
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            Hi ${escapeHtml(name)} — here's your update link
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            You requested a link to update your volunteer
-            information. Click below to view and edit your record.
-          </p>
-          <a href="${updateUrl}"
-             style="display:inline-block;background:#F26522;
-                    color:#ffffff;text-decoration:none;
-                    padding:14px 28px;border-radius:8px;
-                    font-weight:700;font-size:15px;">
-            Update My Information
-          </a>
-          <p style="color:#aaa;font-size:12px;margin:16px 0 0;">
-            Or copy this link: ${updateUrl}
-          </p>
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You requested a link to update your volunteer information. Click the button below to get started.
+    </p>
+    ${buildCtaButton('Update My Info', updateUrl)}
+    <p style="margin:24px 0 0;color:#555555;font-size:13px;line-height:1.6;">
+      This link is unique to your account. If you didn't request this, you can safely ignore this email.
+    </p>
   `
+
+  const subject = 'Your link to update your volunteer information'
+  const html = buildEmailHtml({
+    subject,
+    preheader: "Here's your link to update your volunteer info.",
+    body,
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     to,
-    subject: 'Your link to update your volunteer information',
+    subject,
     html,
   })
 }
@@ -221,60 +235,28 @@ type InfoUpdatedEmailParams = {
 export async function sendInfoUpdatedEmail({
   to,
   name,
-  updateToken,
   volunteerId,
 }: InfoUpdatedEmailParams): Promise<void> {
-  const updateUrl =
-    `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
+  const safeName = escapeHtml(name)
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;
-                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;
-                    font-weight:700;">
-            30 By Ninety Theatre
-          </p>
-        </div>
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            Your information has been updated
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            Hi ${escapeHtml(name)} — we've saved your updated
-            volunteer information. If you need to make any further
-            changes, use the link below.
-          </p>
-          <a href="${updateUrl}"
-             style="display:inline-block;background:#F26522;
-                    color:#ffffff;text-decoration:none;
-                    padding:14px 28px;border-radius:8px;
-                    font-weight:700;font-size:15px;">
-            Update My Information Again
-          </a>
-          <p style="color:#aaa;font-size:12px;margin:16px 0 0;">
-            Or copy this link: ${updateUrl}
-          </p>
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Your volunteer profile with 30 By Ninety Theatre has been updated successfully.
+    </p>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      If you didn't make this change, please contact us at
+      <a href="mailto:info@30byninety.com" style="color:#293994;">info@30byninety.com</a>.
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
 
   const subject = 'Your volunteer information has been updated'
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your volunteer information has been updated.',
+    body,
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
@@ -285,11 +267,7 @@ export async function sendInfoUpdatedEmail({
 
   await logEmailSent({
     subject,
-    bodyPreview:
-      `Hi ${name} — we've saved your updated volunteer information. If you need to make any further changes, use the link below.`.slice(
-        0,
-        150
-      ),
+    bodyPreview: 'Your volunteer information has been updated successfully.',
     recipientType: 'transactional',
     recipientFilter: 'trigger:update',
     sentBy: null,
@@ -317,88 +295,55 @@ export async function sendWelcomeEmail({
   role,
   tempPassword,
 }: WelcomeEmailParams): Promise<void> {
-  const loginUrl = 'https://30byninetyvolunteers.com/crew/login'
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/login`
   const safeName = escapeHtml(toName)
   const safeEmail = escapeHtml(toEmail)
   const safePassword = escapeHtml(tempPassword)
   const roleLabel = ROLE_LABELS[role]
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;
-                  box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;
-                    font-weight:700;">
-            30 By Ninety Theatre
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You've been added to the 30 By Ninety Theatre Production Crew as ${roleLabel}.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
+          <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+            Login Details
           </p>
-        </div>
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            Hi ${safeName},
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            You've been added to the 30 By Ninety Theatre Production Crew
-            as ${roleLabel}.
+          <p style="margin:0 0 4px;color:#555555;font-size:14px;">
+            Login URL: <a href="${loginUrl}" style="color:#293994;font-weight:600;">${loginUrl}</a>
           </p>
-
-          <div style="background:#EEF1FA;border-radius:8px;
-                      padding:20px 24px;margin:0 0 24px;">
-            <p style="margin:0 0 8px;color:#293994;font-size:13px;
-                      font-weight:700;text-transform:uppercase;
-                      letter-spacing:0.5px;">
-              Login Details
-            </p>
-            <p style="margin:0 0 4px;color:#555;font-size:14px;">
-              Login URL:
-              <a href="${loginUrl}" style="color:#293994;font-weight:600;">
-                ${loginUrl}
-              </a>
-            </p>
-            <p style="margin:0 0 4px;color:#555;font-size:14px;">
-              Email: <strong style="color:#1A1A1A;">${safeEmail}</strong>
-            </p>
-            <p style="margin:0;color:#555;font-size:14px;">
-              Temporary Password:
-              <strong style="color:#1A1A1A;">${safePassword}</strong>
-            </p>
-          </div>
-
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            Please log in and change your password after your first
-            sign-in.
+          <p style="margin:0 0 4px;color:#555555;font-size:14px;">
+            Email: <strong style="color:#1A1A1A;">${safeEmail}</strong>
           </p>
-
-          <a href="${loginUrl}"
-             style="display:inline-block;background:#F26522;
-                    color:#ffffff;text-decoration:none;
-                    padding:14px 28px;border-radius:8px;
-                    font-weight:700;font-size:15px;">
-            Log In to Production Crew
-          </a>
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
+          <p style="margin:0;color:#555555;font-size:14px;">
+            Temporary Password: <strong style="color:#1A1A1A;">${safePassword}</strong>
           </p>
-        </div>
-      </div>
-    </body>
-    </html>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Please log in and change your password after your first sign-in.
+    </p>
+    ${buildCtaButton('Log In to Production Crew', loginUrl)}
   `
+
+  const subject = 'Welcome to 30 By Ninety Theatre Production Crew'
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your Production Crew account is ready.',
+    body,
+    footerNote:
+      'This email was sent because a Production Crew account was created for you at 30 By Ninety Theatre.',
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     replyTo: 'info@30byninety.com',
     to: toEmail,
-    subject: 'Welcome to 30 By Ninety Theatre Production Crew',
+    subject,
     html,
   })
 }
@@ -419,56 +364,22 @@ export async function sendOpportunityEOIEmail({
   const safeName = escapeHtml(name)
   const safeTitle = escapeHtml(opportunityTitle)
   const subject = 'Thanks for your interest — 30 By Ninety Theatre'
-  const preview = `Thank you for your interest in ${opportunityTitle}. A member of our team will be in touch soon.`.slice(
-    0,
-    200
-  )
+  const preview = "Your expression of interest has been received. We'll be in touch soon."
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
-            30 By Ninety Theatre
-          </p>
-        </div>
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            Thanks for your interest, ${safeName}!
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-            We've received your expression of interest in
-            <strong>${safeTitle}</strong>. A member of our team will follow
-            up with you personally soon.
-          </p>
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            In the meantime, feel free to browse other upcoming volunteer
-            opportunities.
-          </p>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
-             style="display:inline-block;background:#F26522;
-                    color:#ffffff;text-decoration:none;
-                    padding:14px 28px;border-radius:8px;
-                    font-weight:700;font-size:15px;">
-            Browse Upcoming Shows
-          </a>
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you for your interest in <strong>${safeTitle}</strong>. A member of our team will be in touch
+      with you soon.
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
+
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'We received your expression of interest.',
+    body,
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
@@ -488,55 +399,22 @@ export async function sendOpportunitySlotClaimEmail({
   const safeName = escapeHtml(name)
   const safeTitle = escapeHtml(opportunityTitle)
   const subject = `You're signed up — ${opportunityTitle}`
-  const preview = `You're confirmed for ${opportunityTitle}. We're so glad to have you on board.`.slice(
-    0,
-    200
-  )
+  const preview = `Your position for ${opportunityTitle} is confirmed.`
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
-            30 By Ninety Theatre
-          </p>
-        </div>
-        <div style="padding:32px;">
-          <h1 style="color:#293994;font-size:22px;font-weight:700;
-                     margin:0 0 12px;">
-            You're signed up, ${safeName}!
-          </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-            You're confirmed for <strong>${safeTitle}</strong>. We're so glad
-            to have you on board — thank you for volunteering with us.
-          </p>
-          <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-            In the meantime, feel free to browse other upcoming volunteer
-            opportunities.
-          </p>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
-             style="display:inline-block;background:#F26522;
-                    color:#ffffff;text-decoration:none;
-                    padding:14px 28px;border-radius:8px;
-                    font-weight:700;font-size:15px;">
-            Browse Upcoming Shows
-          </a>
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            30 By Ninety Theatre · Old Mandeville, Louisiana
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You're confirmed for <strong>${safeTitle}</strong> with 30 By Ninety Theatre. We're looking forward to
+      working with you!
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
+
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your volunteer position is confirmed!',
+    body,
+  })
 
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
@@ -585,32 +463,51 @@ function emailShell(bodyHtml: string): string {
 
 function showDetailsBlockHtml(showName: string, showDate: string, showTime: string, roleName: string): string {
   return `
-    <div style="background:#f5f5f5;border-radius:8px;padding:16px 20px;margin:0 0 20px;">
-      <p style="margin:0 0 4px;color:#1A1A1A;font-size:15px;"><strong>${escapeHtml(showName)}</strong></p>
-      <p style="margin:0 0 4px;color:#555;font-size:14px;">${escapeHtml(showDate)} at ${escapeHtml(showTime)}</p>
-      <p style="margin:0;color:#555;font-size:14px;">Role: ${escapeHtml(roleName)}</p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+      <tr>
+        <td bgcolor="#F5F5F5" style="background-color:#F5F5F5;border-radius:8px;padding:16px 20px;">
+          <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;font-weight:700;">${escapeHtml(showName)}</p>
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="color:#555555;font-size:14px;padding:2px 0;">Date:</td>
+              <td style="color:#1A1A1A;font-size:14px;padding:2px 0 2px 8px;">${escapeHtml(showDate)}</td>
+            </tr>
+            <tr>
+              <td style="color:#555555;font-size:14px;padding:2px 0;">Time:</td>
+              <td style="color:#1A1A1A;font-size:14px;padding:2px 0 2px 8px;">${escapeHtml(showTime)}</td>
+            </tr>
+            <tr>
+              <td style="color:#555555;font-size:14px;padding:2px 0;">Role:</td>
+              <td style="color:#1A1A1A;font-size:14px;padding:2px 0 2px 8px;">${escapeHtml(roleName)}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   `
 }
 
 function instructionsBlockHtml(volunteerInstructions: string | null): string {
   if (!volunteerInstructions) return ''
   return `
-    <div style="background:#EEF1FA;border-radius:8px;padding:20px 24px;margin:0 0 24px;">
-      <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;
-                text-transform:uppercase;letter-spacing:0.5px;">
-        Special Instructions
-      </p>
-      <p style="margin:0;color:#555;font-size:14px;line-height:1.6;white-space:pre-line;">
-        ${escapeHtml(volunteerInstructions)}
-      </p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
+          <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+            Special Instructions
+          </p>
+          <p style="margin:0;color:#555555;font-size:14px;line-height:1.6;white-space:pre-line;">
+            ${escapeHtml(volunteerInstructions)}
+          </p>
+        </td>
+      </tr>
+    </table>
   `
 }
 
 function cancelLinkHtml(cancelUrl: string): string {
   return `
-    <p style="color:#aaa;font-size:12px;margin:24px 0 0;">
+    <p style="color:#888888;font-size:12px;margin:24px 0 0;font-family:'Open Sans',Arial,sans-serif;">
       Need to cancel? <a href="${cancelUrl}" style="color:#293994;">Click here</a>.
     </p>
   `
@@ -624,18 +521,6 @@ function addToCalendarLinkHtml(claimToken: string): string {
         📅 Add to your calendar
       </a>
     </p>
-  `
-}
-
-function browseShowsButtonHtml(): string {
-  return `
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
-       style="display:inline-block;background:#F26522;
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      Browse More Opportunities
-    </a>
   `
 }
 
@@ -663,25 +548,30 @@ export async function sendSlotClaimEmail({
   cancelUrl,
   claimToken,
 }: SendSlotClaimEmailParams): Promise<void> {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      You're signed up, ${escapeHtml(volunteerName)}!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-      Thanks for volunteering — here are your details:
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Great news — your volunteer spot has been confirmed for <strong>${escapeHtml(showName)}</strong>.
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
     ${instructionsBlockHtml(volunteerInstructions)}
-    ${browseShowsButtonHtml()}
-    ${cancelLinkHtml(cancelUrl)}
     ${addToCalendarLinkHtml(claimToken)}
-  `)
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${cancelLinkHtml(cancelUrl)}
+  `
+
+  const subject = `You're signed up! — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your volunteer spot is confirmed!',
+    body,
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: `You're signed up! — ${showName}`,
+    subject,
     html,
   })
 }
@@ -701,32 +591,40 @@ export async function sendWaitlistConfirmationEmail({
   to,
   volunteerName,
   showName,
-  showDate,
-  showTime,
   roleName,
   waitlistPosition,
   cancelUrl,
 }: WaitlistConfirmationEmailParams): Promise<void> {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      You're on the waitlist, ${escapeHtml(volunteerName)}
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-      This role is currently full, but you're position <strong>#${waitlistPosition}</strong>
-      on the waitlist. We'll email you right away if a spot opens up.
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thanks for your interest in volunteering for <strong>${escapeHtml(showName)}</strong>. All volunteer spots
+      for the <strong>${escapeHtml(roleName)}</strong> role are currently filled, but you're on the waitlist!
     </p>
-    ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${browseShowsButtonHtml()}
-    <p style="color:#aaa;font-size:12px;margin:24px 0 0;">
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You are currently <strong>#${waitlistPosition}</strong> on the waitlist.
+    </p>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      We'll notify you right away if a spot opens up.
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    <p style="margin:24px 0 0;color:#888888;font-size:12px;font-family:'Open Sans',Arial,sans-serif;">
       Plans changed? <a href="${cancelUrl}" style="color:#293994;">Remove yourself from the waitlist</a>.
     </p>
-  `)
+  `
+
+  const subject = `You're on the waitlist — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: `You're on the waitlist for ${showName}.`,
+    body,
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: `You're on the waitlist — ${showName}`,
+    subject,
     html,
   })
 }
@@ -740,29 +638,33 @@ export async function sendWaitlistPromotionEmail({
   showDate,
   showTime,
   roleName,
-  volunteerInstructions,
   cancelUrl,
   claimToken,
 }: SendWaitlistPromotionEmailParams): Promise<void> {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      Good news, ${escapeHtml(volunteerName)} — a spot opened up!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-      You've moved from the waitlist to a confirmed spot. Here are your details:
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Great news! A volunteer spot has opened up for <strong>${escapeHtml(showName)}</strong>, and you've moved
+      from the waitlist to a confirmed spot.
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${instructionsBlockHtml(volunteerInstructions)}
-    ${browseShowsButtonHtml()}
-    ${cancelLinkHtml(cancelUrl)}
     ${addToCalendarLinkHtml(claimToken)}
-  `)
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${cancelLinkHtml(cancelUrl)}
+  `
+
+  const subject = `Good news — a spot opened up! — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Good news — a volunteer spot just opened up!',
+    body,
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: `Good news — a spot opened up! — ${showName}`,
+    subject,
     html,
   })
 }
@@ -841,25 +743,31 @@ export function buildReminderEmailPayload({
   roleName,
   volunteerInstructions,
 }: ReminderEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      See you tomorrow, ${escapeHtml(volunteerName)}!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Just a friendly reminder that you're volunteering tomorrow:
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
     ${instructionsBlockHtml(volunteerInstructions)}
-    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for volunteering with 30 By Ninety Theatre!
     </p>
-  `)
+  `
+
+  const subject = `Reminder: you're volunteering tomorrow — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your volunteer call is tomorrow!',
+    body,
+  })
 
   return {
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: `Reminder: you're volunteering tomorrow — ${showName}`,
+    subject,
     html,
   }
 }
@@ -882,34 +790,33 @@ export function buildThankYouEmailPayload({
   showDate,
   siteUrl,
 }: ThankYouEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      Thank you, ${escapeHtml(recipientName)}!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-      Thank you so much for volunteering for <strong>${escapeHtml(showName)}</strong> on ${showDate}. Your time
-      and dedication make 30 By Ninety Theatre possible.
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Thank you, ${escapeHtml(recipientName)}!</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you so much for volunteering for <strong>${escapeHtml(showName)}</strong> on ${showDate}. Your
+      time and dedication make 30 By Ninety Theatre possible.
     </p>
-    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       You can view your updated volunteer hours and milestones on the Volunteer Call Board.
     </p>
-    <a href="${siteUrl}/callboard"
-       style="display:inline-block;background:#F26522;
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      View My Volunteer Card
-    </a>
-    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
-      With gratitude,<br />30 By Ninety Theatre
+    ${buildCtaButton('Visit Your Volunteer Hub', `${siteUrl}/callboard`)}
+    <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      With gratitude,<br>30 By Ninety Theatre
     </p>
-  `)
+  `
+
+  const subject = `Thank you for volunteering — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Thank you for volunteering with us!',
+    body,
+  })
 
   return {
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to: recipientEmail,
-    subject: `Thank you for volunteering — ${showName}`,
+    subject,
     html,
   }
 }
@@ -956,33 +863,32 @@ export function buildCategoryMatchNotificationPayload({
 } {
   const rolesList = matchingRoles.map((r) => escapeHtml(r)).join(', ')
 
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      Hi ${escapeHtml(volunteerName)}, we could use your help!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)}, we could use your help!</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       A show you might be interested in is coming up: <strong>${escapeHtml(showName)}</strong>.
     </p>
-    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       We're looking for volunteers in these areas: <strong>${rolesList}</strong>.
     </p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/shows"
-       style="display:inline-block;background:#F26522;
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      View Volunteer Opportunities
-    </a>
-    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
       We'd love to have you on board — sign up today!
     </p>
-  `)
+  `
+
+  const subject = `Volunteer opportunity — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'A volunteer opportunity matching your interests is now open.',
+    body,
+  })
 
   return {
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: `Volunteer opportunity — ${showName}`,
+    subject,
     html,
   }
 }
@@ -1026,19 +932,29 @@ export function buildShowBulkEmailPayload({
   subject: string
   html: string
 } {
-  const html = emailShell(`
-    <p style="color:#1A1A1A;line-height:1.6;margin:0 0 4px;">
+  const safeBody = escapeHtml(body)
+  const preheader = body.slice(0, 100)
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Hi ${escapeHtml(recipientName)},
     </p>
-    <p style="color:#1A1A1A;line-height:1.6;margin:0 0 20px;white-space:pre-line;">
-      ${escapeHtml(body)}
+    <p style="margin:0 0 20px;color:#1A1A1A;font-size:15px;line-height:1.6;white-space:pre-line;">
+      ${safeBody}
     </p>
-    <p style="color:#aaa;font-size:12px;margin:24px 0 0;border-top:1px solid #D0D5E8;padding-top:16px;">
-      This message was sent to volunteers rostered for ${escapeHtml(showName)}.<br />
+    <p style="margin:24px 0 0;color:#555555;font-size:12px;border-top:1px solid #D0D5E8;padding-top:16px;">
+      This message was sent to volunteers rostered for ${escapeHtml(showName)}.<br>
       To update your volunteer information, visit
       <a href="${siteUrl}/update" style="color:#293994;">${siteUrl}/update</a>.
     </p>
-  `)
+  `
+
+  const html = buildEmailHtml({
+    subject,
+    preheader,
+    body: bodyHtml,
+    footerNote: 'This message was sent to you by the production team at 30 By Ninety Theatre.',
+  })
 
   return {
     from: FROM_ADDRESS,
@@ -1067,23 +983,23 @@ export async function sendPendingRegistrationEmail({
 }: PendingRegistrationEmailParams): Promise<void> {
   if (to.length === 0) return
 
+  const reviewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/settings/users`
   const subject = `New access request — ${name} (${email})`
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      New access request
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">New access request</h1>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       <strong>${escapeHtml(name)}</strong> (${escapeHtml(email)}) has requested access to the
       30 By Ninety Theatre Production Crew. Log in to review and approve or decline this request.
     </p>
-    <a href="https://30byninetyvolunteers.com/crew/settings/users"
-       style="display:inline-block;background:#F26522;
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      Review Request
-    </a>
-  `)
+    ${buildCtaButton('Review Request', reviewUrl)}
+  `
+
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'A new Production Crew access request is waiting.',
+    body,
+    footerNote: 'This email was sent to Production Crew administrators of 30 By Ninety Theatre.',
+  })
 
   if (to.length === 1) {
     await resend.emails.send({
@@ -1115,30 +1031,30 @@ export async function sendRegistrationApprovedEmail({
   to,
   name,
 }: RegistrationApprovedEmailParams): Promise<void> {
-  const loginUrl = 'https://30byninetyvolunteers.com/crew/login'
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/login`
 
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      Hi ${escapeHtml(name)}, you're approved!
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-      Your request to join the 30 By Ninety Theatre Production Crew has been approved.
-      You can now log in at the link below with the email and password you registered with.
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(name)}, you're approved!</h1>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Your request to join the 30 By Ninety Theatre Production Crew has been approved. You can now log in
+      at the link below with the email and password you registered with.
     </p>
-    <a href="${loginUrl}"
-       style="display:inline-block;background:#F26522;
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      Log In to Production Crew
-    </a>
-  `)
+    ${buildCtaButton('Log In to Production Crew', loginUrl)}
+  `
+
+  const subject = 'Your access request has been approved'
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your Production Crew access has been approved.',
+    body,
+    footerNote: 'This email was sent because your Production Crew access request was approved.',
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: 'Your access request has been approved',
+    subject,
     html,
   })
 }
@@ -1152,22 +1068,31 @@ export async function sendRegistrationDeclinedEmail({
   to,
   name,
 }: RegistrationDeclinedEmailParams): Promise<void> {
-  const html = emailShell(`
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
-      Hi ${escapeHtml(name)},
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 24px;">
-      Thank you for your interest in the 30 By Ninety Theatre Production Crew. Unfortunately your
-      access request was not approved at this time. Please reach out to the theatre directly if
-      you have questions.
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(name)},</h1>
+    <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you for your interest in the 30 By Ninety Theatre Production Crew. Unfortunately your access
+      request was not approved at this time.
     </p>
-  `)
+    <p style="margin:0;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Please reach out to us at <a href="mailto:info@30byninety.com" style="color:#293994;">info@30byninety.com</a>
+      if you have questions.
+    </p>
+  `
+
+  const subject = 'Your access request was not approved'
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Update on your Production Crew access request.',
+    body,
+    footerNote: 'This email was sent in response to your Production Crew access request at 30 By Ninety Theatre.',
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
     replyTo: REPLY_TO,
     to,
-    subject: 'Your access request was not approved',
+    subject,
     html,
   })
 }
@@ -1322,21 +1247,19 @@ export async function sendMilestoneEmail(
 ): Promise<void> {
   const { subject, bodyHtml } = milestoneEmailContent(name, milestoneLabel, milestoneHours, totalHours)
 
-  const html = emailShell(`
+  const body = `
     ${bodyHtml}
-    <div style="margin:24px 0 0;">
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL}/callboard"
-         style="display:inline-block;background:#F26522;
-                color:#ffffff;text-decoration:none;
-                padding:14px 28px;border-radius:8px;
-                font-weight:700;font-size:15px;">
-        View Your Volunteer Card
-      </a>
-    </div>
-    <p style="color:#555;line-height:1.6;margin:24px 0 0;">
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    <p style="margin:24px 0 0;color:#555555;font-size:15px;line-height:1.6;">
       — The 30 By Ninety Theatre Team
     </p>
-  `)
+  `
+
+  const html = buildEmailHtml({
+    subject,
+    preheader: "You've reached a new volunteer milestone!",
+    body,
+  })
 
   await resend.emails.send({
     from: FROM_ADDRESS,
@@ -1348,11 +1271,7 @@ export async function sendMilestoneEmail(
 
   await logEmailSent({
     subject,
-    bodyPreview: bodyHtml
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 150),
+    bodyPreview: `Congratulations on reaching ${milestoneLabel}!`,
     recipientType: 'transactional',
     recipientFilter: 'trigger:milestone',
     sentBy: null,
