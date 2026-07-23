@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Plus, Trash2, Loader2 } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { calendarEventSchema, type CalendarEventFormData } from '@/lib/validations/calendar'
-import { createCalendarEvent, updateCalendarEvent, checkEventConflict } from '@/lib/actions/calendar'
+import { createCalendarEvent, updateCalendarEvent, checkEventConflict, editRecurringOccurrence } from '@/lib/actions/calendar'
 import type { CalendarEvent } from '@/types/calendar'
 import type { AdminRole } from '@/types/admin'
 
@@ -40,6 +40,7 @@ export default function CalendarEventForm({
   initialData,
   initialDate,
   initialBooking,
+  editScope = 'this',
   onClose,
   onSuccess,
 }: {
@@ -49,6 +50,7 @@ export default function CalendarEventForm({
   initialData?: CalendarEvent | null
   initialDate?: string
   initialBooking?: CalendarBookingPrefill | null
+  editScope?: 'this' | 'future' | 'all'
   onClose: () => void
   onSuccess: () => void
 }) {
@@ -153,7 +155,26 @@ export default function CalendarEventForm({
   async function onSubmit(data: CalendarEventFormData) {
     setIsSubmitting(true)
     setServerError(null)
-    const result = isEdit ? await updateCalendarEvent(initialData!.id, data) : await createCalendarEvent(data)
+    let result: { success: boolean; error?: string }
+    if (isEdit) {
+      if (initialData?.recurrence_group_id) {
+        result = await editRecurringOccurrence(initialData!.id, editScope, {
+          title: data.title,
+          event_type: data.event_type,
+          custom_type_label: data.custom_type_label,
+          location_id: data.location_id,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          description: data.description,
+          requirements: data.requirements,
+          contacts: data.contacts,
+        })
+      } else {
+        result = await updateCalendarEvent(initialData!.id, data)
+      }
+    } else {
+      result = await createCalendarEvent(data)
+    }
     setIsSubmitting(false)
     if (result.success) {
       onSuccess()

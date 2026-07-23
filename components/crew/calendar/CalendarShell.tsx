@@ -16,6 +16,9 @@ import CalendarEventForm, { type CalendarBookingPrefill } from './CalendarEventF
 import CalendarBulkRehearsalForm from './CalendarBulkRehearsalForm'
 import CalendarBookSpacePanel from './CalendarBookSpacePanel'
 import CalendarExportModal from './CalendarExportModal'
+import CalendarRecurringEventForm from './CalendarRecurringEventForm'
+import RecurrenceScopePicker from './RecurrenceScopePicker'
+import { cancelCalendarEvent, cancelRecurringOccurrence } from '@/lib/actions/calendar'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -104,6 +107,10 @@ export default function CalendarShell({
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [prefilledBooking, setPrefilledBooking] = useState<CalendarBookingPrefill | null>(null)
+  const [recurringFormOpen, setRecurringFormOpen] = useState(false)
+  const [scopePickerEvent, setScopePickerEvent] = useState<CalendarEvent | null>(null)
+  const [scopePickerMode, setScopePickerMode] = useState<'edit' | 'cancel' | null>(null)
+  const [editScope, setEditScope] = useState<'this' | 'future' | 'all'>('this')
   const actionMenuRef = useRef<HTMLDivElement>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
 
@@ -200,6 +207,35 @@ export default function CalendarShell({
   function handleEditEvent(event: CalendarEvent) {
     setEditingEvent(event)
     setFormOpen(true)
+  }
+
+  function handleEditRecurringEvent(event: CalendarEvent) {
+    setScopePickerEvent(event)
+    setScopePickerMode('edit')
+  }
+
+  function handleCancelRecurringEvent(event: CalendarEvent) {
+    setScopePickerEvent(event)
+    setScopePickerMode('cancel')
+  }
+
+  async function handleScopeSelected(scope: 'this' | 'future' | 'all') {
+    if (!scopePickerEvent || !scopePickerMode) return
+    if (scopePickerMode === 'edit') {
+      setEditScope(scope)
+      setEditingEvent(scopePickerEvent)
+      setFormOpen(true)
+    } else {
+      const result = await cancelRecurringOccurrence(scopePickerEvent.id, scope)
+      if (result.success) router.refresh()
+    }
+    setScopePickerEvent(null)
+    setScopePickerMode(null)
+  }
+
+  async function handleCancelEvent(event: CalendarEvent) {
+    const result = await cancelCalendarEvent(event.id)
+    if (result.success) router.refresh()
   }
 
   const filteredEvents = events.filter((e) => {
@@ -394,6 +430,16 @@ export default function CalendarShell({
                   >
                     Rehearsal Schedule
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionMenuOpen(false)
+                      setRecurringFormOpen(true)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                  >
+                    Recurring Event
+                  </button>
                 </div>
               )}
             </div>
@@ -452,6 +498,9 @@ export default function CalendarShell({
           adminRole={adminRole}
           onClose={() => setSelectedDate(null)}
           onEditEvent={handleEditEvent}
+          onEditRecurringEvent={handleEditRecurringEvent}
+          onCancelRecurringEvent={handleCancelRecurringEvent}
+          onCancelEvent={handleCancelEvent}
         />
       )}
 
@@ -463,15 +512,18 @@ export default function CalendarShell({
           initialData={editingEvent}
           initialDate={selectedDate ?? undefined}
           initialBooking={prefilledBooking}
+          editScope={editScope}
           onClose={() => {
             setFormOpen(false)
             setEditingEvent(null)
             setPrefilledBooking(null)
+            setEditScope('this')
           }}
           onSuccess={() => {
             setFormOpen(false)
             setEditingEvent(null)
             setPrefilledBooking(null)
+            setEditScope('this')
             router.refresh()
           }}
         />
@@ -507,6 +559,30 @@ export default function CalendarShell({
         <CalendarExportModal
           subscriptionToken={subscriptionToken}
           onClose={() => setExportModalOpen(false)}
+        />
+      )}
+
+      {recurringFormOpen && (
+        <CalendarRecurringEventForm
+          adminRole={adminRole}
+          calendarEditor={calendarEditor}
+          locations={locations}
+          onClose={() => setRecurringFormOpen(false)}
+          onSuccess={() => {
+            setRecurringFormOpen(false)
+            router.refresh()
+          }}
+        />
+      )}
+
+      {scopePickerEvent && scopePickerMode && (
+        <RecurrenceScopePicker
+          mode={scopePickerMode}
+          onSelect={handleScopeSelected}
+          onClose={() => {
+            setScopePickerEvent(null)
+            setScopePickerMode(null)
+          }}
         />
       )}
     </div>

@@ -17,6 +17,15 @@ export default function CalendarDayPanel({
   adminRole,
   onClose,
   onEditEvent,
+  // Reserved for CAL.10c, which wires Edit/Cancel buttons for recurring
+  // events onto the day panel rows. Declared now so CalendarShell can pass
+  // them without a type error; unused until that UI lands.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onEditRecurringEvent,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onCancelRecurringEvent,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onCancelEvent,
 }: {
   date: string
   events: CalendarEvent[]
@@ -24,6 +33,9 @@ export default function CalendarDayPanel({
   adminRole: AdminRole
   onClose: () => void
   onEditEvent: (event: CalendarEvent) => void
+  onEditRecurringEvent?: (event: CalendarEvent) => void
+  onCancelRecurringEvent?: (event: CalendarEvent) => void
+  onCancelEvent?: (event: CalendarEvent) => void
 }) {
   const headerDate = formatInTimeZone(fromZonedTime(`${date} 07:00:00`, CT), CT, 'EEEE, MMMM d, yyyy')
 
