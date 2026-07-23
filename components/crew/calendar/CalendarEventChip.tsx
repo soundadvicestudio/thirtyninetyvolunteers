@@ -25,13 +25,21 @@ export default function CalendarEventChip({
         type="button"
         onClick={onClick}
         title={event.title}
-        className={`w-full text-left text-xs font-semibold text-white rounded-full px-2 py-0.5 truncate cursor-pointer ${
+        className={`relative w-full text-left text-xs font-semibold text-white rounded-full px-2 py-0.5 truncate cursor-pointer ${
           isPending ? 'border border-dashed border-amber-400' : ''
         }`}
         style={{ backgroundColor: color }}
       >
         {event.title}
         {isPending && <span className="ml-1 opacity-90">(Pending)</span>}
+        {event.recurrence_group_id && (
+          <span
+            className="absolute top-0 right-0.5 text-white/70 text-[8px] leading-none select-none pointer-events-none"
+            aria-hidden="true"
+          >
+            ↻
+          </span>
+        )}
       </button>
     )
   }
@@ -56,6 +64,12 @@ export default function CalendarEventChip({
       <p className="text-sm text-mid-gray dark:text-dark-muted">
         {formatCT(event.start_time, 'h:mm a')} – {formatCT(event.end_time, 'h:mm a')}
       </p>
+      {event.recurrence_group_id && (
+        <span className="text-xs text-mid-gray dark:text-dark-muted flex items-center gap-1">
+          <span aria-hidden="true">↻</span>
+          Recurring
+        </span>
+      )}
       {event.location && (
         <span
           className="inline-block mt-1 text-xs font-semibold rounded-full px-2 py-0.5 text-white"

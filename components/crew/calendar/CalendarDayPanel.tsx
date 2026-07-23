@@ -17,14 +17,8 @@ export default function CalendarDayPanel({
   adminRole,
   onClose,
   onEditEvent,
-  // Reserved for CAL.10c, which wires Edit/Cancel buttons for recurring
-  // events onto the day panel rows. Declared now so CalendarShell can pass
-  // them without a type error; unused until that UI lands.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onEditRecurringEvent,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCancelRecurringEvent,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCancelEvent,
 }: {
   date: string
@@ -89,15 +83,36 @@ export default function CalendarDayPanel({
                       {event.location && (
                         <p className="text-sm text-mid-gray dark:text-dark-muted">{event.location.name}</p>
                       )}
+                      {event.recurrence_group_id && (
+                        <span className="text-xs text-mid-gray dark:text-dark-muted flex items-center gap-1 mt-0.5">
+                          <span aria-hidden="true" className="text-[10px]">
+                            ↻
+                          </span>
+                          Part of a recurring series
+                        </span>
+                      )}
                     </div>
                     {adminRole === 'super_admin' && (
-                      <button
-                        type="button"
-                        onClick={() => onEditEvent(event)}
-                        className="text-xs text-navy hover:underline dark:text-steel ml-auto shrink-0 cursor-pointer"
-                      >
-                        Edit
-                      </button>
+                      <div className="ml-auto flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            event.recurrence_group_id ? onEditRecurringEvent?.(event) : onEditEvent(event)
+                          }
+                          className="text-xs text-navy hover:underline dark:text-steel shrink-0 cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            event.recurrence_group_id ? onCancelRecurringEvent?.(event) : onCancelEvent?.(event)
+                          }
+                          className="text-xs text-orange dark:text-orange hover:underline ml-1 shrink-0 cursor-pointer"
+                        >
+                          Cancel event
+                        </button>
+                      </div>
                     )}
                   </li>
                 ))}

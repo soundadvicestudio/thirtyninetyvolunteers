@@ -9,6 +9,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import type { PendingEvent, PendingBatch } from '@/app/crew/(app)/calendar/pending/page'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
+import type { RecurrenceGroup } from '@/types/calendar'
 
 const CT = 'America/Chicago'
 
@@ -20,6 +21,12 @@ const TYPE_LABELS: Record<string, string> = {
   event: 'Event',
   rental: 'Rental',
   other: 'Other',
+}
+
+const FREQ_LABELS: Record<string, string> = {
+  weekly: 'Weekly',
+  biweekly: 'Bi-Weekly',
+  monthly: 'Monthly',
 }
 
 const selectClasses =
@@ -93,6 +100,7 @@ function EventDetails({ event }: { event: PendingEvent }) {
 export default function PendingQueueClient({
   batches,
   individualEvents,
+  recurringGroups,
   locations,
   initialConflicts,
   // Accepted for interface consistency with sibling calendar components
@@ -106,6 +114,7 @@ export default function PendingQueueClient({
 }: {
   batches: PendingBatch[]
   individualEvents: PendingEvent[]
+  recurringGroups: RecurrenceGroup[]
   locations: Location[]
   initialConflicts: Record<string, boolean>
   adminRole: AdminRole
@@ -244,6 +253,42 @@ export default function PendingQueueClient({
     router.refresh()
   }
 
+  // approveBatch() validates each approval server-side via
+  // .eq('rehearsal_batch_id', batchId) — it cannot be reused for
+  // recurrence_group_id grouping. Approve per-event instead, mirroring
+  // handleApproveAllAvailable's eligibility check and error aggregation.
+  async function handleApproveAllRecurring(groupId: string, groupEvents: PendingEvent[]) {
+    const eligible = groupEvents.filter((e) => !!(locationSelections[e.id] ?? e.location_id))
+
+    if (eligible.length === 0) {
+      setError(groupId, 'Select a location for at least one date first')
+      return
+    }
+
+    setBusy(groupId, true)
+    setError(groupId, null)
+
+    let approvedCount = 0
+    let skippedCount = 0
+    for (const event of eligible) {
+      const locationId = (locationSelections[event.id] ?? event.location_id) as string
+      const result = await approveCalendarEvent(event.id, locationId)
+      if (result.success) {
+        approvedCount++
+      } else {
+        skippedCount++
+      }
+    }
+
+    setBusy(groupId, false)
+    if (skippedCount > 0) {
+      setError(groupId, `${approvedCount} approved. ${skippedCount} skipped due to conflicts or errors.`)
+    }
+    router.refresh()
+  }
+
+  const trueIndividualEvents = individualEvents.filter((e) => !e.recurrence_group_id)
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-4">Pending Calendar Requests</h1>
@@ -364,12 +409,112 @@ export default function PendingQueueClient({
         </div>
       )}
 
-      {individualEvents.length > 0 && (
+      {recurringGroups.length > 0 && (
+        <div className="space-y-3 mb-6">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
+            Recurring Events
+          </h2>
+          {recurringGroups.map((group) => {
+            const groupEvents = individualEvents.filter((e) => e.recurrence_group_id === group.id)
+            const expanded = expandedBatches.has(group.id)
+            const isBusy = busyIds.has(group.id)
+            const submitterName = groupEvents[0]?.submitted_by_admin?.name ?? '—'
+            return (
+              <div key={group.id} className="rounded-lg border border-divider dark:border-dark-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleBatch(group.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-light-navy/40 dark:bg-dark-bg hover:bg-light-navy dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-dark dark:text-dark-text">{group.title}</p>
+                        <span className="text-xs font-semibold text-navy dark:text-steel bg-light-navy dark:bg-dark-nav rounded px-1.5 py-0.5">
+                          {FREQ_LABELS[group.frequency] ?? group.frequency}
+                        </span>
+                      </div>
+                      <p className="text-xs text-mid-gray dark:text-dark-muted">
+                        {groupEvents.length} date{groupEvents.length === 1 ? '' : 's'} · submitted by {submitterName} ·{' '}
+                        {formatCT(group.created_at, 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {expanded && (
+                  <div className="p-4 space-y-3 border-t border-divider dark:border-dark-border">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveAllRecurring(group.id, groupEvents)}
+                        disabled={isBusy}
+                        className="ml-auto flex items-center gap-2 bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        {isBusy && <Loader2 size={14} className="animate-spin" />}
+                        Approve All Available
+                      </button>
+                    </div>
+                    {errors[group.id] && <p className="text-sm text-orange">{errors[group.id]}</p>}
+
+                    <div className="space-y-2">
+                      {groupEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-divider dark:border-dark-border p-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>
+                            <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event)}</p>
+                          </div>
+                          <LocationSelect
+                            locations={locations}
+                            value={locationSelections[event.id] ?? ''}
+                            onChange={(id) => handleLocationChange(event.id, id, event.start_time, event.end_time)}
+                          />
+                          <ConflictIndicator
+                            conflict={conflictStatus[event.id]}
+                            locationSelected={!!locationSelections[event.id]}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleApproveSingle(event.id, event.location_id)}
+                            disabled={
+                              !(locationSelections[event.id] ?? event.location_id) ||
+                              conflictStatus[event.id] === true ||
+                              busyIds.has(event.id)
+                            }
+                            className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReject(event.id)}
+                            disabled={busyIds.has(event.id)}
+                            className="text-sm font-semibold text-orange hover:underline cursor-pointer disabled:opacity-50"
+                          >
+                            Skip
+                          </button>
+                          {errors[event.id] && <p className="text-sm text-orange w-full">{errors[event.id]}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {trueIndividualEvents.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
             Individual Requests
           </h2>
-          {individualEvents.map((event) => (
+          {trueIndividualEvents.map((event) => (
             <div key={event.id} className="rounded-lg border border-divider dark:border-dark-border p-4 space-y-2">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>

@@ -3,7 +3,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { hasConflict } from '@/lib/utils/calendar-conflict'
 import PendingQueueClient from '@/components/crew/calendar/PendingQueueClient'
-import type { CalendarEventType } from '@/types/calendar'
+import type { CalendarEventType, RecurrenceGroup } from '@/types/calendar'
 import type { Location } from '@/types/show'
 
 export type PendingEvent = {
@@ -85,6 +85,25 @@ export default async function PendingQueuePage() {
     }))
   }
 
+  const pendingRecurringGroupIds = Array.from(
+    new Set(events.filter((e) => e.recurrence_group_id).map((e) => e.recurrence_group_id as string))
+  )
+
+  let recurringGroups: RecurrenceGroup[] = []
+  if (pendingRecurringGroupIds.length > 0) {
+    const { data: rgData } = await supabase
+      .from('recurrence_groups')
+      .select(
+        `
+        id, title, frequency,
+        series_start_date, series_end_date,
+        status, submitted_by, created_at
+        `
+      )
+      .in('id', pendingRecurringGroupIds)
+    recurringGroups = (rgData ?? []) as unknown as RecurrenceGroup[]
+  }
+
   const individualEvents = events.filter((e) => !e.rehearsal_batch_id)
   const locations = (locationRows ?? []) as unknown as Location[]
 
@@ -103,6 +122,7 @@ export default async function PendingQueuePage() {
     <PendingQueueClient
       batches={batches}
       individualEvents={individualEvents}
+      recurringGroups={recurringGroups}
       locations={locations}
       initialConflicts={initialConflicts}
       adminRole={adminUser.role}
