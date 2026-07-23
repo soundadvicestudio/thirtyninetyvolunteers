@@ -1072,9 +1072,6 @@ ADMIN.20 V12, V13
 ### Phase 11.2 — requires Supabase cross-check:
 11.2 V25 (audit log entry after settings save)
 
-### ADMIN.21 — requires Supabase cross-check:
-ADMIN.21 V1 (phone stored as digits-only after signup)
-
 ### ADMIN.22 — requires a show set to status = 'past':
 ADMIN.22 V1–V9 (flip test show via Settings tab)
 
@@ -1154,7 +1151,9 @@ CAL.9 V7–V18 (all mobile behavior — most verifiable
   by narrowing browser window)
 
 ### CAL.10a — requires Supabase cross-check:
-CAL.10a V1–V5 (schema + RLS + INSERT verification)
+CAL.10a V4, V5 (INSERT + ON DELETE SET NULL — not
+verifiable via service role; require a real auth
+session or manual test)
 
 ### CAL.10a — requires developer console or REPL:
 CAL.10a V6–V10 (utility function spot-checks)
@@ -1489,13 +1488,6 @@ CAL.10c V13–V17 (pending queue Recurring Events
 ## ADMIN.21 — Phone Normalization
 
 **Signup flow:**
-
-- [ ] **ADMIN.21 V1** — Submit the volunteer signup
-      form at / using a formatted phone number
-      (e.g. "(985) 555-0001"). After submission, check
-      the volunteer record in Supabase (or the admin
-      profile). Confirm phone is stored as digits-only
-      ("9855550001"). *(Supabase cross-check)*
 
 - [ ] **ADMIN.21 V2** — Attempt to sign up again with
       the same number in a different format
@@ -2002,15 +1994,6 @@ manual hours tests the "Other Hours" section.*
 
 **Automated thank-you email cron:**
 
-- [ ] **12.4 V1** — *(Supabase cross-check)* Confirm the
-      `thank_you_sent_at` column exists on the
-      `show_dates` table:
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_name = 'show_dates'
-          AND column_name = 'thank_you_sent_at';
-      Must return one row: nullable timestamptz.
-
 - [ ] **12.4 V2** — In Vercel dashboard → Settings →
       Cron Jobs: confirm two cron entries exist —
       `/api/cron/reminders` (0 5 * * *) and
@@ -2245,6 +2228,16 @@ and adds buffer time fields to the show date form.*
       'approved', event_type = 'performance', and
       start_time matching the show date's date + time
       in UTC. *(Supabase cross-check)*
+      ⚠️ **DB-VERIFY.4 FINDING (Q17 FAIL):** As of
+      July 2026, the live DB has 2 shows (1 draft, 1
+      live) and 3 show_dates rows, but zero
+      calendar_events rows with source = 'show'. The
+      sync (syncShowDateToCalendar()) has not produced
+      any records. Root cause unknown — may be that
+      the show dates predate CAL.3 and were never
+      backfilled, or a bug in the sync trigger path.
+      Requires Phase A/B investigation before this
+      item can be cleared.
 
 - [ ] **CAL.3 V3** — Edit an existing show date — change
       its show_time. Save. Check Supabase — confirm the
@@ -3353,36 +3346,6 @@ and utility function tests.*
 
 **Schema verification (Supabase cross-checks):**
 
-- [ ] **CAL.10a V1** — *(Supabase)* Confirm the
-      `recurrence_groups` table exists with the correct
-      columns:
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_name = 'recurrence_groups'
-        ORDER BY ordinal_position;
-      Must return: id, title, event_type,
-      custom_type_label, location_id, start_time,
-      end_time, description, requirements, frequency,
-      series_start_date, series_end_date, status,
-      submitted_by, created_at.
-
-- [ ] **CAL.10a V2** — *(Supabase)* Confirm
-      `calendar_events.recurrence_group_id` exists:
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_name = 'calendar_events'
-          AND column_name = 'recurrence_group_id';
-      Must return one row: nullable uuid.
-
-- [ ] **CAL.10a V3** — *(Supabase)* Confirm RLS on
-      `recurrence_groups`:
-        SELECT policyname FROM pg_policies
-        WHERE tablename = 'recurrence_groups';
-      Must return exactly 3 policies:
-      authenticated_select_recurrence_groups,
-      authenticated_insert_recurrence_groups,
-      super_admin_modify_recurrence_groups.
-
 - [ ] **CAL.10a V4** — *(Supabase)* Confirm an INSERT
       into recurrence_groups as an authenticated admin
       user succeeds. Use the SQL editor while logged in:
@@ -3649,7 +3612,7 @@ one submitted-but-pending recurring series.*
 
 ---
 
-*Total items in this carry-forward list: 510*
+*Total items in this carry-forward list: 505*
 *Prior (v8): 539 items*
 *v8r cleanup: removed 29 items — 6 VERIFY-5 stub items
 (5.3 V4/V5/V8/V10/V11/V12 — VERIFY-5 session never ran;
@@ -3666,4 +3629,11 @@ and remains accurate.*
 *30BN-DB-VERIFY.3 (not counted here)*
 *Last updated: July 2026 — v8r (cleanup revision:*
 *redundant + obsolete items removed)*
+*DB-VERIFY.4 (July 2026): 5 items removed after live*
+*Supabase confirmation (12.4 V1, ADMIN.21 V1,*
+*CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
+*finding (zero show-sourced calendar_events despite*
+*show_dates existing — requires investigation).*
+*CAL.10a V4/V5, CAL.3 V6/V7/V8, CAL.4a V7/V8*
+*retained (require browser action or real auth session).*
 
