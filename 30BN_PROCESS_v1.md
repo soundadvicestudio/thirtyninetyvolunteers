@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.0
-### Created: July 2026 | Last Updated: July 2026 — v3.0 (Beta build — Phase CAL active)
+## 30BN_PROCESS_v1.md — v3.1
+### Created: July 2026 | Last Updated: July 2026 — v3.1 (Phase CAL complete — Phase 13 next)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -253,6 +253,45 @@ no server-only imports. They are safe to import from Client Components — same 
 `lib/milestones-shared.ts`. The grid helpers use UTC-anchored date math to avoid timezone-
 dependent behavior from `date-fns` primitives like `startOfMonth()` which silently depend on
 the runtime's local timezone.
+
+**`lib/utils/calendar-recurrence.ts` is pure client-safe (established CAL.10a):**
+`generateOccurrenceDates()` and `describeRecurrence()` make no DB calls and have no server-only
+imports. Safe to import from Client Components — required for the live N-events preview in
+`CalendarRecurringEventForm`. Same pattern as `calendar-availability.ts`. The functions use
+`date-fns` `addWeeks()`, `addMonths()`, `parseISO()`, `format()` — all pure, no timezone runtime
+dependency.
+
+**`lib/utils/calendar-layout.ts` is pure client-safe (established CAL.9):**
+`computeColumnLayout()` and `computeEventPosition()` make no DB calls and have no server-only
+imports. Used by `UnifiedWeekGrid.tsx` (Client Component) for the column-splitting algorithm and
+absolute-position math. The `EventWithLayout` type is exported from this file. Safe to import
+from any Client Component.
+
+**iCalendar route handlers use `getAdminClient()` (established CAL.7):**
+`/api/calendar/feed.ics/route.ts` and `/api/calendar/claim.ics/route.ts` use `getAdminClient()` —
+these are public or token-authenticated route handlers with no Supabase Auth session. The feed
+route authenticates via a per-admin `calendar_subscription_token` (UUID stored in `admin_users`).
+The claim route authenticates via `claim_token` on `slot_claims`. This is the fourth sanctioned
+`getAdminClient()` use case alongside: (1) Super Admin account creation (auth.admin.* calls),
+(2) Call Board session context, (3) public/cron routes. Never use `getServerClient()` in these
+route handlers — no session cookie exists to read.
+
+**`createUser()` auth.admin exception (confirmed ADMIN.26):**
+`lib/actions/users.ts` `createUser()` must keep `getAdminClient()` for the two Supabase Auth Admin
+API calls: `auth.admin.createUser()` and `auth.admin.deleteUser()`. These require the service
+role key and cannot function on `getServerClient()` regardless of RLS policy. This is the
+established sanctioned exception documented in Brief §7. All `admin_users` table reads/writes
+within `createUser()` should use `getServerClient()` — only the two `auth.admin.*` calls require
+`getAdminClient()`. Confirmed during ADMIN.26 Task A audit.
+
+**Content-Disposition headers must use fixed filenames (established ADMIN.26):**
+HTTP `Content-Disposition: attachment; filename="..."` headers must never interpolate
+user-supplied or DB-sourced values (show names, volunteer names, etc.) into the filename field.
+If a show name contains a `"` character, interpolation corrupts the header value. Always use a
+fixed, safe filename: `'Content-Disposition': 'attachment; filename="volunteer-call.ics"'`
+Confirmed failure pattern in CAL.7 F2: `filename="${show.name}.ics"` — fixed in ADMIN.26 to
+`filename="volunteer-call.ics"`. Applies to all iCalendar routes and any other route handler
+that generates downloadable files.
 
 **Never create a client inside a loop.** Create once per function, reuse.
 
@@ -680,6 +719,32 @@ Run before every Vercel deployment:
   options. Performance events are auto-generated from
   shows via syncShowDateToCalendar() and must never
   be created manually. (CAL.5a confirmed behavior)
+□ Any new route handler that returns a downloadable
+  file (iCalendar, PDF, CSV, etc.): confirm the
+  Content-Disposition header uses a fixed, safe
+  filename — never interpolate show names, volunteer
+  names, or any DB-sourced string into the filename
+  field. A `"` character in a show name will corrupt
+  the header. Pattern: `filename="fixed-name.ext"`
+  (ADMIN.26 / CAL.7 confirmed failure mode)
+□ Any new recurring event creation: confirm
+  createRecurringEvent() uses generateOccurrenceDates()
+  from lib/utils/calendar-recurrence.ts for date
+  generation. Confirm all calendar_events rows
+  created have recurrence_group_id set to the new
+  recurrence_groups.id. Never generate occurrence
+  dates with inline date arithmetic — the shared
+  utility handles month-end edge cases (Jan 31 +
+  1 month → Feb 28/29) and the 12-month cap.
+  (CAL.10a pattern)
+□ Any recurring event edit or cancel: confirm the
+  scope ('this' / 'future' / 'all') is honored
+  correctly. 'this' scope edit must detach the
+  occurrence from the series (recurrence_group_id →
+  null). 'future' scope must only affect events with
+  start_time >= the target event's start_time. 'all'
+  scope cancel must also set recurrence_groups.status
+  = 'cancelled'. (CAL.10a–c pattern)
 ```
 
 ---
@@ -937,6 +1002,130 @@ Document & Admin Prompts
   30BN-DOC.25b   ✓ Brief Update v3.0 Part B (§9 schema,
                    §10 prompt log, §11 Beta phases,
                    version history)
+  30BN-DOC.26    ✓ Process Update v3.0 (Phase CAL
+                   active through CAL.5b: §7 calendar
+                   client patterns + FK replacement
+                   pattern; §8 commit-before-build-
+                   report; §10 show_type + calendar
+                   contact phone grep checks; §11
+                   three calendar checklist items;
+                   §14 five new rules)
+  30BN-DOC.27    ✓ Deferred Verifications v7 (CAL.1–
+                   CAL.5b-FIX2 items, 110 new items,
+                   Quick Reference + Seed Data Cleanup
+                   updated)
+  30BN-CAL.6     ✓ calendar_editor toggle on user
+                   management page (toggleCalendar
+                   Editor() server action, CAL.6
+                   AuditAction type). Production row
+                   type fix in UsersTable.tsx (stale
+                   AdminRole — ROLE_BADGE['production']
+                   gap fixed). Batch Approve button
+                   fallback (Q8 from CAL.5b-FIX2).
+  30BN-CAL.7     ✓ Public /calendar page (Publish
+                   CalendarGrid.tsx, month view,
+                   needs-volunteers indicator). iCal
+                   admin subscription feed (Migration
+                   021: calendar_subscription_token;
+                   /api/calendar/feed.ics route;
+                   rotateCalendarToken() action;
+                   CalendarExportModal.tsx). Volunteer
+                   slot-claim .ics (/api/calendar/
+                   claim.ics; sendSlotClaimEmail()
+                   calendar link). lib/utils/ical.ts.
+                   "View Calendar" links on / + /shows.
+  30BN-CAL.8     ✓ Location Management settings
+                   (/crew/settings/locations page +
+                   LocationsManager.tsx). createLocation,
+                   updateLocation, reorderLocation,
+                   toggleLocationActive() in
+                   lib/actions/settings.ts. location.*
+                   AuditAction types. General Defaults
+                   fallback hierarchy note (link to
+                   Location Management). Batch location
+                   conflict check loop in
+                   handleApplyDefaultLocation()
+                   (batchConflictChecking state,
+                   Approve All disabled during check).
+  30BN-CAL.9     ✓ Unified week grid — UnifiedWeekGrid
+                   .tsx (computeColumnLayout column-
+                   splitting, buffer blocks, current-
+                   time indicator, location name on
+                   blocks). WeekAgendaView.tsx (mobile
+                   week view). CalendarWeekView.tsx
+                   rewritten (hidden md:block /
+                   md:hidden pattern, toggle removed).
+                   CalendarFilterBar: toggle removed.
+                   CalendarShell: mobile ⋯ More menu.
+                   CalendarEventForm + BulkRehearsalForm:
+                   bottom sheet on mobile. PendingQueue
+                   Client batch rows: flex-col mobile
+                   stacking. PublicCalendarGrid pills:
+                   dot-only on smallest breakpoint.
+                   lib/utils/calendar-layout.ts created.
+  30BN-CAL.10a   ✓ Recurring events foundation.
+                   Migration 022 (recurrence_groups +
+                   calendar_events.recurrence_group_id,
+                   RLS). lib/utils/calendar-recurrence
+                   .ts (generateOccurrenceDates(),
+                   describeRecurrence() — pure, client-
+                   safe). recurringEventSchema in lib/
+                   validations/calendar.ts. recurring_
+                   event.* AuditAction types. Record
+                   Group + frequency/status types in
+                   types/calendar.ts. createRecurring
+                   Event(), editRecurringOccurrence(),
+                   cancelRecurringOccurrence() in lib/
+                   actions/calendar.ts.
+  30BN-CAL.10b   ✓ Recurring events creation UI.
+                   CalendarRecurringEventForm.tsx (live
+                   preview via describeRecurrence(),
+                   frequency radio buttons, contacts
+                   useFieldArray, role-adaptive). Record
+                   ScopePicker.tsx (edit/cancel modes,
+                   3 scope options, mobile bottom
+                   sheet). CalendarShell: third dropdown
+                   option, recurringFormOpen + scope
+                   picker state + handlers + editScope.
+                   CalendarEventForm: editScope prop +
+                   editRecurringOccurrence() routing.
+                   CalendarDayPanel: 3 optional props
+                   added (wired in CAL.10c).
+  30BN-CAL.10c   ✓ Recurring events display + queue.
+                   CalendarDayPanel: Edit branches on
+                   recurrence_group_id (scope picker
+                   vs direct form). Cancel event button
+                   (Super Admin, scope-picker-aware).
+                   "↻ Part of a recurring series" note.
+                   eslint-disable comments removed.
+                   CalendarEventChip: ↻ overlay (compact
+                   mode, aria-hidden) + "↻ Recurring"
+                   label (full mode). pending/page.tsx:
+                   recurrence_groups fetch. Pending
+                   QueueClient: recurringGroups prop,
+                   Recurring Events section, trueIndivid
+                   ualEvents filter, handleApproveAll
+                   Recurring() with busy/error state.
+  30BN-ADMIN.26  ✓ CAL phase cleanup: users.ts — 4
+                   actions (deactivateUser, reactivate
+                   User, changeRole, non-auth parts of
+                   createUser) migrated to getServer
+                   Client() + revalidatePath('/crew/
+                   settings/users'). createUser() keeps
+                   getAdminClient() for auth.admin.*
+                   calls (sanctioned exception). router
+                   .refresh() replaces window.location
+                   .href in UsersTable.tsx (dead reload()
+                   helper removed; setIsSubmitting(false)
+                   bug fixed). changeRole() Production
+                   role guard. sendWaitlistPromotion
+                   Email() updated with claimToken +
+                   calendar link (addToCalendarLink
+                   Html() helper reused from CAL.7).
+                   claim.ics Content-Disposition fixed
+                   to fixed filename "volunteer-call
+                   .ics". CalendarWeekGrid.tsx deleted
+                   (dead code since CAL.9).
 
 Phase 2 — Public Volunteer Signup ✓ Complete
   30BN-2.1  ✓ Landing Page Design & Layout
@@ -1085,7 +1274,7 @@ Phase 12 — Polish, Mobile & Performance ✓ Complete
 
 ### Beta Build
 ```
-Phase CAL — Master Calendar System (active)
+Phase CAL — Master Calendar System ✓ Complete
   CAL.1  ✓ show_type → location_id migration (016)
   CAL.2  ✓ Calendar schema + Production role (017)
   CAL.3  ✓ Show-to-calendar sync + conflict detection
@@ -1095,14 +1284,60 @@ Phase CAL — Master Calendar System (active)
   CAL.5a ✓ Event creation + submission forms
   CAL.5b ✓ Seed data, bulk rehearsal form, pending
            approval queue, Book Space panel
-  CAL.6  — Production role user management +
-           calendar_editor toggle on user mgmt page
-  CAL.7  — Public /calendar page (performance events
-           only, needs-volunteers indicator)
-  CAL.8  — Location Management settings
-           (/crew/settings/locations): add/edit/
-           reorder/deactivate, color picker,
-           per-location default_hours UI
+  CAL.6  ✓ calendar_editor toggle on user management
+           page. Production role row fix in
+           UsersTable.tsx. Batch Approve button
+           fallback fix (Q8 from CAL.5b-FIX2).
+  CAL.7  ✓ Public /calendar page. iCalendar admin
+           subscription feed (/api/calendar/feed.ics,
+           token auth, Migration 021). Volunteer
+           slot-claim .ics (/api/calendar/claim.ics).
+           CalendarExportModal. sendSlotClaimEmail()
+           + sendWaitlistPromotionEmail() calendar
+           links. Call Board claim history links.
+           lib/utils/ical.ts.
+  CAL.8  ✓ Location Management settings
+           (/crew/settings/locations): add/rename/
+           reorder/deactivate/reactivate, color
+           picker, per-location default_hours UI.
+           General Defaults fallback note added.
+           Batch location conflict check fix.
+           location.* AuditAction types.
+  CAL.9  ✓ Unified week grid (UnifiedWeekGrid.tsx
+           replaces CalendarWeekGrid.tsx —
+           CalendarWeekGrid.tsx deleted in ADMIN.26).
+           Column-splitting algorithm (calendar-
+           layout.ts). Mobile optimization: ⋯ More
+           header menu, bottom sheet modals,
+           WeekAgendaView.tsx for mobile week view.
+  CAL.10a ✓ Recurring events — schema (Migration 022:
+           recurrence_groups table +
+           calendar_events.recurrence_group_id).
+           lib/utils/calendar-recurrence.ts
+           (generateOccurrenceDates(),
+           describeRecurrence()). recurringEventSchema.
+           recurring_event.* AuditAction types.
+           createRecurringEvent(),
+           editRecurringOccurrence(),
+           cancelRecurringOccurrence() in
+           lib/actions/calendar.ts.
+  CAL.10b ✓ Recurring events — creation UI.
+           CalendarRecurringEventForm.tsx (live
+           N-events preview). RecurrenceScopePicker
+           .tsx (edit/cancel scope modal). Calendar
+           Shell: third dropdown option, scope picker
+           state + handlers. CalendarEventForm:
+           editScope prop + editRecurringOccurrence
+           routing.
+  CAL.10c ✓ Recurring events — display + pending
+           queue. CalendarDayPanel: scope picker
+           trigger, Cancel event button, "Part of
+           a recurring series" note, eslint-disable
+           comments removed. CalendarEventChip: ↻
+           indicator (compact + full modes).
+           PendingQueueClient: Recurring Events
+           section, trueIndividualEvents filter.
+           pending/page.tsx: recurrence_groups fetch.
 
 Phase 13 — Email Blast System       (detail in v2)
 Phase 14 — Check-In System          (detail in v2)
@@ -1292,6 +1527,12 @@ DOC.25a flagged a mismatch where the tracker said "Edits 14–38" but the prompt
 Edits 1–14; DOC.25b had a similar mismatch. Procedure: finalize all EDIT blocks first, count
 them, then write the task tracker with accurate ranges.
 
+### Content-Disposition headers must use fixed filenames (established ADMIN.26 / CAL.7)
+HTTP `Content-Disposition: attachment; filename="..."` headers must never interpolate user-supplied or DB-sourced values (show names, volunteer names, record IDs, etc.) into the filename field. If the value contains a `"` character, the header value is malformed and the download may fail or behave unexpectedly across browsers. Use a fixed, safe filename for all downloadable route handlers: `'Content-Disposition': 'attachment; filename="volunteer-call.ics"'` Confirmed failure pattern: `filename="${show.name}.ics"` in `/api/calendar/claim.ics/route.ts` — fixed in ADMIN.26 to `filename="volunteer-call.ics"`. Applies to: iCalendar routes, PDF export routes, CSV export routes, and any future downloadable route.
+
+### lib/utils/calendar-recurrence.ts is pure client-safe (established CAL.10a)
+`generateOccurrenceDates()` and `describeRecurrence()` have no DB calls and no server-only imports. Safe to import from Client Components — required for the live N-events preview in `CalendarRecurringEventForm.tsx`. The functions use `date-fns` primitives only. `addMonths()` correctly handles month-end edge cases (Jan 31 + 1 month → Feb 28/29). Same pattern as `lib/utils/calendar-availability.ts` (CAL.4b) and `lib/milestones-shared.ts` (9.2). Do not add server-only imports to this file — it would break the Client Component import chain.
+
 ### escapeHtml() in Email Templates (established 12.2a)
 All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only. If escaping is needed in a new file, extract to lib/utils/string.ts at that time.
 
@@ -1310,5 +1551,6 @@ All user-supplied values interpolated into HTML email strings must be wrapped in
 *v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
 *v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
 *v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
-*Cross-reference: 30BN_BRIEF_v1.md v2.1*
+*Cross-reference: 30BN_BRIEF_v1.md v3.1*
 *v3.0 (July 2026 — Beta Phase CAL active: §7 calendar client patterns added (getServerClient() for calendar actions, parameter-passing pattern for utility functions, calendar-availability.ts pure client-safe); §7 FK replacement migration pattern added (CAL.1); §8 commit-before-build-report standard added (CAL.5b); §10 show_type regression grep check added (CAL.1); §10 calendar contact phone grep check added (CAL.5a); §11 three new checklist items (calendar mutations + two routes to revalidate, contact phone normalization, performance type exclusion from manual creation); §13 Phase CAL added to Beta Build section (CAL.1–CAL.5b complete, CAL.6–CAL.8 planned); §13 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a/25b added to prompt log; §14 five new rules: codebase sweep before column removal, commit-before-build-report, post-build audit session pattern, calendar server action client rule, DOC prompt task tracker accuracy; DOC.26 logged)*
+*v3.1 (July 2026 — Phase CAL complete: §7 iCalendar route getAdminClient() exception added (CAL.7); createUser() auth.admin exception clarified (ADMIN.26 confirmed pattern); Content-Disposition fixed-filename rule added (ADMIN.26); calendar-recurrence.ts + calendar-layout.ts pure client-safe noted (CAL.10a, CAL.9); §11 three new checklist items (Content-Disposition filename safety, recurring event creation pattern, recurring event edit/cancel scope pattern); §13 Phase CAL marked complete (CAL.1–CAL.10c); §13 DOC.26–27 + CAL.6–CAL.10c + ADMIN.26 added to prompt log; §14 two new rules: Content-Disposition fixed filename, calendar-recurrence.ts pure client-safe; DOC.29 logged)*
