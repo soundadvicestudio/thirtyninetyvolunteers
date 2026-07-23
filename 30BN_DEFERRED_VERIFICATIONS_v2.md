@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 7 | July 2026 | Through Phase CAL (Beta build active)
+## Version 8 | July 2026 | Phase CAL Complete (CAL.1–CAL.10c + ADMIN.26)
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -143,6 +143,32 @@ test values should be reset):
       buffer_after_minutes = 0
   WHERE buffer_before_minutes > 0
      OR buffer_after_minutes > 0;
+
+Also clean up any test recurring event series and
+their occurrences created during testing:
+
+  DELETE FROM calendar_event_contacts
+  WHERE calendar_event_id IN (
+    SELECT id FROM calendar_events
+    WHERE recurrence_group_id IS NOT NULL
+      AND source = 'manual'
+  );
+
+  DELETE FROM calendar_events
+  WHERE recurrence_group_id IS NOT NULL
+    AND source = 'manual';
+
+  DELETE FROM recurrence_groups
+  WHERE submitted_by IN (
+    SELECT id FROM admin_users
+    WHERE email NOT LIKE '%@30byninety.com'
+  );
+
+Note: The above SQL deletes manual recurring events
+only. Show-sourced performance events (source = 'show')
+are not affected. Review before running at launch —
+only delete test series, not any real production series
+that may have been created.
 
 ---
 
@@ -1241,6 +1267,52 @@ CAL.5b V16 (Book Space button visibility check)
 ### CAL.5b-FIX2 — batch-context Q8 note:
 CAL.5b-FIX2 V4 (known limitation — document result)
 
+### ADMIN.26 — requires real email delivery:
+ADMIN.26 V7, V8 (waitlist promotion calendar link)
+
+### CAL.6 — requires Editor account:
+CAL.6 V3, V4 (calendar_editor toggle + login as editor)
+
+### CAL.6 — requires Production account:
+CAL.6 V8 (confirm row renders correctly)
+
+### CAL.7 — requires real email delivery:
+CAL.7 V15, V16 (claim confirmation + calendar link)
+
+### CAL.7 — requires Google Calendar or Apple Calendar:
+CAL.7 V12 (URL subscription test — owner manual action)
+
+### CAL.7 — requires mobile viewport or phone:
+CAL.7 V7 (/calendar at 375px)
+
+### CAL.8 — requires Editor account:
+CAL.8 V2 (Location Management locked card)
+
+### CAL.8 — requires Supabase cross-check:
+CAL.10b V10 (calendar_event_contacts after recurring
+  create — Supabase verification)
+
+### CAL.9 — requires mobile viewport or phone:
+CAL.9 V7–V18 (all mobile behavior — most verifiable
+  by narrowing browser window)
+
+### CAL.10a — requires Supabase cross-check:
+CAL.10a V1–V5 (schema + RLS + INSERT verification)
+
+### CAL.10a — requires developer console or REPL:
+CAL.10a V6–V10 (utility function spot-checks)
+
+### CAL.10b — requires Supabase cross-check:
+CAL.10b V10 (contacts created with recurring series)
+
+### CAL.10c — requires approved recurring series
+(created in CAL.10b):
+CAL.10c V1–V12 (most items need existing data)
+
+### CAL.10c — requires pending recurring series:
+CAL.10c V13–V17 (pending queue Recurring Events
+  section)
+
 ---
 
 ## NOTES ON VERIFY-5 ITEMS
@@ -1252,24 +1324,6 @@ cleared when VERIFY-5 runs:
 
 If VERIFY-5 confirms them PASS, cross them off this list.
 If any FAIL, add them to the fixes queue.
-
----
-
-*Total items in this carry-forward list: 424*
-*Prior (v6): 314 items through Phase 12 (Alpha)*
-*New (v7): 110 items —*
-*8 ADMIN.25, 7 CAL.1, 6 CAL.2, 8 CAL.3, 8 CAL.4a,*
-*23 CAL.4b, 16 CAL.5a, 21 CAL.5b, 9 CAL.5b-FIX,*
-*4 CAL.5b-FIX2*
-*Quick Reference re-categorized and Seed Data Cleanup*
-*SQL updated with calendar seed data (not counted as*
-*verification items)*
-*Database-verifiable items handled separately in*
-*30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v7 (Phase CAL active —*
-*CAL.1–CAL.5b complete, CAL.6–CAL.8 remaining)*
-*Previous version covered through Phase 12*
-*(Alpha build complete)*
 
 ---
 
@@ -2943,4 +2997,826 @@ location can be approved without touching the dropdown.*
       whether the button is enabled or disabled without
       touching the dropdown. This is a known limitation
       to be addressed in CAL.8.
+
+---
+
+## ADMIN.26 — CAL Phase Cleanup & Debt Resolution
+
+**User management in-place refresh (users.ts
+migration from window.location.href → router.refresh):**
+
+- [ ] **ADMIN.26 V1** — Navigate to /crew/settings/users
+      as Super Admin. Create a new admin account (any
+      name/email/role). Confirm the new user appears
+      in the list without a full page reload.
+
+- [ ] **ADMIN.26 V2** — Deactivate a user from the
+      list. Confirm the row updates in place (Active →
+      Deactivated) without a full page reload.
+
+- [ ] **ADMIN.26 V3** — Reactivate that user. Confirm
+      the row updates in place without a full page
+      reload.
+
+- [ ] **ADMIN.26 V4** — Change a user's role (e.g.
+      Editor → Viewer). Confirm the role badge updates
+      in place without a full page reload.
+
+**changeRole() server-side guards:**
+
+- [ ] **ADMIN.26 V5** — Attempt to change a user's
+      role to Production using the UI role selector.
+      Confirm the Production option is absent from the
+      selector (UI guard from CAL.6). *(The server-side
+      guard is a defense-in-depth measure for direct
+      API calls — not verifiable through normal UI.)*
+
+- [ ] **ADMIN.26 V6** — *(Verify own-account guard
+      exists)* As Super Admin, attempt to change your
+      own role using the role selector. Confirm the
+      selector is disabled or absent on your own row.
+      *(Pre-existing guard — confirming it still works
+      after ADMIN.26 refactor)*
+
+**Waitlist promotion email calendar link
+(sendWaitlistPromotionEmail update):**
+
+- [ ] **ADMIN.26 V7** — *(Requires real email delivery)*
+      Promote a waitlisted volunteer by cancelling the
+      claim ahead of them. Confirm the promotion email
+      received by the promoted volunteer contains an
+      "Add to your calendar" link (📅 Add to your
+      calendar). Confirm the link points to
+      /api/calendar/claim.ics?token=[token].
+
+- [ ] **ADMIN.26 V8** — *(Requires real email delivery)*
+      Click the "Add to your calendar" link in the
+      waitlist promotion email. Confirm a .ics file
+      downloads with the correct show name, date, time,
+      and role name.
+
+**Slot claim .ics fixed filename:**
+
+- [ ] **ADMIN.26 V9** — Download a slot claim .ics
+      file via /api/calendar/claim.ics?token=[valid
+      claim token]. Confirm the downloaded filename is
+      "volunteer-call.ics" — not the show name.
+
+**Audit log regression check:**
+
+- [ ] **ADMIN.26 V10** — After performing any user
+      management action (create, deactivate, reactivate,
+      or role change), navigate to /crew/settings/audit-
+      log. Confirm the corresponding audit entry appears
+      (user.create, user.deactivate, etc.) with correct
+      before/after values. *(Confirms audit logging
+      still works after getServerClient() migration)*
+
+---
+
+## CAL.6 — Calendar Editor Toggle & Batch Approve Fix
+
+**Calendar Editor toggle on user management page:**
+
+- [ ] **CAL.6 V1** — Navigate to /crew/settings/users
+      as Super Admin. Confirm an Editor account row
+      shows a "Calendar Editor" checkbox. Confirm a
+      Viewer account row also shows the checkbox.
+      Confirm a Super Admin row does NOT show it.
+      Confirm a Production-role row does NOT show it.
+
+- [ ] **CAL.6 V2** — Toggle Calendar Editor ON for an
+      Editor account. Confirm the checkbox updates in
+      place (router.refresh() — no full page reload).
+      Confirm no error message appears.
+
+- [ ] **CAL.6 V3** — Log in as that Editor account.
+      Confirm the calendar header button now reads
+      "Add Event" (not "Submit Request"). Create a
+      single event. Confirm it appears on the calendar
+      immediately as approved (not pending).
+
+- [ ] **CAL.6 V4** — Log back in as Super Admin.
+      Toggle Calendar Editor OFF for that Editor.
+      Log in as the Editor again. Confirm the header
+      button reverts to "Submit Request." Submit an
+      event. Confirm it goes to the pending queue.
+
+- [ ] **CAL.6 V5** — After toggling Calendar Editor
+      ON or OFF: navigate to /crew/settings/audit-log.
+      Confirm a user.calendar_editor_change entry
+      appears with the correct before/after values.
+
+**Batch approve button disabled condition fix:**
+
+- [ ] **CAL.6 V6** — In the pending queue: find a
+      rehearsal batch whose dates were submitted with
+      a preferred location. WITHOUT touching the
+      location selector dropdown on any batch date row:
+      confirm the Approve button for those rows is
+      ENABLED (not greyed out). The preferred location
+      should appear pre-selected in the dropdown.
+
+- [ ] **CAL.6 V7** — Click Approve on a batch date
+      with a preferred location without touching the
+      dropdown. Confirm the event is approved into
+      the preferred location and appears on the calendar.
+
+- [ ] **CAL.6 V8** — For a Production-role account
+      (if one exists): navigate to /crew/settings/users.
+      Confirm the Production row renders correctly —
+      role badge shows "Production," no role selector
+      visible, no Calendar Editor checkbox visible.
+      Confirm the page does not crash.
+
+---
+
+## CAL.7 — Public Calendar, iCalendar Export &
+           Volunteer Slot-Claim .ics
+
+**Public /calendar page:**
+
+- [ ] **CAL.7 V1** — Navigate to /calendar (no login
+      required). Confirm the page loads with the
+      current month's grid. Confirm it is light mode
+      only — no dark background even if the browser
+      prefers dark. Confirm it is branded with the 30
+      By Ninety visual identity.
+
+- [ ] **CAL.7 V2** — Confirm performance events (from
+      live approved shows) appear as colored pills on
+      the correct dates. Confirm pill color matches
+      the show's location color.
+
+- [ ] **CAL.7 V3** — If a show date has at least one
+      open volunteer slot: confirm an orange indicator
+      ("Volunteers needed" or similar) appears on
+      that day's pill or cell.
+
+- [ ] **CAL.7 V4** — Click an event pill. Confirm the
+      show name, time range, and "Sign up to
+      volunteer →" link appear. Confirm clicking the
+      link navigates to /shows/[showId].
+
+- [ ] **CAL.7 V5** — Click the previous month (←)
+      and next month (→) navigation buttons. Confirm
+      the grid advances by one month and the period
+      label updates.
+
+- [ ] **CAL.7 V6** — Confirm a "View Calendar" link
+      or button is visible on the public landing page
+      (/). Confirm clicking it navigates to /calendar.
+      Confirm a "View Calendar →" link also appears
+      on the /shows page.
+
+- [ ] **CAL.7 V7** — On a 375px viewport (mobile):
+      confirm /calendar renders without horizontal
+      scroll. Confirm day cells are readable. Confirm
+      event pills are visible (as dots or abbreviated
+      text). Confirm month navigation works.
+
+**Admin iCalendar export:**
+
+- [ ] **CAL.7 V8** — Navigate to /crew/calendar as
+      any admin role. Confirm an "Export" button is
+      visible in the calendar header.
+
+- [ ] **CAL.7 V9** — Click Export. Confirm a modal
+      opens labeled "Export / Subscribe to Calendar."
+      Confirm two sections are visible: Subscribe
+      (with a URL field and copy button) and Download
+      (with a download link).
+
+- [ ] **CAL.7 V10** — Click the copy button next to
+      the subscription URL. Confirm a 2-second
+      "Copied!" feedback appears.
+
+- [ ] **CAL.7 V11** — Click "Download calendar
+      (.ics)". Confirm a .ics file downloads. Open
+      it in a text editor. Confirm it contains
+      VCALENDAR / VEVENT blocks with correct event
+      titles and dates.
+
+- [ ] **CAL.7 V12** — *(Requires Google Calendar or
+      Apple Calendar)* Paste the subscription URL
+      into a calendar app as a URL subscription.
+      Confirm events appear and are correctly named.
+      *(Owner manual action — calendar app required)*
+
+- [ ] **CAL.7 V13** — Click "Rotate subscription
+      URL" in the Export modal. Confirm the displayed
+      URL changes immediately (new token). Confirm
+      the old URL now returns 401 when accessed
+      directly.
+
+- [ ] **CAL.7 V14** — Visit /api/calendar/feed.ics
+      with no token or an invalid token. Confirm a
+      401 response is returned.
+
+**Volunteer slot-claim .ics:**
+
+- [ ] **CAL.7 V15** — *(Requires real email delivery)*
+      Claim a slot via /shows/[id]. Confirm the claim
+      confirmation email contains a "📅 Add to your
+      calendar" link. Confirm the link points to
+      /api/calendar/claim.ics?token=[claim_token].
+
+- [ ] **CAL.7 V16** — Click the "Add to your
+      calendar" link from the claim email. Confirm
+      a .ics file downloads named "volunteer-call.ics"
+      (not the show name). Open it — confirm it
+      contains one VEVENT with the show name, role,
+      correct date, time range, and location.
+
+- [ ] **CAL.7 V17** — Visit /api/calendar/claim.ics
+      with an invalid or expired token. Confirm a
+      404 response.
+
+- [ ] **CAL.7 V18** — Identify as a volunteer on
+      /callboard who has a currently claimed (unresolved)
+      call. Expand the call history section. Confirm
+      an "Add to calendar" link appears on that
+      claimed-and-unresolved row. Confirm it is absent
+      on rows with attendance status (showed/no-show/
+      excused).
+
+- [ ] **CAL.7 V19** — Click "Add to calendar" on a
+      Call Board call history row. Confirm the .ics
+      file downloads with the correct show data.
+
+---
+
+## CAL.8 — Location Management Settings,
+           General Defaults Update & Batch Conflict Fix
+
+**Location Management settings page:**
+
+- [ ] **CAL.8 V1** — Navigate to /crew/settings as
+      Super Admin. Confirm a "Location Management"
+      card is visible and linked. Click it. Confirm
+      /crew/settings/locations loads.
+
+- [ ] **CAL.8 V2** — Navigate to /crew/settings as
+      Editor. Confirm the Location Management card
+      is visible but locked ("Super Admin only"
+      indicator). Confirm clicking it does not
+      navigate to /crew/settings/locations.
+
+- [ ] **CAL.8 V3** — On /crew/settings/locations as
+      Super Admin: confirm all 5 seeded locations
+      appear (Mainstage, Mainstage Lobby, Green Room,
+      Studio X, Studio X Office), each with a colored
+      dot, name, ↑↓ reorder buttons, Edit, and
+      Deactivate controls.
+
+- [ ] **CAL.8 V4** — Navigate directly to
+      /crew/settings/locations as Editor. Confirm
+      you are redirected to /crew/settings.
+
+- [ ] **CAL.8 V5** — Click "Edit" on Mainstage.
+      Confirm an inline edit form appears with the
+      name pre-filled, a color picker pre-filled
+      with the current hex (#293994), and a
+      default_hours field (blank or pre-filled if
+      set). Change the name to "Mainstage Stage"
+      and save. Confirm the list updates to show
+      the new name. Change it back to "Mainstage"
+      and save.
+
+- [ ] **CAL.8 V6** — Click the color picker on any
+      location's edit form. Confirm the native OS
+      color picker opens. Select a new color. Confirm
+      the hex value updates in the text next to the
+      picker. Save. Confirm the colored dot in the
+      list reflects the new color. Revert to the
+      original color.
+
+- [ ] **CAL.8 V7** — Set a default_hours value (e.g.
+      2.5) on Studio X Office via the edit form.
+      Save. Confirm the value persists when you
+      re-open the edit form.
+
+- [ ] **CAL.8 V8** — Use the ↑↓ arrows to reorder
+      a location. Confirm the visual order changes
+      immediately. Reload the page. Confirm the new
+      order persists.
+
+- [ ] **CAL.8 V9** — Click "Deactivate" on a
+      location (e.g. Mainstage Lobby). Confirm the
+      row becomes visually muted with a "Deactivated"
+      badge. Confirm the reorder arrows are disabled
+      on that row.
+
+- [ ] **CAL.8 V10** — After deactivating Mainstage
+      Lobby: navigate to /crew/calendar week view.
+      Confirm Mainstage Lobby no longer appears as
+      a row in the grid.
+
+- [ ] **CAL.8 V11** — Reactivate Mainstage Lobby.
+      Confirm it reappears on the Location Management
+      page. Navigate to /crew/calendar week view.
+      Confirm Mainstage Lobby reappears as a row.
+
+- [ ] **CAL.8 V12** — After adding a new location
+      (or modifying an existing one): navigate to
+      /crew/calendar. Confirm the location legend
+      at the bottom of the filter bar reflects the
+      current active locations.
+
+- [ ] **CAL.8 V13** — Navigate to /crew/settings/
+      general. Confirm a note appears above or within
+      the Default Hours section explaining that
+      per-location defaults take precedence and
+      linking to "Location Management." Click the
+      link. Confirm it navigates to
+      /crew/settings/locations.
+
+- [ ] **CAL.8 V14** — Navigate to /crew/settings/
+      audit-log. After creating, editing, reordering,
+      or deactivating a location: confirm the
+      corresponding audit entry appears (location.create,
+      location.update, location.reorder, or
+      location.deactivate).
+
+- [ ] **CAL.8 V15** — Toggle to dark mode. Navigate
+      to /crew/settings/locations. Confirm the page
+      renders correctly — no light backgrounds, no
+      invisible text, colored dots visible.
+
+**Batch location conflict check fix:**
+
+- [ ] **CAL.8 V16** — In the pending queue: find a
+      rehearsal batch with multiple pending dates.
+      Click "Apply location to all dates" (or the
+      equivalent button that sets the same location
+      for all batch rows at once). Confirm conflict
+      indicators update for ALL dates in the batch —
+      not just the rows whose dropdowns were touched
+      individually.
+
+- [ ] **CAL.8 V17** — During the batch conflict
+      check: confirm the "Approve All Available"
+      button is disabled while the check runs, and
+      a "Checking availability..." indicator
+      appears near the batch Apply button.
+
+- [ ] **CAL.8 V18** — After the batch conflict
+      check completes: confirm conflict indicators
+      are accurate for all rows (⚠ for conflicted, ✓
+      for available). Confirm "Approve All Available"
+      re-enables for non-conflicted rows.
+
+---
+
+## CAL.9 — Unified Week Grid & Mobile Optimization
+
+**Unified week grid (desktop ≥ 768px):**
+
+- [ ] **CAL.9 V1** — Navigate to /crew/calendar and
+      switch to the Week view on a desktop viewport
+      (≥ 768px). Confirm ONE unified grid renders
+      (not separate rows per location). Confirm events
+      from different locations appear on the same
+      grid, each color-coded by their location color.
+
+- [ ] **CAL.9 V2** — Confirm the "All Locations /
+      Booked Only" toggle is GONE from the week view
+      header. It should not appear anywhere in the
+      week view.
+
+- [ ] **CAL.9 V3** — If two approved events exist at
+      overlapping times in different locations (or
+      the same location): confirm they render side-by-
+      side in the same day column (column splitting),
+      not one covering the other.
+
+- [ ] **CAL.9 V4** — Confirm buffer blocks (if any
+      show dates have non-zero buffer_before or
+      buffer_after) render as lighter-shade blocks
+      behind their parent performance event at the
+      correct time position.
+
+- [ ] **CAL.9 V5** — Confirm a red horizontal line
+      appears at the current time when viewing the
+      current week. Navigate to a different week.
+      Confirm the line disappears.
+
+- [ ] **CAL.9 V6** — On an event block that is tall
+      enough (≥ 48px): confirm the location name
+      appears as a secondary line below the title.
+
+**Mobile week view (< 768px):**
+
+- [ ] **CAL.9 V7** — On a mobile viewport (< 768px):
+      switch to the Week view. Confirm the full week
+      grid does NOT render. Instead, confirm a week
+      agenda view appears — events listed
+      chronologically grouped by day (Mon through Sun
+      for the current week).
+
+- [ ] **CAL.9 V8** — Confirm a note appears on the
+      mobile week view: "For the full weekly grid
+      view, use a larger screen" (or equivalent text).
+
+**Mobile calendar header:**
+
+- [ ] **CAL.9 V9** — On a mobile viewport: confirm
+      a "⋯" (More) button appears in the calendar
+      header. Confirm the "Add Event" / "Submit
+      Request" primary button is still visible.
+      Confirm Export, Book Space, and Pending Requests
+      buttons are NOT individually visible — they
+      should be collapsed into the ⋯ menu.
+
+- [ ] **CAL.9 V10** — Tap the ⋯ button. Confirm a
+      dropdown opens containing Export, Book Space
+      (if applicable), and Pending Requests (Super
+      Admin). Tap Export. Confirm the Export modal
+      opens.
+
+- [ ] **CAL.9 V11** — On a desktop viewport (≥768px):
+      confirm all header buttons remain individually
+      visible (Export, Book Space if applicable,
+      Pending Requests if Super Admin, Add Event/
+      Submit Request). No ⋯ button on desktop.
+
+**Mobile forms (bottom sheets):**
+
+- [ ] **CAL.9 V12** — On a mobile viewport: click
+      "Add Event" → "Single Event." Confirm the
+      CalendarEventForm appears as a bottom sheet
+      (slides up from bottom, full width, rounded
+      top corners). Confirm the footer buttons
+      (Cancel / Submit) are visible without scrolling.
+
+- [ ] **CAL.9 V13** — On a mobile viewport: click
+      "Add Event" → "Rehearsal Schedule." Confirm
+      the CalendarBulkRehearsalForm appears as a
+      bottom sheet. Confirm date rows and default
+      time fields stack vertically on mobile (not
+      horizontal overflow).
+
+**Mobile pending queue:**
+
+- [ ] **CAL.9 V14** — On a mobile viewport: navigate
+      to /crew/calendar/pending. Confirm the batch
+      date rows stack vertically (flex-col on mobile)
+      — date, time, location selector, and actions
+      each appear on their own line rather than a
+      single overflowing horizontal row.
+
+**Mobile month and agenda views:**
+
+- [ ] **CAL.9 V15** — On a mobile viewport: confirm
+      the Month view renders correctly. Day cells are
+      readable, event pills are visible, and there is
+      no horizontal scroll.
+
+- [ ] **CAL.9 V16** — On a 375px viewport:
+      confirm /crew/calendar in Month view has no
+      horizontal scroll and all text is readable.
+
+- [ ] **CAL.9 V17** — On a mobile viewport: switch
+      to Agenda view. Confirm event rows are
+      tap-friendly (adequate height for touch targets).
+      Confirm the filter bar collapses to a Filters
+      button.
+
+**Public /calendar mobile:**
+
+- [ ] **CAL.9 V18** — On a 375px viewport: confirm
+      /calendar (public) renders without horizontal
+      scroll. Confirm event pills appear as colored
+      dots (not overflowing text). Confirm month
+      navigation prev/next buttons are accessible.
+
+**Dark mode:**
+
+- [ ] **CAL.9 V19** — Toggle to dark mode. Navigate
+      to /crew/calendar week view on desktop. Confirm
+      the unified grid renders correctly — time axis
+      labels, grid lines, and event blocks all visible.
+      No invisible text or missing backgrounds.
+
+---
+
+## CAL.10a — Recurring Events: Schema & Utilities
+
+*CAL.10a is the data-layer foundation — no UI is visible
+yet. All verification items are Supabase cross-checks
+and utility function tests.*
+
+**Schema verification (Supabase cross-checks):**
+
+- [ ] **CAL.10a V1** — *(Supabase)* Confirm the
+      `recurrence_groups` table exists with the correct
+      columns:
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_name = 'recurrence_groups'
+        ORDER BY ordinal_position;
+      Must return: id, title, event_type,
+      custom_type_label, location_id, start_time,
+      end_time, description, requirements, frequency,
+      series_start_date, series_end_date, status,
+      submitted_by, created_at.
+
+- [ ] **CAL.10a V2** — *(Supabase)* Confirm
+      `calendar_events.recurrence_group_id` exists:
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_name = 'calendar_events'
+          AND column_name = 'recurrence_group_id';
+      Must return one row: nullable uuid.
+
+- [ ] **CAL.10a V3** — *(Supabase)* Confirm RLS on
+      `recurrence_groups`:
+        SELECT policyname FROM pg_policies
+        WHERE tablename = 'recurrence_groups';
+      Must return exactly 3 policies:
+      authenticated_select_recurrence_groups,
+      authenticated_insert_recurrence_groups,
+      super_admin_modify_recurrence_groups.
+
+- [ ] **CAL.10a V4** — *(Supabase)* Confirm an INSERT
+      into recurrence_groups as an authenticated admin
+      user succeeds. Use the SQL editor while logged in:
+        INSERT INTO recurrence_groups (title, event_type,
+          frequency, series_start_date, submitted_by,
+          start_time, end_time)
+        VALUES ('Test Series', 'rehearsal', 'weekly',
+          CURRENT_DATE, [your admin_users id],
+          '19:00', '22:00');
+      Must succeed. Delete the test row after.
+
+- [ ] **CAL.10a V5** — *(Supabase)* Confirm the
+      ON DELETE SET NULL behavior: delete a test
+      recurrence_groups row. Confirm the corresponding
+      calendar_events rows have recurrence_group_id
+      set to NULL (not deleted). *(Only test if a
+      test series exists — skip if no test data.)*
+
+**Utility function spot-checks:**
+
+- [ ] **CAL.10a V6** — *(Developer test)* In a
+      browser console or Node.js REPL with
+      lib/utils/calendar-recurrence.ts available:
+      call generateOccurrenceDates('2026-07-21',
+      'weekly', null) and confirm it returns exactly
+      52 dates (or correct count to 12-month cap),
+      each 7 days apart.
+
+- [ ] **CAL.10a V7** — *(Developer test)* Call
+      generateOccurrenceDates('2026-01-31',
+      'monthly', null, 3). Confirm the second date
+      is '2026-02-28' (not Feb 30 or Feb 31 — date-fns
+      month-end handling).
+
+- [ ] **CAL.10a V8** — *(Developer test)* Call
+      generateOccurrenceDates with an endDate earlier
+      than the cap. Confirm the returned array stops
+      at or before the endDate.
+
+- [ ] **CAL.10a V9** — *(Developer test)* Call
+      describeRecurrence('weekly', '2026-07-21',
+      null). Confirm the result contains 'Weekly on
+      Mondays' (or correct day name for July 21, 2026)
+      and a count.
+
+- [ ] **CAL.10a V10** — *(Developer test)* Call
+      describeRecurrence('monthly', '2026-01-31',
+      null). Confirm the result contains 'Monthly on
+      the 31st.'
+
+---
+
+## CAL.10b — Recurring Events: Creation UI & Shell
+             Wiring
+
+**Action dropdown third option:**
+
+- [ ] **CAL.10b V1** — Navigate to /crew/calendar as
+      Super Admin. Click the "Add Event" dropdown.
+      Confirm THREE options appear: "Single Event,"
+      "Rehearsal Schedule," and "Recurring Event."
+
+- [ ] **CAL.10b V2** — Navigate as Editor. Click
+      "Submit Request." Confirm the same three
+      options appear.
+
+**Recurring Event creation form:**
+
+- [ ] **CAL.10b V3** — Click "Recurring Event."
+      Confirm a modal form opens labeled "Add
+      Recurring Event" (Super Admin) or "Submit
+      Recurring Event" (Editor). Confirm all fields
+      are present: Title, Event Type, Location
+      (required for Super Admin, optional for others),
+      Start Time, End Time, Frequency radio buttons
+      (Weekly / Bi-Weekly / Monthly), First Occurrence
+      (date), Last Occurrence (optional date),
+      Description, Requirements, Contacts.
+
+- [ ] **CAL.10b V4** — Set Frequency to Weekly and
+      enter a First Occurrence date. Confirm a live
+      preview appears below the date fields: e.g.
+      "Weekly on Mondays — 52 events through Jul 2027"
+      (count and end date will vary). Confirm the
+      preview updates when you change the frequency
+      or Last Occurrence date.
+
+- [ ] **CAL.10b V5** — Change Frequency to Monthly.
+      Confirm the preview updates to "Monthly on the
+      [Nth] — N events through [date]".
+
+- [ ] **CAL.10b V6** — Set a Last Occurrence date
+      approximately 1 month from the First Occurrence.
+      Confirm the preview shows a much smaller event
+      count (1–5 events) rather than the full 12-month
+      cap.
+
+- [ ] **CAL.10b V7** — As Super Admin: fill in all
+      required fields and click "Add to Calendar."
+      Confirm a success message appears ("Created N
+      recurring events."). Confirm the form closes.
+      Navigate to /crew/calendar. Confirm events from
+      the series appear on the correct dates with the
+      correct location color.
+
+- [ ] **CAL.10b V8** — As Editor: submit a recurring
+      event series. Confirm the form shows "Submit
+      for Approval." After submitting, confirm the
+      events appear in the pending queue
+      (/crew/calendar/pending) under a "Recurring
+      Events" section, NOT in "Individual Requests."
+
+- [ ] **CAL.10b V9** — Confirm the Rental event type
+      is NOT available in the type dropdown for
+      Editor. Confirm it IS available for Super Admin.
+
+- [ ] **CAL.10b V10** — Add 2 contacts to the form
+      (name + phone each). Submit. Confirm the
+      recurring events were created with those contacts.
+      *(Supabase cross-check: SELECT * FROM
+      calendar_event_contacts WHERE calendar_event_id
+      IN (SELECT id FROM calendar_events WHERE
+      recurrence_group_id = [new group id]);)*
+
+**Regression check — non-recurring edit:**
+
+- [ ] **CAL.10b V11** — Click on a non-recurring event
+      in the day panel. Click the Edit button. Confirm
+      the CalendarEventForm opens directly — NO scope
+      picker appears. This confirms the branching logic
+      correctly distinguishes recurring from non-
+      recurring events.
+
+**Dark mode:**
+
+- [ ] **CAL.10b V12** — Toggle to dark mode. Open the
+      Recurring Event form and the scope picker (by
+      editing a recurring event if one exists). Confirm
+      both render correctly — no light backgrounds or
+      invisible text.
+
+---
+
+## CAL.10c — Recurring Events: Display, Day Panel
+             & Pending Queue
+
+*Prerequisites: at least one approved recurring event
+series must exist (created in CAL.10b) to verify most
+of these items. The pending queue items require at least
+one submitted-but-pending recurring series.*
+
+**Day panel — recurring event features:**
+
+- [ ] **CAL.10c V1** — Click a day that has a recurring
+      event. In the day panel Booked section, confirm
+      the event shows a "↻ Part of a recurring series"
+      note below the location name.
+
+- [ ] **CAL.10c V2** — Confirm a non-recurring event
+      (single manual event) on the same panel does NOT
+      show the "↻ Part of a recurring series" note.
+
+- [ ] **CAL.10c V3** — As Super Admin: click the Edit
+      button on a recurring event in the day panel.
+      Confirm the RecurrenceScopePicker modal appears
+      BEFORE the edit form — showing three options:
+      "Only this occurrence," "This and all future
+      occurrences," "All occurrences."
+
+- [ ] **CAL.10c V4** — Select "Only this occurrence"
+      in the scope picker. Change the title. Save.
+      Confirm only this occurrence's title changed on
+      the calendar. Confirm other occurrences in the
+      series still have the original title.
+
+- [ ] **CAL.10c V5** — Select "This and all future
+      occurrences" on a later occurrence. Change the
+      start time. Confirm all future occurrences update
+      to the new time. Confirm past occurrences are
+      unchanged.
+
+- [ ] **CAL.10c V6** — Select "All occurrences."
+      Change the location. Confirm every event in the
+      series now shows the new location color.
+
+- [ ] **CAL.10c V7** — As Super Admin: click the
+      "Cancel event" button on a recurring event.
+      Confirm the RecurrenceScopePicker opens in
+      cancel mode — option labels read "Only this
+      occurrence," "This and all future occurrences,"
+      "Cancel the entire series."
+
+- [ ] **CAL.10c V8** — Select "Only this occurrence"
+      in cancel mode. Confirm that one occurrence
+      disappears from the calendar. Confirm other
+      occurrences remain.
+
+- [ ] **CAL.10c V9** — Select "Cancel the entire
+      series." Confirm all occurrences in the series
+      disappear from the calendar.
+
+- [ ] **CAL.10c V10** — Click "Cancel event" on a
+      non-recurring event. Confirm NO scope picker
+      appears — the event is cancelled directly.
+      Confirm it disappears from the calendar.
+
+**Recurring indicators on event chips:**
+
+- [ ] **CAL.10c V11** — In Month view: confirm that
+      recurring event pills show a small "↻" icon
+      in the top-right corner of the pill. Confirm
+      non-recurring events do NOT show this icon.
+
+- [ ] **CAL.10c V12** — In Agenda view: confirm that
+      recurring events show a "↻ Recurring" label
+      below the event title. Confirm non-recurring
+      events do NOT show this label.
+
+**Pending queue — Recurring Events section:**
+
+- [ ] **CAL.10c V13** — Navigate to /crew/calendar/
+      pending as Super Admin (with at least one
+      pending recurring series). Confirm a "Recurring
+      Events" section appears between the Rehearsal
+      Batches section and the Individual Requests
+      section.
+
+- [ ] **CAL.10c V14** — In the Recurring Events
+      section: confirm each group card shows the
+      series title and a frequency badge ("Weekly,"
+      "Bi-Weekly," or "Monthly").
+
+- [ ] **CAL.10c V15** — Confirm recurring event
+      occurrences do NOT appear in the "Individual
+      Requests" section — they should only appear in
+      "Recurring Events."
+
+- [ ] **CAL.10c V16** — In the Recurring Events
+      section: use the location selector dropdown on
+      one pending occurrence. Confirm the conflict
+      indicator updates (⚠ or ✓) for that occurrence.
+
+- [ ] **CAL.10c V17** — Click "Approve All Available"
+      on a recurring events group. Confirm that
+      non-conflicted occurrences with a location
+      selected are approved and appear on the calendar.
+      Confirm conflicted occurrences remain in the
+      queue.
+
+- [ ] **CAL.10c V18** — After approving recurring
+      events from the queue: navigate to /crew/calendar.
+      Confirm the approved occurrences appear on the
+      calendar with correct location colors, times,
+      and the ↻ icon.
+
+**Dark mode:**
+
+- [ ] **CAL.10c V19** — Toggle to dark mode. Interact
+      with a recurring event in the day panel (scope
+      picker, edit form). Navigate to the pending
+      queue's Recurring Events section. Confirm all
+      components render correctly in dark mode — no
+      light backgrounds or invisible text.
+
+---
+
+*Total items in this carry-forward list: 539*
+*Prior (v7): 424 items through CAL.5b-FIX2*
+*New (v8): 115 items —*
+*10 ADMIN.26, 8 CAL.6, 19 CAL.7, 18 CAL.8,*
+*19 CAL.9, 10 CAL.10a, 12 CAL.10b, 19 CAL.10c*
+*Quick Reference expanded with CAL.6–CAL.10c and*
+*ADMIN.26 categories. Seed Data Cleanup updated*
+*with recurrence_groups test data. Metadata block*
+*relocated from mid-document to document end.*
+*(New items not counted as verification items)*
+*Database-verifiable items handled separately in*
+*30BN-DB-VERIFY.3 (not counted here)*
+*Last updated: July 2026 — v8 (Phase CAL complete —*
+*CAL.1–CAL.10c + ADMIN.26; Phase 13 next)*
+*Previous version covered through CAL.5b-FIX2*
 
