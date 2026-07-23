@@ -254,6 +254,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
           sent_by: null,
           subject,
           recipient_type: 'transactional',
+          recipient_filter: actuallyFull ? 'trigger:waitlist_added' : 'trigger:slot_claim',
           recipient_count: 1,
         })
         .select('id')
@@ -340,13 +341,14 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
         volunteer_email: string
         volunteer_name: string
         claim_token: string
+        volunteer_id: string | null
       } | null = null
 
       if (wasClaimed) {
         // D. Promote the next waitlisted volunteer, if any.
         const { data: nextWaitlisted } = await client
           .from('slot_claims')
-          .select('id, volunteer_email, volunteer_name, claim_token, waitlist_position')
+          .select('id, volunteer_email, volunteer_name, claim_token, waitlist_position, volunteer_id')
           .eq('volunteer_role_id', claim.volunteer_role_id)
           .eq('status', 'waitlisted')
           .order('waitlist_position', { ascending: true })
@@ -446,6 +448,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                   sent_by: null,
                   subject: `Good news — a spot opened up! — ${showRow.name}`,
                   recipient_type: 'transactional',
+                  recipient_filter: 'trigger:waitlist_promoted',
                   recipient_count: 1,
                 })
                 .select('id')
@@ -454,6 +457,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
               if (logRow) {
                 await client.from('email_log_recipients').insert({
                   email_log_id: logRow.id,
+                  volunteer_id: promotedClaim.volunteer_id,
                   email_address: promotedClaim.volunteer_email,
                 })
               }
@@ -482,6 +486,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                     sent_by: null,
                     subject: `Volunteer cancellation — ${showRow.name}`,
                     recipient_type: 'transactional',
+                    recipient_filter: 'trigger:cancellation_notify',
                     recipient_count: editorEmails.length,
                   })
                   .select('id')

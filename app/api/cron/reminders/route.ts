@@ -90,6 +90,7 @@ export async function GET(request: Request) {
           sent_by: null,
           subject: '24hr volunteer reminder',
           recipient_type: 'transactional',
+          recipient_filter: 'cron:reminders',
           recipient_count: claims.length,
         })
         .select('id')

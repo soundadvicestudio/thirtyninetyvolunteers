@@ -1,5 +1,6 @@
 import 'server-only'
 import { Resend } from 'resend'
+import { getAdminClient } from '@/lib/supabase/admin'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -17,6 +18,7 @@ type ConfirmationEmailParams = {
   name: string
   updateToken: string
   categoryNames: string[]
+  volunteerId?: string | null
 }
 
 export async function sendVolunteerConfirmationEmail({
@@ -24,6 +26,7 @@ export async function sendVolunteerConfirmationEmail({
   name,
   updateToken,
   categoryNames,
+  volunteerId,
 }: ConfirmationEmailParams): Promise<void> {
   const updateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
   const safeName = escapeHtml(name)
@@ -113,11 +116,26 @@ export async function sendVolunteerConfirmationEmail({
     </html>
   `
 
+  const subject = `Welcome to 30 By Ninety Theatre, ${name}!`
+
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     to,
-    subject: `Welcome to 30 By Ninety Theatre, ${name}!`,
+    subject,
     html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview:
+      `Thank you for signing up to volunteer with 30 By Ninety Theatre. We're so glad you're here — volunteers like you are what make every production possible.`.slice(
+        0,
+        150
+      ),
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:signup',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId: volunteerId ?? null }],
   })
 }
 
@@ -197,12 +215,14 @@ type InfoUpdatedEmailParams = {
   to: string
   name: string
   updateToken: string
+  volunteerId?: string | null
 }
 
 export async function sendInfoUpdatedEmail({
   to,
   name,
   updateToken,
+  volunteerId,
 }: InfoUpdatedEmailParams): Promise<void> {
   const updateUrl =
     `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
@@ -254,11 +274,26 @@ export async function sendInfoUpdatedEmail({
     </html>
   `
 
+  const subject = 'Your volunteer information has been updated'
+
   await resend.emails.send({
     from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     to,
-    subject: 'Your volunteer information has been updated',
+    subject,
     html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview:
+      `Hi ${name} — we've saved your updated volunteer information. If you need to make any further changes, use the link below.`.slice(
+        0,
+        150
+      ),
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:update',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId: volunteerId ?? null }],
   })
 }
 
@@ -1282,7 +1317,8 @@ export async function sendMilestoneEmail(
   name: string,
   milestoneLabel: string,
   milestoneHours: number,
-  totalHours: number | null
+  totalHours: number | null,
+  volunteerId?: string | null
 ): Promise<void> {
   const { subject, bodyHtml } = milestoneEmailContent(name, milestoneLabel, milestoneHours, totalHours)
 
@@ -1309,4 +1345,71 @@ export async function sendMilestoneEmail(
     subject,
     html,
   })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: bodyHtml
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 150),
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:milestone',
+    sentBy: null,
+    recipients: [{ email, volunteerId: volunteerId ?? null }],
+  })
+}
+
+// ─── Email activity logging helper (30BN-13.1) ───────────────────
+// Internal — not exported. Always called AFTER the Resend send succeeds.
+// All errors are silently swallowed: a logging failure must never block
+// email delivery or propagate to the caller.
+
+async function logEmailSent({
+  subject,
+  bodyPreview,
+  recipientType,
+  recipientFilter,
+  sentBy,
+  recipients,
+}: {
+  subject: string
+  bodyPreview?: string
+  recipientType: 'all' | 'category' | 'individual' | 'transactional'
+  recipientFilter?: string
+  sentBy?: string | null
+  recipients: Array<{
+    email: string
+    volunteerId?: string | null
+  }>
+}): Promise<void> {
+  try {
+    const supabase = getAdminClient()
+    const { data: logRow, error: logError } = await supabase
+      .from('email_log')
+      .insert({
+        subject,
+        body_preview: bodyPreview ?? null,
+        recipient_type: recipientType,
+        recipient_filter: recipientFilter ?? null,
+        sent_by: sentBy ?? null,
+        reply_to: null,
+        recipient_count: recipients.length,
+      })
+      .select('id')
+      .single()
+
+    if (logError || !logRow) return
+
+    if (recipients.length > 0) {
+      const recipientRows = recipients.map((r) => ({
+        email_log_id: logRow.id,
+        email_address: r.email,
+        volunteer_id: r.volunteerId ?? null,
+      }))
+      await supabase.from('email_log_recipients').insert(recipientRows)
+    }
+  } catch {
+    // Silently swallow — log failure must never block email delivery.
+  }
 }

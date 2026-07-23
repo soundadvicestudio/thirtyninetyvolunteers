@@ -179,6 +179,19 @@ export default async function SettingsPage() {
           />
         )}
 
+        {isSuperAdmin ? (
+          <LinkedCard
+            href="/crew/settings/email-activity"
+            title="Email Activity"
+            description="Review all emails sent by the platform, including automated system emails."
+          />
+        ) : (
+          <LockedCard
+            title="Email Activity"
+            description="Review all emails sent by the platform, including automated system emails."
+          />
+        )}
+
         {isEditorOrAbove ? (
           <LinkedCard
             href="/crew/settings/documents"

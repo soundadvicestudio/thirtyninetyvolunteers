@@ -176,6 +176,7 @@ export async function updateVolunteerInfo(
         to:          current.email,
         name:        data.full_name,
         updateToken: newToken,
+        volunteerId,
       })
     } catch (emailErr) {
       console.error('Info updated email failed:', emailErr)

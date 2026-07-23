@@ -158,6 +158,30 @@ export async function approveRegistration(pendingId: string, role: AdminRole): P
 
   try {
     await sendRegistrationApprovedEmail({ to: pendingRow.email, name: pendingRow.name })
+
+    try {
+      const { data: logRow } = await client
+        .from('email_log')
+        .insert({
+          sent_by: admin.id,
+          subject: 'Your access request has been approved',
+          recipient_type: 'transactional',
+          recipient_filter: 'trigger:admin_approved',
+          recipient_count: 1,
+        })
+        .select('id')
+        .single()
+
+      if (logRow) {
+        await client.from('email_log_recipients').insert({
+          email_log_id: logRow.id,
+          volunteer_id: null,
+          email_address: pendingRow.email,
+        })
+      }
+    } catch {
+      // Logging failure must never block approval.
+    }
   } catch (err) {
     console.error('[email] sendRegistrationApprovedEmail failed:', err)
   }
@@ -215,6 +239,30 @@ export async function declineRegistration(pendingId: string): Promise<ActionResu
 
   try {
     await sendRegistrationDeclinedEmail({ to: pendingRow.email, name: pendingRow.name })
+
+    try {
+      const { data: logRow } = await client
+        .from('email_log')
+        .insert({
+          sent_by: admin.id,
+          subject: 'Your access request was not approved',
+          recipient_type: 'transactional',
+          recipient_filter: 'trigger:admin_declined',
+          recipient_count: 1,
+        })
+        .select('id')
+        .single()
+
+      if (logRow) {
+        await client.from('email_log_recipients').insert({
+          email_log_id: logRow.id,
+          volunteer_id: null,
+          email_address: pendingRow.email,
+        })
+      }
+    } catch {
+      // Logging failure must never block decline.
+    }
   } catch (err) {
     console.error('[email] sendRegistrationDeclinedEmail failed:', err)
   }

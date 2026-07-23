@@ -149,6 +149,7 @@ export async function submitOpportunity(formData: {
         subject: emailResult.subject,
         body_preview: emailResult.preview,
         recipient_type: 'transactional',
+        recipient_filter: claimType === 'eoi' ? 'trigger:opportunity_eoi' : 'trigger:opportunity_claim',
         recipient_count: 1,
       })
       .select('id')

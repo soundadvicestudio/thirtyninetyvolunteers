@@ -61,7 +61,7 @@ export async function checkFirstCall(volunteerId: string): Promise<void> {
 
   // Send congratulations email (non-blocking — milestone is already logged)
   try {
-    await sendMilestoneEmail(volunteer.email, volunteer.full_name, 'First Call', 0, null)
+    await sendMilestoneEmail(volunteer.email, volunteer.full_name, 'First Call', 0, null, volunteerId)
     await client
       .from('milestone_log')
       .update({ email_sent: true })
@@ -134,7 +134,7 @@ export async function checkMilestones(volunteerId: string): Promise<void> {
     }
 
     try {
-      await sendMilestoneEmail(volunteer.email, volunteer.full_name, milestone.label, milestone.hours, totalHours)
+      await sendMilestoneEmail(volunteer.email, volunteer.full_name, milestone.label, milestone.hours, totalHours, volunteerId)
       await client
         .from('milestone_log')
         .update({ email_sent: true })

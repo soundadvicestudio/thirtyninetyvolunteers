@@ -105,6 +105,30 @@ export async function createUser(
         role: value.role,
         tempPassword,
       })
+
+      try {
+        const { data: logRow } = await adminClient
+          .from('email_log')
+          .insert({
+            sent_by: admin.id,
+            subject: 'Welcome to 30 By Ninety Theatre Production Crew',
+            recipient_type: 'transactional',
+            recipient_filter: 'trigger:admin_welcome',
+            recipient_count: 1,
+          })
+          .select('id')
+          .single()
+
+        if (logRow) {
+          await adminClient.from('email_log_recipients').insert({
+            email_log_id: logRow.id,
+            volunteer_id: null,
+            email_address: value.email,
+          })
+        }
+      } catch {
+        // Logging failure must never block account creation.
+      }
     } catch (err) {
       console.error('[email] sendWelcomeEmail failed:', err)
       emailFailed = true

@@ -128,6 +128,7 @@ export async function submitVolunteerForm(
         name:         data.full_name,
         updateToken:  newVolunteer.update_token,
         categoryNames,
+        volunteerId:  newVolunteer.id,
       })
     } catch (emailError) {
       // Email failure should not block signup success.
@@ -230,6 +231,7 @@ export async function mergeVolunteer(
           name:         data.full_name,
           updateToken:  volunteer.update_token,
           categoryNames: cats?.map(c => c.name) ?? [],
+          volunteerId:  existingId,
         })
       } catch (emailError) {
         console.error('Merge confirmation email failed:', emailError)
