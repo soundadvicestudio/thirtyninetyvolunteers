@@ -437,6 +437,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                 roleName: roleRow.role_name,
                 volunteerInstructions: showRow.volunteer_instructions,
                 cancelUrl: promoCancelUrl,
+                claimToken: promotedClaim.claim_token,
               })
 
               const { data: logRow } = await client

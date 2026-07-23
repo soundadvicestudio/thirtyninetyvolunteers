@@ -24,10 +24,6 @@ const ROLE_BADGE: Record<AdminUserRow['role'], { label: string; className: strin
   production: { label: 'Production', className: 'bg-orange text-white' },
 }
 
-function reload() {
-  window.location.href = window.location.pathname
-}
-
 function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,22 +32,22 @@ function UserRow({ user, isSelf }: { user: AdminUserRow; isSelf: boolean }) {
   async function handleRoleChange(newRole: 'editor' | 'viewer') {
     setIsSubmitting(true)
     const result = await changeRole(user.id, newRole)
+    setIsSubmitting(false)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
-    setIsSubmitting(false)
     alert(result.error)
   }
 
   async function handleToggleActive() {
     setIsSubmitting(true)
     const result = user.is_active ? await deactivateUser(user.id) : await reactivateUser(user.id)
+    setIsSubmitting(false)
     if ('success' in result) {
-      reload()
+      router.refresh()
       return
     }
-    setIsSubmitting(false)
     alert(result.error)
   }
 

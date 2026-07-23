@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   return new Response(icsContent, {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${show.name}.ics"`,
+      'Content-Disposition': 'attachment; filename="volunteer-call.ics"',
       'Cache-Control': 'no-cache, no-store',
     },
   })

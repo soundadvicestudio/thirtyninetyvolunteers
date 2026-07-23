@@ -50,9 +50,9 @@ export async function createUser(
   }
   const value = parsed.data
 
-  const client = getAdminClient()
+  const supabase = await getServerClient()
 
-  const { data: existing } = await client
+  const { data: existing } = await supabase
     .from('admin_users')
     .select('id')
     .eq('email', value.email)
@@ -64,7 +64,12 @@ export async function createUser(
 
   const tempPassword = generateTempPassword()
 
-  const { data, error: authError } = await client.auth.admin.createUser({
+  // auth.admin.* requires the service role key — this is the sanctioned
+  // getAdminClient() use case per Brief §7 ("Super Admin account creation").
+  // It cannot run on a session-scoped client regardless of RLS.
+  const adminClient = getAdminClient()
+
+  const { data, error: authError } = await adminClient.auth.admin.createUser({
     email: value.email,
     password: tempPassword,
     email_confirm: true,
@@ -77,7 +82,7 @@ export async function createUser(
     return { error: authError?.message ?? 'Failed to create account.' }
   }
 
-  const { error: insertError } = await client.from('admin_users').insert({
+  const { error: insertError } = await supabase.from('admin_users').insert({
     id: data.user.id,
     name: value.name,
     email: value.email,
@@ -87,7 +92,7 @@ export async function createUser(
 
   if (insertError) {
     console.error('createUser admin_users insert error:', insertError)
-    await client.auth.admin.deleteUser(data.user.id)
+    await adminClient.auth.admin.deleteUser(data.user.id)
     return { error: 'Failed to create admin record. Auth user has been cleaned up.' }
   }
 
@@ -112,6 +117,8 @@ export async function createUser(
     role: value.role,
   })
 
+  revalidatePath('/crew/settings/users')
+
   return { success: true, emailFailed }
 }
 
@@ -125,9 +132,9 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
     return { error: 'Cannot deactivate your own account.' }
   }
 
-  const client = getAdminClient()
+  const supabase = await getServerClient()
 
-  const { data: target, error: fetchError } = await client
+  const { data: target, error: fetchError } = await supabase
     .from('admin_users')
     .select('role')
     .eq('id', targetId)
@@ -141,7 +148,7 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
     return { error: 'Cannot deactivate a Super Admin account via this panel.' }
   }
 
-  const { error } = await client
+  const { error } = await supabase
     .from('admin_users')
     .update({ is_active: false })
     .eq('id', targetId)
@@ -153,6 +160,8 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
 
   await logAction(admin.id, 'user.deactivate', 'admin_user', targetId)
 
+  revalidatePath('/crew/settings/users')
+
   return { success: true }
 }
 
@@ -162,9 +171,9 @@ export async function reactivateUser(targetId: string): Promise<ActionResult> {
     return { error: 'Unauthorized' }
   }
 
-  const client = getAdminClient()
+  const supabase = await getServerClient()
 
-  const { error } = await client
+  const { error } = await supabase
     .from('admin_users')
     .update({ is_active: true })
     .eq('id', targetId)
@@ -175,6 +184,8 @@ export async function reactivateUser(targetId: string): Promise<ActionResult> {
   }
 
   await logAction(admin.id, 'user.reactivate', 'admin_user', targetId)
+
+  revalidatePath('/crew/settings/users')
 
   return { success: true }
 }
@@ -192,9 +203,17 @@ export async function changeRole(
     return { error: 'Cannot change your own role.' }
   }
 
-  const client = getAdminClient()
+  // Defense-in-depth: newRole is typed 'editor' | 'viewer' so no compile-time
+  // caller can pass 'production', but a raw/untyped call to the Server Action
+  // endpoint bypasses that. Compare via a widened cast since the literal
+  // union has no structural overlap with 'production'.
+  if ((newRole as string) === 'production') {
+    return { error: 'The Production role cannot be assigned via role change. Create a new Production account instead.' }
+  }
 
-  const { data: target, error: fetchError } = await client
+  const supabase = await getServerClient()
+
+  const { data: target, error: fetchError } = await supabase
     .from('admin_users')
     .select('role')
     .eq('id', targetId)
@@ -208,7 +227,7 @@ export async function changeRole(
     return { error: 'Super Admin roles cannot be changed via this panel.' }
   }
 
-  const { error } = await client
+  const { error } = await supabase
     .from('admin_users')
     .update({ role: newRole })
     .eq('id', targetId)
@@ -226,6 +245,8 @@ export async function changeRole(
     { role: target.role },
     { role: newRole }
   )
+
+  revalidatePath('/crew/settings/users')
 
   return { success: true }
 }

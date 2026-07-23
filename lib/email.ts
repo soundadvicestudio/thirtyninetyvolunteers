@@ -696,6 +696,8 @@ export async function sendWaitlistConfirmationEmail({
   })
 }
 
+type SendWaitlistPromotionEmailParams = SlotClaimEmailParams & { claimToken: string }
+
 export async function sendWaitlistPromotionEmail({
   to,
   volunteerName,
@@ -705,7 +707,8 @@ export async function sendWaitlistPromotionEmail({
   roleName,
   volunteerInstructions,
   cancelUrl,
-}: SlotClaimEmailParams): Promise<void> {
+  claimToken,
+}: SendWaitlistPromotionEmailParams): Promise<void> {
   const html = emailShell(`
     <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
       Good news, ${escapeHtml(volunteerName)} — a spot opened up!
@@ -717,6 +720,7 @@ export async function sendWaitlistPromotionEmail({
     ${instructionsBlockHtml(volunteerInstructions)}
     ${browseShowsButtonHtml()}
     ${cancelLinkHtml(cancelUrl)}
+    ${addToCalendarLinkHtml(claimToken)}
   `)
 
   await resend.emails.send({
