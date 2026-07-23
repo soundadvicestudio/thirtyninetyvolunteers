@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 8 | July 2026 | Phase CAL Complete (CAL.1–CAL.10c + ADMIN.26)
+## Version 8r | July 2026 | Phase CAL Complete (CAL.1–CAL.10c + ADMIN.26) — Cleanup Revision
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -14,7 +14,7 @@ Sections cover: ADMIN.14 re-verify, Phases 5–7 remaining,
 ADMIN.15–19, Phase 8 (Call Board), Phase 9 (Hours &
 Milestones), Phase 10 (Audit Log), ADMIN.20 (Dashboard),
 Phase 11.1–11.2 (Stubs/404/Settings), ADMIN.21–24,
-Phase 12 (12.1–12.4).
+Phase 12 (12.1–12.4), ADMIN.25, CAL.1–CAL.10c, ADMIN.26.
 
 ---
 
@@ -271,14 +271,6 @@ or second account.
       arrives with show name, matching roles, and link
       to /shows. *(Requires real email delivery)*
 
-- [ ] **5.3 V4** — *(Covered in VERIFY-5 A2 — confirm
-      PASS was recorded)* Publish with notify toggle
-      unchecked; notifications_sent_at stays null.
-
-- [ ] **5.3 V5** — *(Covered in VERIFY-5 A1 — confirm
-      PASS was recorded)* Republish warning appears when
-      notifications_sent_at is already set.
-
 - [ ] **5.3 V6** — Volunteer with multiple matching roles
       receives exactly one email — not one per role.
       *(Requires real email delivery)*
@@ -286,25 +278,9 @@ or second account.
 - [ ] **5.3 V7** — Volunteer with no matching categories
       receives no email. *(Requires real email delivery)*
 
-- [ ] **5.3 V8** — *(Covered in VERIFY-5 B1 — confirm
-      PASS was recorded)* Settings tab live transition
-      inline panel behavior.
-
 - [ ] **5.3 V9** — Overview tab Volunteer Notifications
       section is NOT visible to Viewer role.
       *(Requires Viewer account — A1)*
-
-- [ ] **5.3 V10** — *(Covered in VERIFY-5 C1/C3 — confirm
-      PASS was recorded)* "Send Again" confirm prompt and
-      Cancel behavior.
-
-- [ ] **5.3 V11** — *(Covered in VERIFY-5 C2 — confirm
-      PASS was recorded)* "Notifications last sent"
-      timestamp displays correctly formatted.
-
-- [ ] **5.3 V12** — *(Covered in VERIFY-5 C1 — confirm
-      PASS was recorded)* Live show with no matching
-      volunteers: send returns 0, no error.
 
 - [ ] **5.3 V13** — Viewer sees no notification toggle
       or trigger button on any surface.
@@ -1021,125 +997,6 @@ response values for fields that were not removed.
 
 ---
 
-## VIEWER-GATED ITEMS (VERIFY-7)
-
-All require the Viewer account (A1 — password reset needed).
-
-- [ ] **4.1 V9** — Viewer navigates to /crew/shows/new.
-      Confirm redirect — form inaccessible.
-
-- [ ] **4.3 V17** — Viewer on show detail page: no Edit
-      link, no attendance controls, no editor add/remove,
-      no status selector.
-
-- [ ] **4.4a V6** — Viewer on /crew/shows/opportunities:
-      list visible, New/Edit/Archive controls hidden.
-
-- [ ] **5.3 V9** — Viewer on show Overview tab: Volunteer
-      Notifications section not visible.
-
-- [ ] **5.3 V13** — Viewer: no notification toggle or
-      trigger button on any surface.
-
-- [ ] **6.1 V11** — Viewer: "New Form" absent on list.
-      /crew/forms/new redirects.
-
----
-
-## WAITLIST UI (VERIFY-7 — requires Supabase slot adjustment)
-
-Requires temporarily setting a role's slots_available to 1
-to make it appear full. See VERIFY-7 Section A for SQL.
-
-- [ ] **5.1 V2** — Live show with all slots claimed does
-      NOT appear on /shows.
-
-- [ ] **5.1 V9** — Full role shows "Join the Waitlist"
-      button, not "Claim My Spot."
-
-- [ ] **5.1 V10** — Date where all roles are full is
-      labeled "Full" and non-interactive in date picker.
-
-- [ ] **5.2 V8 (browser)** — Submit a waitlist claim:
-      waitlist success state appears ("You're on the
-      waitlist at position N").
-
----
-
-## NOTIFICATION TIMESTAMP (VERIFY-7 Section C)
-
-- [ ] **5.3 V3 (browser)** — Trigger "Send Again" on
-      Overview tab. Confirm "Notifications last sent"
-      timestamp updates to current time (not stale seed
-      timestamp from DB-VERIFY.2).
-
----
-
-## EMAIL DELIVERY ITEMS (manual — owner inbox)
-
-These cannot be verified by Claude in Chrome. Check your
-inbox alongside the relevant Chrome sessions.
-
-From address: 30 By Ninety Theatre
-  <volunteers@30byninetyvolunteers.com>
-
-**Opportunity submission emails (alongside VERIFY-2):**
-
-- [ ] **4.4b V2 (email)** — After submitting an EOI
-      opportunity with a real email address: confirmation
-      email arrives.
-
-- [ ] **4.4b V7 (EOI)** — EOI confirmation email has
-      warm "we'll be in touch" tone — not transactional.
-
-- [ ] **4.4b V7 (Slot Claim)** — Slot Claim confirmation
-      email explicitly confirms the position — not "we'll
-      be in touch." *(Skip if no Slot Claim opportunity
-      was tested)*
-
-**Slot claim emails (alongside VERIFY-4):**
-
-- [ ] **5.2 V2** — Claim confirmation email arrives with
-      show name, date, time, role, and working /cancel link.
-
-- [ ] **5.2 V3** — volunteer_instructions appear in claim
-      email if set on the show.
-
-- [ ] **5.2 V9** — Waitlist confirmation email arrives
-      with correct position number.
-
-- [ ] **5.2 V16 (email)** — After cancelling a claimed
-      slot with a waitlisted volunteer: promotion email
-      arrives at the waitlisted volunteer's address.
-
-- [ ] **5.2 V17 (email)** — After a claimed cancellation:
-      show editors receive a cancellation notification
-      email. (Requires editors to be assigned to show.)
-
-**Notification emails (alongside VERIFY-5):**
-
-- [ ] **5.3 V2 (email)** — After publishing a show with
-      a matching volunteer category: notification email
-      arrives with show name, matching role names, and
-      link to /shows.
-
-- [ ] **5.3 V6 (email)** — Volunteer matching multiple
-      roles receives exactly one notification email.
-
-- [ ] **5.3 V7 (email)** — Volunteer with no matching
-      categories receives no notification email.
-
----
-
-## VERCEL DASHBOARD
-
-- [ ] **5.2 V21** — After first midnight CT cron run (or
-      via manual trigger in Vercel dashboard): Vercel →
-      Functions → Cron Jobs logs confirm the reminders
-      cron ran and returned a result.
-
----
-
 ## QUICK REFERENCE
 
 ### Requires Viewer account password reset (A1):
@@ -1312,18 +1169,6 @@ CAL.10c V1–V12 (most items need existing data)
 ### CAL.10c — requires pending recurring series:
 CAL.10c V13–V17 (pending queue Recurring Events
   section)
-
----
-
-## NOTES ON VERIFY-5 ITEMS
-
-VERIFY-5 was not yet run. The following items are listed
-in this document as pending but will be confirmed or
-cleared when VERIFY-5 runs:
-5.3 V4, V5, V8, V10, V11, V12
-
-If VERIFY-5 confirms them PASS, cross them off this list.
-If any FAIL, add them to the fixes queue.
 
 ---
 
@@ -3804,19 +3649,21 @@ one submitted-but-pending recurring series.*
 
 ---
 
-*Total items in this carry-forward list: 539*
-*Prior (v7): 424 items through CAL.5b-FIX2*
-*New (v8): 115 items —*
-*10 ADMIN.26, 8 CAL.6, 19 CAL.7, 18 CAL.8,*
-*19 CAL.9, 10 CAL.10a, 12 CAL.10b, 19 CAL.10c*
-*Quick Reference expanded with CAL.6–CAL.10c and*
-*ADMIN.26 categories. Seed Data Cleanup updated*
-*with recurrence_groups test data. Metadata block*
-*relocated from mid-document to document end.*
-*(New items not counted as verification items)*
+*Total items in this carry-forward list: 510*
+*Prior (v8): 539 items*
+*v8r cleanup: removed 29 items — 6 VERIFY-5 stub items
+(5.3 V4/V5/V8/V10/V11/V12 — VERIFY-5 session never ran;
+stubs not actionable) and 23 duplicate items from 5
+consolidation sections (EMAIL DELIVERY ITEMS: 11,
+VIEWER-GATED ITEMS: 6, WAITLIST UI: 4, NOTIFICATION
+TIMESTAMP: 1, VERCEL DASHBOARD: 1 — all items already
+existed verbatim in their original phase sections;
+Quick Reference serves the cross-referencing function
+without duplicating full item text).*
+*Quick Reference retained — references item IDs only
+and remains accurate.*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v8 (Phase CAL complete —*
-*CAL.1–CAL.10c + ADMIN.26; Phase 13 next)*
-*Previous version covered through CAL.5b-FIX2*
+*Last updated: July 2026 — v8r (cleanup revision:*
+*redundant + obsolete items removed)*
 
