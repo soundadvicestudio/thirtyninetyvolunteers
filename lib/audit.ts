@@ -69,6 +69,11 @@ export type AuditAction =
   | 'location.reorder'
   | 'location.deactivate'
 
+  // Recurring Events
+  | 'recurring_event.create'
+  | 'recurring_event.edit'
+  | 'recurring_event.cancel'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

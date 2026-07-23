@@ -29,6 +29,7 @@ type RawCalendarEventRow = {
   source: CalendarEventSource
   source_show_date_id: string | null
   rehearsal_batch_id: string | null
+  recurrence_group_id: string | null
   submitted_by: string | null
   approved_by: string | null
   created_at: string
@@ -115,6 +116,7 @@ export default async function CalendarPage({
       location_id, start_time, end_time,
       description, requirements, status, source,
       source_show_date_id, rehearsal_batch_id,
+      recurrence_group_id,
       submitted_by, approved_by, created_at,
       updated_at,
       location:locations ( id, name, color ),
@@ -164,6 +166,7 @@ export default async function CalendarPage({
     source: e.source,
     source_show_date_id: e.source_show_date_id,
     rehearsal_batch_id: e.rehearsal_batch_id,
+    recurrence_group_id: e.recurrence_group_id,
     submitted_by: e.submitted_by,
     submitted_by_admin: null,
     approved_by: e.approved_by,

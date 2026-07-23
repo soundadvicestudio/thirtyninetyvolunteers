@@ -62,3 +62,37 @@ export const rehearsalBatchSchema = z.object({
 })
 
 export type RehearsalBatchFormData = z.infer<typeof rehearsalBatchSchema>
+
+export const recurringEventSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or fewer'),
+    event_type: z.enum(['rehearsal', 'teaching', 'meeting', 'event', 'rental', 'other']),
+    custom_type_label: z.string().max(100).optional().nullable(),
+    location_id: z.string().uuid().or(z.literal('')).optional().nullable(),
+    start_time: z.string().min(1, 'Start time is required'),
+    end_time: z.string().min(1, 'End time is required'),
+    frequency: z.enum(['weekly', 'biweekly', 'monthly']),
+    series_start_date: z.string().min(1, 'Start date is required'),
+    series_end_date: z.string().optional().nullable(),
+    description: z.string().max(2000).optional().nullable(),
+    requirements: z.string().max(2000).optional().nullable(),
+    contacts: z.array(contactSchema).max(5),
+  })
+  .superRefine((data, ctx) => {
+    if (data.end_time <= data.start_time) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'End time must be after start time',
+        path: ['end_time'],
+      })
+    }
+    if (data.series_end_date && data.series_end_date < data.series_start_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'End date must be after start date',
+        path: ['series_end_date'],
+      })
+    }
+  })
+
+export type RecurringEventFormData = z.infer<typeof recurringEventSchema>

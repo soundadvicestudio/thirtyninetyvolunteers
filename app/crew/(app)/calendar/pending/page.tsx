@@ -18,6 +18,7 @@ export type PendingEvent = {
   description: string | null
   requirements: string | null
   rehearsal_batch_id: string | null
+  recurrence_group_id: string | null
   submitted_by_admin: { id: string; name: string } | null
   created_at: string
   contacts: { id: string; name: string; phone: string; sort_order: number }[]
@@ -53,7 +54,7 @@ export default async function PendingQueuePage() {
         `
         id, title, event_type, custom_type_label,
         location_id, start_time, end_time,
-        description, requirements, rehearsal_batch_id, created_at,
+        description, requirements, rehearsal_batch_id, recurrence_group_id, created_at,
         location:locations ( id, name, color ),
         submitted_by_admin:admin_users!calendar_events_submitted_by_fkey ( id, name ),
         contacts:calendar_event_contacts ( id, name, phone, sort_order )
