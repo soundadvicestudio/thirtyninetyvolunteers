@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Beta build underway. Alpha Phases 1–12 complete. Phase CAL (Master Calendar system) active — CAL.1–CAL.5b complete, CAL.6–CAL.8 remaining.
+**Current phase:** Phase CAL complete (CAL.1–CAL.10c + ADMIN.26). Phase 13 (Email Blast System) next.
 
 ---
 
@@ -39,7 +39,6 @@
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
 | **Production** | New admin role (CAL.2). Calendar-only access. Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor and Viewer accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
-| **Production Crew** | The admin backend. Labeled "Production Crew" in navigation. |
 
 ---
 
@@ -184,7 +183,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
 | Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/calendar` | No | No | No auth required |
 
-**`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor or Viewer account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this). UI toggle for setting this flag planned for CAL.6. Currently settable via Supabase dashboard only.
+**`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor or Viewer account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they identify themselves via email or phone lookup on the Call Board; a match sets a 7-day cookie session with no magic link or email step required.
 **Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts use the same Request Access flow — assigned `role = 'production'` by the Super Admin on approval. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
@@ -494,6 +493,8 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Multiple Super Admins are supported. Deactivate button is disabled for ALL Super Admin rows in the Users table (not just own account).
 - Change role (Super Admin only). Super Admin role cannot be changed via the Users panel.
 - Super Admin cannot be demoted via this panel
+- **`calendar_editor` toggle** (CAL.6): on each Editor/Viewer row — grants or revokes direct calendar write access. Toggle absent on Super Admin and Production rows. Calls `toggleCalendarEditor()` in `lib/actions/users.ts`.
+- **ADMIN.26:** All four user management actions (`createUser`, `deactivateUser`, `reactivateUser`, `changeRole`) migrated to `getServerClient()` with `revalidatePath('/crew/settings/users')`. Client components use `router.refresh()` instead of `window.location.href`. `changeRole()` guards: Production role cannot be set via role change; admin cannot change own role.
 - **Change Password** — `/crew/settings/password` page accessible to all logged-in admins via "Change Password" link in the top bar. New Password + Confirm New Password fields (min 8 chars). Uses Supabase Auth `updateUser({ password })`. No current password field required (relies on valid session). Logged to `audit_log` as `user.password_change`. Built in ADMIN.15.
 
 **Show Management (`/crew/shows`):**
@@ -721,15 +722,16 @@ optional and additive: entering email or phone personalizes the view with a volu
 
 **`/crew/calendar` — Admin Calendar Page (CAL.4b):** Three switchable views, all in one page:
 - **Month view:** 7-column calendar grid. Up to 3 colored event chips per day (overflow: "+N more"). Day click opens day detail panel.
-- **Week view (room-booking grid):** Rows = active locations (toggle: All Locations / Booked Only). Columns = Mon–Sun. Time axis 7 AM–10 PM at 1-hour increments. Event blocks absolutely positioned by start/end time. Buffer windows shown as lighter shade of location color. Current-time indicator (red line) when viewing current week.
+- **Week view (unified grid, CAL.9):** One master grid — all locations displayed concurrently, events color-coded by location. Columns = Mon–Sun (day headers). Time axis 7 AM–10 PM at 1-hour increments. Overlapping events rendered side-by-side via column-splitting algorithm (`computeColumnLayout()` in `lib/utils/calendar-layout.ts`). Buffer windows shown as lighter shade of location color behind their parent event block. Current-time indicator (red line) when viewing current week. Location name shown on event blocks. The previous 'All Locations / Booked Only' per-location-row toggle has been removed — the filter bar's location multi-select serves this purpose. **Mobile (< 768px):** Week grid replaced by `WeekAgendaView.tsx` — events for Mon–Sun listed chronologically with a note to use a larger screen for the full grid. Desktop and mobile shown via Tailwind `hidden md:block` / `md:hidden` pattern.
 - **Agenda view:** Chronological list, grouped by date. Colored left border per event. 90-day forward window. Empty dates omitted.
 - **Location Legend (`CalendarLegend.tsx`):** Horizontal color-chip row visible across all views and all roles, below the filter bar. Shows all active locations with their assigned colors.
 - **Filter bar:** Location multi-select, Event Type multi-select, Season (server-side re-fetch). Location/type filters applied client-side; season filter triggers server re-fetch (requires show→season join). Week-view only: "All Locations / Booked Only" toggle. Mobile: collapses to "Filters" button.
-- **Day detail panel:** Slide-in from right (desktop) / bottom sheet (mobile). Two sections: Booked (events in time order) and Available Windows (free time slots per location within 7 AM–10 PM, computed via `getAvailableWindows()` from `lib/utils/calendar-availability.ts`).
+- **Day detail panel:** Slide-in from right (desktop) / bottom sheet (mobile). Two sections: Booked (events in time order) and Available Windows (free time slots per location within 7 AM–10 PM, computed via `getAvailableWindows()` from `lib/utils/calendar-availability.ts`). Recurring events show a '↻ Part of a recurring series' note below the location name. Super Admin sees Edit and Cancel event buttons on each row. Edit on a recurring event opens `RecurrenceScopePicker.tsx` before the form; Cancel on a recurring event opens it in cancel mode. Edit on a non-recurring event opens the form directly (existing behavior).
 - **Pending Requests link** (Super Admin only): in calendar header. Badge shows count of pending events.
-- **"Add Event" / "Submit Request" dropdown:** Opens either single-event form or bulk rehearsal form. Label adapts to role.
+- **"Add Event" / "Submit Request" dropdown:** Three options: Single Event, Rehearsal Schedule, Recurring Event. Label adapts to role (Super Admin / calendar_editor → "Add Event"; others → "Submit Request").
 - **Book Space panel** (`CalendarBookSpacePanel.tsx`): slides in from the LEFT (not right — avoids day panel conflict). Date + time range + location search → returns per-location availability. "Book This Slot" pre-fills CalendarEventForm. Visible to Super Admin and `calendar_editor` users only.
-- **URL params:** `view`, `date`, `locations`, `types`, `season`, `show_locations`. Shareable, survive navigation.
+- **URL params:** `view`, `date`, `locations`, `types`, `season`. Shareable, survive navigation. (`show_locations` param removed in CAL.9 alongside the toggle it controlled.)
+- **Mobile optimization (CAL.9):** Calendar header collapses secondary buttons (Export, Book Space, Pending Requests) into a ⋯ More dropdown on mobile. Primary action button (Add Event/Submit Request) always visible. CalendarEventForm and Bulk RehearsalForm render as bottom sheets on mobile (full-width, rounded top corners, sticky footer). CalendarBookSpacePanel already bottom-sheet on mobile (built CAL.5b). PendingQueueClient batch date table wrapped in overflow-x-auto for horizontal scroll.
 
 **Event Creation / Submission (CAL.5a):** Single form `CalendarEventForm.tsx` with role-adaptive behavior:
 - Fields: Title, Event Type, Custom Type Label (if Other), Location (required for Super Admin / calendar_editor; optional "Preferred Location" for others), Date, Start Time, End Time, Description, Requirements, Contacts (up to 5, name + phone, normalized via `normalizePhone()`).
@@ -749,13 +751,54 @@ optional and additive: entering email or phone personalizes the view with a volu
 - For direct-create (Super Admin / calendar_editor): per-date conflict detection runs server-side. Partial success — non-conflicting dates approved, conflicting dates reported.
 - For pending flow: all dates saved as pending, no conflict check at submission.
 
-**Pending Approval Queue (`/crew/calendar/pending`, CAL.5b):** Super Admin only. Server-side conflict pre-check at page load for events with a preferred location set. Two sections:
-- Rehearsal Batches: grouped by batch, collapsible cards. Per-date table: Date, Requested Time, Location Selector, Conflict Indicator (⚠ / ✓ / —), Approve / Skip actions. "Approve All Available" button approves non-conflicted dates with a location selected via `approveBatch()`.
-- Individual Requests: per-event cards with same location selector and conflict logic.
+**Pending Approval Queue (`/crew/calendar/pending`, CAL.5b + CAL.10c):** Super Admin only. Server-side conflict pre-check at page load for events with a preferred location set. Three sections:
+- Rehearsal Batches: grouped by batch, collapsible cards. Per-date table: Date, Requested Time, Location Selector, Conflict Indicator (⚠ / ✓ / —), Approve / Skip actions. "Approve All Available" approves non-conflicted dates via `approveBatch()`.
+- Recurring Events (CAL.10c): grouped by `recurrence_group_id`, same card pattern as batches. Header shows series title + frequency badge. Approve All calls `approveCalendarEvent()` per occurrence.
+- Individual Requests: non-batch, non-recurring events.
 Location selector onChange triggers live `checkEventConflict()` re-check. Approve button disabled when conflict confirmed. `approveCalendarEvent(eventId, locationId)` runs a final server-side conflict check before approving.
 Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent()` in `lib/actions/calendar.ts`.
 
-**Public Events Calendar (`/calendar`, CAL.7 — planned):** Read-only. Shows `event_type = 'performance'` and `status = 'approved'` events only. Month view. "Needs volunteers" indicator on show dates with at least one open slot. Click → show name, time, "Sign up to volunteer →" link to show slot-claiming page. No room detail, no filters, no booking.
+**Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Click pill → show name, time, "Sign up to volunteer →" link to `/shows/[id]`. Month navigation via `?month=YYYY-MM` URL param (CT-safe default). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link added to `/` landing page and `/shows` page. Component: `components/calendar/PublicCalendarGrid.tsx`.
+
+**Recurring Events (CAL.10a–c):**
+
+**Schema:** `recurrence_groups` table (Migration 022) is the series template. Each occurrence is a standard `calendar_events` row with `recurrence_group_id` FK (nullable, ON DELETE SET NULL). Fields on `recurrence_groups`: title, event_type, custom_type_label, location_id, start_time (time), end_time (time), description, requirements, frequency (`weekly` | `biweekly` | `monthly`), series_start_date (date), series_end_date (date, nullable), status (`active` | `cancelled`), submitted_by.
+
+**Generation:** `generateOccurrenceDates()` in `lib/utils/calendar-recurrence.ts` (pure, client-safe) generates YYYY-MM-DD date strings from series_start_date forward. Cap: 12 months if series_end_date is null. Monthly uses date-fns `addMonths()` (handles month-end correctly — Jan 31 + 1 month → Feb 28/29). Returns an array of date strings; each becomes one `calendar_events` row via `buildEventTimes()`.
+
+**Frequencies:**
+- `weekly`: repeats every 7 days from series_start_date
+- `biweekly`: repeats every 14 days
+- `monthly`: repeats on the same day of the month
+
+**Creation:** Third option in the action dropdown. `CalendarRecurringEventForm.tsx` — same modal pattern as CalendarEventForm. Fields: Title, Event Type, Location, Start Time, End Time, Frequency (radio buttons: Weekly / Bi-Weekly / Monthly), First Occurrence (date), Last Occurrence (optional date), live N-events preview (`describeRecurrence()` from `lib/utils/calendar-recurrence.ts`), Description, Requirements, Contacts. Live preview: "Weekly on Mondays — 52 events through Jul 2027". Server action: `createRecurringEvent()` in `lib/actions/calendar.ts`. Batch inserts all occurrence rows in one call.
+
+**Edit/cancel scope picker:** `RecurrenceScopePicker.tsx` — modal with three choices:
+- "Only this occurrence" — updates/cancels one event, detaches it from the series (recurrence_group_id → null for edits)
+- "This and all future occurrences" — updates/cancels this and all later events in the group
+- "All occurrences" — updates/cancels every event; cancel also sets recurrence_groups.status = 'cancelled'
+
+Clicking Edit on a recurring event in the day panel opens the scope picker first, then the form. Clicking Cancel on a recurring event opens the scope picker in cancel mode — no form, direct action. Non-recurring events: Edit opens form directly, Cancel calls `cancelCalendarEvent()` directly.
+
+**Server actions** (in `lib/actions/calendar.ts`): `createRecurringEvent()`, `editRecurringOccurrence()`, `cancelRecurringOccurrence()`.
+
+**Pending queue:** Recurring Events section in PendingQueueClient alongside Rehearsal Batches and Individual Requests. Grouped by `recurrence_group_id`. Card header shows series title + frequency badge. Same location selector + conflict indicator per occurrence. Approve All Available calls `approveCalendarEvent()` loop (not `approveBatch()` — deferred optimization).
+
+**AuditAction types:** `recurring_event.create`, `recurring_event.edit`, `recurring_event.cancel`.
+
+**Key utilities:**
+- `lib/utils/calendar-recurrence.ts` — `generateOccurrenceDates()`, `describeRecurrence()` (pure, client-safe)
+- `types/calendar.ts` — `RecurrenceGroup`, `RecurrenceGroupFrequency`, `RecurrenceGroupStatus`
+- `lib/validations/calendar.ts` — `recurringEventSchema`, `RecurringEventFormData`
+
+**CalendarEventChip recurring indicator (CAL.10c):** Recurring events show a '↻' icon overlay. In compact mode (month grid pills): tiny icon in top-right corner, `aria-hidden`. In full mode (agenda view rows): small '↻ Recurring' label below the title.
+
+**iCalendar Export & Subscription (CAL.7):** Admin calendar export for Production Crew users. Two modes:
+- **Subscription URL (live sync):** `/api/calendar/feed.ics?token=[calendar_subscription_token]`. Token is per-admin UUID stored in `admin_users.calendar_subscription_token` (Migration 021, NOT NULL DEFAULT gen_random_uuid()). Calendar apps (Google Calendar, Apple Calendar, Outlook) subscribe to this URL and auto-sync as events are added or changed. Auth via token (calendar apps can't send session cookies). Route uses `getAdminClient()`. Returns all approved `calendar_events` as iCalendar format.
+- **Download (.ics file):** Same route with the admin's own token; download delivers a snapshot.
+- **`CalendarExportModal.tsx`:** In the calendar header (Export button, all roles). Subscribe section: URL display with copy button, per-platform instructions (Google/Apple/Outlook), "Rotate subscription URL" button (`rotateCalendarToken()` server action generates a new UUID, invalidates old URL). Download section: direct `<a>` link to the .ics route.
+- **Volunteer slot-claim `.ics` (CAL.7 + ADMIN.26):** `/api/calendar/claim.ics?token=[claim_token]`. Public route (no auth — uses claim_token for identity). Returns a single VEVENT for the claimed show date. DST-safe CT time construction (fromZonedTime pattern). Fixed filename `volunteer-call.ics`. Added to: (1) slot claim confirmation email ("📅 Add to your calendar" link), (2) waitlist promotion email (ADMIN.26 — `sendWaitlistPromotionEmail()` now accepts and uses `claimToken`), (3) Call Board call history rows (claimed status only).
+- **Shared iCalendar utility:** `lib/utils/ical.ts` — `generateVEvent()`, `wrapInCalendar()`, `buildClaimICalEvent()`, `buildAdminCalendarEvents()`. Pure TypeScript, RFC 5545 compliant, CRLF line endings, 75-octet line folding, text escaping.
 
 **Key files (CAL phase):**
 - `lib/actions/calendar-sync.ts` — `syncShowDateToCalendar()`
@@ -765,9 +808,16 @@ Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent
 - `lib/validations/calendar.ts` — `calendarEventSchema`, `calendarEventSubmitSchema`, `rehearsalBatchSchema`
 - `types/calendar.ts` — `CalendarEvent`, `CalendarEventType`, `CalendarEventContact`, `RehearsalBatch`, `ShowDateBuffer`, etc.
 - `types/admin.ts` — `AdminRole` type (consolidated from inline definitions in CAL.2; `lib/auth.ts` re-exports it)
-- `components/crew/calendar/` — CalendarShell, CalendarMonthView, CalendarWeekView, CalendarWeekGrid, CalendarAgendaView, CalendarDayPanel, CalendarFilterBar, CalendarEventChip, CalendarLegend, CalendarEventForm, CalendarBulkRehearsalForm, PendingQueueClient, CalendarBookSpacePanel
+- `lib/utils/calendar-recurrence.ts` — `generateOccurrenceDates()`, `describeRecurrence()`
+- `lib/utils/calendar-layout.ts` — `computeColumnLayout()`, `computeEventPosition()`, `EventWithLayout` type (unified week grid layout)
+- `lib/utils/ical.ts` — `generateVEvent()`, `wrapInCalendar()`, `buildClaimICalEvent()`, `buildAdminCalendarEvents()` (iCalendar generation)
+- `lib/actions/calendar.ts` — all calendar server actions including `createRecurringEvent()`, `editRecurringOccurrence()`, `cancelRecurringOccurrence()`, `rotateCalendarToken()`
+- `lib/validations/calendar.ts` — `calendarEventSchema`, `calendarEventSubmitSchema`, `rehearsalBatchSchema`, `recurringEventSchema`
+- `types/calendar.ts` — `CalendarEvent`, `CalendarEventType`, `CalendarEventContact`, `RehearsalBatch`, `ShowDateBuffer`, `RecurrenceGroup`, `RecurrenceGroupFrequency`, `RecurrenceGroupStatus`
+- `components/crew/calendar/` — CalendarShell, CalendarMonthView, CalendarWeekView (wrapper), UnifiedWeekGrid, WeekAgendaView, CalendarAgendaView, CalendarDayPanel, CalendarFilterBar, CalendarEventChip, CalendarLegend, CalendarEventForm, CalendarBulkRehearsalForm, CalendarRecurringEventForm, RecurrenceScopePicker, CalendarExportModal, PendingQueueClient, CalendarBookSpacePanel (Note: `CalendarWeekGrid.tsx` deleted in ADMIN.26 — replaced by UnifiedWeekGrid.tsx in CAL.9)
+- `components/calendar/PublicCalendarGrid.tsx` (public /calendar page — separate from crew components)
 
-**ADMIN.25 — Default Hours Fallback Update:** `getLocationHoursBucket()` in `lib/actions/attendance.ts` (and the parallel auto-fill in `ShowForm.tsx`) was updated to check `locations.default_hours` (Migration 020 — numeric, nullable) as the primary source before falling back to the `app_settings` name→bucket map. This means per-location default hours can be set directly on the `locations` record. The three existing `app_settings` keys (`default_hours_mainstage`, `default_hours_studio_x`, `default_hours_one_off`) remain as fallbacks when `locations.default_hours` is null. Per-location `default_hours` UI planned for CAL.8 — currently settable via Supabase dashboard only.
+**ADMIN.25 — Default Hours Fallback Update:** `getLocationHoursBucket()` in `lib/actions/attendance.ts` (and the parallel auto-fill in `ShowForm.tsx`) was updated to check `locations.default_hours` (Migration 020 — numeric, nullable) as the primary source before falling back to the `app_settings` name→bucket map. This means per-location default hours can be set directly on the `locations` record. The three existing `app_settings` keys (`default_hours_mainstage`, `default_hours_studio_x`, `default_hours_one_off`) remain as fallbacks when `locations.default_hours` is null. Per-location `default_hours` UI built in CAL.8 (`/crew/settings/locations`).
 
 **Communication (`/crew/communication`):**
 Stub page built in Phase 11.1. Navigation link active.
@@ -802,7 +852,7 @@ displays 8 section cards using the `LinkedCard` /
 | User Management | `/crew/settings/users` | Super Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
 | Audit Log | `/crew/settings/audit-log` | Editor + Super Admin (LinkedCard); Viewer (LockedCard "Editor & Super Admin only") |
 | Document Management | `/crew/settings/documents` | Editor + Super Admin (LinkedCard, "Beta" badge); Viewer (LockedCard) |
-| Location Management | `/crew/settings/locations` | Super Admin only (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **planned CAL.8, not yet built** |
+| Location Management | `/crew/settings/locations` | Super Admin only (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
 
 Sub-pages built in Phase 11.2:
 - `/crew/settings/announcement` — see Announcement
@@ -820,9 +870,18 @@ Sub-pages built in Phase 11.2:
   `signup_show_school`, `signup_show_age_range`. Single
   save. `revalidatePath('/')`. Action:
   `saveSignupFormToggles()`.
-- `/crew/settings/general` — Default hours (fallback by location bucket: Mainstage/Studio X/One-Off, min 0 max 24, step 0.5) and default reply-to email. These keys are now fallbacks only — per-location `default_hours` on the `locations` table takes precedence when set (ADMIN.25). Per-location UI planned for CAL.8. Two
+- `/crew/settings/general` — Default hours (fallback by location bucket: Mainstage/Studio X/One-Off, min 0 max 24, step 0.5) and default reply-to email. These keys are now fallbacks only — per-location `default_hours` on the `locations` table takes precedence when set (ADMIN.25). A fallback hierarchy note with a link to Location Management was added to this page in CAL.8. Two
   independently-saving sections. Actions:
   `saveDefaultHours()`, `saveDefaultReplyTo()`.
+
+**Location Management (`/crew/settings/locations`, CAL.8 — Super Admin only):**
+- Full CRUD for the `locations` table. Page: `app/crew/(app)/settings/locations/page.tsx`. Component: `components/crew/settings/LocationsManager.tsx`.
+- **Add new location:** Name, color (`<input type="color">` — native OS color picker, 6-digit hex), per-location `default_hours` (numeric, optional, takes precedence over `app_settings` bucket fallbacks per ADMIN.25). New location appears at bottom with `sort_order = max + 1`, `is_active = true`.
+- **Edit existing location:** Inline edit (same row) — name, color picker pre-filled, default_hours. Save updates immediately.
+- **Reorder:** ↑↓ arrow buttons. No drag library (R6). Same pattern as hearing_options reorder.
+- **Deactivate / Reactivate:** Deactivated locations hidden from event type selectors and week grid rows. Existing calendar events keep their location FK.
+- **Server actions** (in `lib/actions/settings.ts`): `createLocation()`, `updateLocation()`, `reorderLocation()`, `toggleLocationActive()`. All Super Admin only, audit-logged, `revalidatePath()` for settings + calendar + shows routes.
+- **AuditAction types:** `location.create`, `location.update`, `location.reorder`, `location.deactivate` (covers both directions).
 
 All settings mutations use `getServerClient()`, upsert
 via `ON CONFLICT (key) DO UPDATE`, log to `audit_log`
