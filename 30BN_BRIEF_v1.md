@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.0
-### Created: July 2026 | Last Updated: July 2026 — v3.0 (Beta build — Phase CAL active)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.1
+### Created: July 2026 | Last Updated: July 2026 — v3.1 (Phase CAL complete — Phase 13 next)
 
 ---
 
@@ -701,7 +701,7 @@ optional and additive: entering email or phone personalizes the view with a volu
 
 **Overview:** A theater-wide room-booking and event calendar system. Two surfaces: a full Production Crew admin calendar at `/crew/calendar` and a public read-only Events Calendar at `/calendar` (shows performance dates and volunteer-needs indicators only).
 
-**Locations (`locations` table, Migration 016):** Locations replace the old `show_type` concept (CAL.1 migration). All bookable spaces are rows in the `locations` table: Mainstage (#293994 navy), Mainstage Lobby (#0D9488 teal), Green Room (#15803D green), Studio X (#F26522 orange), Studio X Office (#7C3AED purple). Each location has a display color used for event chips, the room-booking grid, and the legend. Location management UI (add/edit/reorder/deactivate, color picker, per-location `default_hours`) planned for CAL.8. Shows now carry a `location_id` FK instead of a `show_type` text column.
+**Locations (`locations` table, Migration 016):** Locations replace the old `show_type` concept (CAL.1 migration). All bookable spaces are rows in the `locations` table: Mainstage (#293994 navy), Mainstage Lobby (#0D9488 teal), Green Room (#15803D green), Studio X (#F26522 orange), Studio X Office (#7C3AED purple). Each location has a display color used for event chips, the room-booking grid, and the legend. Location management UI (add/edit/reorder/deactivate, color picker, per-location `default_hours`) built in CAL.8 (`/crew/settings/locations`). Shows now carry a `location_id` FK instead of a `show_type` text column.
 
 **Show-to-Calendar Auto-Sync (CAL.3):** When a show date is created or updated, a `calendar_events` row is automatically upserted via `syncShowDateToCalendar(showDateId, supabase)` in `lib/actions/calendar-sync.ts`. Key behavior:
 - `event_type = 'performance'`, `source = 'show'`, `status = 'approved'`, `submitted_by = null`
@@ -802,11 +802,8 @@ Clicking Edit on a recurring event in the day panel opens the scope picker first
 
 **Key files (CAL phase):**
 - `lib/actions/calendar-sync.ts` — `syncShowDateToCalendar()`
-- `lib/actions/calendar.ts` — all calendar server actions (checkEventConflict, createCalendarEvent, updateCalendarEvent, createRehearsalBatch, approveCalendarEvent, approveBatch, cancelCalendarEvent, findAvailableSlots)
 - `lib/utils/calendar-conflict.ts` — `hasConflict()`, `hasConflictWithBuffer()`
 - `lib/utils/calendar-availability.ts` — `getAvailableWindows()`, grid helpers
-- `lib/validations/calendar.ts` — `calendarEventSchema`, `calendarEventSubmitSchema`, `rehearsalBatchSchema`
-- `types/calendar.ts` — `CalendarEvent`, `CalendarEventType`, `CalendarEventContact`, `RehearsalBatch`, `ShowDateBuffer`, etc.
 - `types/admin.ts` — `AdminRole` type (consolidated from inline definitions in CAL.2; `lib/auth.ts` re-exports it)
 - `lib/utils/calendar-recurrence.ts` — `generateOccurrenceDates()`, `describeRecurrence()`
 - `lib/utils/calendar-layout.ts` — `computeColumnLayout()`, `computeEventPosition()`, `EventWithLayout` type (unified week grid layout)
@@ -1013,7 +1010,11 @@ has been sent for each show date.
 
 **Migration 020 status:** Applied — `020_locations_default_hours.sql` (ADMIN.25). Adds `default_hours numeric(4,2)` (nullable, no default) to `locations`. When set, takes precedence over the `app_settings` name→bucket fallback in `getLocationHoursBucket()`. Per-location UI planned for CAL.8.
 
-**Next migration:** 021
+**Migration 021 status:** Applied — `021_admin_calendar_token.sql` (CAL.7). Adds `calendar_subscription_token uuid NOT NULL DEFAULT gen_random_uuid()` to `admin_users`. Creates UNIQUE index `idx_admin_users_calendar_token` on `admin_users(calendar_subscription_token)`. Gives every existing admin a unique subscription token on migration; new admins get one via the DEFAULT. Used by the iCalendar admin feed route (`/api/calendar/feed.ics`) to authenticate calendar app subscription requests without a session cookie.
+
+**Migration 022 status:** Applied — `022_recurring_events.sql` (CAL.10a). Creates `recurrence_groups` table (series template for recurring calendar events). Adds `recurrence_group_id uuid REFERENCES recurrence_groups(id) ON DELETE SET NULL` to `calendar_events`. Creates index `idx_calendar_events_recurrence_group` on `calendar_events(recurrence_group_id)`. RLS on `recurrence_groups`: authenticated SELECT + INSERT, super_admin_all FOR ALL (using is_admin()).
+
+**Next migration:** 023
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1269,6 +1270,8 @@ role             text NOT NULL CHECK (role IN (
 ))
 is_active        boolean NOT NULL DEFAULT true
 calendar_editor  boolean NOT NULL DEFAULT false
+calendar_subscription_token uuid NOT NULL
+  DEFAULT gen_random_uuid()
 last_login               timestamptz
 activity_cleared_at      timestamptz
 created_at               timestamptz NOT NULL DEFAULT now()
@@ -1284,7 +1287,16 @@ created_at               timestamptz NOT NULL DEFAULT now()
 --   viewer account: direct write access to calendar
 --   (events approved immediately). DB CHECK constraint
 --   enforces calendar_editor = false on super_admin
---   and production accounts. UI toggle planned CAL.6.
+--   and production accounts. UI toggle built CAL.6 on
+--   /crew/settings/users (Super Admin only) via
+--   toggleCalendarEditor() in lib/actions/users.ts.
+--   Logged as user.calendar_editor_change in audit_log.
+-- NOTE: calendar_subscription_token added Migration 021
+--   (CAL.7). uuid NOT NULL DEFAULT gen_random_uuid().
+--   UNIQUE index idx_admin_users_calendar_token.
+--   Used by /api/calendar/feed.ics to authenticate
+--   calendar app subscriptions without a session cookie.
+--   Rotate via rotateCalendarToken() server action.
 ```
 
 ### forms
@@ -1410,6 +1422,8 @@ source_show_date_id uuid REFERENCES show_dates(id)
   ON DELETE CASCADE
 rehearsal_batch_id  uuid REFERENCES rehearsal_batches(id)
   ON DELETE SET NULL
+recurrence_group_id uuid REFERENCES recurrence_groups(id)
+  ON DELETE SET NULL
 submitted_by     uuid REFERENCES admin_users(id)
 approved_by      uuid REFERENCES admin_users(id)
 created_at       timestamptz NOT NULL DEFAULT now()
@@ -1420,6 +1434,14 @@ updated_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_calendar_events_source_show_date_id
 -- INDEX: idx_calendar_events_submitted_by
 -- INDEX: idx_calendar_events_rehearsal_batch_id
+-- INDEX: idx_calendar_events_recurrence_group
+--   (idx_calendar_events_recurrence_group_id on
+--   calendar_events.recurrence_group_id — Migration 022)
+-- NOTE: recurrence_group_id added Migration 022
+--   (CAL.10a). Nullable, ON DELETE SET NULL. When set:
+--   this event is one occurrence in a recurring series.
+--   Editing with scope='this' sets it to null (detaches
+--   from series). See recurrence_groups table.
 -- UNIQUE: calendar_events_source_show_date_id_unique
 --   on source_show_date_id (Migration 018) —
 --   required upsert conflict anchor for
@@ -1452,6 +1474,51 @@ created_at       timestamptz NOT NULL DEFAULT now()
 -- before insert, per ADMIN.21 pattern).
 -- RLS: authenticated all operations.
 -- Migration 017 (017_calendar_schema.sql)
+```
+
+### recurrence_groups
+```sql
+id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title            text NOT NULL
+event_type       text NOT NULL CHECK (event_type IN (
+  'performance','rehearsal','teaching',
+  'meeting','event','rental','other'
+))
+custom_type_label text
+location_id      uuid REFERENCES locations(id)
+start_time       time NOT NULL
+end_time         time NOT NULL
+description      text
+requirements     text
+frequency        text NOT NULL CHECK (
+  frequency IN ('weekly','biweekly','monthly')
+)
+series_start_date date NOT NULL
+series_end_date   date
+status           text NOT NULL DEFAULT 'active' CHECK (
+  status IN ('active','cancelled')
+)
+submitted_by     uuid NOT NULL
+  REFERENCES admin_users(id)
+created_at       timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_recurrence_groups_submitted_by
+-- RLS: authenticated_select_recurrence_groups
+--   (SELECT, authenticated), authenticated_insert_
+--   recurrence_groups (INSERT, authenticated),
+--   super_admin_modify_recurrence_groups (ALL,
+--   authenticated, is_admin()).
+-- Series template: each occurrence is a separate
+--   calendar_events row with recurrence_group_id FK.
+-- frequency values: 'weekly' (every 7 days),
+--   'biweekly' (every 14 days), 'monthly' (same day
+--   of month, date-fns addMonths() — handles month-
+--   end correctly: Jan 31 + 1mo → Feb 28/29).
+-- series_end_date null = indefinite (capped at 12
+--   months forward by generateOccurrenceDates()).
+-- status 'cancelled': set when cancel scope='all'.
+--   Individual occurrence cancels use
+--   calendar_events.status = 'cancelled' instead.
+-- Migration 022 (022_recurring_events.sql)
 ```
 
 ### email_log
@@ -2031,6 +2098,131 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
                  full Master Calendar section added,
                  General Defaults fallback note updated,
                  Location Management card added to settings.
+30BN-DOC.26    ✓ Process Update v3.0 (Phase CAL
+                 active through CAL.5b — §7 client
+                 patterns, §8 commit-before-build-
+                 report, §10/§11 calendar checks,
+                 §14 five new process rules)
+30BN-DOC.27    ✓ Deferred Verifications v7 (CAL.1–
+                 CAL.5b-FIX2 items — 110 new items,
+                 Quick Reference + Seed Data Cleanup
+                 updated, metadata relocated to end)
+30BN-CAL.6     ✓ calendar_editor toggle on user
+                 management page. toggleCalendar
+                 Editor() server action +
+                 user.calendar_editor_change audit
+                 type. Production row type fix
+                 (ROLE_BADGE['production'] gap).
+                 Batch Approve fallback fix (Q8
+                 from CAL.5b-FIX2).
+30BN-CAL.7     ✓ Public /calendar page + iCal
+                 admin subscription feed (Migration
+                 021: calendar_subscription_token;
+                 /api/calendar/feed.ics;
+                 CalendarExportModal.tsx;
+                 rotateCalendarToken()). Volunteer
+                 slot-claim .ics (/api/calendar/
+                 claim.ics). lib/utils/ical.ts.
+                 sendSlotClaimEmail() +
+                 sendWaitlistPromotionEmail()
+                 calendar links. Call Board claim
+                 history calendar links. "View
+                 Calendar" links on / + /shows.
+30BN-CAL.8     ✓ Location Management settings
+                 (/crew/settings/locations).
+                 createLocation(), updateLocation(),
+                 reorderLocation(), toggleLocation
+                 Active() in lib/actions/settings.ts.
+                 location.* AuditAction types.
+                 General Defaults fallback note +
+                 link. Batch location conflict
+                 check loop (batchConflictChecking
+                 state, Approve All disabled).
+30BN-CAL.9     ✓ Unified week grid — Unified
+                 WeekGrid.tsx (column-splitting
+                 algorithm, buffer blocks, current-
+                 time indicator). WeekAgendaView
+                 .tsx (mobile). CalendarWeekView
+                 .tsx rewritten. Toggle removed.
+                 Mobile: ⋯ More header menu, bottom
+                 sheet forms, flex-col pending rows.
+                 lib/utils/calendar-layout.ts
+                 (computeColumnLayout(), compute
+                 EventPosition(), EventWithLayout).
+30BN-CAL.10a   ✓ Recurring events foundation.
+                 Migration 022 (recurrence_groups
+                 + calendar_events.recurrence_group
+                 _id, RLS). lib/utils/calendar-
+                 recurrence.ts (generate
+                 OccurrenceDates(), describe
+                 Recurrence() — pure, client-safe).
+                 recurringEventSchema. RecurrenceGroup
+                 types in types/calendar.ts.
+                 createRecurringEvent(), edit
+                 RecurringOccurrence(), cancel
+                 RecurringOccurrence() in lib/
+                 actions/calendar.ts.
+30BN-CAL.10b   ✓ Recurring events creation UI.
+                 CalendarRecurringEventForm.tsx
+                 (live preview, frequency radio,
+                 role-adaptive). RecurrenceScopePicker
+                 .tsx (edit/cancel scope modal,
+                 mobile bottom sheet). CalendarShell:
+                 third dropdown, scope picker state
+                 + handlers + editScope.
+                 CalendarEventForm: editScope prop +
+                 editRecurringOccurrence() routing.
+30BN-CAL.10c   ✓ Recurring events display + queue.
+                 CalendarDayPanel: scope picker
+                 trigger, Cancel event button,
+                 "↻ Part of a recurring series"
+                 note. CalendarEventChip: ↻ overlay
+                 (compact) + label (full mode).
+                 PendingQueueClient: Recurring
+                 Events section + trueIndividual
+                 Events filter. pending/page.tsx:
+                 recurrence_groups fetch.
+30BN-ADMIN.26  ✓ CAL phase cleanup. users.ts:
+                 deactivateUser/reactivateUser/
+                 changeRole migrated to
+                 getServerClient() + revalidatePath;
+                 createUser() keeps getAdminClient()
+                 for auth.admin.* calls (sanctioned).
+                 UsersTable.tsx: router.refresh()
+                 replaces window.location.href;
+                 setIsSubmitting(false) bug fixed.
+                 changeRole() Production guard.
+                 sendWaitlistPromotionEmail() +
+                 claimToken + calendar link.
+                 claim.ics Content-Disposition →
+                 fixed filename "volunteer-call
+                 .ics". CalendarWeekGrid.tsx deleted.
+30BN-DOC.28a   ✓ Brief Update v3.1 Part A (§1,
+                 §2, §7, §8): phase updated (CAL
+                 complete), terminology duplicate
+                 removed, calendar_editor note +
+                 User Management ADMIN.26/CAL.6,
+                 week view unified grid, mobile
+                 optimization note, dropdown three
+                 options, day panel recurring
+                 features, chip ↻ indicator anchor,
+                 public /calendar built, iCalendar
+                 export section, Location Management
+                 built + full spec, Recurring Events
+                 section, Key files updated, pending
+                 queue three sections.
+30BN-DOC.29    ✓ Process Update v3.1 (Phase CAL
+                 complete — §7 iCalendar + createUser
+                 exceptions + Content-Disposition
+                 rule; §11 three new checklist items;
+                 §13 Phase CAL complete + prompt log
+                 through ADMIN.26; §14 two new rules)
+30BN-DOC.30    ✓ Deferred Verifications v8 (CAL.6–
+                 CAL.10c + ADMIN.26 items — 115 new
+                 items, Quick Reference expanded,
+                 Seed Data Cleanup + recurrence_groups
+                 cleanup, metadata block relocated
+                 to document end)
 ```
 
 ---
@@ -2352,10 +2544,9 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase CAL is the active Beta phase. CAL.1–CAL.5b are complete. CAL.6–CAL.8 remain.*
+*Phase CAL is complete. CAL.1–CAL.10c + ADMIN.26 all shipped. Phase 13 (Email Blast System) is next.*
 
-### Phase CAL — Master Calendar System
-*CAL.1–CAL.5b complete. CAL.6–CAL.8 remaining.*
+### Phase CAL — Master Calendar System ✓ Complete
 
 **CAL.1 ✓** show_type → location_id migration.
 **CAL.2 ✓** Calendar schema + Production role.
@@ -2367,45 +2558,26 @@ Migration 015 applied.
 **CAL.5a ✓** Event creation and submission forms.
 **CAL.5b ✓** Seed data, bulk rehearsal form, pending
   approval queue, Book Space panel.
-
-**CAL.6 — Production Role User Management (~1 prompt)**
-- `calendar_editor` toggle on Editor/Viewer accounts
-  (on the Super Admin user management page,
-  `/crew/settings/users`)
-- Production role account creation via existing
-  Request Access flow — Super Admin assigns
-  `role = 'production'` on approval
-- Google OAuth Q2 fix: `app/auth/callback/route.ts`
-  already fixed in CAL.3; confirm no remaining gaps
-- Batch Approve button disabled condition fallback
-  (Q8 from CAL.5b-FIX2 — batch-context Approve does
-  not fall back to event.location_id the way
-  individual-events Approve does; fix alongside
-  calendar_editor toggle)
-
-**CAL.7 — Public /calendar Page (~1 prompt)**
-- Read-only. Performance events only
-  (event_type='performance', status='approved').
-- Month view. "Needs volunteers" indicator on dates
-  with at least one open slot (any volunteer_role with
-  claimed < slots_available). Click → show name, time,
-  "Sign up to volunteer →" link to /shows/[id].
-- No room detail, no filters, no booking.
-
-**CAL.8 — Location Management Settings (~1 prompt)**
-- New settings card: Location Management at
-  `/crew/settings/locations` (Super Admin only)
-- Add, rename, reorder (↑↓ arrows), deactivate/
-  reactivate locations. Color picker for each location.
-- Per-location `default_hours` field (numeric, optional
-  — takes precedence over app_settings bucket fallback
-  per ADMIN.25 pattern).
-- Update General Defaults settings page to clarify
-  that the three existing keys are fallbacks only.
-- Batch Approve Q7: batch-level location assignment
-  button should trigger conflict checks for each
-  affected date (same as per-row selector behavior).
-  Fold into CAL.8 alongside location management.
+**CAL.6 ✓** calendar_editor toggle on user management
+  page. Batch Approve button fallback fix.
+**CAL.7 ✓** Public /calendar page. iCalendar admin
+  subscription feed + volunteer slot-claim .ics.
+  CalendarExportModal. Calendar links in emails.
+**CAL.8 ✓** Location Management settings page.
+  Per-location default_hours UI. General Defaults
+  fallback note. Batch location conflict check fix.
+**CAL.9 ✓** Unified week grid (UnifiedWeekGrid.tsx,
+  column-splitting). Mobile optimization (⋯ More
+  header, bottom sheet modals, WeekAgendaView.tsx).
+**CAL.10a ✓** Recurring events foundation: Migration
+  022, recurrence_groups table, calendar-recurrence
+  .ts utility, three new server actions.
+**CAL.10b ✓** Recurring events creation UI:
+  CalendarRecurringEventForm.tsx (live preview),
+  RecurrenceScopePicker.tsx, Shell wiring.
+**CAL.10c ✓** Recurring events display + pending
+  queue: day panel scope picker, ↻ chip indicator,
+  Recurring Events queue section.
 
 ### Phase 13 — Email Blast System (~4 prompts)
 - Resend full integration: branded HTML templates for all email types
@@ -2633,5 +2805,6 @@ Phase 12 prompts all marked complete (12.1–12.4); §10
 DOC.20–DOC.21 + 12.1–12.4 added to prompt log; §11
 Beta thank-you email marked built in Alpha; §12 Open
 Decision #7 resolved; DOC.21 logged)*
-*Cross-reference: 30BN_PROCESS_v1.md v2.1*
+*Cross-reference: 30BN_PROCESS_v1.md v3.1*
 *v3.0 (July 2026 — Beta Phase CAL active: §1 current phase updated (Beta underway, Phase CAL active); §1 public surfaces updated (/calendar added); §2 terminology table updated (Production role, Calendar Editor flag); §7 roles table updated (Production row, calendar_editor flag paragraph, middleware note); §8 Show Management updated (show_type → location, end time, buffer time); §8 Master Calendar section added (full feature spec: locations, auto-sync, event types, role access, calendar views, event creation, bulk rehearsal, pending queue, Book Space, public calendar); §8 General Defaults fallback note updated; §8 Location Management card added (planned CAL.8); §9 Migrations 016–020 status added, next migration 021; §9 locations table added; §9 shows.show_type replaced by location_id; §9 show_dates.end_time added; §9 show_date_buffer table added; §9 rehearsal_batches, calendar_events, calendar_event_contacts tables added; §9 admin_users.role extended + calendar_editor added; §10 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a added to prompt log; §11 Phase CAL added with CAL.1–CAL.5b marked complete + CAL.6–CAL.8 planned; DOC.25a/25b logged)*
+*v3.1 (July 2026 — Phase CAL complete: §9 Migrations 021–022 status added (021: admin calendar token; 022: recurring events schema); next migration updated to 023; admin_users calendar_subscription_token column + calendar_editor note updated (built not planned); calendar_events recurrence_group_id column + index + note added; recurrence_groups table schema block added; §8 F2 fixed (duplicate Key Files entries removed); §8 F3 fixed (stale 'planned for CAL.8' Locations note updated to built); §10 prompt log DOC.26–30 + CAL.6–CAL.10c + ADMIN.26 added; §11 Phase CAL marked complete (CAL.1–CAL.10c); DOC.28a/28b logged)*
