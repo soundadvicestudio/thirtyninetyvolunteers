@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { CheckCircle } from 'lucide-react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
+import Underline from '@tiptap/extension-underline'
 import { searchVolunteers, previewBlast, sendBlastEmail } from '@/lib/actions/blast'
 
 type Props = {
@@ -25,7 +27,16 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
   const [subject, setSubject] = useState('')
   const [replyTo, setReplyTo] = useState(defaultReplyTo)
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+        },
+      }),
+    ],
     content: '',
     immediatelyRender: false, // required for Next.js App Router to prevent hydration mismatch
   })
@@ -145,6 +156,20 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
     recipientMode === mode
       ? 'w-full sm:w-auto px-4 py-2 rounded bg-navy text-white text-sm'
       : 'w-full sm:w-auto px-4 py-2 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text bg-white dark:bg-dark-surface text-sm'
+
+  function handleSetLink() {
+    const previousUrl =
+      editor?.getAttributes('link').href ?? ''
+    const url = window.prompt('Enter URL:', previousUrl)
+    if (url === null) return // user cancelled
+    if (url === '') {
+      editor?.chain().focus().unsetLink().run()
+      return
+    }
+    editor?.chain().focus()
+      .setLink({ href: url })
+      .run()
+  }
 
   if (step === 'sent') {
     return (
@@ -407,6 +432,47 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           </button>
           <button
             type="button"
+            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            className={`px-2 py-1 text-xs rounded underline ${
+              editor?.isActive('underline')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            U
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+            className={`px-2 py-1 text-xs rounded font-bold ${
+              editor?.isActive('heading', { level: 1 })
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            H1
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+            className={`px-2 py-1 text-xs rounded font-semibold ${
+              editor?.isActive('heading', { level: 2 })
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            H2
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+            className="px-2 py-1 text-xs rounded text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border"
+            title="Insert horizontal rule"
+          >
+            —
+          </button>
+          <button
+            type="button"
             onClick={() => editor?.chain().focus().toggleBulletList().run()}
             className={`px-2 py-1 text-xs rounded ${
               editor?.isActive('bulletList')
@@ -426,6 +492,18 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             }`}
           >
             1. List
+          </button>
+          <button
+            type="button"
+            onClick={handleSetLink}
+            className={`px-2 py-1 text-xs rounded ${
+              editor?.isActive('link')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+            title="Insert or edit link"
+          >
+            🔗
           </button>
         </div>
 

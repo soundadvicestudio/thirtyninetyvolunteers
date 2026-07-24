@@ -51,12 +51,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
                 var saved = localStorage.getItem(
                   'crew-theme'
                 );
-                var preferred = saved || (
-                  window.matchMedia(
-                    '(prefers-color-scheme: dark)'
-                  ).matches ? 'dark' : 'light'
-                );
-                if (preferred === 'dark') {
+                if (saved === 'dark') {
                   document.body.setAttribute('data-theme', 'dark');
                 }
               } catch(e) {}

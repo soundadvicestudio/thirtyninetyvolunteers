@@ -18,17 +18,14 @@ export function ThemeProvider({
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Read saved preference, fall back to system
+    // Read saved preference. No saved value → stay at the
+    // useState('light') default (never derive from
+    // prefers-color-scheme).
     const saved = localStorage.getItem('crew-theme') as Theme | null
     if (saved) {
       // Reads localStorage (client-only) after mount to avoid SSR hydration mismatch.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(saved)
-    } else if (
-      window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-    ) {
-      setTheme('dark')
     }
     setMounted(true)
   }, [])

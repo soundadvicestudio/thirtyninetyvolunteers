@@ -244,9 +244,9 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
     // <script>, event handlers, and javascript: hrefs. Does NOT escape
     // the body — it remains HTML for the email template.
     const sanitizedBody = sanitizeHtml(parsed.data.body, {
-      allowedTags: ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'blockquote', 'a'],
+      allowedTags: ['p', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'blockquote', 'hr', 'a'],
       allowedAttributes: {
-        a: ['href'],
+        a: ['href', 'rel'],
       },
       allowedSchemes: ['http', 'https', 'mailto'],
     })
