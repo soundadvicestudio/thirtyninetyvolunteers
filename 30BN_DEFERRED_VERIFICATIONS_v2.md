@@ -170,6 +170,47 @@ are not affected. Review before running at launch —
 only delete test series, not any real production series
 that may have been created.
 
+Also clean up any test blast emails and newly-logged
+transactional emails created during Phase 13 testing:
+
+  DELETE FROM email_log_recipients
+  WHERE email_log_id IN (
+    SELECT id FROM email_log
+    WHERE recipient_type IN ('all','individual')
+      AND sent_at > '2026-07-01'
+  );
+
+  DELETE FROM email_log
+  WHERE recipient_type IN ('all','individual')
+    AND sent_at > '2026-07-01';
+
+Also clean up transactional log entries created during
+Phase 13 testing (trigger:signup, trigger:slot_claim,
+trigger:update_link_request, etc.) — these accumulate
+from test actions and should be removed before launch:
+
+  DELETE FROM email_log_recipients
+  WHERE email_log_id IN (
+    SELECT id FROM email_log
+    WHERE recipient_type = 'transactional'
+      AND sent_by IS NULL
+      AND sent_at > '2026-07-01'
+      AND recipient_filter NOT LIKE 'show_date:%'
+  );
+
+  DELETE FROM email_log
+  WHERE recipient_type = 'transactional'
+    AND sent_by IS NULL
+    AND sent_at > '2026-07-01'
+    AND recipient_filter NOT LIKE 'show_date:%';
+
+Note: the recipient_filter NOT LIKE 'show_date:%'
+guard preserves thank-you cron rows (already handled
+by the existing thank-you cron cleanup block above).
+Review all deletes carefully before running — only
+remove test data, not any real volunteer interactions
+that may have occurred.
+
 ---
 
 ## PREREQUISITE
@@ -1169,6 +1210,39 @@ CAL.10c V1–V12 (most items need existing data)
 CAL.10c V13–V17 (pending queue Recurring Events
   section)
 
+### Phase 13.1 — requires Editor/Viewer accounts (A1):
+13.1 V2, 13.1 V4
+
+### Phase 13.1 — requires real email delivery or existing
+log rows:
+13.1 V5, 13.1 V6
+
+### Phase 13.2 — requires real email delivery:
+13.2 V1, 13.2 V2, 13.2 V3, 13.2 V4, 13.2 V5, 13.2 V6
+
+### Phase 13.3a — requires Viewer account (A1):
+13.3a V2
+
+### Phase 13.3a — requires real email delivery:
+13.3a V8
+
+### Phase 13.3a — requires Supabase cross-check
+(optional):
+13.3a V9
+
+### Phase 13.3b — requires real email delivery:
+13.3b V4
+
+### Phase 13.4a — requires real email delivery:
+13.4a V1, 13.4a V3
+
+### Phase 13.4a — advanced/optional (devtools):
+13.4a V4
+
+### Phase 13.4b — requires phone-width viewport:
+13.4b V1, 13.4b V2, 13.4b V3, 13.4b V4, 13.4b V5,
+13.4b V6, 13.4b V7
+
 ---
 
 ## ADMIN.20 — Dashboard (Season at a Glance + Quick Stats)
@@ -1268,6 +1342,9 @@ CAL.10c V13–V17 (pending queue Recurring Events
       Confirm the page renders within the sidebar layout
       (not a blank page or 404). Confirm "Coming Soon"
       badge and feature description are visible.
+      Superseded by Phase 13.3a — /crew/communication
+      is now the full blast composer. See Phase 13
+      verification items below.
 
 - [ ] **11.1 V2** — Navigate to /crew/tools/checkin.
       Confirm the page renders with sidebar layout,
@@ -3612,23 +3689,357 @@ one submitted-but-pending recurring series.*
 
 ---
 
-*Total items in this carry-forward list: 505*
-*Prior (v8): 539 items*
-*v8r cleanup: removed 29 items — 6 VERIFY-5 stub items
-(5.3 V4/V5/V8/V10/V11/V12 — VERIFY-5 session never ran;
-stubs not actionable) and 23 duplicate items from 5
-consolidation sections (EMAIL DELIVERY ITEMS: 11,
-VIEWER-GATED ITEMS: 6, WAITLIST UI: 4, NOTIFICATION
-TIMESTAMP: 1, VERCEL DASHBOARD: 1 — all items already
-existed verbatim in their original phase sections;
-Quick Reference serves the cross-referencing function
-without duplicating full item text).*
+## PHASE 13.1 — Email Activity Log & Transactional
+                Logging
+
+**Settings hub — Email Activity card:**
+
+- [ ] **13.1 V1** — Navigate to /crew/settings as Super
+      Admin. Confirm an "Email Activity" card is present
+      between the Audit Log card and the Document
+      Management card. Confirm it is a LinkedCard (not
+      locked) for Super Admin.
+
+- [ ] **13.1 V2** — Log in as Editor. Navigate to
+      /crew/settings. Confirm the Email Activity card
+      appears as a LockedCard with a "Super Admin only"
+      indicator. Log in as Viewer. Confirm the same
+      LockedCard behavior.
+      *(Requires Editor account and Viewer account — A1)*
+
+**Email Activity page:**
+
+- [ ] **13.1 V3** — Navigate to /crew/settings/email-
+      activity as Super Admin. Confirm the page loads
+      with three tabs: "All Emails," "System Only," and
+      "About System Emails."
+
+- [ ] **13.1 V4** — Navigate to /crew/settings/email-
+      activity as Editor. Confirm you are redirected to
+      /crew/settings (Editor cannot access this page).
+      *(Requires Editor account)*
+
+- [ ] **13.1 V5** — On the "All Emails" tab: confirm
+      existing logged email rows appear (e.g. rows from
+      category-match notifications or show bulk emails
+      sent via ADMIN.23, or the thank-you cron rows).
+      Confirm columns: Date, Subject, Type, Sent By,
+      Recipients, Trigger/Filter.
+
+- [ ] **13.1 V6** — Trigger a transactional email (e.g.
+      sign up a test volunteer, or claim a slot). Navigate
+      to /crew/settings/email-activity. Confirm the new
+      email appears in the "All Emails" tab with the
+      correct recipient_filter tag (e.g.
+      "trigger:signup" or "trigger:slot_claim").
+
+- [ ] **13.1 V7** — Click the "System Only" tab. Confirm
+      only rows with Sent By = "System" appear — no
+      admin-triggered bulk emails or blasts.
+
+- [ ] **13.1 V8** — Click the "About System Emails" tab.
+      Confirm a static catalog of automated email triggers
+      is visible, listing at least the 11 system email
+      types with when each fires, who receives it, and
+      spam protection notes.
+
+- [ ] **13.1 V9** — If more than 25 email rows exist:
+      confirm pagination controls appear ("Previous" /
+      "Page N of M" / "Next"). Confirm clicking Next
+      loads the next page. Confirm page state persists
+      in the URL (?page=N).
+
+- [ ] **13.1 V10** — Toggle to dark mode. Navigate to
+      /crew/settings/email-activity. Confirm the page,
+      all tabs, and log table render correctly — no light
+      backgrounds or invisible text.
+
+---
+
+## PHASE 13.2 — Branded HTML Email Templates
+
+*These items require real email delivery to a real inbox.
+Trigger each email type and check rendering in Gmail and
+Apple Mail (or whatever email clients are available).*
+
+- [ ] **13.2 V1** — Trigger a volunteer signup
+      confirmation by submitting a new volunteer on
+      the public signup form (/). Open the email in
+      Gmail. Confirm: branded navy header with logo,
+      white content area, correct volunteer name, category
+      list (if categories selected), and a "Visit Your
+      Volunteer Hub" CTA button linking to /callboard.
+      *(Requires real email delivery)*
+
+- [ ] **13.2 V2** — Claim a slot on a live show as a
+      test volunteer (/shows/[id]). Open the claim
+      confirmation email. Confirm: show name in subject,
+      show details table (role, date, time), "📅 Add to
+      your calendar" link, "Visit Your Volunteer Hub" CTA,
+      and a plain-text cancel link below the CTA. Confirm
+      the CTA links to /callboard — not /shows.
+      *(Requires real email delivery)*
+
+- [ ] **13.2 V3** — Create a new admin account via
+      /crew/settings/users with "Send Welcome Email"
+      toggled on. Open the welcome email. Confirm: branded
+      header, welcome message, login link pointing to
+      /crew/login (not /callboard — admin emails link
+      to the admin login). *(Requires real email delivery)*
+
+- [ ] **13.2 V4** — If a volunteer gets promoted off the
+      waitlist (cancel another claim that has a waitlisted
+      volunteer): open the waitlist promotion email.
+      Confirm it contains the show details, "📅 Add to
+      your calendar" link, "Visit Your Volunteer Hub" CTA,
+      and a cancel link. *(Requires real email delivery
+      + waitlisted volunteer setup)*
+
+- [ ] **13.2 V5** — Confirm the table layout renders
+      correctly in both Gmail and Apple Mail — no broken
+      table borders, no raw HTML visible, content width
+      ≤ 600px, branded colors (navy header, orange CTAs)
+      visible. *(Spot-check any one email)*
+
+- [ ] **13.2 V6** — Confirm the logo image loads in the
+      email header (the img src points to the production
+      URL). If the logo does not load, confirm the theater
+      name text "30 BY NINETY THEATRE" still appears as
+      fallback text in the header.
+      *(Check during any real email delivery test)*
+
+---
+
+## PHASE 13.3a — Email Blast Composer (Backend + Shell)
+
+- [ ] **13.3a V1** — Navigate to /crew/communication as
+      Editor or Super Admin. Confirm the stub "Coming
+      Soon" page is gone and the full blast composer
+      renders with: "New Email Blast" heading, three
+      recipient mode buttons (All Volunteers, By Category,
+      Individual), Subject field, Reply-To field (pre-
+      filled), and Message body area.
+
+- [ ] **13.3a V2** — Log in as Viewer. Navigate to
+      /crew/communication. Confirm the composer is not
+      visible. Confirm a "Email sending not available"
+      locked message appears explaining that Editor or
+      Super Admin access is required.
+      *(Requires Viewer account — A1)*
+
+- [ ] **13.3a V3** — Click "By Category." Confirm a
+      checkbox list of volunteer categories appears.
+      Confirm the categories match those visible in
+      /crew/settings/categories (loaded from DB — not
+      hardcoded).
+
+- [ ] **13.3a V4** — Click "Individual." Confirm a
+      search input appears. Type at least 2 characters
+      of a volunteer name or email. Confirm a dropdown
+      of matching active volunteers appears within ~300ms
+      (debounced). Confirm clicking a result adds that
+      volunteer as a chip below the input.
+
+- [ ] **13.3a V5** — Click the × on a selected individual
+      chip. Confirm the volunteer is removed from the
+      recipient list.
+
+- [ ] **13.3a V6** — Fill in a subject, reply-to, and
+      message body. Click "Preview & Send →". Confirm a
+      loading state appears on the button, then the
+      Confirm step renders with: summary card (subject,
+      reply-to, recipient mode, recipient count, sample
+      emails, body preview), an orange warning banner,
+      "← Back" and "Send Email Blast" buttons.
+
+- [ ] **13.3a V7** — On the Confirm step, click "← Back."
+      Confirm the compose form returns with all fields
+      intact (subject, reply-to, body, recipient mode,
+      any selected categories/individuals still present).
+
+- [ ] **13.3a V8** — Complete the compose and confirm
+      steps for a small recipient group (e.g. "By
+      Category" with one category that has few volunteers,
+      or "Individual" with one test volunteer). Click
+      "Send Email Blast." Confirm the Sent step appears:
+      CheckCircle icon, "Email sent successfully!", correct
+      recipient count, "Send Another Email" button.
+
+- [ ] **13.3a V9** — Check /crew/settings/email-activity
+      after a successful blast. Confirm a new row appears
+      with recipient_type matching the mode used (e.g.
+      'all', 'category', or 'individual') and the
+      correct recipient_filter value ('all',
+      'category:{ids}', or 'individual').
+      *(Supabase cross-check optional)*
+
+- [ ] **13.3a V10** — Click "Send Another Email." Confirm
+      all form state resets: mode back to "All Volunteers,"
+      subject/reply-to/body cleared, no selected
+      categories or individuals.
+
+---
+
+## PHASE 13.3b — TipTap Rich Text Editor
+
+- [ ] **13.3b V1** — Navigate to /crew/communication.
+      Confirm the message body area is a rich text editor
+      — not a plain textarea. Confirm a toolbar appears
+      above the editor with four buttons: B (Bold), I
+      (Italic), • List (Bullet List), 1. List (Ordered
+      List).
+
+- [ ] **13.3b V2** — Click inside the editor and type
+      some text. Select a word and click the Bold button.
+      Confirm the word becomes bold AND the Bold button
+      highlights (active state — navy background) while
+      the cursor is inside bold text. Click Bold again
+      to toggle off. Confirm the highlighting removes.
+
+- [ ] **13.3b V3** — Repeat the active-state check for
+      Italic, Bullet List, and Ordered List. Each button
+      should highlight when the cursor is inside content
+      of that type.
+
+- [ ] **13.3b V4** — Type a multi-paragraph message
+      using the editor (multiple paragraphs, at least
+      one bold phrase, one bullet list). Send a test
+      blast to a single test volunteer. Open the received
+      email. Confirm: paragraphs are separated (not one
+      long block of text), bold text appears bold, the
+      bullet list renders as an HTML list (not raw <ul>
+      tags). *(Requires real email delivery)*
+
+- [ ] **13.3b V5** — On the Confirm step: confirm the
+      "Preview" field in the summary card shows readable
+      plain text — not raw HTML like <p> or <strong>.
+      The preview should be the first ~150 characters of
+      the message content without markup.
+
+- [ ] **13.3b V6** — After a successful blast send:
+      navigate to /crew/settings/email-activity. Confirm
+      the body_preview column for the new blast row shows
+      plain readable text — no HTML tags visible.
+
+- [ ] **13.3b V7** — Click "Send Another Email" after a
+      successful send. Confirm the editor content is
+      cleared (editor resets to empty). Confirm the
+      toolbar buttons are no longer in an active state.
+
+---
+
+## PHASE 13.4a — Logging Cleanup & HTML Sanitization
+
+- [ ] **13.4a V1** — Navigate to /update (volunteer info
+      update page). Enter a volunteer's email or phone
+      to request a new update link. The email is sent.
+      Navigate to /crew/settings/email-activity. Confirm
+      a new row appears with recipient_filter =
+      'trigger:update_link_request' and Sent By = "System."
+      *(Requires real email delivery to trigger)*
+
+- [ ] **13.4a V2** — Submit a new admin access request
+      via the "Request Access" panel on /crew/login.
+      Navigate to /crew/settings/email-activity as Super
+      Admin. Confirm a new row appears with
+      recipient_filter = 'trigger:admin_registration_
+      request', Sent By = "System", and recipient_count
+      matching the number of active Super Admins.
+
+- [ ] **13.4a V3** — Compose a test blast with formatted
+      content: bold text, italic text, a bullet list, and
+      a hyperlink. Send to a single test recipient. Open
+      the received email. Confirm all formatting renders
+      correctly — bold appears bold, list renders as a
+      list, link is clickable. Confirm no raw HTML tags
+      are visible anywhere in the email.
+      *(Requires real email delivery)*
+
+- [ ] **13.4a V4** — *(Advanced/optional — requires
+      browser devtools)* On /crew/communication, open
+      browser developer tools. In the Elements panel,
+      find the TipTap editor's contenteditable div.
+      Manually inject a <script>alert('xss')</script>
+      tag into the editor's innerHTML. Then send the
+      blast. Confirm: no alert fires on the recipient
+      side, and the received email does not contain any
+      <script> tag. *(Verifies sanitize-html strips
+      disallowed tags before sending)*
+
+---
+
+## PHASE 13.4b — Mobile Optimization
+
+*Check at 375px viewport width (phone-width). Use browser
+dev tools device emulation or narrow the browser window.*
+
+**Blast composer (/crew/communication):**
+
+- [ ] **13.4b V1** — At 375px viewport: navigate to
+      /crew/communication as Editor or Super Admin.
+      Confirm the three recipient mode buttons ("All
+      Volunteers," "By Category," "Individual") stack
+      vertically — one button per row — rather than
+      appearing side by side in a row that overflows.
+
+- [ ] **13.4b V2** — At 375px: complete the compose
+      form and advance to the Confirm step. Confirm
+      the "← Back" and "Send Email Blast" buttons
+      are both fully visible and tappable — neither
+      is cut off or overlapping.
+
+- [ ] **13.4b V3** — At 768px viewport: confirm the
+      recipient mode buttons return to a horizontal
+      layout (side by side). This confirms the
+      sm:flex-row breakpoint is working correctly.
+
+**Email Activity page (/crew/settings/email-activity):**
+
+- [ ] **13.4b V4** — At 375px viewport: navigate to
+      /crew/settings/email-activity. Confirm the three
+      tab labels ("All Emails," "System Only," "About
+      System Emails") wrap onto two lines rather than
+      overflowing the viewport. Confirm no horizontal
+      scroll appears.
+
+- [ ] **13.4b V5** — At 375px: on the "All Emails" or
+      "System Only" tab (with at least one email row):
+      confirm the log table is NOT visible. Confirm
+      instead a card layout appears — each email row
+      shown as a stacked card with date, type badge,
+      subject, sent-by/recipient count, and trigger
+      badge.
+
+- [ ] **13.4b V6** — At 768px or wider: confirm the
+      log table IS visible and the mobile card layout
+      is hidden. This confirms the hidden sm:block
+      / sm:hidden pattern is working correctly.
+
+- [ ] **13.4b V7** — At 375px: toggle to dark mode.
+      Navigate to /crew/settings/email-activity. Confirm
+      the mobile card layout renders correctly in dark
+      mode — no light backgrounds or invisible text on
+      the cards.
+
+---
+
+*Total items in this carry-forward list: 549*
+*Prior (v8r): 505 items*
+*v9 additions: 44 new items (Phase 13.1: 10,
+Phase 13.2: 6, Phase 13.3a: 10, Phase 13.3b: 7,
+Phase 13.4a: 4, Phase 13.4b: 7). 1 item superseded
+(11.1 V1 — Communication page stub, replaced by
+Phase 13.3a blast composer).*
+*Quick Reference: 10 new groups added (Phase 13.1–13.4b).*
+*Seed Data Cleanup: Phase 13 blast + transactional log
+cleanup SQL added.*
 *Quick Reference retained — references item IDs only
 and remains accurate.*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v8r (cleanup revision:*
-*redundant + obsolete items removed)*
+*Last updated: July 2026 — v9 (Phase 13 complete:
+13.1–13.4b verification items added, 11.1 V1 superseded,
+Quick Reference updated, Seed Data Cleanup updated)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
