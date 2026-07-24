@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.1
-### Created: July 2026 | Last Updated: July 2026 — v3.1 (Phase CAL complete — Phase 13 next)
+## 30BN_PROCESS_v1.md — v3.2
+### Created: July 2026 | Last Updated: July 2026 — v3.2 (Phase 13 complete — Phase 14 next)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -420,6 +420,9 @@ Tasks use letters (A, B, C...) rather than numbers to avoid confusion with numbe
 
 Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work; the lettered task format is the current standard.
 
+**All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
+Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
+
 ---
 
 ## 9. Quality Gates
@@ -619,6 +622,24 @@ grep -n "calendar_event_contacts" \
 # createRehearsalBatch() both normalize via .map())
 ```
 
+```bash
+# Confirm blast body is sanitized before email payload
+# build (R31 / 13.4a) — sanitizeHtml() must be called on
+# the body param in sendBlastEmail() before it reaches
+# buildBlastEmailHtml() — not escapeHtml()
+grep -n "sanitizeHtml\|sanitize-html" lib/actions/blast.ts
+# Must show: import at top + call site in sendBlastEmail()
+# Any absence means TipTap HTML reaches the email
+# template unsanitized.
+```
+
+```bash
+# Confirm logEmailSent() is not exported from
+# lib/email.ts (13.1 pattern)
+grep -n "export.*logEmailSent" lib/email.ts
+# Must return zero results — logEmailSent is internal only.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -727,6 +748,22 @@ Run before every Vercel deployment:
   field. A `"` character in a show name will corrupt
   the header. Pattern: `filename="fixed-name.ext"`
   (ADMIN.26 / CAL.7 confirmed failure mode)
+□ Any new email send function added to lib/email.ts:
+  confirm logEmailSent() is called AFTER the Resend
+  send succeeds (never before), sentBy is null for
+  system-triggered sends, and the call is wrapped so
+  logging failures are swallowed and never block email
+  delivery. (13.1 pattern)
+□ Any new blast or communication send path that accepts
+  TipTap HTML as body content: confirm sanitizeHtml()
+  from sanitize-html is applied to the body before it
+  reaches the email template. Never use escapeHtml()
+  on TipTap HTML — it will encode angle brackets and
+  corrupt the HTML structure. See R31. (13.4a pattern)
+□ Any new 'use client' component with user-input fields:
+  confirm no <form> elements are used. All state must
+  be managed via controlled inputs and onClick handlers.
+  (13.3a confirmed constraint)
 □ Any new recurring event creation: confirm
   createRecurringEvent() uses generateOccurrenceDates()
   from lib/utils/calendar-recurrence.ts for date
@@ -1339,11 +1376,64 @@ Phase CAL — Master Calendar System ✓ Complete
            section, trueIndividualEvents filter.
            pending/page.tsx: recurrence_groups fetch.
 
-Phase 13 — Email Blast System       (detail in v2)
-Phase 14 — Check-In System          (detail in v2)
-Phase 15 — Document Management      (detail in v2)
+Phase 13 — Email Blast System ✓ Complete (13.1–13.4b)
+  13.1   ✓ Transactional email logging gap closed.
+           logEmailSent() helper (lib/email.ts,
+           internal). 11 email paths now log.
+           recipient_filter tags added to 7 pre-
+           existing inserts. Email Activity page
+           (/crew/settings/email-activity, 3 tabs,
+           Super Admin only). Email Activity card
+           added to Settings hub.
+  13.2   ✓ Branded HTML email templates. All 17
+           send functions in lib/email.ts converted
+           from plain text. buildEmailHtml() +
+           buildCtaButton() helpers (internal). All
+           volunteer CTAs → /callboard. Dead
+           browseShowsButtonHtml() removed.
+  13.3a  ✓ Blast composer backend + UI shell.
+           lib/actions/blast.ts (searchVolunteers,
+           previewBlast, sendBlastEmail,
+           resolveBlastRecipients). BlastComposer
+           .tsx (compose → confirm → sent step
+           machine). /crew/communication stub
+           replaced with live composer.
+  13.3b  ✓ TipTap rich text editor integrated.
+           @tiptap/react + @tiptap/pm +
+           @tiptap/starter-kit v3.28.0.
+           immediatelyRender:false (Next.js
+           hydration guard). Toolbar: Bold/Italic/
+           Bullet/Ordered lists. editor.getHTML()/
+           .getText() replace body state.
+  13.4a  ✓ Logging cleanup + HTML sanitization.
+           sendUpdateLinkEmail() now logs
+           (volunteerId param added, both call
+           sites in update/actions.ts updated).
+           sendPendingRegistrationEmail() now logs
+           inline in admin-registration.ts (Case B
+           — recipient list at call site; zero-
+           recipient guard added). body_preview
+           added to 5 pre-existing email_log
+           inserts. 10× #555 → #555555 in
+           milestoneEmailContent(). sanitize-html +
+           @types/sanitize-html installed;
+           sanitizeHtml() in sendBlastEmail()
+           before payload build.
+  13.4b  ✓ Mobile optimization for Phase 13 UI
+           surfaces. BlastComposer: tab bar stacks
+           vertically below sm breakpoint (flex-col
+           sm:flex-row, w-full sm:w-auto), confirm
+           row flex-wrap. email-activity page: tab
+           bar flex-wrap + whitespace-nowrap, log
+           table hidden below sm with mobile card
+           layout above it. AboutSystemEmails.tsx:
+           clean.
+  13.4c    npm vulnerability sweep (pending)
+
+Phase 14 — Check-In System          (pending)
+Phase 15 — Document Management      (pending)
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
-Phase 17 — Launch                   (detail in v2)
+Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
 Phase 18 — Additional Alpha Features ✓ Complete
@@ -1360,6 +1450,33 @@ Phase 19 — Waitlist notification preferences
   (volunteer opt-in for notification method)
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
+
+30BN-DOC.31    ✓ Brief Update v3.2 (Phase 13
+                 complete: §1 phase updated; §3
+                 TipTap + sanitize-html added; §6
+                 email design expanded; §8
+                 Communication page full spec,
+                 Email Activity page + card, CTA +
+                 stale note updates; §9 body_preview
+                 note; §11 Phase 13 complete summary;
+                 R31 added; v3.2 history entry)
+30BN-DOC.32    ✓ Process Update v3.2 (this prompt —
+                 Phase 13 complete: §14 logEmailSent()
+                 pattern + blast.ts client rule; §8
+                 single-code-block prompt rule; §10
+                 blast sanitization + logEmailSent
+                 export greps; §11 three new
+                 checklist items; §13 Phase 13
+                 complete summary + prompt log
+                 13.1–13.4b + DOC.31–32; §14 single-
+                 code-block rule + escapeHtml R31
+                 cross-reference; v3.2 history)
+30BN-13.1      ✓ (see Phase 13 above)
+30BN-13.2      ✓ (see Phase 13 above)
+30BN-13.3a     ✓ (see Phase 13 above)
+30BN-13.3b     ✓ (see Phase 13 above)
+30BN-13.4a     ✓ (see Phase 13 above)
+30BN-13.4b     ✓ (see Phase 13 above)
 ```
 
 ---
@@ -1449,6 +1566,9 @@ layout must target document.body explicitly. The ThemeProvider effect must inclu
 theme in its dependency array. Confirmed failure mode: dark→light toggle required a hard reload
 (VERIFY-1 A4). Fixed in ADMIN.14.
 
+### All Build Prompts in a Single Fenced Code Block (established 13.3b/13.4a)
+Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity about whether the session starter is optional, which undermines its purpose. Confirmed correction during Phase 13: multiple prompts were flagged for having the session starter as a separate block before this rule was explicit. Owner direction: "all prompts must be completely contained within a single code block." Applies to all future prompts — build, DOC, and ADMIN.
+
 ### next/link for Internal Navigation (established 30BN-11.1)
 In Next.js App Router, plain `<a>` tags used for internal navigation (links to routes within
 the app, e.g. `/`, `/crew/dashboard`) trigger the `@next/next/no-html-link-for-pages` ESLint
@@ -1520,6 +1640,9 @@ supabase client as a parameter from the calling action. The caller constructs th
 and passes it in; utility functions never construct their own client. `lib/utils/calendar-
 availability.ts` is pure (no DB calls) and safe to import from Client Components.
 
+### lib/actions/blast.ts Uses getServerClient() (established 13.3a)
+The blast composer server actions (`searchVolunteers()`, `previewBlast()`, `sendBlastEmail()`) all use `getServerClient()` — they are always invoked from authenticated Editor or Super Admin sessions. The private helper `resolveBlastRecipients()` receives the supabase client as a parameter from its callers (`previewBlast()` and `sendBlastEmail()`), following the same parameter-passing pattern as `syncShowDateToCalendar()` and the calendar utility functions. Never use `getAdminClient()` in blast actions — the session exists.
+
 ### DOC prompt task tracker ranges must match actual edits (established DOC.25a/DOC.25b)
 DOC prompts list edits sequentially and track them in the task tracker (e.g., "Task B: Edits
 1–8"). The task tracker ranges must be written after the edits are finalized, not before.
@@ -1533,8 +1656,23 @@ HTTP `Content-Disposition: attachment; filename="..."` headers must never interp
 ### lib/utils/calendar-recurrence.ts is pure client-safe (established CAL.10a)
 `generateOccurrenceDates()` and `describeRecurrence()` have no DB calls and no server-only imports. Safe to import from Client Components — required for the live N-events preview in `CalendarRecurringEventForm.tsx`. The functions use `date-fns` primitives only. `addMonths()` correctly handles month-end edge cases (Jan 31 + 1 month → Feb 28/29). Same pattern as `lib/utils/calendar-availability.ts` (CAL.4b) and `lib/milestones-shared.ts` (9.2). Do not add server-only imports to this file — it would break the Client Component import chain.
 
+### logEmailSent() Internal Helper Pattern (established 13.1)
+`logEmailSent()` is an internal, unexported helper in `lib/email.ts` used to write `email_log` + `email_log_recipients` rows after every system email send. Key rules:
+- Always called AFTER `resend.emails.send()` succeeds — never before. A send failure means no log row. A log failure must never block email delivery.
+- Uses `getAdminClient()` internally — correct for all contexts where system emails fire (public routes, cron routes, no session cookie).
+- All errors are silently swallowed inside the helper. Logging failures are non-fatal.
+- Not exported from `lib/email.ts` — only callable within that file.
+- Action files and cron files that send email (e.g., `lib/actions/admin-registration.ts`, `lib/actions/users.ts`, `app/api/cron/reminders/route.ts`) use an inline log pattern directly with `getAdminClient()` rather than calling `logEmailSent()`. This is correct and intentional — the helper is scoped to `lib/email.ts` functions only.
+- `sentBy` is null for all system-triggered emails. Pass the acting admin's UUID only when an admin explicitly triggered the send.
+
 ### escapeHtml() in Email Templates (established 12.2a)
-All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only. If escaping is needed in a new file, extract to lib/utils/string.ts at that time.
+All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only.
+
+### Critical Exception — TipTap HTML / Blast Body (R31, established 13.4a)
+The email blast body originates from TipTap's getHTML() output and must NOT be passed through escapeHtml(). TipTap output is already structured HTML — escaping it would encode all angle brackets and produce literal &lt;p&gt; text in the email body. Instead, sanitizeHtml() from the sanitize-html package is called in sendBlastEmail() before the body reaches buildBlastEmailHtml(). lib/actions/blast.ts has its own local escapeHtml() for subject and wrapper metadata (not extracted to lib/utils/string.ts — the blast file is self-contained). See R31 in Brief §13 for the full sanitization allowlist.
+
+### R31 — Blast Body Uses sanitize-html, Not escapeHtml() (cross-reference)
+Documented in Brief §13 R31. Referenced here for R-number continuity. Core rule: TipTap HTML output passed as the blast body in sendBlastEmail() must be processed by sanitizeHtml(), not escapeHtml(). Allowlist: p, strong, em, ul, ol, li, br, h1, h2, h3, blockquote, a[href]. Schemes: http, https, mailto only. Established 13.4a. See §10 grep check and §11 checklist item.
 
 ---
 
@@ -1551,6 +1689,7 @@ All user-supplied values interpolated into HTML email strings must be wrapped in
 *v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
 *v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
 *v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
-*Cross-reference: 30BN_BRIEF_v1.md v3.1*
+*Cross-reference: 30BN_BRIEF_v1.md v3.2*
 *v3.0 (July 2026 — Beta Phase CAL active: §7 calendar client patterns added (getServerClient() for calendar actions, parameter-passing pattern for utility functions, calendar-availability.ts pure client-safe); §7 FK replacement migration pattern added (CAL.1); §8 commit-before-build-report standard added (CAL.5b); §10 show_type regression grep check added (CAL.1); §10 calendar contact phone grep check added (CAL.5a); §11 three new checklist items (calendar mutations + two routes to revalidate, contact phone normalization, performance type exclusion from manual creation); §13 Phase CAL added to Beta Build section (CAL.1–CAL.5b complete, CAL.6–CAL.8 planned); §13 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a/25b added to prompt log; §14 five new rules: codebase sweep before column removal, commit-before-build-report, post-build audit session pattern, calendar server action client rule, DOC prompt task tracker accuracy; DOC.26 logged)*
 *v3.1 (July 2026 — Phase CAL complete: §7 iCalendar route getAdminClient() exception added (CAL.7); createUser() auth.admin exception clarified (ADMIN.26 confirmed pattern); Content-Disposition fixed-filename rule added (ADMIN.26); calendar-recurrence.ts + calendar-layout.ts pure client-safe noted (CAL.10a, CAL.9); §11 three new checklist items (Content-Disposition filename safety, recurring event creation pattern, recurring event edit/cancel scope pattern); §13 Phase CAL marked complete (CAL.1–CAL.10c); §13 DOC.26–27 + CAL.6–CAL.10c + ADMIN.26 added to prompt log; §14 two new rules: Content-Disposition fixed filename, calendar-recurrence.ts pure client-safe; DOC.29 logged)*
+*v3.2 (July 2026 — Phase 13 complete: §2 header updated (Phase 13 complete, Phase 14 next); §14 logEmailSent() helper pattern added (13.1 — internal to lib/email.ts, getAdminClient(), errors swallowed, never before send, inline pattern for action/cron files); §14 blast.ts getServerClient() note added (13.3a — authenticated session, resolveBlastRecipients receives client as parameter); §8 single-fenced-code-block rule added for all prompts (13.3b/13.4a confirmed correction); §10 blast sanitization grep + logEmailSent export grep added; §11 three new checklist items (logEmailSent() after send, blast body sanitizeHtml not escapeHtml, no <form> in Client Components); §13 Phase 13 marked complete (13.1–13.4b each described, 13.4c pending); §13 prompt log updated (DOC.31–DOC.32 + 13.1–13.4b added); §14 single-fenced-code-block rule added; §14 escapeHtml() note updated (TipTap exception + blast.ts local copy); §14 R31 cross-reference added; DOC.32 logged)*
