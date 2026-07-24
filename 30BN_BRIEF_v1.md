@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.1
-### Created: July 2026 | Last Updated: July 2026 — v3.1 (Phase CAL complete — Phase 13 next)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.2
+### Created: July 2026 | Last Updated: July 2026 — v3.2 (Phase 13 complete — Phase 14 next)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase CAL complete (CAL.1–CAL.10c + ADMIN.26). Phase 13 (Email Blast System) next.
+**Current phase:** Phase 13 complete (13.1–13.4b). Phase 14 (Check-In System) next.
 
 ---
 
@@ -59,6 +59,8 @@
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
+| **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote. Editor outputs HTML passed to `sendBlastEmail()`. Installed 13.3b. |
+| **HTML Sanitization** | `sanitize-html` + `@types/sanitize-html` | Server-side sanitization of TipTap HTML output in `sendBlastEmail()` before the email payload is built. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href]` only. HTTP/HTTPS/mailto schemes only. Strips `<script>`, event handlers, and `javascript:` hrefs. Installed 13.4a. |
 | **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
 
 **Mobile Sidebar State Pattern (established 12.1):**
@@ -168,7 +170,11 @@ Mid Gray:             #555555  --color-mid-gray
 ### Email Design
 - From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch)
 - Default Reply-To: `info@30byninety.com` (editable per send by Editor)
-- All emails use 30 By Ninety brand colors and Open Sans
+- All emails use branded HTML templates (built Phase 13.2): table-based layout, inline styles only (email client compatibility), max 600px content width, navy (`#293994`) header, white content area, footer-gray (`#F5F5F5`) footer.
+- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote? })` in `lib/email.ts` (internal, not exported). Logo uses `${NEXT_PUBLIC_SITE_URL}/logo.png` with graceful fallback to text-only header if env var is absent.
+- CTA buttons built via `buildCtaButton(label, url, color)` helper (internal). Volunteer-facing CTAs link to `/callboard`. Admin-facing CTAs link to `/crew/login` or `/crew/`.
+- All user-supplied values interpolated into HTML email strings must be wrapped in `escapeHtml()` (internal to `lib/email.ts`). Exception: the blast body passed from TipTap is sanitized via `sanitize-html` instead of escaped — escaping would corrupt the HTML structure. See `sendBlastEmail()` in `lib/actions/blast.ts`.
+- All outbound emails (system-triggered and admin-triggered) logged to `email_log` + `email_log_recipients` as of Phase 13.1.
 
 ---
 
@@ -227,7 +233,7 @@ Mid Gray:             #555555  --color-mid-gray
   - Match found → friendly merge prompt ("We found an existing record — update it?")
 - Confirmation email: branded, warm, includes personal update token link
 - Success state: warm thank-you in-page (no redirect)
-- Confirmation email sent on signup includes a link to `/shows` so volunteers can browse upcoming opportunities immediately.
+- Confirmation email sent on signup includes a CTA button linking to `/callboard` (updated Phase 13.2 — was `/shows` in Alpha).
 - `age_range` field is required when `signup_show_age_range` setting is `true` (owner decision, 30BN-2.3-FIX).
 
 ### Public — Volunteer Info Update (`/update`)
@@ -473,9 +479,8 @@ optional and additive: entering email or phone personalizes the view with a volu
   Component:
   `components/crew/volunteers/CommunicationHistory.tsx`.
   Note: only emails explicitly logged via `email_log` /
-  `email_log_recipients` appear here — not all
-  transactional emails are currently logged
-  (pre-Phase 13 gap).
+  `email_log_recipients` appear here. All system-triggered
+  email paths are logged as of Phase 13.1.
 
 **Category Management (`/crew/settings/categories`):**
 - Super Admin only (not Editor or Viewer)
@@ -816,13 +821,36 @@ Clicking Edit on a recurring event in the day panel opens the scope picker first
 
 **ADMIN.25 — Default Hours Fallback Update:** `getLocationHoursBucket()` in `lib/actions/attendance.ts` (and the parallel auto-fill in `ShowForm.tsx`) was updated to check `locations.default_hours` (Migration 020 — numeric, nullable) as the primary source before falling back to the `app_settings` name→bucket map. This means per-location default hours can be set directly on the `locations` record. The three existing `app_settings` keys (`default_hours_mainstage`, `default_hours_studio_x`, `default_hours_one_off`) remain as fallbacks when `locations.default_hours` is null. Per-location `default_hours` UI built in CAL.8 (`/crew/settings/locations`).
 
-**Communication (`/crew/communication`):**
-Stub page built in Phase 11.1. Navigation link active.
-Displays "Coming Soon" state with feature description.
-Full email blast system (all volunteers / by category /
-individual; rich text composer; recipient preview;
-confirm before send; communication history log) deferred
-to Phase 13 (Beta).
+**Communication (`/crew/communication`, built Phase 13.3a/b):**
+Full email blast composer. Editor and Super Admin only
+(Viewers see a locked message). Stub replaced entirely.
+
+Recipient modes:
+- "All Volunteers" — sends to all `status = 'active'` volunteers
+- "By Category" — multi-select from visible `volunteer_categories`; volunteers matching ANY selected category receive the email (two-query approach: assignments → volunteer IDs → active volunteers)
+- "Individual" — debounced name/email search via `searchVolunteers()` server action; selected volunteers shown as removable chips
+
+Compose → Confirm → Sent flow (client-side step machine):
+- Compose step: recipient mode selector (stacks vertically on mobile — 13.4b), subject (max 200 chars), reply-to (pre-filled from `default_reply_to`), TipTap rich text body (max 10,000 chars)
+- "Preview & Send" calls `previewBlast()` server action → returns `recipientCount` + `sampleEmails` (first 5) without sending → advances to Confirm step
+- Confirm step: summary card (subject, reply-to, recipient mode, count, sample emails, body plain-text preview), orange warning banner, Back button (restores compose), Send button
+- "Send Email Blast" calls `sendBlastEmail()` → Sent step with success message and recipient count
+- Sent step: "Send Another Email" button resets all state to initial compose
+
+Server actions (all in `lib/actions/blast.ts`):
+- `searchVolunteers(query)` — active volunteer search (min 2 chars, max 10 results)
+- `previewBlast(payload)` — resolves recipients, returns count + sample, does not send
+- `sendBlastEmail(payload)` — Zod validation, recipient resolution, dedup by lowercased email, sanitize-html on TipTap body (allowlist: p/strong/em/ul/ol/li/br/h1–h3/blockquote/a[href]; HTTP/HTTPS/mailto only), batch send via `sendBatchEmails()`, logs to `email_log` (`sent_by = admin.id`, `recipient_type = recipientMode`) + `email_log_recipients`
+- Private helper: `resolveBlastRecipients()` — used by both preview and send to avoid duplication
+- `recipient_filter` values: `'all'` / `'category:{id1},{id2}'` / `'individual'`
+
+Email template: Local `buildBlastEmailHtml()` in `blast.ts` (not `buildShowBulkEmailPayload()` — that function has a show-context line that is semantically wrong for blasts). Same table-based inline-style pattern as `buildEmailHtml()`.
+
+Validation (Zod): subject min 1 max 200; body min 1 max 10,000; replyTo email format. Viewer and Production roles blocked at action level (return error, never throw).
+
+Mobile (13.4b): Recipient mode tab bar stacks vertically below `sm` breakpoint. Confirm step button row uses `flex-wrap` for narrow viewports.
+
+Component: `components/crew/communication/BlastComposer.tsx` ('use client'). Page: `app/crew/(app)/communication/page.tsx` (Server Component — fetches `default_reply_to` and visible categories).
 
 **Announcement Banner (`/crew/settings/announcement`):**
 Built in Phase 11.2. Text input (280 char limit with
@@ -848,8 +876,23 @@ displays 8 section cards using the `LinkedCard` /
 | Category Management | `/crew/settings/categories` | Super Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
 | User Management | `/crew/settings/users` | Super Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
 | Audit Log | `/crew/settings/audit-log` | Editor + Super Admin (LinkedCard); Viewer (LockedCard "Editor & Super Admin only") |
+| Email Activity | `/crew/settings/email-activity` | Super Admin only (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — built 13.1 |
 | Document Management | `/crew/settings/documents` | Editor + Super Admin (LinkedCard, "Beta" badge); Viewer (LockedCard) |
 | Location Management | `/crew/settings/locations` | Super Admin only (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
+
+**Email Activity (`/crew/settings/email-activity`, built Phase 13.1 — Super Admin only):**
+Global log of all emails sent by the platform. Three tabs via `?tab=` URL param:
+- All Emails — paginated reverse-chronological log of all `email_log` rows. 25/page, `?page=N`.
+- System Only — same log filtered to `sent_by IS NULL` (system-triggered emails only).
+- About System Emails — static trigger catalog listing all 11 automated email triggers, when each fires, who receives it, and spam protections in place.
+
+Log columns: Date (`formatCT(sent_at)`), Subject, Type (human-readable label), Sent By (admin name or "System"), Recipients (`recipient_count`), Trigger/Filter (`recipient_filter` in monospace badge).
+
+Type label mapping: transactional + `sent_by IS NULL` → "System"; transactional + `sent_by IS NOT NULL` → "Transactional"; category + `recipient_filter` starts with `show:` → "Show Message"; category otherwise → "Category Email"; all → "All Volunteers"; individual → "Direct".
+
+Mobile (13.4b): Tab bar uses `flex-wrap` + `whitespace-nowrap` — wraps cleanly at 375px. Log table hidden below `sm` breakpoint; mobile card layout (date + type badge, subject, sent-by + recipient count, trigger badge) renders instead.
+
+Page: `app/crew/(app)/settings/email-activity/page.tsx` (Server Component). Component: `components/crew/settings/AboutSystemEmails.tsx` (static trigger catalog).
 
 Sub-pages built in Phase 11.2:
 - `/crew/settings/announcement` — see Announcement
@@ -1528,6 +1571,11 @@ sent_by          uuid REFERENCES admin_users(id)
 sent_at          timestamptz NOT NULL DEFAULT now()
 subject          text NOT NULL
 body_preview     text
+-- Plain-text preview of email body (first 150 chars).
+-- For TipTap-sourced blast emails: HTML tags stripped
+-- before truncation (.replace(/<[^>]+>/g,'').slice(0,150)).
+-- All system-triggered sends populate this field as
+-- of Phase 13.1. Pre-13.1 entries may have null here.
 recipient_type   text NOT NULL CHECK (recipient_type IN ('all','category','individual','transactional'))
 recipient_filter text
 reply_to         text
@@ -2223,6 +2271,45 @@ All fields per §8 feature set. Build with `react-hook-form` + `zod`.
                  Seed Data Cleanup + recurrence_groups
                  cleanup, metadata block relocated
                  to document end)
+30BN-13.1      ✓ Transactional email logging gap closed.
+                 logEmailSent() helper (lib/email.ts,
+                 internal). 11 email paths now log to
+                 email_log + email_log_recipients.
+                 recipient_filter tags added to 7 pre-
+                 existing inserts. Email Activity page
+                 (/crew/settings/email-activity, 3 tabs,
+                 Super Admin only). EmailActivity card
+                 added to Settings hub.
+30BN-13.2      ✓ Branded HTML email templates. All 17
+                 send functions converted from plain text.
+                 buildEmailHtml() + buildCtaButton()
+                 helpers (internal). All volunteer CTAs
+                 → /callboard. Dead browseShowsButtonHtml()
+                 removed.
+30BN-13.3a     ✓ Blast composer backend + UI shell.
+                 lib/actions/blast.ts (searchVolunteers,
+                 previewBlast, sendBlastEmail,
+                 resolveBlastRecipients). BlastComposer
+                 .tsx (compose→confirm→sent). /crew/
+                 communication stub replaced.
+30BN-13.3b     ✓ TipTap rich text editor. @tiptap/react
+                 @tiptap/pm @tiptap/starter-kit v3.28.0.
+                 immediatelyRender:false. Toolbar: Bold/
+                 Italic/Bullet/Ordered lists. editor
+                 .getHTML()/.getText() replace body state.
+30BN-13.4a     ✓ Logging cleanup + sanitization.
+                 sendUpdateLinkEmail() now logs (volunteerId
+                 param added). sendPendingRegistration
+                 Email() now logs inline (admin-registration
+                 .ts). body_preview added to 5 pre-existing
+                 inserts. 10× #555 → #555555. sanitize-html
+                 installed; sanitizeHtml() in sendBlast
+                 Email().
+30BN-13.4b     ✓ Mobile optimization. BlastComposer:
+                 tab bar stacks on mobile, confirm row
+                 flex-wrap. email-activity: tab bar
+                 flex-wrap, mobile card layout below sm.
+                 AboutSystemEmails: clean.
 ```
 
 ---
@@ -2544,7 +2631,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase CAL is complete. CAL.1–CAL.10c + ADMIN.26 all shipped. Phase 13 (Email Blast System) is next.*
+*Phase 13 is complete (13.1–13.4b). Phase 14 (Check-In System) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -2579,15 +2666,69 @@ Migration 015 applied.
   queue: day panel scope picker, ↻ chip indicator,
   Recurring Events queue section.
 
-### Phase 13 — Email Blast System (~4 prompts)
-- Resend full integration: branded HTML templates for all email types
-- All transactional emails (currently using plain text in Alpha)
-- **Email CTA consistency:** standardize all transactional email CTAs to link to
-  `/callboard` (the established volunteer hub). Currently most transactional emails
-  link to `/shows`; milestone emails already link to `/callboard` (set in 9.2).
-  Phase 13 reconciles all CTAs in one pass.
-- Blast composer: compose, recipient selector, reply-to, preview, send, confirm
-- Communication history log (already schema'd, wire the viewer)
+### Phase 13 — Email Blast System ✓ Complete
+
+**13.1 ✓** Transactional email logging gap closed across
+all email send paths. `logEmailSent()` helper added to
+`lib/email.ts` (internal). `email_log` writes added to
+11 previously unlogged email functions. `recipient_filter`
+tags added to 7 pre-existing log writes. Email Activity
+log page built at `/crew/settings/email-activity`
+(Super Admin only, three tabs). Email Activity card
+added to Settings hub.
+
+**13.2 ✓** Branded HTML email templates — all 17 send
+functions in `lib/email.ts` converted from plain text
+to table-based inline-style HTML using brand system.
+`buildEmailHtml()` shared wrapper + `buildCtaButton()`
+helper added (both internal). All volunteer-facing email
+CTAs standardized to `/callboard`. Admin-facing CTAs
+unchanged. `addToCalendarLinkHtml()` confirmed already
+inline-styled. Dead `browseShowsButtonHtml()` removed.
+
+**13.3a ✓** Email blast composer — backend + UI shell.
+`lib/actions/blast.ts` created: `searchVolunteers()`,
+`previewBlast()`, `sendBlastEmail()`, private
+`resolveBlastRecipients()`. `BlastComposer.tsx` created
+with full compose → confirm → sent step machine.
+`/crew/communication` stub replaced with live composer
+page. Plain `<textarea>` placeholder for body field.
+
+**13.3b ✓** TipTap rich text editor integrated into
+`BlastComposer.tsx`. `@tiptap/react`, `@tiptap/pm`,
+`@tiptap/starter-kit` v3.28.0 installed.
+`immediatelyRender: false` (Next.js hydration guard).
+Toolbar: Bold, Italic, Bullet List, Ordered List.
+Body state replaced by `editor.getHTML()` /
+`editor.getText()`. Confirm preview and `email_log`
+`body_preview` both use `getText()` (HTML tags stripped).
+
+**13.4a ✓** Logging cleanup + HTML sanitization.
+`sendUpdateLinkEmail()` now logs (`trigger:update_link_
+request`; `volunteerId` param added + threaded from both
+call sites in `app/update/actions.ts`).
+`sendPendingRegistrationEmail()` now logs inline in
+`lib/actions/admin-registration.ts` (Case B — recipient
+list visible at call site; zero-recipient guard added).
+`body_preview` added to 5 pre-existing `email_log`
+inserts in `claims.ts` (3), `reminders/route.ts` (1);
+`submissions.ts` was already populated. 10 shorthand
+hex (`#555`) values normalized to `#555555` in
+`milestoneEmailContent()`. `sanitize-html` +
+`@types/sanitize-html` installed; `sanitizeHtml()`
+called on `parsed.data.body` in `sendBlastEmail()`
+before payload build.
+
+**13.4b ✓** Mobile optimization for Phase 13 UI surfaces.
+`BlastComposer.tsx`: recipient mode tab bar
+(`flex flex-col sm:flex-row`, buttons `w-full sm:w-auto`),
+confirm button row (`flex-wrap`).
+`/crew/settings/email-activity/page.tsx`: tab bar
+(`flex-wrap` + `whitespace-nowrap`), log table
+hidden below `sm` with mobile card layout above it.
+`AboutSystemEmails.tsx`: verified clean, no changes.
+
+**13.4c** — npm vulnerability sweep (pending).
 
 ### Phase 14 — Check-In System (~2 prompts)
 - Per-show-date check-in QR code generation (from show detail)
@@ -2618,9 +2759,9 @@ These features were added to Alpha scope and are now built:
   Profile.
 - **Show-level post-show reporting** ✓ Built ADMIN.22. "Report" tab on show detail
   (status = 'past' only). See §8 Show Management.
-- **Volunteer self-service hours history on Call Board** — per-show breakdown in expanded
-  card section (built partially in 9.2; hours summary line present; full per-show breakdown
-  table deferred to Phase 12 polish).
+- **Volunteer self-service hours history on Call Board** ✓ Built 30BN-12.3. Per-show grouped
+  breakdown (show name → call sub-rows → per-show total) + "Other Hours" section for manual
+  entries. Hours summary simplified to "[X] hours across [Y] shows."
 - **Bulk email from show detail** ✓ Built ADMIN.23. "Message Volunteers" on Overview tab.
   See §8 Show Management.
 
@@ -2772,6 +2913,9 @@ attribute in place until a hard reload. Both `ThemeProvider.tsx` and the inline 
 must have the current theme value in its dependency array so it runs on every toggle, not just
 on mount. Established ADMIN.14.
 
+### R31 — Blast Body Uses sanitize-html, Not escapeHtml()
+The email blast body originates from TipTap's `getHTML()` output — it is already structured HTML and must NOT be passed through `escapeHtml()`. Doing so would encode all angle brackets and produce literal `&lt;p&gt;` text in the email body. Instead, `sanitizeHtml()` from the `sanitize-html` package is called in `sendBlastEmail()` before the body reaches `buildBlastEmailHtml()`. The sanitizer strips disallowed tags and attributes while preserving the HTML structure. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`, `h2`, `h3`, `blockquote`, `a[href]`. Schemes: `http`, `https`, `mailto` only. Established 13.4a.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -2806,5 +2950,6 @@ DOC.20–DOC.21 + 12.1–12.4 added to prompt log; §11
 Beta thank-you email marked built in Alpha; §12 Open
 Decision #7 resolved; DOC.21 logged)*
 *Cross-reference: 30BN_PROCESS_v1.md v3.1*
+*v3.2 (July 2026 — Phase 13 complete: §1 current phase updated (Phase 13 complete, Phase 14 next); §3 TipTap and sanitize-html added to tech stack table; §6 email design section expanded (branded HTML templates, buildEmailHtml() wrapper, CTA rules, sanitization exception, universal logging); §8 signup confirmation CTA updated (/shows → /callboard); §8 Communication History stale pre-Phase-13 note updated; §8 Communication page stub replaced with full blast composer spec; §8 Settings hub card table updated (Email Activity card added); §8 Email Activity page new section added; §9 email_log body_preview comment updated; §11 Phase 13 header line updated (Phase 14 next); §11 Phase 13 section replaced (forward-looking → completed summary, 13.1–13.4b each described); §11 Phase 18 Call Board hours marked complete (12.3); §11 prompt log updated (13.1–13.4b added); §13 R31 added (blast body uses sanitize-html, not escapeHtml()); DOC.33 logged)*
 *v3.0 (July 2026 — Beta Phase CAL active: §1 current phase updated (Beta underway, Phase CAL active); §1 public surfaces updated (/calendar added); §2 terminology table updated (Production role, Calendar Editor flag); §7 roles table updated (Production row, calendar_editor flag paragraph, middleware note); §8 Show Management updated (show_type → location, end time, buffer time); §8 Master Calendar section added (full feature spec: locations, auto-sync, event types, role access, calendar views, event creation, bulk rehearsal, pending queue, Book Space, public calendar); §8 General Defaults fallback note updated; §8 Location Management card added (planned CAL.8); §9 Migrations 016–020 status added, next migration 021; §9 locations table added; §9 shows.show_type replaced by location_id; §9 show_dates.end_time added; §9 show_date_buffer table added; §9 rehearsal_batches, calendar_events, calendar_event_contacts tables added; §9 admin_users.role extended + calendar_editor added; §10 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a added to prompt log; §11 Phase CAL added with CAL.1–CAL.5b marked complete + CAL.6–CAL.8 planned; DOC.25a/25b logged)*
 *v3.1 (July 2026 — Phase CAL complete: §9 Migrations 021–022 status added (021: admin calendar token; 022: recurring events schema); next migration updated to 023; admin_users calendar_subscription_token column + calendar_editor note updated (built not planned); calendar_events recurrence_group_id column + index + note added; recurrence_groups table schema block added; §8 F2 fixed (duplicate Key Files entries removed); §8 F3 fixed (stale 'planned for CAL.8' Locations note updated to built); §10 prompt log DOC.26–30 + CAL.6–CAL.10c + ADMIN.26 added; §11 Phase CAL marked complete (CAL.1–CAL.10c); DOC.28a/28b logged)*
