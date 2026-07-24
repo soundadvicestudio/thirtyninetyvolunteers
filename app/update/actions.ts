@@ -51,6 +51,7 @@ export async function sendUpdateLink(
         to: phoneMatch.email,
         name: phoneMatch.full_name,
         updateToken: phoneMatch.update_token,
+        volunteerId: phoneMatch.id,
       })
       return { status: 'success' }
     }
@@ -59,6 +60,7 @@ export async function sendUpdateLink(
       to: volunteer.email,
       name: volunteer.full_name,
       updateToken: volunteer.update_token,
+      volunteerId: volunteer.id,
     })
     return { status: 'success' }
 

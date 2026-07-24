@@ -95,7 +95,39 @@ export async function registerAdminRequest(
       .eq('is_active', true)
 
     const recipients = ((superAdmins ?? []) as { email: string }[]).map((row) => row.email)
+    const subject = `New access request — ${value.name} (${value.email})`
     await sendPendingRegistrationEmail({ to: recipients, name: value.name, email: value.email })
+
+    // sendPendingRegistrationEmail() silently no-ops when recipients is
+    // empty — only log when there was actually something to send.
+    if (recipients.length > 0) {
+      try {
+        const { data: logRow } = await client
+          .from('email_log')
+          .insert({
+            sent_by: null,
+            subject,
+            body_preview: 'A new Production Crew access request is waiting for your review.',
+            recipient_type: 'transactional',
+            recipient_filter: 'trigger:admin_registration_request',
+            recipient_count: recipients.length,
+          })
+          .select('id')
+          .single()
+
+        if (logRow) {
+          await client.from('email_log_recipients').insert(
+            recipients.map((email) => ({
+              email_log_id: logRow.id,
+              volunteer_id: null,
+              email_address: email,
+            }))
+          )
+        }
+      } catch {
+        // Logging failure must never block registration.
+      }
+    }
   } catch (err) {
     console.error('[email] sendPendingRegistrationEmail failed:', err)
   }

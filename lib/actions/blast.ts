@@ -2,6 +2,7 @@
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import sanitizeHtml from 'sanitize-html'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
 import { sendBatchEmails } from '@/lib/email'
@@ -88,11 +89,13 @@ function escapeHtml(value: string): string {
 // not exported. Table-based layout, inline styles only, matching the
 // branded look of every other transactional email in the app.
 //
-// IMPORTANT: `body` is NOT escaped here. In 30BN-13.3a it is plain text
-// typed into a <textarea>, but in 30BN-13.3b it will be TipTap-generated
-// HTML — escaping it here would double-escape every tag once the rich
-// text editor ships. `recipientName` and `subject` ARE escaped: they are
-// always plain text, never HTML, in both phases.
+// IMPORTANT: `body` is NOT escaped here — it is TipTap-generated HTML
+// (30BN-13.3b) and escaping it would turn every tag into visible text.
+// The caller (sendBlastEmail(), 30BN-13.4a) sanitizes it with
+// sanitize-html before it ever reaches this function, so by the time
+// it arrives here it is already restricted to a safe allowlist of tags
+// and attributes. `recipientName` and `subject` ARE escaped here: they
+// are always plain text, never HTML.
 function buildBlastEmailHtml({
   recipientName,
   subject,
@@ -135,10 +138,10 @@ function buildBlastEmailHtml({
                   <p style="margin:0 0 20px;color:#1A1A1A;font-size:15px;line-height:1.6;">
                     Hi ${safeName},
                   </p>
-                  <!-- body is raw — plain text today (13.3a), TipTap HTML in
-                       13.3b. white-space:pre-line preserves textarea line
-                       breaks now; revisit if it double-spaces rich-text
-                       block elements once 13.3b ships. -->
+                  <!-- body is TipTap HTML (13.3b), sanitized by the caller
+                       before reaching here (13.4a). white-space:pre-line
+                       preserves paragraph spacing; revisit if it ever
+                       double-spaces rich-text block elements. -->
                   <div style="color:#1A1A1A;font-size:15px;line-height:1.6;white-space:pre-line;">
                     ${body}
                   </div>
@@ -236,15 +239,29 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       return { success: false, recipientCount: 0, error: 'No recipients found' }
     }
 
+    // Sanitize the TipTap HTML output before sending (30BN-13.4a).
+    // Allows only the tags and attributes StarterKit produces. Strips
+    // <script>, event handlers, and javascript: hrefs. Does NOT escape
+    // the body — it remains HTML for the email template.
+    const sanitizedBody = sanitizeHtml(parsed.data.body, {
+      allowedTags: ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'blockquote', 'a'],
+      allowedAttributes: {
+        a: ['href'],
+      },
+      allowedSchemes: ['http', 'https', 'mailto'],
+    })
+
     // Build payloads — one per recipient. Case B (see 30BN-13.3a build
     // report): buildShowBulkEmailPayload() in lib/email.ts is exported but
     // hardcodes show-specific copy that doesn't fit a general blast, and
     // lib/email.ts is out of scope for this prompt. buildBlastEmailHtml()
     // above is the local equivalent.
-    // NOTE: parsed.data.body is passed through as-is — do NOT wrap it in
-    // escapeHtml() here or in buildBlastEmailHtml(). It is plain text in
-    // 13.3a but will be TipTap-generated HTML in 13.3b; escaping it now
-    // would double-escape every tag once the rich text editor ships.
+    // NOTE: sanitizedBody (not parsed.data.body) is passed through as-is
+    // from here on — do NOT wrap it in escapeHtml() here or in
+    // buildBlastEmailHtml(). It is TipTap-generated HTML (30BN-13.3b);
+    // escaping it would turn every tag into visible text. sanitizeHtml()
+    // above is what makes this safe to trust — it strips anything not on
+    // the allowlist before this point.
     const payloads = recipients.map((r) => ({
       from: FROM_ADDRESS,
       replyTo: parsed.data.replyTo,
@@ -253,7 +270,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       html: buildBlastEmailHtml({
         recipientName: r.full_name,
         subject: parsed.data.subject,
-        body: parsed.data.body,
+        body: sanitizedBody,
       }),
     }))
 
@@ -269,7 +286,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       .from('email_log')
       .insert({
         subject: parsed.data.subject,
-        body_preview: parsed.data.body.replace(/<[^>]+>/g, '').slice(0, 150),
+        body_preview: sanitizedBody.replace(/<[^>]+>/g, '').slice(0, 150),
         recipient_type: parsed.data.recipientMode,
         recipient_filter: recipientFilter,
         sent_by: admin.id,

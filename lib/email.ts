@@ -186,12 +186,14 @@ type UpdateLinkEmailParams = {
   to: string
   name: string
   updateToken: string
+  volunteerId?: string | null
 }
 
 export async function sendUpdateLinkEmail({
   to,
   name,
   updateToken,
+  volunteerId,
 }: UpdateLinkEmailParams): Promise<void> {
   const updateUrl =
     `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
@@ -220,6 +222,15 @@ export async function sendUpdateLinkEmail({
     to,
     subject,
     html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: 'Your link to update your volunteer information is ready.',
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:update_link_request',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId: volunteerId ?? null }],
   })
 }
 
@@ -1110,7 +1121,7 @@ function milestoneEmailContent(
   const safeName = escapeHtml(name)
   const totalHoursLine =
     totalHours != null
-      ? `<p style="color:#555;line-height:1.6;margin:16px 0 0;">Your total hours: <strong>${totalHours}</strong>.</p>`
+      ? `<p style="color:#555555;line-height:1.6;margin:16px 0 0;">Your total hours: <strong>${totalHours}</strong>.</p>`
       : ''
 
   switch (milestoneHours) {
@@ -1121,11 +1132,11 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             Welcome to the family, ${safeName}!
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             Welcome to the 30 By Ninety Theatre volunteer community! You've just made your first
             contribution to bringing live theatre to our community — and that means everything to us.
           </p>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             We're so glad you're here. Keep an eye out for upcoming shows and opportunities on the
             Volunteer Call Board. We can't wait to see you again.
           </p>
@@ -1138,7 +1149,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             10 hours, ${safeName}!
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             You've officially logged 10 volunteer hours with 30 By Ninety Theatre. That's real time,
             real effort, and a real difference in the lives of everyone who walks through our doors.
             Thank you.
@@ -1153,7 +1164,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             20 hours, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             20 hours. You keep showing up, and it shows. The 30 By Ninety community is stronger
             because you're part of it. Thank you for your continued dedication.
           </p>
@@ -1167,7 +1178,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             35 hours, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             35 volunteer hours is no small thing — that's a serious commitment to our community and
             to live theatre. We see you, and we're grateful for every hour you've given.
           </p>
@@ -1181,7 +1192,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             50 hours, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             Fifty hours. Take a moment to let that sink in. You've given 50 hours of your time to 30
             By Ninety Theatre — and our community is richer for it. This is a milestone worth
             celebrating. Thank you, from all of us.
@@ -1196,7 +1207,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             75 hours, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             75 hours of service — you've become one of the pillars of the 30 By Ninety volunteer
             community. The shows we produce, the experiences we create, the community we build — all
             of it exists because of people like you.
@@ -1211,7 +1222,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             100 hours, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             One hundred hours. This is something very few volunteers ever achieve, and you've done
             it. 100 hours of showing up, helping out, and making live theatre happen. We are deeply
             grateful. You are part of what makes 30 By Ninety special.
@@ -1226,7 +1237,7 @@ function milestoneEmailContent(
           <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
             ${escapeHtml(milestoneLabel)}, ${safeName}
           </h1>
-          <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+          <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
             ${escapeHtml(milestoneLabel)} of volunteer service. You continue to show up for 30 By
             Ninety Theatre in ways that genuinely move us. Thank you for your extraordinary
             commitment to our community.

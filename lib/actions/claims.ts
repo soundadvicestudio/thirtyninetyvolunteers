@@ -253,6 +253,9 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
         .insert({
           sent_by: null,
           subject,
+          body_preview: actuallyFull
+            ? `You are on the waitlist for ${role.role_name} — ${show.name}`.slice(0, 150)
+            : `Your volunteer spot is confirmed — ${role.role_name} for ${show.name}`.slice(0, 150),
           recipient_type: 'transactional',
           recipient_filter: actuallyFull ? 'trigger:waitlist_added' : 'trigger:slot_claim',
           recipient_count: 1,
@@ -447,6 +450,10 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                 .insert({
                   sent_by: null,
                   subject: `Good news — a spot opened up! — ${showRow.name}`,
+                  body_preview: `Good news — a spot opened up for ${roleRow.role_name} at ${showRow.name}`.slice(
+                    0,
+                    150
+                  ),
                   recipient_type: 'transactional',
                   recipient_filter: 'trigger:waitlist_promoted',
                   recipient_count: 1,
@@ -485,6 +492,11 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                   .insert({
                     sent_by: null,
                     subject: `Volunteer cancellation — ${showRow.name}`,
+                    body_preview:
+                      `Volunteer cancellation: ${claim.volunteer_name} cancelled their ${roleRow.role_name} spot for ${showRow.name}`.slice(
+                        0,
+                        150
+                      ),
                     recipient_type: 'transactional',
                     recipient_filter: 'trigger:cancellation_notify',
                     recipient_count: editorEmails.length,

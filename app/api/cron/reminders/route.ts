@@ -89,6 +89,7 @@ export async function GET(request: Request) {
         .insert({
           sent_by: null,
           subject: '24hr volunteer reminder',
+          body_preview: 'Your volunteer call is tomorrow.',
           recipient_type: 'transactional',
           recipient_filter: 'cron:reminders',
           recipient_count: claims.length,
