@@ -44,7 +44,7 @@ function TabLink({ tab, activeTab, label }: { tab: Tab; activeTab: Tab; label: s
   return (
     <Link
       href={buildEmailActivityHref(tab, 1)}
-      className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+      className={`whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
         isActive
           ? 'border-navy dark:border-steel text-navy dark:text-steel'
           : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel'
@@ -114,7 +114,7 @@ export default async function EmailActivityPage({
         A log of all emails sent by the platform.
       </p>
 
-      <div className="flex gap-1 border-b border-divider dark:border-dark-border mb-6">
+      <div className="flex flex-wrap gap-1 border-b border-divider dark:border-dark-border mb-6">
         <TabLink tab="all" activeTab={tab} label="All Emails" />
         <TabLink tab="system" activeTab={tab} label="System Only" />
         <TabLink tab="about" activeTab={tab} label="About System Emails" />
@@ -131,7 +131,42 @@ export default async function EmailActivityPage({
         </div>
       ) : (
         <>
-          <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
+          {/* Mobile card layout — visible below sm breakpoint */}
+          <div className="sm:hidden space-y-3">
+            {entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-lg border border-divider dark:border-dark-border p-4 space-y-2 bg-white dark:bg-dark-surface"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-mid-gray dark:text-dark-muted">
+                    {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a')}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-light-navy dark:bg-dark-border text-navy dark:text-dark-text font-medium">
+                    {getEmailTypeLabel(entry.recipient_type, entry.recipient_filter, entry.sent_by)}
+                  </span>
+                </div>
+
+                <p className="text-sm font-semibold text-dark dark:text-dark-text leading-snug">{entry.subject}</p>
+
+                <div className="flex items-center gap-3 text-xs text-mid-gray dark:text-dark-muted">
+                  <span>{entry.admin?.name ?? 'System'}</span>
+                  <span>·</span>
+                  <span>
+                    {entry.recipient_count} {entry.recipient_count === 1 ? 'recipient' : 'recipients'}
+                  </span>
+                </div>
+
+                {entry.recipient_filter && (
+                  <span className="inline-block text-xs font-mono px-1.5 py-0.5 rounded bg-light-navy dark:bg-dark-border text-mid-gray dark:text-dark-muted">
+                    {entry.recipient_filter}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden sm:block bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-divider dark:border-dark-border text-left">

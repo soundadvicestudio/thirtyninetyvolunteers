@@ -143,8 +143,8 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
   const modeButtonClass = (mode: RecipientMode) =>
     recipientMode === mode
-      ? 'px-4 py-2 rounded bg-navy text-white text-sm'
-      : 'px-4 py-2 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text bg-white dark:bg-dark-surface text-sm'
+      ? 'w-full sm:w-auto px-4 py-2 rounded bg-navy text-white text-sm'
+      : 'w-full sm:w-auto px-4 py-2 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text bg-white dark:bg-dark-surface text-sm'
 
   if (step === 'sent') {
     return (
@@ -221,7 +221,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
         {actionError && <p className="text-red-500 text-sm">{actionError}</p>}
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={() => {
               setStep('compose')
@@ -250,7 +250,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       {/* Recipient mode selector */}
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Recipients</label>
-        <div className="flex gap-2 mt-2">
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
           <button onClick={() => setRecipientMode('all')} className={modeButtonClass('all')}>
             All Volunteers
           </button>
