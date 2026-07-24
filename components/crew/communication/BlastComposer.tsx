@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { CheckCircle } from 'lucide-react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 import { searchVolunteers, previewBlast, sendBlastEmail } from '@/lib/actions/blast'
 
 type Props = {
@@ -22,7 +24,11 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
   const [selectedIndividuals, setSelectedIndividuals] = useState<VolunteerHit[]>([])
   const [subject, setSubject] = useState('')
   const [replyTo, setReplyTo] = useState(defaultReplyTo)
-  const [body, setBody] = useState('')
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: '',
+    immediatelyRender: false, // required for Next.js App Router to prevent hydration mismatch
+  })
 
   // Individual search
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,7 +73,8 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
     const errs: Record<string, string> = {}
     if (!subject.trim()) errs.subject = 'Subject is required'
     if (!replyTo.trim()) errs.replyTo = 'Reply-To is required'
-    if (!body.trim()) errs.body = 'Message is required'
+    const bodyText = editor?.getText() ?? ''
+    if (!bodyText.trim()) errs.body = 'Message is required'
     if (recipientMode === 'category' && selectedCategoryIds.length === 0) {
       errs.recipients = 'Select at least one category'
     }
@@ -88,7 +95,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       individualIds: selectedIndividuals.map((v) => v.id),
       subject,
       replyTo,
-      body,
+      body: editor?.getHTML() ?? '',
     })
     setPreviewLoading(false)
     if (result.error) {
@@ -108,7 +115,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       individualIds: selectedIndividuals.map((v) => v.id),
       subject,
       replyTo,
-      body,
+      body: editor?.getHTML() ?? '',
     })
     setSendLoading(false)
     if (!result.success) {
@@ -126,7 +133,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
     setSelectedIndividuals([])
     setSubject('')
     setReplyTo(defaultReplyTo)
-    setBody('')
+    editor?.commands.clearContent()
     setSearchQuery('')
     setSearchResults([])
     setPreview(null)
@@ -199,8 +206,8 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
               Preview
             </span>
             <p className="text-dark dark:text-dark-text mt-0.5 text-sm">
-              {body.slice(0, 150)}
-              {body.length > 150 ? '...' : ''}
+              {(editor?.getText() ?? '').slice(0, 150)}
+              {(editor?.getText() ?? '').length > 150 ? '...' : ''}
             </p>
           </div>
         </div>
@@ -371,20 +378,83 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
         {errors.replyTo && <p className="text-red-500 text-xs mt-1">{errors.replyTo}</p>}
       </div>
 
-      {/* Message body — PLACEHOLDER for TipTap (13.3b) */}
-      {/* TODO: Replace <textarea> with TipTap editor in 13.3b */}
+      {/* Message body — TipTap rich text editor */}
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Message</label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={10000}
-          rows={8}
-          className="w-full border border-divider dark:border-dark-border rounded px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface resize-y"
+        {/* Toolbar */}
+        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-light-navy dark:bg-dark-surface rounded-t-md">
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            className={`px-2 py-1 text-xs rounded font-bold ${
+              editor?.isActive('bold')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            B
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            className={`px-2 py-1 text-xs rounded italic ${
+              editor?.isActive('italic')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            I
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            className={`px-2 py-1 text-xs rounded ${
+              editor?.isActive('bulletList')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            • List
+          </button>
+          <button
+            type="button"
+            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+            className={`px-2 py-1 text-xs rounded ${
+              editor?.isActive('orderedList')
+                ? 'bg-navy text-white'
+                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+            }`}
+          >
+            1. List
+          </button>
+        </div>
+
+        {/* Editor content area */}
+        <EditorContent
+          editor={editor}
+          className="min-h-[180px] px-3 py-2 text-sm
+            text-dark dark:text-dark-text
+            bg-white dark:bg-dark-surface
+            rounded-b-md border-x border-b
+            border-divider dark:border-dark-border
+            [&_.ProseMirror]:outline-none
+            [&_.ProseMirror]:min-h-[160px]
+            [&_.ProseMirror_p]:mb-3
+            [&_.ProseMirror_ul]:list-disc
+            [&_.ProseMirror_ul]:pl-5
+            [&_.ProseMirror_ul]:mb-3
+            [&_.ProseMirror_ol]:list-decimal
+            [&_.ProseMirror_ol]:pl-5
+            [&_.ProseMirror_ol]:mb-3
+            [&_.ProseMirror_strong]:font-bold
+            [&_.ProseMirror_em]:italic
+            [&_.ProseMirror]:placeholder:text-mid-gray"
         />
         <div className="flex justify-between mt-1">
           {errors.body && <p className="text-red-500 text-xs">{errors.body}</p>}
-          <p className="text-xs text-mid-gray dark:text-dark-muted ml-auto">{body.length}/10,000</p>
+          <p className="text-xs text-mid-gray dark:text-dark-muted ml-auto">
+            {(editor?.getText() ?? '').length}/10,000
+          </p>
         </div>
       </div>
 

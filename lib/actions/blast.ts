@@ -269,7 +269,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       .from('email_log')
       .insert({
         subject: parsed.data.subject,
-        body_preview: parsed.data.body.slice(0, 150),
+        body_preview: parsed.data.body.replace(/<[^>]+>/g, '').slice(0, 150),
         recipient_type: parsed.data.recipientMode,
         recipient_filter: recipientFilter,
         sent_by: admin.id,
