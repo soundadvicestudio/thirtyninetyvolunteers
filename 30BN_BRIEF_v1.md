@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 13 complete (13.1–13.4c). HELP phase complete (HELP.1–HELP.2d + ADMIN.27–29). SETUP.0 complete (Migration 023 + Owner Admin role guard sweep). Phase 14 (Check-In System) next.
+**Current phase:** Phase 14 complete (14.1–14.3 + 14.1-FIX). Phase 15 underway (15.1–15.2 + 15.2-AUDIT/FIX complete). Phase 15.3 (Master Media Library) next.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -54,7 +54,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Framework** | Next.js (App Router, TypeScript) | Use `create-next-app@latest`. Do not pin to a version. |
 | **Database** | Supabase (PostgreSQL) | Project: `thirtyninetyvolunteers` |
 | **Auth** | Supabase Auth (email/password + Google OAuth) | Google SSO live in Alpha. Admin self-registration with pending approval flow added in ADMIN.15. Super Admin must approve before access is granted. |
-| **File Storage** | Supabase Storage | Beta only (PDF consent form uploads). |
+| **File Storage** | Supabase Storage | Active. Private bucket `media` stores all platform media files (consent form submissions, future media library uploads). P-DC pattern (direct browser upload to Supabase Storage via signed upload URL — bypasses Vercel 4.5MB serverless limit). All file types supported: PDF, image, video, audio. Access controlled via signed URLs generated server-side. |
 | **Styling** | Tailwind CSS v4 | CSS-first. See §4 Critical Constraint. |
 | **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
 | **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
@@ -139,8 +139,8 @@ CRON_SECRET=                     # Secret for Vercel Cron Job auth — must matc
 - Authorized JavaScript origins: `http://localhost:3000`, `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`, `https://30byninetyvolunteers.com`
 - Authorized redirect URIs: all four Supabase/local/Vercel/production callback URLs above
 
-**Storage Buckets (Beta — create when needed):**
-- `documents` — volunteer consent form PDFs (public read)
+**Storage Buckets:**
+- `media` — all platform media files (private; signed URLs required for access). Created Phase 15.2. Path namespacing within the bucket: `consent-forms/[volunteer_id]/[submission_id]/` for consent submissions; `library/[folder_id]/[document_id]/` for media library files (Phase 15.3); `attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments (future phases). No public access — all reads go through the `/documents/[token]` redirect route which enforces access tier and generates signed URLs.
 
 ---
 
@@ -193,7 +193,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
 | Production | `/crew/calendar` and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
-| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/calendar` | No | No | No auth required |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). |
 
 **`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor, Viewer, or Owner Admin account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this; `owner_admin` CAN have `calendar_editor = true` — CHECK constraint updated in Migration 023). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
@@ -212,7 +212,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Heading reads "Join the 30 By Ninety Theatre Volunteer Community" (not "Join Our Next Production")
 - Redundant "30 By Ninety Theatre" text under the logo has been removed
 - Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
-- Downloadable consent form link (under-18; admin-swappable PDF — Beta)
+- Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
 - Two equal-weight outlined CTA buttons above the signup form: "Update My Info" (→ `/update`) and "View Opportunities" (→ `/callboard`). Appear below the bridging text, above the form.
 - "Sign up to add your name to our volunteer list" subheading appears immediately above the form.
 - Discreet "Production Crew" text link in page footer → `/crew/login` (intentionally subtle — small text, not a CTA button)
@@ -339,10 +339,49 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Middleware: `/callboard` excluded from admin session checks. Anonymous access intentional.
 - No migration needed — no schema changes for the Call Board session.
 
-### Public — Check-In Page (`/checkin/[token]`) — Alpha (stub in Alpha, full in Beta)
-- Per-show-date QR code links to this page
-- Enter email or phone → matched to `slot_claims` for that show date → auto-marks Showed
-- Success/not-found/not-rostered states handled gracefully
+### Public — Check-In Page (`/checkin/[token]`) — Built Phase 14
+
+**Two QR types, one route.** The `[token]` can be either a `show_dates.check_in_token`
+(per-date QR) or a `shows.check_in_token` (whole-show QR). The route resolves which
+table the token belongs to by querying `show_dates` first, then `shows` as a fallback.
+
+**Per-date token:** Resolves directly to one show date. Volunteer enters email or phone,
+system matches against `slot_claims` for that date, auto-marks Showed.
+
+**Whole-show token:** Auto-selects the nearest upcoming show date (today or future in CT).
+A date picker appears when the show has multiple upcoming dates — volunteer can confirm
+or choose a different date.
+
+**Lookup result states:**
+- Found + not yet checked in → inserts `attendance` row (`status = 'showed'`,
+  `source = 'checkin'`, `marked_by = null`, hours from 3-tier fallback, `hours_confirmed
+  = false`). Triggers `checkFirstCall()` + `checkMilestones()` non-blocking. Success state
+  with volunteer name.
+- Already checked in → idempotent success ("You're already checked in").
+- Not found (no slot claim for this volunteer + date) → "You're not on the list yet"
+  → reveals inline full signup form (same fields as the public landing page, same
+  `app_settings` toggles respected). Submitting creates the volunteer record, sends
+  confirmation email, inserts `attendance` with `slot_claim_id = null` (walk-in),
+  triggers `checkFirstCall()`. Success: "You're all checked in — check your email."
+- Invalid/expired token → static branded error page.
+- Date in the past (in CT) → "This check-in period has ended."
+
+**Architecture:** Public Server Component at `app/checkin/[token]/page.tsx` (no route group,
+same pattern as `/opportunities/[id]`). Client Component `CheckInClient.tsx` manages all
+interactive state. Server actions in `lib/actions/checkin.ts` (uses `getAdminClient()` —
+no session on public route). Uses `formatCT(new Date(), 'yyyy-MM-dd')` for CT date comparison.
+Inline signup uses XHR (not fetch) for upload progress; react-hook-form + zod via
+`createCheckInSignupSchema(showAgeRange)` factory. No `<form>` element (project constraint).
+
+**`/consent/[token]` — Under-18 Consent Form Upload Page (built Phase 15.2):**
+Public page at `app/consent/[token]/page.tsx`. Token comes from `consent_form_submissions
+.upload_token`. Three server-rendered states: (1) invalid token → static error; (2)
+already submitted (`submitted_file_path IS NOT NULL`) → "received" confirmation; (3)
+pending → renders `ConsentUploadForm.tsx`. Upload uses P-DC pattern: `getConsentUploadUrl()`
+generates a Supabase signed upload URL, client PUTs directly to `media` bucket under
+`consent-forms/[volunteer_id]/[submission_id]/`, then `confirmConsentSubmission()` records
+the path. XHR used for progress indicator. Accepted types: PDF, JPG, PNG, GIF, WebP.
+Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480px].
 
 ### Admin — Production Crew (`/crew`)
 
@@ -518,8 +557,20 @@ optional and additive: entering email or phone personalizes the view with a volu
   - Tabs: Overview / Volunteers / Waitlist / Dates /
   Report / Settings. The Report tab renders only when
   show.status = 'past' (hidden on all other statuses).
-  - Volunteers tab: per-role roster, attendance status, per-date filter
+  - Volunteers tab: per-role roster, attendance status, per-date filter. **"Self
+    Check-In" badge** (built Phase 14.2) on attendance rows where `source = 'checkin'`
+    — visually distinguishes QR self-check-ins from admin-marked attendance. Rows
+    where `source = 'manual'` show no badge. `attendance.source` added to the
+    data fetch in Phase 14.2.
   - Waitlist tab: ordered list per role, volunteer name + time added
+  - Dates tab: read-only, all show dates in order. Past dates visually distinguished.
+    **Check-in QRs (built Phase 14.2):** Whole-show QR at the top of the tab
+    (links to `/checkin/[show.check_in_token]` — scanning auto-selects nearest
+    upcoming date, volunteer can switch). Per-date QR on each date row (always
+    visible, links to `/checkin/[show_date.check_in_token]`). Both QRs show PNG
+    and SVG download links. All QR containers are white regardless of theme (QR
+    scanability requirement). Generated server-side via `generateQR()` in `lib/qr.ts`.
+    Both `check_in_token` columns added in Migration 024.
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
 - Post-event attendance marking (Editors only, only available after show date has passed):
   - Per-volunteer, per-date: Showed / No-Show / Excused
@@ -908,7 +959,7 @@ displays 8 section cards using the `LinkedCard` /
 | User Management | `/crew/settings/users` | Super Admin + Owner Admin (LinkedCard, with restrictions — see §7); Editor + Viewer (LockedCard "Super Admin only") |
 | Audit Log | `/crew/settings/audit-log` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
 | Email Activity | `/crew/settings/email-activity` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — built 13.1 |
-| Document Management | `/crew/settings/documents` | Super Admin + Owner Admin (LinkedCard, "Beta" badge); Editor + Viewer (LockedCard "Super Admin only") |
+| Document Management | `/crew/settings/documents` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — built Phase 15.1; "Beta" badge removed 15.1 Q2 fix |
 | Location Management | `/crew/settings/locations` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
 | Platform Setup | `/crew/settings/setup` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — Phase SETUP |
 
@@ -1021,23 +1072,120 @@ Implementation: Page: `app/crew/(app)/settings/setup/page.tsx` (Server Component
 
 Phase SETUP.0 (prerequisite): Migration 023 + role guard sweep must run first (adds `owner_admin` role, updates `is_editor()`, inserts default `app_settings` rows for all new keys).
 
-**Document Management (`/crew/settings/documents`) — Beta:**
-Stub page built in Phase 11.1. Displays "Coming Soon"
-state with feature description. Linked from the
-Settings hub with a "Beta" badge. Full system
-(upload/swap consent form PDF, one active per type,
-landing page link auto-updates using P-DC pattern)
-deferred to Phase 15 (Beta).
+**Document Management (`/crew/settings/documents`) — Built Phase 15.1–15.2:**
+Super Admin + Owner Admin only. "Beta" badge removed from the Settings hub card
+(15.1 Q2 fix — card gating now matches the page guard).
 
-**Check-In System (Beta — stub in Alpha):**
-Admin tool stub page built in Phase 11.1 at
-`/crew/tools/checkin`. "Check-In" sidebar nav link
-added (Phase 11.1 — appears after QR Generator in the
-sidebar). Displays "Coming Soon" state with feature
-description. Full system (per-show-date check-in QR
-from show detail, public check-in page at
-`/checkin/[token]`, email/phone entry → auto-mark
-attendance) deferred to Phase 14 (Beta).
+**Two sections on the settings page:**
+
+**Section 1 — Document Types Manager (built Phase 15.1):**
+Full CRUD for `document_types` table. Add, rename inline, toggle active, reorder
+(↑↓), delete (blocked for `is_system = true` types and types with attached
+documents). Per type: shows the currently active document for that type (title
++ upload date) and a "Set Active Document" picker. System types cannot be deleted,
+only deactivated. Built component: `DocumentTypesManager.tsx`.
+
+Seeded document types: Volunteer Consent Form (`volunteer_consent_form`, system),
+Cast / Auditioner Consent Form (`cast_consent_form`, system — placeholder, no doc
+yet), Volunteer Handbook, Production Schedule, Audition Materials.
+
+**Section 2 — Consent Form Submissions Queue (built Phase 15.2):**
+Three-tab view (Pending / Approved / Rejected). Shows all `consent_form_submissions`
+rows. Columns: Volunteer (linked to profile), Form Type, Submitted, File (view link),
+Action (Approve / Reject with inline notes field). Approve and reject buttons call
+`approveConsentSubmission()` / `rejectConsentSubmission()` in `lib/actions/documents.ts`
+and set `reviewed_by`, `reviewed_at`, optional `notes`. Built component:
+`ConsentSubmissionsQueue.tsx`.
+
+**`/documents/[token]` — Universal Document Redirect Route (built Phase 15.2):**
+Route handler at `app/documents/[token]/route.ts`. Looks up `documents` by
+`access_token`. Enforces access tier:
+- `public` / `link_only` → proceed without auth check (having the link is the
+  credential for `link_only`)
+- `backend` → verifies admin session via `getServerClient().auth.getUser()` +
+  `admin_users` lookup; redirects to `/crew/login?redirect=/documents/[token]`
+  if unauthenticated
+- Inactive document → redirects to `/not-found`
+For `entry_type = 'file'`: generates 1-hour signed URL from `media` bucket
+(`supabase.storage.from('media').createSignedUrl(storage_path, 3600)`) and redirects.
+For `entry_type = 'link'`: redirects directly to `external_url` (Phase 15.4 will
+add embed detection and player routing for YouTube/Vimeo/audio links).
+Uses `getAdminClient()` for document lookup and storage (no session on public route);
+`getServerClient()` only for backend-tier session check.
+
+**Under-18 Consent Form Email Trigger (built Phase 15.2):**
+In `submitVolunteerForm()` (app/actions/volunteer.ts): when `data.age_range ===
+'under_18'`, a non-blocking try/catch block runs after signup confirmation:
+(1) queries `document_types` for `slug = 'volunteer_consent_form'` with
+`is_active = true`; (2) inserts `consent_form_submissions` row with a DB-generated
+`upload_token`; (3) queries `documents` for `is_type_active = true` on this type
+to build an `activeFormUrl` (null if no document uploaded yet); (4) calls
+`sendConsentFormRequestEmail()`. On failure: `console.error`, never throws —
+volunteer signup is never blocked by consent flow failure.
+
+`sendConsentFormRequestEmail()` in `lib/email.ts`: branded HTML email with
+upload CTA (always present, links to `/consent/[uploadToken]`) and conditional
+download CTA (only when `activeFormUrl` is not null). When null: "Your coordinator
+will provide you with the consent form." Logged with
+`trigger:consent_form_request`. `escapeHtml()` on volunteer name only.
+
+**Planned (Phase 15.3–15.4):**
+- `/crew/media` — Master media library: all roles, folder browser, upload interface
+  (P-DC for files, link entry for embeds), per-document QR + distribution link,
+  role/user visibility controls, attachment context (show/rehearsal/audition).
+  Supports: PDF, image (preview), video (native player + YouTube/Vimeo embed),
+  audio (native player), generic links.
+- Phase 15.4: video and audio player UI, embed detection, PDF inline viewer.
+
+**Key files:**
+`lib/actions/documents.ts` — document type CRUD + consent submission review
+`lib/actions/consent.ts` — `getConsentUploadUrl()`, `confirmConsentSubmission()`
+`lib/actions/checkin-admin.ts` — `getCheckInRosterForDate()` (separate from
+  `lib/actions/checkin.ts` which is public-route `getAdminClient()` only)
+`lib/data/checkin.ts` — `getCheckInDashboardData(supabase)`
+`app/documents/[token]/route.ts` — universal document redirect route handler
+`app/consent/[token]/page.tsx` — public consent form upload page
+`components/consent/ConsentUploadForm.tsx` — Client Component, XHR P-DC upload
+`components/crew/tools/CheckInDashboard.tsx` — live check-in dashboard
+`components/crew/settings/DocumentTypesManager.tsx`
+`components/crew/settings/ConsentSubmissionsQueue.tsx`
+`lib/validations/checkin.ts` — `createCheckInSignupSchema(showAgeRange)` factory
+`types/checkin.ts` — `CheckInTokenResolution`, `CheckInResult`, `CheckInRoster`,
+  `CheckInDashboardData`, and related types
+
+**Check-In Dashboard (`/crew/tools/checkin`) — Built Phase 14.3:**
+All roles. Live-updating dashboard for door-side use on show nights. Auto-refreshes
+every 10 seconds via `router.refresh()` + `setInterval`. "Last updated Xs ago"
+counter between refreshes.
+
+**Layout:** Top section = full roster for the show with the nearest upcoming
+show_date (today or future, CT-aware). Below = all other future shows in
+chronological accordion, each collapsed showing show name + date + "X / Y checked in"
+summary. Only one accordion can be expanded at a time.
+
+**Full roster (top show and expanded accordions):** All `slot_claims` with
+`status = 'claimed'` for the selected show date, grouped by role. Per-row
+attendance status:
+- `showed` + `source = 'checkin'` → green "✓ Checked In (QR)"
+- `showed` + `source = 'manual'` → green "✓ Checked In (Admin)"
+- `no_show` → red "✗ No-Show"
+- `excused` → amber "Excused"
+- No attendance record → gray "— Awaiting"
+
+**Walk-In section:** Attendance rows with `slot_claim_id = null` (created by
+`checkInNewVolunteer()` — volunteers who signed up at the door). Shows volunteer
+name + check-in time. Null `volunteer_id` handled gracefully ("Unknown Volunteer").
+
+**Date selector:** Shown when top show has multiple upcoming dates. Changing the
+selected date triggers `getCheckInRosterForDate(showDateId)` server action for fresh
+roster data.
+
+**Architecture:** Server Component shell (`page.tsx`) fetches initial data via
+`getCheckInDashboardData(supabase)` in `lib/data/checkin.ts` (uses `getServerClient()`
+— admin page). Client Component `CheckInDashboard.tsx` manages interval, date selection,
+accordion state. Server action `getCheckInRosterForDate()` in `lib/actions/checkin-admin.ts`
+(uses `getServerClient()` — authenticated admin session; separate file from
+`lib/actions/checkin.ts` which is public-route `getAdminClient()` only).
 
 ---
 
@@ -3106,7 +3254,7 @@ These features were added to Alpha scope and are now built:
 | 2 | Sending email address | ✅ Resolved | `volunteers@30byninetyvolunteers.com` — domain verified in Resend during Phase 2 Alpha build |
 | 3 | Google OAuth credentials | ✅ Resolved | Implemented in Alpha (30BN-1.3). Google Cloud OAuth client "Volunteers Final" configured and live. |
 | 4 | Jonathan's surname | ✅ Resolved | Sturcken — Jonathan Sturcken |
-| 5 | Under-18 consent form PDF | 🔄 Pending | Existing PDF or new one needed at Beta launch. |
+| 5 | Under-18 consent form PDF | 🔄 Partially resolved | Consent form infrastructure fully built (Phase 15.2): upload trigger on signup, submission storage, admin review queue, `/consent/[token]` upload page. The actual PDF document content has not yet been created or uploaded. When a PDF is uploaded and set as the active `volunteer_consent_form` document, it will appear as a download link in the consent request email automatically. |
 | 6 | Multiple Super Admins | ✅ Resolved | Multiple Super Admins are expected and supported. Deactivate disabled for all Super Admin rows. Role change blocked for Super Admin rows. |
 | 7 | Mobile PWA sidebar | ✅ Resolved | Built in 30BN-12.1. Hamburger button + slide-in drawer at <768px. MobileSidebarContext pattern. Fixed-column sidebar unchanged at 768px+. |
 
