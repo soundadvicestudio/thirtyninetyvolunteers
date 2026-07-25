@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.4
-### Created: July 2026 | Last Updated: July 2026 — v3.4 (SETUP.0 complete — Phase 14 next)
+## 30BN_PROCESS_v1.md — v3.5
+### Created: July 2026 | Last Updated: July 2026 — v3.5 (Phase 14 complete + Phase 15.1–15.2 complete — Phase 15.3 next)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -276,6 +276,25 @@ The claim route authenticates via `claim_token` on `slot_claims`. This is the fo
 (2) Call Board session context, (3) public/cron routes. Never use `getServerClient()` in these
 route handlers — no session cookie exists to read.
 
+**Public-route action file invariant (established 14.1):**
+Files that serve public token-gated routes (no Supabase Auth session) must use
+`getAdminClient()` exclusively. The canonical examples are `lib/actions/checkin.ts`
+(public check-in page) and `lib/actions/consent.ts` (public consent upload page).
+Both files carry a header comment documenting this invariant:
+
+```typescript
+// PUBLIC ROUTE — getAdminClient() only, never getServerClient()
+```
+
+Never add `getServerClient()` to these files. If an authenticated-session action is
+needed for the same domain (e.g., an admin-side check-in roster fetch), create a
+separate `*-admin.ts` sibling file that uses `getServerClient()`. The two files must
+never be merged.
+
+Pattern: `lib/actions/checkin.ts` (public, `getAdminClient()`) +
+`lib/actions/checkin-admin.ts` (authenticated, `getServerClient()`). This split was
+established in Phase 14 and confirmed again in Phase 15.2.
+
 **`createUser()` auth.admin exception (confirmed ADMIN.26):**
 `lib/actions/users.ts` `createUser()` must keep `getAdminClient()` for the two Supabase Auth Admin
 API calls: `auth.admin.createUser()` and `auth.admin.deleteUser()`. These require the service
@@ -302,6 +321,33 @@ EXCEPTIONS that remain Super Admin only: (1) `/crew/settings/setup` and all its 
 
 When writing a SETUP.0 role guard sweep prompt, every `role === 'super_admin'` check must be evaluated individually — most should become `['super_admin', 'owner_admin'].includes(role)` but the exceptions above must stay as `role === 'super_admin'`.
 
+**P-DC upload pattern for file uploads (established 15.2):**
+All file uploads use the P-DC (presigned-direct-client) pattern to bypass Vercel's
+4.5MB serverless function body limit (R9). Never route file bytes through Server
+Actions or route handlers. The two-step flow:
+
+1. Server action generates a signed upload URL:
+   `supabase.storage.from('media').createSignedUploadUrl(path)`
+   Returns `{ signedUrl, path }` to the client.
+
+2. Client PUTs the file directly to `signedUrl` using `XMLHttpRequest` (not `fetch`)
+   when upload progress tracking is needed. `XHR.upload.onprogress` is the only
+   browser-native way to report file upload progress — this is the one sanctioned
+   use of XHR in this project and must include a comment explaining the deviation.
+
+3. Client calls a confirmation server action with the `path`. The action records the
+   storage path in the DB.
+
+All storage operations use the `media` bucket — never `documents` or any other bucket
+name. Storage paths within the `media` bucket are namespaced by purpose:
+`consent-forms/[volunteer_id]/[submission_id]/` for consent form submissions;
+`library/[folder_id]/[document_id]/` for media library files (Phase 15.3);
+`attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments.
+
+Path namespacing enforces separation of concerns within the single private bucket.
+All reads go through the `/documents/[token]` redirect route, which generates signed
+download URLs for files and enforces access tier.
+
 **Never create a client inside a loop.** Create once per function, reuse.
 
 **Feature flag pattern via getFeatureFlags() (established Phase SETUP design — not yet built):**
@@ -322,6 +368,37 @@ Enforced from SETUP.0 onward. See R32 in Brief §13 and §10 grep check.
 **`lib/actions/setup.ts` uses `getServerClient()` (established Phase SETUP design — not yet built):**
 Setup Panel server actions (`saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`) use `getServerClient()` — they are always called from authenticated Super Admin sessions. Same principle as calendar actions (CAL.5a) and blast actions (13.3a). Never use `getAdminClient()` in setup actions.
 
+**Conditional zod schema factory pattern (established 14.1-FIX):**
+When a zod schema has field requirements that depend on a runtime flag (e.g.,
+`age_range` required when `showAgeRange = true`, optional when false), implement the
+schema as a factory function rather than a static export:
+
+```typescript
+// WRONG — static schema ignores runtime flag
+export const checkInSignupSchema = z.object({ ... })
+
+// CORRECT — factory function
+export function createCheckInSignupSchema(showAgeRange: boolean) {
+  return z.object({
+    age_range: showAgeRange
+      ? z.string().min(1, 'Required')
+      : z.string().optional(),
+    // ...
+  })
+}
+export type CheckInSignupInput =
+  z.infer<ReturnType<typeof createCheckInSignupSchema>>
+```
+
+The factory must be used in BOTH locations:
+- Client component: `zodResolver(createCheckInSignupSchema(showAgeRange))`
+- Server action: `createCheckInSignupSchema(showAgeRange).safeParse(formData)`
+
+A static schema that ignores the flag is a server-side validation gap even if the
+client validates correctly. Confirmed failure mode caught in 14.1-FIX: the static
+schema was accepting missing `age_range` on the server even when `showAgeRange` was
+true.
+
 **FK replacement migration pattern (established CAL.1):**
 When a text CHECK constraint column is replaced by a FK to a new lookup table (e.g.,
 `show_type` text → `location_id` FK to `locations`), the migration must follow this order:
@@ -336,6 +413,15 @@ When a text CHECK constraint column is replaced by a FK to a new lookup table (e
 7. Drop the old text column.
 The RAISE EXCEPTION safety guard in step 4 is mandatory — it prevents silent data loss if any
 rows had an unmapped value. Confirmed in CAL.1 Migration 016.
+
+**`lib/data/*.ts` parameter-passing pattern (confirmed 15.1, from showReport.ts):**
+Data utility functions in `lib/data/` receive the supabase client as a parameter.
+They never construct their own client. Pattern: `getCheckInDashboardData(supabase)`,
+`getPostShowReportData(showId, supabase)`. Page Server Components construct
+`getServerClient()` once and pass it in. Server Actions that need to call data
+utilities must construct their own client internally — a raw Supabase client cannot
+be passed across the client/server boundary. This is the same principle as
+`syncShowDateToCalendar(showDateId, supabase)` in calendar-sync.ts.
 
 ---
 
@@ -449,6 +535,22 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
+
+**XHR over fetch for upload progress (established 15.2):**
+The project's default HTTP pattern is `fetch()`. There is one sanctioned deviation:
+`XMLHttpRequest` is used in `components/consent/ConsentUploadForm.tsx` for file uploads
+because `fetch()` does not support upload progress events in any browser.
+`XHR.upload.onprogress` is the only browser-native way to report real-time upload
+progress to the user. Any component using XHR must include a comment explaining this
+deliberate deviation:
+
+```typescript
+// XHR used instead of fetch() — fetch() does not support upload progress events.
+// xhr.upload.onprogress is the only browser-native way to report upload progress.
+```
+
+This is not a mistake to be "fixed." Do not replace XHR with fetch in upload progress
+contexts. All other HTTP in this project uses fetch().
 
 ---
 
@@ -702,6 +804,36 @@ grep -rn "role === 'super_admin'\|role !== 'super_admin'" \
 # ['super_admin','owner_admin'].includes(role) instead.
 ```
 
+```bash
+# Confirm all storage uses 'media' bucket (not 'documents'
+# or any other name) — established 15.2
+grep -rn "\.storage\.from(['\"]documents['\"])" \
+  app/ lib/ components/
+# Must return zero results. All Supabase Storage operations
+# in this project use .from('media'). The old 'documents'
+# bucket spec was superseded in Migration 025.
+```
+
+```bash
+# Confirm no getServerClient in public-route action files
+# (public-route invariant — established 14.1 / 15.2)
+grep -n "getServerClient" \
+  lib/actions/checkin.ts \
+  lib/actions/consent.ts
+# Must return zero results. These files are public-route
+# only — getAdminClient() throughout. Any hit is a
+# security violation.
+```
+
+```bash
+# Confirm XHR usage is intentional (established 15.2)
+grep -rn "XMLHttpRequest\|new XHR" components/ app/
+# Any hit must be in ConsentUploadForm.tsx only (upload
+# progress tracking — the one sanctioned XHR use in this
+# project). Any other hit requires review and must include
+# a comment explaining the deliberate deviation from fetch.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -856,6 +988,38 @@ Run before every Vercel deployment:
   start_time >= the target event's start_time. 'all'
   scope cancel must also set recurrence_groups.status
   = 'cancelled'. (CAL.10a–c pattern)
+□ Any new file upload path: confirm P-DC pattern is
+  used (signed URL from server action → client PUT to
+  Supabase Storage → confirmation server action records
+  path in DB). Never route file bytes through Server
+  Actions or route handlers (Vercel 4.5MB serverless
+  limit — R9). (15.2 pattern)
+□ Any new public-route server action file (no session
+  context): confirm getAdminClient() only throughout.
+  Add file-level header comment:
+  "// PUBLIC ROUTE — getAdminClient() only, never
+  getServerClient()". Create a separate *-admin.ts
+  file for any authenticated-session counterparts.
+  Never merge public-route and admin-session actions
+  into the same file. (14.1 / 15.2 invariant)
+□ Any new storage operation: confirm bucket is 'media'
+  (not 'documents' or any other name). Confirm storage
+  path is correctly namespaced within the media bucket:
+  consent-forms/ for consent submissions; library/ for
+  media library files; attachments/ for show/rehearsal/
+  audition attachments. (15.2 established; 15.3 extends)
+□ Any new attendance insert with source = 'checkin':
+  confirm slot_claim_id is explicitly set — either the
+  slot_claims.id for a rostered volunteer, or null for
+  a walk-in (checkInNewVolunteer() path). Never omit
+  slot_claim_id — the column is nullable but the value
+  must be intentional. (14.1 pattern)
+□ Any new zod schema with field requirements that depend
+  on a runtime flag: implement as a factory function,
+  not a static export. Use the factory in both the
+  client zodResolver and the server action safeParse.
+  A static schema that ignores the flag is a server-
+  side validation gap. (14.1-FIX pattern)
 ```
 
 ---
@@ -1582,6 +1746,86 @@ Phase THEME — Dynamic CSS Brand System (pending)
            pages sweep.
   THEME.2 Admin UI sweep.
   THEME.3 Email template sweep.
+
+Phase 14 — Check-In System ✓ Complete
+  30BN-14.1  ✓ Migration 024 (show_dates.check_in_token
+               + attendance.slot_claim_id nullable).
+               Public /checkin/[token] (per-date and
+               whole-show tokens, auto-date resolution,
+               walk-in inline signup, all result states).
+               lib/actions/checkin.ts (resolveCheckIn
+               Token, checkInVolunteer, checkInNew
+               Volunteer — getAdminClient() only, public-
+               route invariant). lib/validations/
+               checkin.ts: createCheckInSignupSchema()
+               factory. types/checkin.ts. AuditAction
+               types: attendance.checkin, volunteer.
+               checkin_signup.
+  30BN-14.1-FIX ✓ Server-side showAgeRange validation
+               gap in checkInNewVolunteer (static schema
+               → factory). 3-file fix.
+  30BN-14.2  ✓ Show detail Dates tab: per-date + whole-
+               show check-in QRs (always visible, PNG +
+               SVG downloads). Volunteers tab: "Self
+               Check-In" badge on source='checkin' rows.
+  30BN-14.3  ✓ Live check-in dashboard at /crew/tools/
+               checkin. lib/data/checkin.ts (getDashboard
+               Data). lib/actions/checkin-admin.ts (get
+               RosterForDate — getServerClient(), separate
+               file from public checkin.ts). CheckIn
+               Dashboard.tsx: 10s auto-refresh, roster
+               grouped by role, walk-in section, accordion
+               for other shows, "Last updated Xs ago".
+
+Phase 15 — Document & Media System (underway)
+  30BN-15.1  ✓ Migration 025 (drop old documents table;
+               create document_types, media_folders,
+               media_folder_access, documents, document_
+               access, consent_form_submissions; 5 seed
+               rows). Media bucket (private). lib/
+               actions/documents.ts (document type CRUD
+               + consent submission review). /crew/
+               settings/documents: DocumentTypesManager
+               .tsx + ConsentSubmissionsQueue.tsx.
+               Hub card: Beta badge removed, guard fixed
+               to SA/OA only.
+  30BN-15.2  ✓ app/documents/[token]/route.ts (universal
+               redirect: access tier enforcement, signed
+               URLs from media bucket, link redirect).
+               app/consent/[token]/page.tsx + Consent
+               UploadForm.tsx (P-DC upload, XHR progress,
+               3 states). lib/actions/consent.ts (get
+               ConsentUploadUrl, confirmConsentSubmission
+               — getAdminClient() only). sendConsent
+               FormRequestEmail() in lib/email.ts
+               (conditional download CTA, upload CTA
+               always, trigger:consent_form_request).
+               submitVolunteerForm() consent trigger
+               (non-blocking, is_minor check, active
+               doc lookup for activeFormUrl). AuditAction:
+               consent_submission.file_received.
+  30BN-15.2-AUDIT ✓ Post-build read-only audit (81 items:
+               71 PASS, 1 PARTIAL, 9 FAIL). Context
+               compaction during Tasks D/E caused
+               incomplete implementations. Mandatory
+               trigger for AUDIT session confirmed: any
+               mid-build compaction = immediate AUDIT.
+  30BN-15.2-FIX ✓ All 9 FAILs resolved: activeFormUrl
+               param added to email function + trigger,
+               is_active filter on document_types query,
+               active doc lookup for activeFormUrl,
+               hidden file input + trigger button,
+               Try Again button, volunteerName in success.
+               recipientFilter corrected to
+               'trigger:consent_form_request'.
+  30BN-DOC.37a ✓ Brief Update v3.5 Part A (§1, §3, §5,
+               §7, §8, §12)
+  30BN-DOC.37b ✓ Brief Update v3.5 Part B (§9, §11,
+               version history)
+  30BN-DOC.38  ✓ Process Update v3.5 (this prompt)
+  30BN-15.3  (pending) — Master media library /crew/media
+  30BN-15.4  (pending) — Media players + embed detection
+
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
 
@@ -1786,19 +2030,32 @@ push before delivering the build report." Rationale: the build report must descr
 actually deployed, not what was planned. A build report delivered before pushing can describe
 work that was never committed.
 
-### Post-build audit session pattern (established CAL.5b-AUDIT)
-When a large prompt is executed in a session that was compacted mid-build, or when deliverable
-volume is high enough that all components cannot be verified during the build session itself,
-issue a dedicated read-only audit session immediately after. Naming: `[PROMPT-ID]-AUDIT`.
+### Post-build audit session pattern (established CAL.5b-AUDIT; extended 15.2-AUDIT)
+Issue a dedicated read-only audit session (`[PROMPT-ID]-AUDIT`) immediately after a
+build when either of these conditions is met:
+
+1. **Context compaction mid-build:** The session was compacted before all tasks
+   completed. Do not trust the build report from a compacted session — the rebuilt
+   portion was produced without full prompt context and is likely incomplete or
+   incorrect. 15.2-AUDIT established this as a mandatory trigger: 9 FAILs found,
+   all tracing to work lost during compaction of Tasks D/E.
+
+2. **High deliverable volume:** The prompt created/modified enough files that
+   comprehensive verification during the build session itself was impractical.
+   CAL.5b-AUDIT established this trigger (84 items checked).
+
 Structure:
 - Phase A only (no Phase B — no code changes)
 - Read every new and modified file in full
 - Compare each against its spec in the prompt
 - Rate each check: PASS / PARTIAL / FAIL
-- Report summary: total checked, PASS/PARTIAL/FAIL counts, list of items requiring a fix prompt
+- Report summary: total checked, PASS/PARTIAL/FAIL counts, list of items requiring
+  a fix prompt
 - Any FAIL or significant PARTIAL drives a separate `[PROMPT-ID]-FIX` prompt
-Pattern established: CAL.5b-AUDIT (84 items, 60 PASS, 17 PARTIAL, 7 FAIL) → CAL.5b-FIX (6
-targeted fixes) → CAL.5b-FIX2 (1 residual fix).
+
+Pattern history: CAL.5b-AUDIT (84 items, 60 PASS, 17 PARTIAL, 7 FAIL) →
+CAL.5b-FIX (6 fixes) → CAL.5b-FIX2 (1 residual). 15.2-AUDIT (81 items, 71 PASS,
+1 PARTIAL, 9 FAIL) → 15.2-FIX (all 9 resolved).
 
 ### Calendar server action client rule (established CAL.5a)
 All server actions in `lib/actions/calendar.ts` use `getServerClient()`. They are always invoked
@@ -1835,6 +2092,16 @@ HTTP `Content-Disposition: attachment; filename="..."` headers must never interp
 
 ### escapeHtml() in Email Templates (established 12.2a)
 All user-supplied values interpolated into HTML email strings must be wrapped in the escapeHtml() utility that lives inside lib/email.ts. This prevents stored XSS via email clients, which render HTML from the email body. Apply to: volunteer names, show names, message bodies, note content — anything sourced from user input that appears inside an HTML string template. Do NOT apply to: server-controlled enum values (show_type, status fields), formatted date strings, or hardcoded strings. Plain-text emails (no HTML tags) are not vulnerable and do not need escaping. Pattern confirmed in 12.2a audit — one gap fixed in sendVolunteerConfirmationEmail() (categoryNames was unescaped). The escapeHtml() utility is local to lib/email.ts and is not currently exported; use it within that file only.
+
+**Storage paths and system-generated URLs are exempt:**
+Storage paths (e.g., `consent-forms/[volunteer_id]/[submission_id]/file.pdf`) and
+system-generated URLs (e.g., `/consent/[uploadToken]`, `/documents/[accessToken]`)
+are produced by the system — not sourced from user input. Do NOT apply `escapeHtml()`
+to these values when interpolating them into email HTML. The three escaping rules
+together:
+- User-supplied strings in email HTML → `escapeHtml()` (this rule)
+- TipTap HTML blast body → `sanitizeHtml()` instead (R31 / Critical Exception above)
+- System-generated paths and URLs → no escaping needed (established 15.2)
 
 ### Critical Exception — TipTap HTML / Blast Body (R31, established 13.4a)
 The email blast body originates from TipTap's getHTML() output and must NOT be passed through escapeHtml(). TipTap output is already structured HTML — escaping it would encode all angle brackets and produce literal &lt;p&gt; text in the email body. Instead, sanitizeHtml() from the sanitize-html package is called in sendBlastEmail() before the body reaches buildBlastEmailHtml(). lib/actions/blast.ts has its own local escapeHtml() for subject and wrapper metadata (not extracted to lib/utils/string.ts — the blast file is self-contained). See R31 in Brief §13 for the full sanitization allowlist.
@@ -1873,6 +2140,29 @@ Confirmed in ADMIN.29: 10 of the existing 26 HelpTooltip placements are in Clien
 placements to Server Component files only. When a UI heading lives inside a Client Component,
 place the tooltip there directly.
 
+### Public-Route Action File Invariant (established 14.1 / 15.2)
+
+Files serving public token-gated routes (no Supabase Auth session) use
+`getAdminClient()` exclusively and carry a file-level header comment:
+
+```typescript
+// PUBLIC ROUTE — getAdminClient() only, never getServerClient()
+```
+
+This applies to: `lib/actions/checkin.ts`, `lib/actions/consent.ts`, and any future
+file serving a public route with no session. The comment is not decorative — it is
+an architectural invariant that prevents future contributors from adding
+`getServerClient()` calls without recognizing the context.
+
+When a domain needs both public-route actions and authenticated admin-session actions,
+split them into separate files:
+- `lib/actions/[domain].ts` — public route, `getAdminClient()` only
+- `lib/actions/[domain]-admin.ts` — authenticated session, `getServerClient()`
+
+Never merge the two patterns into one file. This is the same principle as the
+iCalendar routes (CAL.7) — token-authenticated public routes use `getAdminClient()`
+regardless of how the token was issued.
+
 ### R32 — Owner Admin Role Guard Pattern (cross-reference)
 
 Documented in Brief §13 R32. Referenced here for R-number continuity. See also §7 Owner Admin
@@ -1880,6 +2170,24 @@ role guard pattern note. Core rule: after SETUP.0, operational role guards shoul
 owner_admin through alongside super_admin. Only the Setup Panel (/crew/settings/setup),
 owner_admin / super_admin account creation, and calendar_editor on Super Admin accounts
 remain Super Admin exclusive. See §10 grep check and §11 checklist item.
+
+### Storage Bucket Naming — Single 'media' Bucket (established 15.2)
+
+All Supabase Storage operations in this project use a single private bucket named
+`media`. This bucket was created in Phase 15.2 (replacing the earlier spec for a
+`documents` bucket). Never reference any other bucket name in storage calls.
+
+The grep check in §10 confirms zero hits for `.from('documents')` in a storage
+context. If you see a storage call referencing any bucket other than `media`, it is
+a bug.
+
+Path namespacing within the `media` bucket provides organizational separation:
+- `consent-forms/` — under-18 consent form uploads
+- `library/` — media library files (Phase 15.3)
+- `attachments/` — show/rehearsal/audition attachments (future phases)
+
+The single-bucket design simplifies access control (one set of signed URL policies)
+and avoids cross-bucket complexity in route handlers.
 
 ### R33 — CSS Custom Properties After Phase THEME (cross-reference)
 
@@ -1911,3 +2219,4 @@ onward.
 *v3.2 (July 2026 — Phase 13 complete: §2 header updated (Phase 13 complete, Phase 14 next); §14 logEmailSent() helper pattern added (13.1 — internal to lib/email.ts, getAdminClient(), errors swallowed, never before send, inline pattern for action/cron files); §14 blast.ts getServerClient() note added (13.3a — authenticated session, resolveBlastRecipients receives client as parameter); §8 single-fenced-code-block rule added for all prompts (13.3b/13.4a confirmed correction); §10 blast sanitization grep + logEmailSent export grep added; §11 three new checklist items (logEmailSent() after send, blast body sanitizeHtml not escapeHtml, no <form> in Client Components); §13 Phase 13 marked complete (13.1–13.4b each described, 13.4c pending); §13 prompt log updated (DOC.31–DOC.32 + 13.1–13.4b added); §14 single-fenced-code-block rule added; §14 escapeHtml() note updated (TipTap exception + blast.ts local copy); §14 R31 cross-reference added; DOC.32 logged)*
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §2 header updated (HELP phase + OpenCall OS, Phase 14 next); §7 Owner Admin role guard pattern added (SETUP.0 design — checks super_admin || owner_admin for operational features, super_admin-only for Setup Panel + account escalation); §7 getFeatureFlags() pattern added (Phase SETUP design — all feature flag reads through lib/feature-flags.ts); §7 lib/actions/setup.ts getServerClient() note added (Phase SETUP design); §10 three new grep checks added (proxy.ts/middleware.ts, feature flags, owner_admin role guards); §11 two new checklist items (owner_admin role guards, feature flags via getFeatureFlags()); §13 13.4c marked complete (npm sweep: next 16.2.11, 6 remaining blocked upstream); §13 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29 all complete); §13 Phase SETUP section added (SETUP.0–4 pending); §13 Phase THEME section added (THEME.A/1–3 pending); §13 prompt log updated (DOC.33–34, HELP.1–HELP.2d, ADMIN.27–29); §14 ADMIN.28 proxy.ts rename note added; §14 ADMIN.27 light-mode-always note added; §14 HelpTooltip Client Component clarification added; §14 R32 cross-reference added (owner_admin role guard); §14 R33 cross-reference added (CSS custom properties post-THEME); DOC.35 logged)*
 *v3.4 (July 2026 — SETUP.0 complete: §2 header updated (SETUP.0 complete, Phase 14 next); §7 Owner Admin role guard pattern note updated (not-yet-built language removed); §10 owner_admin grep check comment updated (post-sweep standing verification); §13 Phase SETUP updated (SETUP.0 ✓ with full summary, "(pending)" removed from header, DOC.36 added to prompt log); SETUP.1–4 still pending; DOC.36 logged)*
+*v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §2 header updated (Phase 14 complete, Phase 15.3 next); §7 five new patterns added: public-route action file invariant (getAdminClient() only + header comment + *-admin.ts split — 14.1/15.2), P-DC upload pattern (signedUploadUrl → client PUT → confirm action, XHR for progress, media bucket only — 15.2), lib/data/*.ts parameter-passing pattern (client as parameter, never construct internally — 15.1/CAL.3 principle), conditional zod schema factory pattern (runtime flag → factory function in both client and server — 14.1-FIX), storage bucket single-bucket note; §8 XHR-over-fetch convention added (ConsentUploadForm.tsx — only sanctioned XHR use, must include deviation comment); §10 three new grep checks: media bucket (no documents bucket), getServerClient in public-route files (must be zero), XHR usage (ConsentUploadForm only); §11 five new checklist items: P-DC pattern, public-route file invariant, storage bucket + path namespacing, attendance slot_claim_id explicit, zod factory for conditional schemas; §13 Phase 14 marked complete (14.1, 14.1-FIX, 14.2, 14.3); §13 Phase 15 added (15.1 ✓, 15.2 ✓, 15.2-AUDIT ✓, 15.2-FIX ✓, DOC.37a ✓, DOC.37b ✓, DOC.38 ✓, 15.3–15.4 pending); §14 post-build audit session pattern updated (compaction mid-build = mandatory AUDIT trigger, extended from CAL.5b-AUDIT with 15.2-AUDIT evidence); §14 three new rules: public-route action file invariant, storage bucket naming (single media bucket), escapeHtml() storage path exemption; DOC.38 logged)*
