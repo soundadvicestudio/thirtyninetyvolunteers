@@ -186,6 +186,7 @@ type ConsentFormRequestEmailParams = {
   to: string
   name: string
   uploadToken: string
+  activeFormUrl: string | null
   documentTypeName: string
   volunteerId?: string | null
 }
@@ -194,11 +195,27 @@ export async function sendConsentFormRequestEmail({
   to,
   name,
   uploadToken,
+  activeFormUrl,
   documentTypeName,
   volunteerId,
 }: ConsentFormRequestEmailParams): Promise<void> {
   const uploadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/consent/${uploadToken}`
   const safeName = escapeHtml(name)
+
+  const downloadSectionHtml = activeFormUrl
+    ? `
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        Please download the ${documentTypeName}, have a parent or guardian sign it, then use the button below to
+        upload the signed copy.
+      </p>
+      ${buildCtaButton('Download Consent Form', activeFormUrl, '#293994')}
+    `
+    : `
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        Your coordinator will provide you with the consent form. Once you have a signed copy, please use the
+        button below to upload it.
+      </p>
+    `
 
   const body = `
     <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
@@ -206,6 +223,7 @@ export async function sendConsentFormRequestEmail({
       Thank you for signing up to volunteer with 30 By Ninety Theatre! Because you're under 18, we need a
       signed ${documentTypeName} from a parent or guardian before you can start volunteering.
     </p>
+    ${downloadSectionHtml}
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Please use the button below to upload your completed form.
     </p>
@@ -230,7 +248,7 @@ export async function sendConsentFormRequestEmail({
     subject,
     bodyPreview: 'Please submit your volunteer consent form to get started.',
     recipientType: 'transactional',
-    recipientFilter: 'trigger:consent_request',
+    recipientFilter: 'trigger:consent_form_request',
     sentBy: null,
     recipients: [{ email: to, volunteerId: volunteerId ?? null }],
   })

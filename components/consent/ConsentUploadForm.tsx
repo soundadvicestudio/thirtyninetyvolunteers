@@ -112,9 +112,10 @@ export default function ConsentUploadForm({
         <div className="w-16 h-16 rounded-full bg-orange mx-auto flex items-center justify-center">
           <span className="text-white text-2xl font-bold">✓</span>
         </div>
-        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">Thank you!</h1>
+        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">Thank you, {volunteerName}!</h1>
         <p className="text-mid-gray text-base">
-          Your {documentTypeName.toLowerCase()} has been received. No further action is needed.
+          Your {documentTypeName.toLowerCase()} has been received. A coordinator will review it and be in touch if
+          anything is needed.
         </p>
       </div>
     )
@@ -132,15 +133,23 @@ export default function ConsentUploadForm({
 
       <div>
         <label className="block text-sm font-semibold text-dark mb-1">Choose file</label>
+        {/* Hidden file input — triggered by the button below */}
         <input
           ref={fileInputRef}
           type="file"
           accept="application/pdf,image/jpeg,image/png,image/gif,image/webp"
           onChange={handleFileChange}
           disabled={state === 'uploading'}
-          className={inputClasses}
+          className="hidden"
         />
-        {selectedFile && <p className="text-xs text-mid-gray mt-1">{selectedFile.name}</p>}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={state === 'uploading'}
+          className={`${inputClasses} text-left cursor-pointer disabled:opacity-50`}
+        >
+          {selectedFile ? selectedFile.name : 'Choose File'}
+        </button>
       </div>
 
       {state === 'uploading' && (
@@ -152,7 +161,22 @@ export default function ConsentUploadForm({
         </div>
       )}
 
-      {errorMessage && <p className="text-sm text-orange">{errorMessage}</p>}
+      {errorMessage && (
+        <div>
+          <p className="text-sm text-orange">{errorMessage}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setState('idle')
+              setErrorMessage(null)
+              setSelectedFile(null)
+            }}
+            className="mt-2 text-sm font-semibold text-navy hover:underline cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
 
       <button
         type="button"

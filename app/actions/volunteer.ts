@@ -145,6 +145,7 @@ export async function submitVolunteerForm(
           .from('document_types')
           .select('id, name')
           .eq('slug', 'volunteer_consent_form')
+          .eq('is_active', true)
           .maybeSingle()
 
         if (docType) {
@@ -160,10 +161,23 @@ export async function submitVolunteerForm(
           if (submissionError || !submission) {
             console.error('Consent submission insert error:', submissionError)
           } else {
+            // Look up the currently active consent form document
+            const { data: activeDoc } = await supabase
+              .from('documents')
+              .select('access_token')
+              .eq('document_type_id', docType.id)
+              .eq('is_type_active', true)
+              .maybeSingle()
+
+            const activeFormUrl = activeDoc
+              ? `${process.env.NEXT_PUBLIC_SITE_URL}/documents/${activeDoc.access_token}`
+              : null
+
             await sendConsentFormRequestEmail({
               to: data.email,
               name: data.full_name,
               uploadToken: submission.upload_token,
+              activeFormUrl,
               documentTypeName: docType.name,
               volunteerId: newVolunteer.id,
             })
