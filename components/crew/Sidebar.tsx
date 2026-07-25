@@ -52,7 +52,7 @@ export default function Sidebar({
   const { isOpen, close } = useMobileSidebar()
   const isProduction = admin.role === 'production'
   const visibleNavItems = isProduction
-    ? NAV_ITEMS.filter((item) => item.href === '/crew/calendar')
+    ? NAV_ITEMS.filter((item) => item.href === '/crew/calendar' || item.href === '/crew/help')
     : NAV_ITEMS
 
   useEffect(() => {

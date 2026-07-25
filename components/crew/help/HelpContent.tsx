@@ -68,13 +68,16 @@ const ALL_SECTIONS: TocSection[] = [
   {
     id: 'settings',
     label: 'Settings',
-    roles: ['super_admin', 'editor', 'viewer'],
+    roles: ['super_admin'],
     children: [
-      { id: 'hearing-options', label: 'Hearing Options', roles: ['super_admin', 'editor'] },
-      { id: 'default-hours', label: 'Default Hours', roles: ['super_admin', 'editor'] },
-      { id: 'reply-to', label: 'Reply-To Email', roles: ['super_admin', 'editor'] },
+      { id: 'hearing-options', label: 'Hearing Options', roles: ['super_admin'] },
+      { id: 'default-hours', label: 'Default Hours', roles: ['super_admin'] },
+      { id: 'reply-to', label: 'Reply-To Email', roles: ['super_admin'] },
       { id: 'categories', label: 'Categories', roles: ['super_admin'] },
       { id: 'user-accounts', label: 'User Accounts', roles: ['super_admin'] },
+      { id: 'audit-log', label: 'Audit Log', roles: ['super_admin'] },
+      { id: 'location-management', label: 'Location Management', roles: ['super_admin'] },
+      { id: 'email-activity-log', label: 'Email Activity Log', roles: ['super_admin'] },
     ],
   },
   { id: 'callboard', label: 'The Volunteer Call Board', roles: ['super_admin', 'editor', 'viewer'] },
@@ -326,9 +329,13 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                   <p className={pClasses}>{`Fill in:`}</p>
                   <ul className={ulClasses}>
                     <li>{`Show name (like "South Pacific" or "Studio X: Holiday Showcase")`}</li>
-                    <li>{`Show type: Mainstage, Studio X, or One-Off`}</li>
+                    <li>{`Location — choose where this show will be performed`}</li>
                     <li>{`Season (select an existing season or type a new one — it will be created automatically)`}</li>
                   </ul>
+                  <p className={pClasses}>
+                    <strong>{`Location`}</strong>
+                    {` — the list comes from your active locations, the same locations that appear on the master calendar. Your Super Admin manages this list in Settings.`}
+                  </p>
                   <p className={pClasses}>
                     {`Add your performance dates. For each date, add the volunteer roles you need and how many slots each role has. For example: Ushers (6 slots), Concessions (4 slots).`}
                   </p>
@@ -339,7 +346,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                     {`Add volunteer instructions if needed — parking info, dress code, where to check in. These appear in the confirmation email every volunteer receives when they sign up.`}
                   </p>
                   <p className={pClasses}>
-                    {`The Default Hours field controls how many hours each volunteer earns for this show. It fills in automatically based on show type, but you can change it.`}
+                    {`Default volunteer hours are set per location. You can change the hours for any individual show date if needed.`}
                   </p>
                   <p className={pClasses}>
                     {`When you're ready, click Publish to make the show live, or Save as Draft to save without publishing.`}
@@ -402,7 +409,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                   <h3 id="post-show-report" className={h3Classes}>{`Post-Show Report`}</h3>
                   <p className={pClasses}>{`After a show is marked Past, a Report tab appears on the show's detail page.`}</p>
                   <p className={pClasses}>
-                    {`The report shows the total number of volunteer appearances, how many showed up, how many were no-shows, total hours logged, and the attendance rate. It breaks these numbers down by date so you can see how each performance night went.`}
+                    {`The report shows the total number of volunteer appearances, how many showed up, how many were no-shows, how many were excused, total hours logged, and the attendance rate. It breaks these numbers down by date so you can see how each performance night went.`}
                   </p>
                 </>
               )}
@@ -453,7 +460,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                 <>
                   <h3 id="milestones" className={h3Classes}>{`Milestones`}</h3>
                   <p className={pClasses}>
-                    {`Volunteers earn milestones as they accumulate hours. The milestones are: First Call (their very first appearance), 10 hours, 20 hours, 35 hours, 50 hours, 75 hours, and 100 hours.`}
+                    {`Volunteers earn milestones as they accumulate hours. The milestones are: First Call (their very first appearance), 10 hours, 20 hours, 35 hours, 50 hours, 75 hours, 100 hours, and every 25 hours thereafter.`}
                   </p>
                   <p className={pClasses}>{`When a volunteer hits a milestone, they receive a congratulations email automatically.`}</p>
                   <p className={pClasses}>
@@ -535,10 +542,13 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
               {show('default-hours') && (
                 <>
                   <h3 id="default-hours" className={h3Classes}>{`Default Volunteer Hours`}</h3>
-                  <p className={pClasses}>{`Default hours are the number of hours automatically credited to a volunteer per call, based on show type.`}</p>
-                  <p className={pClasses}>{`Go to Settings, then click General Defaults.`}</p>
-                  <p className={pClasses}>{`The three show types each have their own default: Mainstage, Studio X, and One-Off.`}</p>
-                  <Warning>{`Changing default hours only affects new shows created after the change. Existing shows keep their original setting.`}</Warning>
+                  <p className={pClasses}>
+                    {`Every location can have its own default hours. Your Super Admin sets these in Location Management under Settings. When a location has no default set, the system falls back to one of three general buckets: Mainstage, Studio X, or One-Off — also set in Settings.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`You can always override hours for any individual show date when you create or edit a show.`}
+                  </p>
+                  <Warning>{`Changing the default hours in Settings does not update hours for show dates that already exist. It only affects new show dates going forward.`}</Warning>
                 </>
               )}
 
@@ -568,25 +578,69 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
               {show('user-accounts') && (
                 <>
                   <h3 id="user-accounts" className={h3Classes}>{`Production Crew Accounts`}</h3>
-                  <p className={pClasses}>{`Production Crew has three account types:`}</p>
+                  <p className={pClasses}>{`Production Crew has four account types:`}</p>
+                  <ul className={ulClasses}>
+                    <li>
+                      <strong>{`Super Admin`}</strong>
+                      {` — full access to everything. Manages accounts, settings, and all platform content.`}
+                    </li>
+                    <li>
+                      <strong>{`Editor`}</strong>
+                      {` — can create and edit shows, volunteers, forms, and send emails. Cannot access Settings or manage other accounts.`}
+                    </li>
+                    <li>
+                      <strong>{`Viewer`}</strong>
+                      {` — read-only access to volunteers, shows, and forms. Cannot make any changes.`}
+                    </li>
+                    <li>
+                      <strong>{`Production`}</strong>
+                      {` — calendar access only. Designed for directors and stage managers who need to submit and view rehearsal schedules but do not manage volunteers. Cannot access any other part of Production Crew.`}
+                    </li>
+                  </ul>
                   <p className={pClasses}>
-                    <strong>{`Super Admin`}</strong>
-                    {` — full access, including the ability to create and manage all other accounts.`}
+                    {`Super Admins can also grant any Editor or Viewer account direct calendar write access using the Calendar Editor toggle on their account. By default, Editors and Viewers submit calendar events for Super Admin approval. With Calendar Editor turned on, their events are approved immediately.`}
                   </p>
-                  <p className={pClasses}>
-                    <strong>{`Editor`}</strong>
-                    {` — full read and write access for all volunteer and show management. Cannot manage user accounts.`}
-                  </p>
-                  <p className={pClasses}>
-                    <strong>{`Viewer`}</strong>
-                    {` — read-only access. Can see everything but cannot make any changes.`}
-                  </p>
-                  <Warning>{`Only Super Admins can create, change, or deactivate Production Crew accounts. Go to Settings, then User Management.`}</Warning>
-                  <p className={pClasses}>
-                    {`New team members can also request access themselves from the Production Crew login page. A Super Admin must approve the request before access is granted.`}
-                  </p>
+                  <Tip>
+                    {`To add a new account, go to Settings then User Management. New users can also request access from the login page — a Super Admin must approve the request before they can log in.`}
+                  </Tip>
                 </>
               )}
+
+              <h3 id="audit-log" className={h3Classes}>{`Audit Log`}</h3>
+              <p className={pClasses}>
+                {`The Audit Log keeps a permanent record of every action taken in Production Crew — who did it, what changed, and when. Use it to track edits, spot mistakes, and review account activity.`}
+              </p>
+              <p className={pClasses}>
+                {`Every row shows the action type, the admin who performed it, and the date and time. Click any row to expand it and see the before-and-after values for that change.`}
+              </p>
+              <p className={pClasses}>
+                {`Use the filters at the top to narrow results by action type or date range. The log is read-only — nothing in it can be edited or deleted.`}
+              </p>
+              <Tip>
+                {`If something on the platform looks wrong and you aren't sure what happened, the Audit Log is the first place to check.`}
+              </Tip>
+
+              <h3 id="location-management" className={h3Classes}>{`Location Management`}</h3>
+              <p className={pClasses}>
+                {`Locations are the spaces your theater uses for performances, rehearsals, and other events. They appear on the master calendar as color-coded entries and drive how default volunteer hours are calculated for shows.`}
+              </p>
+              <p className={pClasses}>
+                {`You can add a new location, give it a display color, and set a default number of volunteer hours for events in that space. You can also rename, reorder, or deactivate locations at any time. Deactivated locations are hidden from new events but existing calendar entries are not affected.`}
+              </p>
+              <Tip>
+                {`The color you assign to a location appears on the master calendar and in the location legend. Choose colors that are easy to tell apart at a glance.`}
+              </Tip>
+
+              <h3 id="email-activity-log" className={h3Classes}>{`Email Activity Log`}</h3>
+              <p className={pClasses}>
+                {`The Email Activity Log shows every email the platform has sent — automatic system emails and emails you sent manually. Use it to confirm that a message went out, check who received it, and see a preview of what it said.`}
+              </p>
+              <p className={pClasses}>
+                {`The log has three tabs. All Emails shows everything. System Only shows automatic emails like slot confirmations, reminders, and milestone notifications. About System Emails explains what each automatic email is and when it fires.`}
+              </p>
+              <Tip>
+                {`If a volunteer says they never got a confirmation email, check the Email Activity Log first. You can see exactly what was sent and when.`}
+              </Tip>
             </section>
           )}
 
