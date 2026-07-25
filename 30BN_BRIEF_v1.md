@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.4
-### Created: July 2026 | Last Updated: July 2026 — v3.4 (SETUP.0 complete — Phase 14 next)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.5
+### Created: July 2026 | Last Updated: July 2026 — v3.5 (Phase 14 complete + Phase 15.1–15.2 complete — Phase 15.3 next)
 
 ---
 
@@ -1302,7 +1302,43 @@ has been sent for each show date.
 - Inserted 17 default `app_settings` rows for all SETUP keys via `INSERT ... ON CONFLICT (key) DO NOTHING`
 - Added `is_super_admin_or_owner_admin()` helper function (plain `LANGUAGE sql STABLE`, same pattern as `is_editor()`/`is_admin()`/`is_super_admin()` — not a SECURITY DEFINER RPC, so R28 does not apply) to fix a discovered gap: the `locations` table's RLS write policy used `is_super_admin()` exclusively, which would have blocked Owner Admin location-management writes despite the app-level guard passing — repointed to `is_super_admin_or_owner_admin()`
 
-**Next migration:** 024
+**Migration 024 status:** Applied — `024_checkin_system.sql` (14.1):
+- Added `check_in_token uuid NOT NULL DEFAULT gen_random_uuid()` to `show_dates`.
+  Created UNIQUE index `idx_show_dates_check_in_token`.
+- Made `attendance.slot_claim_id` nullable (dropped NOT NULL constraint).
+  Existing rows unaffected. Walk-in check-ins (via public check-in page for
+  new volunteers) use `slot_claim_id = null`.
+
+**Migration 025 status:** Applied — `025_document_system.sql` (15.1):
+Dropped the old `documents` table (which had `document_type IN
+('consent_under18','general')` and `file_path` — a narrow Alpha-era schema with
+zero live rows at drop time). Created six new tables:
+- `document_types` — org-level document type registry with slugs for system
+  behavior (e.g. `volunteer_consent_form`). RLS: authenticated SELECT all;
+  `is_super_admin_or_owner_admin()` for write. Seeded with 5 types.
+- `media_folders` — folder/category layer for the master media library.
+  RLS: authenticated SELECT; `is_editor()` INSERT/UPDATE; SA/OA DELETE.
+  `handle_updated_at()` trigger on `updated_at`.
+- `media_folder_access` — role/user-specific folder visibility grants.
+  RLS: authenticated SELECT; `is_editor()` INSERT/DELETE.
+- `documents` (new schema) — core documents table with `access_token` (UUID,
+  unique), `entry_type` ('file'/'link'), `storage_path` (for files),
+  `external_url` (for links), `mime_type`, `access_tier`
+  ('public'/'link_only'/'backend'), `is_type_active` (one active per type),
+  `attached_to_type`/`attached_to_id` (polymorphic show/rehearsal/audition
+  attachment). RLS: authenticated SELECT all; authenticated INSERT;
+  `is_editor()` UPDATE; `is_super_admin_or_owner_admin()` DELETE.
+  `handle_updated_at()` trigger on `updated_at`.
+- `document_access` — role/user-specific document visibility grants.
+  Same RLS pattern as `media_folder_access`.
+- `consent_form_submissions` — tracks under-18 consent form uploads. Fields:
+  `upload_token` (UUID, unique — sent in email), `volunteer_id`, `document_type_id`,
+  `status` ('pending'/'approved'/'rejected'), `submitted_file_path` (null until
+  uploaded), `submitted_at`, `reviewed_by`, `reviewed_at`, `notes`. RLS:
+  authenticated all; anon SELECT WHERE status = 'pending' (for public upload page
+  token validation via `getAdminClient()`).
+
+**Next migration:** 026
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1446,7 +1482,9 @@ show_time        time NOT NULL
 end_time         time without time zone
 created_at       timestamptz NOT NULL DEFAULT now()
 thank_you_sent_at timestamptz
+check_in_token   uuid NOT NULL DEFAULT gen_random_uuid()
 -- INDEX: idx_show_dates_show_id
+-- UNIQUE INDEX: idx_show_dates_check_in_token (Migration 024)
 -- NOTE: end_time added in Migration 019 (CAL.4a).
 -- Nullable — null = end time not yet set. When null,
 -- syncShowDateToCalendar() uses startTime + 3 hours
@@ -1460,6 +1498,11 @@ thank_you_sent_at timestamptz
 -- Non-null = timestamp when it was sent. The thank-you
 -- cron checks IS NULL to avoid re-sending on subsequent
 -- daily runs.
+-- NOTE: check_in_token added in Migration 024 (14.1).
+-- NOT NULL DEFAULT gen_random_uuid(). UNIQUE index.
+-- Used by the public /checkin/[token] page and the admin
+-- Dates tab per-date check-in QR. Links to:
+-- ${NEXT_PUBLIC_SITE_URL}/checkin/[check_in_token]
 ```
 
 ### show_date_buffer
@@ -1523,7 +1566,12 @@ cancelled_at     timestamptz
 ### attendance
 ```sql
 id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-slot_claim_id    uuid NOT NULL REFERENCES slot_claims(id)
+slot_claim_id    uuid REFERENCES slot_claims(id)
+-- NOTE: Made nullable in Migration 024 (14.1).
+-- Walk-in check-ins via /checkin/[token] (new
+-- volunteer signs up at the door) have
+-- slot_claim_id = null — no prior slot claim exists.
+-- All pre-Migration-024 rows have a non-null value.
 volunteer_id     uuid REFERENCES volunteers(id)
 show_id          uuid NOT NULL REFERENCES shows(id)
 show_date_id     uuid NOT NULL REFERENCES show_dates(id)
@@ -1863,17 +1911,103 @@ created_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_audit_log_admin_id, idx_audit_log_target_type, idx_audit_log_created_at
 ```
 
-### documents
+### documents (new schema — Migration 025)
 ```sql
-id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-name             text NOT NULL
-document_type    text NOT NULL CHECK (document_type IN ('consent_under18','general'))
-file_path        text NOT NULL
-is_active        boolean NOT NULL DEFAULT false
-uploaded_by      uuid REFERENCES admin_users(id)
-uploaded_at      timestamptz NOT NULL DEFAULT now()
--- INDEX: idx_documents_type_active
+id                uuid PRIMARY KEY DEFAULT gen_random_uuid()
+access_token      uuid NOT NULL DEFAULT gen_random_uuid()
+title             text NOT NULL
+description       text
+document_type_id  uuid REFERENCES document_types(id)
+                  ON DELETE SET NULL
+folder_id         uuid REFERENCES media_folders(id)
+                  ON DELETE SET NULL
+entry_type        text NOT NULL CHECK (entry_type IN ('file','link'))
+storage_path      text  -- Supabase Storage path within 'media' bucket
+external_url      text  -- for link entries
+mime_type         text  -- detected at upload (determines player in 15.4)
+file_size         bigint
+original_filename text
+access_tier       text NOT NULL DEFAULT 'backend'
+                  CHECK (access_tier IN ('public','link_only','backend'))
+is_active         boolean NOT NULL DEFAULT true
+is_type_active    boolean NOT NULL DEFAULT false
+-- True = this is the current active document for its type.
+-- Only one document per document_type_id should have this true.
+-- Enforced at app layer via setTypeActiveDocument() action.
+-- Partial index: idx_documents_is_type_active WHERE is_type_active = true
+attached_to_type  text CHECK (attached_to_type IN (
+                    'show','rehearsal_batch','audition'
+                  ))
+attached_to_id    uuid  -- polymorphic FK, enforced at app layer
+uploaded_by       uuid REFERENCES admin_users(id)
+created_at        timestamptz NOT NULL DEFAULT now()
+updated_at        timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_documents_access_token on access_token
+-- INDEX: idx_documents_document_type_id
+-- INDEX: idx_documents_folder_id
+-- INDEX: idx_documents_uploaded_by
+-- INDEX: idx_documents_attached_to (attached_to_type, attached_to_id)
+-- RLS: authenticated SELECT all; authenticated INSERT;
+--   is_editor() UPDATE; is_super_admin_or_owner_admin() DELETE
+-- Trigger: handle_updated_at() on updated_at
+-- NOTE: old documents table (document_type IN ('consent_under18',
+--   'general'), file_path) dropped in Migration 025. Had zero live
+--   rows at the time of drop.
+-- Migration 025 (025_document_system.sql)
 ```
+
+### document_types
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name         text NOT NULL
+slug         text NOT NULL
+description  text
+is_system    boolean NOT NULL DEFAULT false
+is_active    boolean NOT NULL DEFAULT true
+sort_order   integer NOT NULL DEFAULT 0
+created_at   timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_document_types_slug on slug
+-- INDEX: idx_document_types_sort_order
+-- RLS: authenticated SELECT all;
+--   is_super_admin_or_owner_admin() INSERT/UPDATE/DELETE
+-- Seeded: volunteer_consent_form (system), cast_consent_form (system),
+--   volunteer_handbook, production_schedule, audition_materials
+-- is_system = true: cannot delete (app-layer guard); only deactivate.
+-- Migration 025 (025_document_system.sql)
+```
+
+### consent_form_submissions
+```sql
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+upload_token        uuid NOT NULL DEFAULT gen_random_uuid()
+volunteer_id        uuid REFERENCES volunteers(id) ON DELETE CASCADE
+document_type_id    uuid NOT NULL REFERENCES document_types(id)
+status              text NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending','approved','rejected'))
+submitted_file_path text  -- null until file uploaded via /consent/[token]
+submitted_at        timestamptz  -- null until submitted
+reviewed_by         uuid REFERENCES admin_users(id)
+reviewed_at         timestamptz
+notes               text
+created_at          timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_consent_submissions_token on upload_token
+-- INDEX: idx_consent_submissions_volunteer_id
+-- INDEX: idx_consent_submissions_status
+-- INDEX: idx_consent_submissions_doc_type on document_type_id
+-- RLS: admin_all (authenticated, all operations);
+--   anon SELECT WHERE status = 'pending' (token validation on
+--   public /consent/[token] page uses getAdminClient() — this
+--   policy is a safety net)
+-- Upload token is permanent until submitted_file_path is set.
+-- Status 'pending' means awaiting admin review (not "no file yet" —
+--   submitted_file_path IS NOT NULL indicates file received).
+-- Migration 025 (025_document_system.sql)
+```
+
+**Media library tables (Migration 025 — schema pending DOC.37c):**
+`media_folders`, `media_folder_access`, `document_access` created
+in Migration 025. Full schema blocks will be documented in DOC.37c
+when Phase 15.3 (master media library UI) ships.
 
 ### app_settings
 ```sql
@@ -1933,6 +2067,13 @@ submitted_at     timestamptz NOT NULL DEFAULT now()
 ```
 
 **`is_editor()` Postgres helper function:** Currently checks `role IN ('super_admin', 'editor')`. Updated in Migration 023 (SETUP.0) to include `'owner_admin'`: `role IN ('super_admin', 'owner_admin', 'editor')`. RLS policies that gate on editor-level access (`volunteer_notes` SELECT/INSERT, etc.) will apply correctly to Owner Admin after this update.
+
+**AuditAction types added since Phase 13:** Check-In (14.1): `attendance.checkin`,
+`volunteer.checkin_signup`. Documents (15.1): `document_type.create`,
+`document_type.update`, `document_type.delete`, `document_type.reorder`,
+`consent_submission.approve`, `consent_submission.reject`. Consent file receipt
+(15.2): `consent_submission.file_received`. All added to the AuditAction union
+in `lib/audit.ts` and visible in the audit log viewer.
 
 **Default `app_settings` seed values:**
 ```
@@ -2989,7 +3130,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase 13 is complete (13.1–13.4c). HELP phase complete (HELP.1–HELP.2d + ADMIN.27–29). Phase 14 (Check-In System) is next.*
+*Phase 14 complete (14.1–14.3 + 14.1-FIX). Phase 15 underway (15.1–15.2 + 15.2-AUDIT/FIX complete). Phase 15.3 (Master Media Library) next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3170,6 +3311,54 @@ Commit df8f907.
 **30BN-DOC.36** ✓ — Brief + Process Update v3.4 (SETUP.0
 complete — this prompt).
 
+Phase 14 — Check-In System ✓ Complete
+  30BN-14.1  ✓ Migration 024 + public check-in page
+               (app/checkin/[token]) + lib/actions/
+               checkin.ts (resolveCheckInToken,
+               checkInVolunteer, checkInNewVolunteer)
+               + types/checkin.ts + validations +
+               AuditAction types
+  30BN-14.1-FIX ✓ Server-side showAgeRange validation
+               gap (checkInNewVolunteer + CheckInClient)
+  30BN-14.2  ✓ Dates tab QRs (per-date + whole-show) +
+               Volunteers tab Self Check-In badge +
+               types/show.ts check_in_token + interim
+               /crew/tools/checkin stub update
+  30BN-14.3  ✓ Live check-in dashboard: lib/data/
+               checkin.ts + lib/actions/checkin-admin.ts
+               + CheckInDashboard.tsx (10s refresh,
+               accordion, roster, walk-ins)
+
+Phase 15 — Document & Media System (underway)
+  30BN-15.1  ✓ Migration 025 (6 new tables) + media
+               bucket + lib/actions/documents.ts +
+               DocumentTypesManager.tsx +
+               ConsentSubmissionsQueue.tsx + hub card fix
+  30BN-15.2  ✓ /documents/[token]/route.ts + /consent/
+               [token]/page.tsx + ConsentUploadForm.tsx +
+               lib/actions/consent.ts +
+               sendConsentFormRequestEmail() + volunteer
+               consent trigger + consent_submission.
+               file_received AuditAction
+  30BN-15.2-AUDIT ✓ Post-build read-only audit (81 items:
+               71 PASS, 1 PARTIAL, 9 FAIL). Identified
+               9 items requiring 15.2-FIX (primarily
+               activeFormUrl missing from email function
+               and trigger — context compaction during
+               build).
+  30BN-15.2-FIX ✓ All 9 FAILs resolved: activeFormUrl
+               param + conditional CTA in email function,
+               is_active filter + active doc lookup in
+               trigger, hidden file input, Try Again
+               button, volunteerName in success state,
+               recipientFilter corrected.
+  30BN-DOC.37a ✓ Brief Update v3.5 Part A (§1, §3, §5,
+               §7, §8, §12 feature spec updates)
+  30BN-DOC.37b ✓ Brief Update v3.5 Part B (§9 schema,
+               §11 phase tracking, version — this prompt)
+  30BN-15.3  (pending) — Master media library /crew/media
+  30BN-15.4  (pending) — Media players + embed detection
+
 **SETUP.1–4** (pending) — Setup Panel UI (six sections:
 Org Identity, Brand Colors, Logo, Email Config, Feature
 Flags, Instance Label). Full spec in §8 Platform Setup.
@@ -3201,16 +3390,74 @@ hardcoded hex values in `buildEmailHtml()`,
 `buildCtaButton()`, and email functions reference custom
 properties or are read from `app_settings` at send time.
 
-### Phase 14 — Check-In System (~2 prompts)
-- Per-show-date check-in QR code generation (from show detail)
-- Full check-in page: email/phone entry → auto-mark attendance → success/error states
-- Replace Alpha stub
+### Phase 14 — Check-In System ✓ Complete
 
-### Phase 15 — Document Management (~1 prompt)
-- PDF upload to Supabase Storage using P-DC pattern (direct browser upload — Vercel 4.5MB limit)
-- Active document management: one active per type
-- Landing page consent form link wired to active document
-- Replace Alpha stub
+**14.1 ✓** Migration 024 (show_dates.check_in_token + attendance.slot_claim_id
+nullable). Public check-in page at `/checkin/[token]` (handles both per-date
+and whole-show tokens). `lib/actions/checkin.ts`: `resolveCheckInToken()`,
+`checkInVolunteer()`, `checkInNewVolunteer()`. Full inline signup form for
+walk-in volunteers. CT-aware date gating. 3-tier hours fallback (`resolveHoursLogged()`
++ `applyHoursForCheckin()`). `lib/validations/checkin.ts`:
+`createCheckInSignupSchema(showAgeRange)` factory. `types/checkin.ts`: all
+check-in types. `lib/audit.ts`: `attendance.checkin`, `volunteer.checkin_signup`
+AuditAction types added.
+
+**14.1-FIX ✓** Three corrections from 14.3 audit (Q3): server-side `checkInNewVolunteer()`
+gained `showAgeRange: boolean` param for conditional age_range validation (real gap was
+server-side only — client already worked). `CheckInClient.tsx` passes `showAgeRange` prop
+through. No schema changes.
+
+**14.2 ✓** Admin show detail updates: Dates tab per-date check-in QRs (always visible,
+PNG + SVG downloads) + whole-show QR at top. Volunteers tab "Self Check-In" badge on
+`source = 'checkin'` rows. `show_dates.check_in_token` and `shows.check_in_token` added
+to data fetches. `/crew/tools/checkin` stub updated to interim pointing message (replaced
+in 14.3). `types/show.ts`: `check_in_token?: string` added to ShowDate.
+
+**14.3 ✓** Live check-in dashboard at `/crew/tools/checkin` replacing the stub.
+`lib/data/checkin.ts`: `getCheckInDashboardData(supabase)`. `lib/actions/checkin-admin.ts`:
+`getCheckInRosterForDate()` (uses `getServerClient()` — authenticated; separate file from
+public-route checkin.ts). `components/crew/tools/CheckInDashboard.tsx`: 10s auto-refresh
+via `router.refresh()` + `setInterval`, date selector, accordion for other shows, full
+RosterTable with all 5 status states, walk-in section, "Last updated Xs ago" counter.
+Additional types in `types/checkin.ts`: `CheckInRosterEntry`, `CheckInWalkIn`,
+`CheckInRoster`, `CheckInShowSummary`, `CheckInDashboardData`.
+
+### Phase 15 — Document & Media System (underway)
+
+**15.1 ✓** Migration 025 (drop old documents table + create 6 new tables: document_types,
+media_folders, media_folder_access, documents, document_access, consent_form_submissions;
+5 document_type seed rows). Supabase Storage `media` bucket (private). `lib/audit.ts`:
+document and consent_submission AuditAction types. `lib/actions/documents.ts`: document
+type CRUD (`createDocumentType`, `updateDocumentType`, `deleteDocumentType`,
+`reorderDocumentType`, `setTypeActiveDocument`) + consent submission review
+(`approveConsentSubmission`, `rejectConsentSubmission`). `/crew/settings/documents`
+page: `DocumentTypesManager.tsx` (inline edit, reorder, system-type guard, active document
+picker) + `ConsentSubmissionsQueue.tsx` (3 tabs, approve/reject). Hub card "Beta" badge
+removed; guard corrected to SA/OA only (15.1 Q2).
+
+**15.2 ✓** (+ 15.2-AUDIT + 15.2-FIX) `app/documents/[token]/route.ts`: universal
+document redirect route (access tier enforcement, signed URL generation from `media`
+bucket, link redirect). `app/consent/[token]/page.tsx` + `ConsentUploadForm.tsx`:
+public P-DC consent form upload page (XHR with progress, all states, file type
+validation). `lib/actions/consent.ts`: `getConsentUploadUrl()` + `confirmConsentSubmission()`
+(getAdminClient() only). `sendConsentFormRequestEmail()` in `lib/email.ts`: conditional
+download CTA when active form exists, "coordinator will provide" fallback, upload CTA
+always present, `trigger:consent_form_request`. Under-18 consent trigger added to
+`submitVolunteerForm()`: non-blocking, looks up active consent form document for
+`activeFormUrl`, inserts `consent_form_submissions`, sends email.
+`lib/audit.ts`: `consent_submission.file_received` added. 15.2-AUDIT caught 9 FAILs
+(context compaction during build); 15.2-FIX resolved all: `activeFormUrl` param added
+to email function, trigger upgraded to look up active document, `is_active` filter added
+to document_types query, file picker UX fixed (hidden input + trigger button), "Try
+Again" button added, `volunteerName` added to success state.
+
+**15.3** (pending) — Master media library at `/crew/media` (all roles, folder browser,
+P-DC upload for files, link entry, QR + distribution link per document, role/user
+visibility controls, attachment context for shows/rehearsals/auditions).
+
+**15.4** (pending) — Media players: video (native `<video>` + YouTube/Vimeo embed),
+audio (native `<audio>`), PDF inline viewer, image preview. Embed detection in
+`/documents/[token]` route.
 
 ### Phase 16 — Google SSO ✓ Completed in Alpha (30BN-1.3)
 - Configure Google OAuth in Supabase Auth
@@ -3432,3 +3679,4 @@ Decision #7 resolved; DOC.21 logged)*
 *v3.1 (July 2026 — Phase CAL complete: §9 Migrations 021–022 status added (021: admin calendar token; 022: recurring events schema); next migration updated to 023; admin_users calendar_subscription_token column + calendar_editor note updated (built not planned); calendar_events recurrence_group_id column + index + note added; recurrence_groups table schema block added; §8 F2 fixed (duplicate Key Files entries removed); §8 F3 fixed (stale 'planned for CAL.8' Locations note updated to built); §10 prompt log DOC.26–30 + CAL.6–CAL.10c + ADMIN.26 added; §11 Phase CAL marked complete (CAL.1–CAL.10c); DOC.28a/28b logged)*
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §1 current phase updated (13.4c complete, HELP complete, Phase 14 next); §1 OpenCall OS context paragraph added; §2 Owner Admin, OpenCall OS, Setup Panel terminology rows added; §3 TipTap row updated (extension-link + extension-underline + full toolbar list); §6 email design forward reference notes for dynamic from address and logo URL (Phase SETUP); §7 roles table updated (Owner Admin row added, Editor row corrected — Settings access removed, Production row updated with /crew/help); §7 calendar_editor flag note updated (owner_admin allowed); §7 middleware/proxy note updated (proxy.ts rename, Owner Admin access, Production /crew/help exception); §8 Settings hub card table corrected (all cards = SA + Owner Admin; Platform Setup card added); §8 Communication page Owner Admin access note added; §8 Help System section added (full HELP phase spec, role visibility, anchor inventory, HelpTooltip count 26, Production sidebar, Settings = SA + Owner Admin); §8 Platform Setup section added (full SETUP spec: 6 sections, all app_settings keys, feature flags, implementation notes); §9 is_editor() function update note added; §9 new SETUP app_settings keys added (17 keys); §9 Migration 023 scope added; §9 admin_users.role CHECK updated (owner_admin added); §9 calendar_editor CHECK note updated (owner_admin allowed); §10 prompt log updated (DOC.31–33, ADMIN.27–29, HELP.1–HELP.2d, ADMIN.29 added); §11 header updated (13.4c + HELP complete); §11 Phase 13 13.4c marked complete; §11 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29); §11 Phase SETUP section added (SETUP.0–4 forward spec); §11 Phase THEME section added (THEME.A/1–3 forward spec); §13 R32 added (feature flags via getFeatureFlags()); §13 R33 added (CSS custom properties post-THEME); DOC.34 logged)*
 *v3.4 (July 2026 — SETUP.0 complete: §1 current phase updated (SETUP.0 complete, Phase 14 next); §2 Calendar Editor terminology updated (Owner Admin added); §7 Owner Admin row updated (built SETUP.0); §8 User Management updated (calendar_editor toggle on OA rows, deactivate guard, role selector restriction, badge — SETUP.0); §9 Migration 023 marked applied (role CHECK, calendar_editor CHECK, is_editor() update, is_super_admin_or_owner_admin() added, 17 app_settings keys, locations RLS repointed); §9 locations table RLS note updated; §9 next migration updated to 024; §11 SETUP.0 marked complete with summary; §11 Phase SETUP header "(pending)" removed; §10/§11 prompt log updated (SETUP.0 ✓, DOC.36 ✓); §13 R32 note updated (not-yet-built language removed, SETUP.1 forward reference added); DOC.36 logged)*
+*v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §1 current phase updated (Phase 14 complete, Phase 15.3 next); §3 File Storage updated (media bucket, P-DC, all file types); §5 Storage Buckets updated (media private bucket replaces documents spec); §7 Public routes updated (/consent/*, /documents/*); §8 landing page consent form bullet replaced (auto-trigger on is_minor); §8 Public Check-In Page replaced (full 14.1–14.3 spec: per-date + whole-show tokens, walk-in signup, all result states, /consent/[token] doc); §8 Check-In Admin section replaced (live dashboard spec: 10s refresh, roster, walk-ins, accordion); §8 Show Management Dates tab updated (check-in QRs); §8 Volunteers tab updated (Self Check-In badge); §8 Document Management replaced (15.1–15.2 spec: document types manager, consent submissions queue, /documents/[token] redirect route, consent trigger, sendConsentFormRequestEmail, 15.3–15.4 pending); §8 Settings hub card Document Management updated (Beta badge removed); §9 show_dates check_in_token column added (Migration 024); §9 attendance slot_claim_id made nullable (Migration 024); §9 old documents table schema replaced with new 6-table schema (Migration 025): documents, document_types, consent_form_submissions (with full schema blocks) + media_folders, media_folder_access, document_access (deferred to DOC.37c); §9 Migration 024–025 status blocks added; §9 next migration updated to 026; §9 AuditAction types note added (14.1 + 15.1 + 15.2 additions); §11 header updated (Phase 15.3 next); §11 Phase 14 marked complete (14.1–14.3 + 14.1-FIX summaries); §11 Phase 15 section replaced (15.1–15.2 ✓ + 15.3–15.4 pending); §11 prompt log updated (14.1–14.3, 14.1-FIX, 15.1, 15.2, 15.2-AUDIT, 15.2-FIX, DOC.37a, DOC.37b added); §12 Open Decision #5 updated (infrastructure built, PDF content pending); DOC.37b logged)*
