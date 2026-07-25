@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 8r | July 2026 | Phase CAL Complete (CAL.1–CAL.10c + ADMIN.26) — Cleanup Revision
+## Version 10 | July 2026 | Phase 13 + HELP Phase Complete (13.1–13.4c + HELP.1–HELP.2d + ADMIN.27–29)
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -1242,6 +1242,30 @@ log rows:
 ### Phase 13.4b — requires phone-width viewport:
 13.4b V1, 13.4b V2, 13.4b V3, 13.4b V4, 13.4b V5,
 13.4b V6, 13.4b V7
+
+### ADMIN.27 — requires real email delivery:
+ADMIN.27 V6
+
+### ADMIN.27 — requires incognito/cleared localStorage:
+ADMIN.27 V7
+
+### HELP.2a — requires Production account:
+HELP.2a V1, HELP.2a V2, HELP.2a V3
+
+### HELP.2b — requires Editor account:
+HELP.2b V1
+
+### HELP.2b — requires Viewer account (A1):
+HELP.2b V2
+
+### HELP.2c — requires Viewer account (A1):
+HELP.2c V2, HELP.2c V7
+
+### HELP.2c — requires Production account:
+HELP.2c V4
+
+### ADMIN.29 — requires calendar_editor or Super Admin:
+ADMIN.29 V8
 
 ---
 
@@ -3888,6 +3912,8 @@ Apple Mail (or whatever email clients are available).*
       above the editor with four buttons: B (Bold), I
       (Italic), • List (Bullet List), 1. List (Ordered
       List).
+      Superseded by ADMIN.27 — toolbar expanded to 9
+      buttons. See ADMIN.27 V1 below.
 
 - [ ] **13.3b V2** — Click inside the editor and type
       some text. Select a word and click the Bold button.
@@ -4023,23 +4049,292 @@ dev tools device emulation or narrow the browser window.*
 
 ---
 
-*Total items in this carry-forward list: 549*
-*Prior (v8r): 505 items*
-*v9 additions: 44 new items (Phase 13.1: 10,
-Phase 13.2: 6, Phase 13.3a: 10, Phase 13.3b: 7,
-Phase 13.4a: 4, Phase 13.4b: 7). 1 item superseded
-(11.1 V1 — Communication page stub, replaced by
-Phase 13.3a blast composer).*
-*Quick Reference: 10 new groups added (Phase 13.1–13.4b).*
-*Seed Data Cleanup: Phase 13 blast + transactional log
-cleanup SQL added.*
+## PHASE 13.4c — npm Vulnerability Sweep
+
+No owner verification required. All changes are
+dependency-level (package.json / package-lock.json).
+Verify Vercel build succeeded after the next deploy.
+
+---
+
+## ADMIN.27 — TipTap Rich Formatting + Light Mode Default
+
+**Expanded toolbar — /crew/communication:**
+
+- [ ] **ADMIN.27 V1** — Navigate to /crew/communication
+      as Editor or Super Admin. Confirm the toolbar above
+      the rich text editor now shows NINE buttons in this
+      order: B (Bold), I (Italic), U (Underline), H1,
+      H2, — (Horizontal Rule), • List (Bullet), 1. List
+      (Ordered), 🔗 (Link). Confirm all nine are visible
+      without wrapping on a desktop viewport.
+
+- [ ] **ADMIN.27 V2** — Select a word in the editor and
+      click the U (Underline) button. Confirm the word
+      becomes underlined and the U button highlights
+      (active state — navy background). Click again to
+      toggle off.
+
+- [ ] **ADMIN.27 V3** — Click the H1 button with the
+      cursor on a paragraph. Confirm the text becomes a
+      large heading. Click H2. Confirm it becomes a
+      medium heading. Click H1 again to toggle off.
+      Confirm the active state highlights correctly for
+      each.
+
+- [ ] **ADMIN.27 V4** — Click the — (Horizontal Rule)
+      button. Confirm a horizontal divider line is
+      inserted in the editor. Confirm no active state
+      highlight (horizontal rules are not toggle states).
+
+- [ ] **ADMIN.27 V5** — Select some text and click the
+      🔗 (Link) button. Confirm a browser prompt appears
+      asking for a URL. Enter a URL (e.g.
+      https://30byninety.com). Confirm the selected text
+      becomes a clickable link. Click the 🔗 button
+      again while the cursor is inside the link. Confirm
+      a prompt appears pre-filled with the existing URL.
+      Clear it and confirm the link is removed.
+
+- [ ] **ADMIN.27 V6** — Send a test blast containing:
+      underlined text, an H1 heading, a horizontal rule,
+      and a clickable link. Open the received email.
+      Confirm: underline is visible, heading renders
+      large, horizontal rule appears as a dividing line,
+      link is clickable. No raw HTML tags visible.
+      *(Requires real email delivery)*
+
+**Light mode default:**
+
+- [ ] **ADMIN.27 V7** — Open the admin panel
+      (/crew/login) in a browser with no localStorage
+      (use a fresh incognito window or clear
+      localStorage). Confirm the page renders in LIGHT
+      mode — not dark — without any user action. The
+      default must now be light regardless of the
+      operating system's color scheme preference.
+
+- [ ] **ADMIN.27 V8** — Log in and toggle to dark mode
+      using the sidebar theme toggle. Close the tab.
+      Reopen /crew/dashboard in the same browser (not
+      incognito). Confirm dark mode persists (stored
+      preference honored). Toggle back to light.
+      Close and reopen. Confirm light persists.
+
+---
+
+## HELP.2a — Help Page: Structural Scaffold
+
+**Production role access to /crew/help:**
+
+- [ ] **HELP.2a V1** — Log in as a Production-role
+      account. Confirm the sidebar shows a Help link
+      (HelpCircle icon, labeled "Help") alongside the
+      Calendar link. *(Requires Production account)*
+
+- [ ] **HELP.2a V2** — As Production role, navigate to
+      /crew/help. Confirm the page loads — you are NOT
+      redirected to /crew/calendar.
+      *(Requires Production account)*
+
+- [ ] **HELP.2a V3** — As Production role on /crew/help:
+      confirm the TOC on the left shows ONLY two
+      sections: "Master Calendar" and "Getting Help."
+      Confirm no other sections (Volunteers, Shows,
+      Dashboard, Communication, etc.) appear in the TOC
+      or the page content. *(Requires Production account)*
+
+- [ ] **HELP.2a V4** — As Super Admin, navigate to
+      /crew/help. Confirm the page loads correctly (no
+      regression — role-aware TOC renders all sections
+      for Super Admin). *(Quick sanity check)*
+
+---
+
+## HELP.2b — Help Page: Existing Sections Updated
+
+**Role-filtered sections:**
+
+- [ ] **HELP.2b V1** — Log in as Editor. Navigate to
+      /crew/help. Confirm the Settings section does NOT
+      appear in the TOC or the page content.
+      *(Requires Editor account)*
+
+- [ ] **HELP.2b V2** — As Viewer on /crew/help: confirm
+      the Settings section is absent. Confirm the
+      Communication section is absent. Confirm no edit-
+      only subsections appear within Volunteers (no "Edit
+      a Volunteer" or "Archive a Volunteer"), Shows (no
+      "Create a Show" or "Publish a Show"), or Attendance
+      (no "Mark Attendance"). *(Requires Viewer account
+      — A1)*
+
+- [ ] **HELP.2b V3** — As Super Admin on /crew/help:
+      confirm the Settings section IS present and contains
+      three new subsections: "Audit Log," "Location
+      Management," and "Email Activity Log" — in addition
+      to the existing Settings subsections.
+
+**Updated content accuracy:**
+
+- [ ] **HELP.2b V4** — On /crew/help, navigate to
+      Settings → General Defaults (or the default hours
+      subsection). Confirm the content describes the
+      HIERARCHY: per-location default hours take
+      precedence, with the three bucket fallbacks
+      (Mainstage/Studio X/One-Off) as fallback only.
+      Confirm no mention of "show type."
+
+- [ ] **HELP.2b V5** — Navigate to the account types
+      section of /crew/help (within Settings → User
+      Management or equivalent). Confirm FOUR account
+      types are described: Super Admin, Editor, Viewer,
+      and Production. Confirm the calendar_editor flag
+      is mentioned. *(Super Admin only)*
+
+---
+
+## HELP.2c — Help Page: New Sections
+
+**Dashboard section:**
+
+- [ ] **HELP.2c V1** — As Super Admin or Editor, navigate
+      to /crew/help. Confirm a "Your Dashboard" section
+      appears in the TOC and on the page. Confirm it
+      contains subsections for: Quick Stats, Season at a
+      Glance, and Activity Feed.
+
+- [ ] **HELP.2c V2** — As Viewer on /crew/help: confirm
+      "Your Dashboard" is present (Viewers can see the
+      dashboard). Confirm the Pending Hours and Pending
+      Milestones are NOT described as standalone
+      subsections (those are Editor/SA features) — they
+      are mentioned as a cross-link only in the Activity
+      Feed Tip. *(Requires Viewer account — A1)*
+
+**Master Calendar section:**
+
+- [ ] **HELP.2c V3** — As Super Admin on /crew/help:
+      confirm a "Master Calendar" section appears in the
+      TOC with 9 subsections: Calendar Overview,
+      Submitting an Event, Direct Event Creation, Bulk
+      Rehearsal Schedules, Recurring Events, Pending
+      Approval Queue, Book Space, Calendar Export &
+      Subscription, The Public Calendar.
+
+- [ ] **HELP.2c V4** — As Production role on /crew/help:
+      confirm the "Master Calendar" section is visible
+      with all 9 subsections EXCEPT "Pending Approval
+      Queue" (Super Admin only). Confirm all 8 visible
+      subsections appear in the TOC.
+      *(Requires Production account)*
+
+- [ ] **HELP.2c V5** — As Editor or Viewer on /crew/help:
+      confirm "Pending Approval Queue" subsection is
+      absent from the TOC and content. Confirm the other
+      8 calendar subsections are present.
+
+**Communication section:**
+
+- [ ] **HELP.2c V6** — As Super Admin or Editor on
+      /crew/help: confirm a "Communication" section
+      appears in the TOC with a "Sending an Email Blast"
+      subsection. Confirm the content describes the three
+      recipient modes (All Volunteers, By Category,
+      Individual) and the compose → confirm → sent flow.
+
+- [ ] **HELP.2c V7** — As Viewer on /crew/help: confirm
+      the "Communication" section is absent from the TOC
+      and page content entirely. *(Requires Viewer
+      account — A1)*
+
+---
+
+## HELP.2d + ADMIN.29 — New HelpTooltip Placements
+
+Each HelpTooltip is a small HelpCircle icon that appears
+next to a heading or button. Clicking it links to the
+relevant /crew/help anchor.
+
+- [ ] **ADMIN.29 V1** — Navigate to /crew/dashboard.
+      Find the "Season at a Glance" section heading.
+      Confirm a small HelpCircle icon appears next to it.
+      Click it. Confirm it navigates to
+      /crew/help#dashboard-season.
+
+- [ ] **ADMIN.29 V2** — Navigate to /crew/communication.
+      Find the "Communication" page heading (h1).
+      Confirm a small HelpCircle icon appears next to it.
+      Click it. Confirm it navigates to
+      /crew/help#blast-compose.
+
+- [ ] **ADMIN.29 V3** — Navigate to
+      /crew/settings/locations. Find the page heading.
+      Confirm a small HelpCircle icon appears next to it.
+      Click it. Confirm it navigates to
+      /crew/help#location-management.
+
+- [ ] **ADMIN.29 V4** — Navigate to
+      /crew/settings/audit-log. Find the page heading.
+      Confirm a small HelpCircle icon appears next to it.
+      Click it. Confirm it navigates to
+      /crew/help#audit-log.
+
+- [ ] **ADMIN.29 V5** — Navigate to
+      /crew/settings/email-activity. Find the page
+      heading. Confirm a small HelpCircle icon appears
+      next to it. Click it. Confirm it navigates to
+      /crew/help#email-activity-log.
+
+- [ ] **ADMIN.29 V6** — Navigate to /crew/calendar.
+      Find the "Add Event" / "Submit Request" dropdown
+      button in the calendar header. Confirm a small
+      HelpCircle icon appears immediately after (as a
+      sibling element — NOT inside the button). Click it.
+      Confirm it navigates to /crew/help#calendar-submit.
+
+- [ ] **ADMIN.29 V7** — On /crew/calendar: find the
+      "Export" button in the calendar header (desktop
+      only — not visible in the mobile ⋯ More menu).
+      Confirm a HelpCircle icon appears next to it.
+      Click it. Confirm it navigates to
+      /crew/help#calendar-export.
+
+- [ ] **ADMIN.29 V8** — On /crew/calendar (as Super
+      Admin or calendar_editor holder): find the "Book
+      Space" button in the calendar header (desktop
+      only). Confirm a HelpCircle icon appears next to
+      it. Click it. Confirm it navigates to
+      /crew/help#calendar-book-space. As a non-calendar-
+      editor Editor: confirm the Book Space button AND
+      its tooltip are both absent.
+
+- [ ] **ADMIN.29 V9** — Navigate to
+      /crew/calendar/pending as Super Admin. Find the
+      "Pending Calendar Requests" h1 heading. Confirm
+      a HelpCircle icon appears inside the h1 (inline
+      with the text). Click it. Confirm it navigates to
+      /crew/help#calendar-pending.
+
+---
+
+*Total items in this carry-forward list: 582*
+*Prior (v9): 549 items*
+*v10 additions: 33 new items (13.4c: 0, ADMIN.27: 8,
+HELP.2a: 4, HELP.2b: 5, HELP.2c: 7, HELP.2d+ADMIN.29: 9).
+1 item superseded and struck through (13.3b V1 — stale
+4-button toolbar description, replaced by ADMIN.27 V1).*
+*Quick Reference: 8 new groups added.*
+*Seed Data Cleanup: no new SQL needed (ADMIN.27–29 and
+HELP phase added no new test data).*
 *Quick Reference retained — references item IDs only
 and remains accurate.*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v9 (Phase 13 complete:
-13.1–13.4b verification items added, 11.1 V1 superseded,
-Quick Reference updated, Seed Data Cleanup updated)*
+*Last updated: July 2026 — v10 (ADMIN.27 rich toolbar +
+light mode default, HELP phase role-filtered help page,
+HELP.2d + ADMIN.29 HelpTooltip placements, 13.3b V1
+superseded, Quick Reference updated)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
