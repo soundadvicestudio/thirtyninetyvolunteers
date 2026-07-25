@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, Loader2, AlertTriangle, Check } from 'lucide
 import { approveCalendarEvent, approveBatch, cancelCalendarEvent, checkEventConflict } from '@/lib/actions/calendar'
 import { formatCT } from '@/lib/utils/date'
 import { formatInTimeZone } from 'date-fns-tz'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { PendingEvent, PendingBatch } from '@/app/crew/(app)/calendar/pending/page'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -291,7 +292,9 @@ export default function PendingQueueClient({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-4">Pending Calendar Requests</h1>
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-4">
+        Pending Calendar Requests <HelpTooltip anchor="calendar-pending" label="Approval Queue" />
+      </h1>
 
       {isEmpty && (
         <p className="text-sm text-mid-gray dark:text-dark-muted">Nothing waiting for approval right now.</p>

@@ -19,6 +19,7 @@ import CalendarExportModal from './CalendarExportModal'
 import CalendarRecurringEventForm from './CalendarRecurringEventForm'
 import RecurrenceScopePicker from './RecurrenceScopePicker'
 import { cancelCalendarEvent, cancelRecurringOccurrence } from '@/lib/actions/calendar'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
@@ -386,16 +387,20 @@ export default function CalendarShell({
                 <Download size={16} />
                 Export
               </button>
+              <HelpTooltip anchor="calendar-export" label="Calendar Export" />
 
               {canDirectCreate && (
-                <button
-                  type="button"
-                  onClick={() => setBookSpaceOpen(true)}
-                  className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
-                >
-                  <CalendarSearch size={16} />
-                  Book Space
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setBookSpaceOpen(true)}
+                    className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                  >
+                    <CalendarSearch size={16} />
+                    Book Space
+                  </button>
+                  <HelpTooltip anchor="calendar-book-space" label="Book Space" />
+                </>
               )}
             </div>
 
@@ -408,6 +413,7 @@ export default function CalendarShell({
                 {adminRole === 'super_admin' ? 'Add Event' : 'Submit Request'}
                 <ChevronDown size={14} />
               </button>
+              <HelpTooltip anchor="calendar-submit" label="Submitting Events" />
               {actionMenuOpen && (
                 <div className="absolute right-0 z-20 mt-1 w-48 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg py-1">
                   <button
