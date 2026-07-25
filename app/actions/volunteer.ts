@@ -1,7 +1,7 @@
 'use server'
 
 import { getAdminClient } from '@/lib/supabase/admin'
-import { sendVolunteerConfirmationEmail } from '@/lib/email'
+import { sendVolunteerConfirmationEmail, sendConsentFormRequestEmail } from '@/lib/email'
 import { normalizePhone } from '@/lib/utils/phone'
 import { VolunteerFormData } from '@/types/volunteer'
 
@@ -134,6 +134,44 @@ export async function submitVolunteerForm(
       // Email failure should not block signup success.
       // Log and continue.
       console.error('Confirmation email failed:', emailError)
+    }
+
+    // CONSENT FORM TRIGGER — new minor volunteers only. Never fires from
+    // mergeVolunteer(); is_minor is derived inline from data.age_range
+    // rather than re-read from the DB.
+    if (data.age_range === 'under_18') {
+      try {
+        const { data: docType } = await supabase
+          .from('document_types')
+          .select('id, name')
+          .eq('slug', 'volunteer_consent_form')
+          .maybeSingle()
+
+        if (docType) {
+          const { data: submission, error: submissionError } = await supabase
+            .from('consent_form_submissions')
+            .insert({
+              volunteer_id: newVolunteer.id,
+              document_type_id: docType.id,
+            })
+            .select('upload_token')
+            .single()
+
+          if (submissionError || !submission) {
+            console.error('Consent submission insert error:', submissionError)
+          } else {
+            await sendConsentFormRequestEmail({
+              to: data.email,
+              name: data.full_name,
+              uploadToken: submission.upload_token,
+              documentTypeName: docType.name,
+              volunteerId: newVolunteer.id,
+            })
+          }
+        }
+      } catch (consentError) {
+        console.error('Consent form trigger failed:', consentError)
+      }
     }
 
     return { status: 'success' }

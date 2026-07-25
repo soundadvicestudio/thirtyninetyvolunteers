@@ -192,18 +192,16 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isEditorOrAbove ? (
+        {canAccessAdminSettings ? (
           <LinkedCard
             href="/crew/settings/documents"
             title="Document Management"
             description="Upload and manage the volunteer consent form PDF linked on the public signup page."
-            badgeLabel="Beta"
           />
         ) : (
           <LockedCard
             title="Document Management"
             description="Upload and manage the volunteer consent form PDF linked on the public signup page."
-            badgeLabel="Editor & Super Admin only"
           />
         )}
       </div>

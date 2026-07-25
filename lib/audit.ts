@@ -85,6 +85,7 @@ export type AuditAction =
   | 'document_type.reorder'
   | 'consent_submission.approve'
   | 'consent_submission.reject'
+  | 'consent_submission.file_received'
 
 export async function logAction(
   adminId: string | null,

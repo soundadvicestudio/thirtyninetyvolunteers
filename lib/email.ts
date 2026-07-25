@@ -180,6 +180,62 @@ export async function sendVolunteerConfirmationEmail({
   })
 }
 
+// ─── Consent form request email (30BN-15.2) ──────────────────────
+
+type ConsentFormRequestEmailParams = {
+  to: string
+  name: string
+  uploadToken: string
+  documentTypeName: string
+  volunteerId?: string | null
+}
+
+export async function sendConsentFormRequestEmail({
+  to,
+  name,
+  uploadToken,
+  documentTypeName,
+  volunteerId,
+}: ConsentFormRequestEmailParams): Promise<void> {
+  const uploadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/consent/${uploadToken}`
+  const safeName = escapeHtml(name)
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you for signing up to volunteer with 30 By Ninety Theatre! Because you're under 18, we need a
+      signed ${documentTypeName} from a parent or guardian before you can start volunteering.
+    </p>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Please use the button below to upload your completed form.
+    </p>
+    ${buildCtaButton('Upload Consent Form', uploadUrl)}
+  `
+
+  const subject = 'Action needed: submit your volunteer consent form'
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Please submit your volunteer consent form to get started.',
+    body,
+  })
+
+  await resend.emails.send({
+    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    to,
+    subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: 'Please submit your volunteer consent form to get started.',
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:consent_request',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId: volunteerId ?? null }],
+  })
+}
+
 // ─── Update link email ───────────────────────────────────────────
 
 type UpdateLinkEmailParams = {
