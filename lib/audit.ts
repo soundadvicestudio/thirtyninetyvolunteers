@@ -78,6 +78,14 @@ export type AuditAction =
   | 'attendance.checkin'
   | 'volunteer.checkin_signup'
 
+  // Documents
+  | 'document_type.create'
+  | 'document_type.update'
+  | 'document_type.delete'
+  | 'document_type.reorder'
+  | 'consent_submission.approve'
+  | 'consent_submission.reject'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,
