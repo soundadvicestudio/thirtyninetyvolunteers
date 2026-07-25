@@ -45,3 +45,62 @@ export type CheckInSignupData = {
   referral_name?: string
   category_ids: string[]
 }
+
+// A single rostered volunteer's check-in state
+export type CheckInRosterEntry = {
+  claimId: string
+  volunteerName: string
+  roleName: string
+  attendance: {
+    status: 'showed' | 'no_show' | 'excused'
+    source: 'manual' | 'checkin'
+    markedAt: string
+  } | null
+}
+
+// A walk-in who signed up at the door via check-in page
+export type CheckInWalkIn = {
+  volunteerName: string
+  markedAt: string
+}
+
+// Full roster data for one show date
+export type CheckInRoster = {
+  claims: CheckInRosterEntry[]
+  walkIns: CheckInWalkIn[]
+  checkedInCount: number // showed (claimed + walk-in)
+  totalRostered: number // claimed slot_claims only
+}
+
+// Summary card for accordion (other future shows)
+export type CheckInShowSummary = {
+  showId: string
+  showName: string
+  locationName: string
+  nearestDateId: string
+  nearestDate: string // YYYY-MM-DD bare date string
+  nearestTime: string // time string
+  checkedInCount: number
+  totalRostered: number
+}
+
+// Full dashboard data returned by getCheckInDashboardData
+export type CheckInDashboardData =
+  | { noUpcomingShows: true }
+  | {
+      noUpcomingShows: false
+      topShow: {
+        showId: string
+        showName: string
+        locationName: string
+        upcomingDates: Array<{
+          id: string
+          show_date: string
+          show_time: string
+          end_time: string | null
+        }>
+        selectedDateId: string
+        roster: CheckInRoster
+      }
+      otherShows: CheckInShowSummary[]
+    }

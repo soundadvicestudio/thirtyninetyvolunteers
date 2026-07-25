@@ -8,7 +8,7 @@ import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 import { logAction } from '@/lib/audit'
 import { checkFirstCall, checkMilestones } from '@/lib/milestones'
 import { sendVolunteerConfirmationEmail } from '@/lib/email'
-import { checkInSignupSchema, type CheckInSignupInput } from '@/lib/validations/checkin'
+import { createCheckInSignupSchema, type CheckInSignupInput } from '@/lib/validations/checkin'
 import type { CheckInTokenResolution, CheckInResult, CheckInNewResult } from '@/types/checkin'
 
 // This file serves the public /checkin/[token] route — no Supabase Auth
@@ -283,10 +283,11 @@ export async function checkInVolunteer(
 export async function checkInNewVolunteer(
   token: string,
   selectedDateId: string | undefined,
-  formData: CheckInSignupInput
+  formData: CheckInSignupInput,
+  showAgeRange: boolean
 ): Promise<CheckInNewResult> {
   try {
-    const parsed = checkInSignupSchema.safeParse(formData)
+    const parsed = createCheckInSignupSchema(showAgeRange).safeParse(formData)
     if (!parsed.success) {
       return { error: 'unknown' }
     }

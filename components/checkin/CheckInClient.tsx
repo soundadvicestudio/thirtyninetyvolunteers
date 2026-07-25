@@ -229,7 +229,7 @@ export default function CheckInClient({
       category_ids: data.category_ids,
     }
 
-    const result = await checkInNewVolunteer(token, selectedDateId, payload)
+    const result = await checkInNewVolunteer(token, selectedDateId, payload, showAgeRange)
 
     if ('success' in result) {
       setVolunteerName(result.volunteerName)
