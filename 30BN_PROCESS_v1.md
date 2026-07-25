@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.3
-### Created: July 2026 | Last Updated: July 2026 — v3.3 (HELP phase + OpenCall OS additions — Phase 14 next)
+## 30BN_PROCESS_v1.md — v3.4
+### Created: July 2026 | Last Updated: July 2026 — v3.4 (SETUP.0 complete — Phase 14 next)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -293,7 +293,7 @@ Confirmed failure pattern in CAL.7 F2: `filename="${show.name}.ics"` — fixed i
 `filename="volunteer-call.ics"`. Applies to all iCalendar routes and any other route handler
 that generates downloadable files.
 
-**Owner Admin role guard pattern (established SETUP.0 — not yet built):**
+**Owner Admin role guard pattern (established and built SETUP.0):**
 After Migration 023 / SETUP.0 ships and the `owner_admin` role exists, role guards throughout the codebase must be evaluated:
 
 Operational features (email blast, attendance marking, show management, Settings hub sub-pages, email activity, audit log, location management, category management, user management, calendar admin): guards should pass `owner_admin` through alongside `super_admin`. Pattern: `role === 'super_admin' || role === 'owner_admin'` — or equivalently, checking that `role !== 'viewer' && role !== 'production'`.
@@ -694,10 +694,12 @@ grep -rn "role === 'super_admin'\|role !== 'super_admin'" \
   lib/actions/ app/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "setup"
-# Review hits after SETUP.0 role sweep. Most should have become
-# ['super_admin','owner_admin'].includes(role). Exceptions:
-# Setup Panel actions, owner_admin/super_admin account creation.
-# Run this after SETUP.0 to confirm sweep was complete.
+# Review every hit. After SETUP.0, legitimate remaining hits are:
+#   - createUser()/changeRole() account escalation guards
+#   - /crew/settings/setup action guards (SETUP.1)
+#   - proxy.ts /crew/settings/setup route block
+# Any other hit is an unswept guard that should use
+# ['super_admin','owner_admin'].includes(role) instead.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -1557,10 +1559,19 @@ Phase HELP — In-App Help System ✓ Complete
 
 Phase 14 — Check-In System          (pending)
 Phase 15 — Document Management      (pending)
-Phase SETUP — OpenCall OS Setup Panel (pending)
-  SETUP.0 Migration 023 + role guard sweep (owner_admin
-           role, is_editor() update, default app_settings
-           keys). Prerequisite for all SETUP.1–4.
+Phase SETUP — OpenCall OS Setup Panel
+  SETUP.0 ✓ Migration 023 + role guard sweep. owner_admin
+           role CHECK, is_editor() update, is_super_admin_
+           or_owner_admin() helper + locations RLS fix, 17
+           app_settings SETUP keys, AdminRole type update,
+           proxy.ts setup route block, full 47-guard sweep
+           (each evaluated individually). UsersTable/
+           CreateUserModal/PendingRegistrations badge +
+           toggle + deactivate + role selector. Sidebar/
+           HelpContent/settings pages. TopBar exhaustive
+           Record<AdminRole> maps (tsc --noEmit catch).
+           29 files. Zero lint errors. Commit df8f907.
+  30BN-DOC.36 ✓ Brief + Process Update v3.4 (this prompt)
   SETUP.1–4 Setup Panel UI (pending): org identity, brand
            colors, logo, email config, feature flags,
            instance label. lib/actions/setup.ts. Settings
@@ -1899,3 +1910,4 @@ onward.
 *v3.1 (July 2026 — Phase CAL complete: §7 iCalendar route getAdminClient() exception added (CAL.7); createUser() auth.admin exception clarified (ADMIN.26 confirmed pattern); Content-Disposition fixed-filename rule added (ADMIN.26); calendar-recurrence.ts + calendar-layout.ts pure client-safe noted (CAL.10a, CAL.9); §11 three new checklist items (Content-Disposition filename safety, recurring event creation pattern, recurring event edit/cancel scope pattern); §13 Phase CAL marked complete (CAL.1–CAL.10c); §13 DOC.26–27 + CAL.6–CAL.10c + ADMIN.26 added to prompt log; §14 two new rules: Content-Disposition fixed filename, calendar-recurrence.ts pure client-safe; DOC.29 logged)*
 *v3.2 (July 2026 — Phase 13 complete: §2 header updated (Phase 13 complete, Phase 14 next); §14 logEmailSent() helper pattern added (13.1 — internal to lib/email.ts, getAdminClient(), errors swallowed, never before send, inline pattern for action/cron files); §14 blast.ts getServerClient() note added (13.3a — authenticated session, resolveBlastRecipients receives client as parameter); §8 single-fenced-code-block rule added for all prompts (13.3b/13.4a confirmed correction); §10 blast sanitization grep + logEmailSent export grep added; §11 three new checklist items (logEmailSent() after send, blast body sanitizeHtml not escapeHtml, no <form> in Client Components); §13 Phase 13 marked complete (13.1–13.4b each described, 13.4c pending); §13 prompt log updated (DOC.31–DOC.32 + 13.1–13.4b added); §14 single-fenced-code-block rule added; §14 escapeHtml() note updated (TipTap exception + blast.ts local copy); §14 R31 cross-reference added; DOC.32 logged)*
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §2 header updated (HELP phase + OpenCall OS, Phase 14 next); §7 Owner Admin role guard pattern added (SETUP.0 design — checks super_admin || owner_admin for operational features, super_admin-only for Setup Panel + account escalation); §7 getFeatureFlags() pattern added (Phase SETUP design — all feature flag reads through lib/feature-flags.ts); §7 lib/actions/setup.ts getServerClient() note added (Phase SETUP design); §10 three new grep checks added (proxy.ts/middleware.ts, feature flags, owner_admin role guards); §11 two new checklist items (owner_admin role guards, feature flags via getFeatureFlags()); §13 13.4c marked complete (npm sweep: next 16.2.11, 6 remaining blocked upstream); §13 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29 all complete); §13 Phase SETUP section added (SETUP.0–4 pending); §13 Phase THEME section added (THEME.A/1–3 pending); §13 prompt log updated (DOC.33–34, HELP.1–HELP.2d, ADMIN.27–29); §14 ADMIN.28 proxy.ts rename note added; §14 ADMIN.27 light-mode-always note added; §14 HelpTooltip Client Component clarification added; §14 R32 cross-reference added (owner_admin role guard); §14 R33 cross-reference added (CSS custom properties post-THEME); DOC.35 logged)*
+*v3.4 (July 2026 — SETUP.0 complete: §2 header updated (SETUP.0 complete, Phase 14 next); §7 Owner Admin role guard pattern note updated (not-yet-built language removed); §10 owner_admin grep check comment updated (post-sweep standing verification); §13 Phase SETUP updated (SETUP.0 ✓ with full summary, "(pending)" removed from header, DOC.36 added to prompt log); SETUP.1–4 still pending; DOC.36 logged)*

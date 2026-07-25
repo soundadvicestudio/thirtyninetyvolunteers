@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.3
-### Created: July 2026 | Last Updated: July 2026 — v3.3 (HELP phase + OpenCall OS additions — Phase 14 next)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.4
+### Created: July 2026 | Last Updated: July 2026 — v3.4 (SETUP.0 complete — Phase 14 next)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 13 complete (13.1–13.4c). HELP phase complete (HELP.1–HELP.2d + ADMIN.27–29). Phase 14 (Check-In System) next.
+**Current phase:** Phase 13 complete (13.1–13.4c). HELP phase complete (HELP.1–HELP.2d + ADMIN.27–29). SETUP.0 complete (Migration 023 + Owner Admin role guard sweep). Phase 14 (Check-In System) next.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -40,7 +40,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
 | **Production** | New admin role (CAL.2). Calendar-only access. Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. |
-| **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor and Viewer accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
+| **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can manage Editor, Viewer, and Production accounts but cannot create Super Admin or other Owner Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
 | **Setup Panel** | Super Admin-only configuration panel at `/crew/settings/setup`. Allows Jonathan to brand and configure each OpenCall OS client deployment without code changes: org identity, brand colors, logo, email configuration, feature flags, and instance label. Owner Admins are hard-blocked from this route. |
@@ -188,7 +188,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Role | Route Access | Can Edit | Can Email | Notes |
 |---|---|---|---|---|
 | Super Admin | All `/crew/*` including `/crew/settings/setup` | Yes | Yes | Creates/manages all admin accounts including Owner Admin. Only role with access to the Setup Panel. |
-| Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can manage Editor, Viewer, and Production accounts. Cannot create Super Admin or other Owner Admin accounts. Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments (Phase SETUP.0). |
+| Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can manage Editor, Viewer, and Production accounts. Cannot create Super Admin or other Owner Admin accounts. Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. |
 | Editor | All `/crew/*` except Settings hub and user management | Yes | Yes | Full operational access. Cannot access Settings sub-pages (owner decision — Settings is Super Admin and Owner Admin only). Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
 | Production | `/crew/calendar` and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. |
@@ -504,8 +504,9 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Multiple Super Admins are supported. Deactivate button is disabled for ALL Super Admin rows in the Users table (not just own account).
 - Change role (Super Admin only). Super Admin role cannot be changed via the Users panel.
 - Super Admin cannot be demoted via this panel
-- **`calendar_editor` toggle** (CAL.6): on each Editor/Viewer row — grants or revokes direct calendar write access. Toggle absent on Super Admin and Production rows. Calls `toggleCalendarEditor()` in `lib/actions/users.ts`.
+- **`calendar_editor` toggle** (CAL.6, updated SETUP.0): on each Editor, Viewer, and Owner Admin row — grants or revokes direct calendar write access. Toggle absent on Super Admin and Production rows. Calls `toggleCalendarEditor()` in `lib/actions/users.ts`.
 - **ADMIN.26:** All four user management actions (`createUser`, `deactivateUser`, `reactivateUser`, `changeRole`) migrated to `getServerClient()` with `revalidatePath('/crew/settings/users')`. Client components use `router.refresh()` instead of `window.location.href`. `changeRole()` guards: Production role cannot be set via role change; admin cannot change own role.
+- **SETUP.0 user management updates:** Deactivate button disabled on Owner Admin rows when the caller is an Owner Admin (Super Admin sees the button enabled on Owner Admin rows and can deactivate them). Role selector in create-account (`CreateUserModal.tsx`) and pending-registration approval (`PendingRegistrations.tsx`) flows: Owner Admin callers see only `editor`/`viewer` as assignable roles; Super Admin callers additionally see `owner_admin` (create-account) or `owner_admin`/`super_admin` (registration approval — the only path that can mint an additional Super Admin account). The change-role dropdown in `UsersTable.tsx` only ever offers `editor`/`viewer` regardless of caller, so no caller-conditional options were needed there — only which rows show the selector at all (Owner Admin rows are locked when the caller is Owner Admin). Server action guards are authoritative; UI selectors match. Owner Admin badge added to `UsersTable.tsx` (distinct color from Super Admin and Editor). `UsersTable.tsx`, `CreateUserModal.tsx`, `PendingRegistrations.tsx`, and `TopBar.tsx` all updated.
 - **Change Password** — `/crew/settings/password` page accessible to all logged-in admins via "Change Password" link in the top bar. New Password + Confirm New Password fields (min 8 chars). Uses Supabase Auth `updateUser({ password })`. No current password field required (relies on valid session). Logged to `audit_log` as `user.password_change`. Built in ADMIN.15.
 
 **Show Management (`/crew/shows`):**
@@ -1146,13 +1147,14 @@ has been sent for each show date.
 
 **Migration 022 status:** Applied — `022_recurring_events.sql` (CAL.10a). Creates `recurrence_groups` table (series template for recurring calendar events). Adds `recurrence_group_id uuid REFERENCES recurrence_groups(id) ON DELETE SET NULL` to `calendar_events`. Creates index `idx_calendar_events_recurrence_group` on `calendar_events(recurrence_group_id)`. RLS on `recurrence_groups`: authenticated SELECT + INSERT, super_admin_all FOR ALL (using is_admin()).
 
-**Migration 023 scope (SETUP.0 — not yet applied):** `023_owner_admin_feature_flags.sql`:
-- Update `admin_users.role` CHECK to include `'owner_admin'`
-- Update `calendar_editor` CHECK to allow `owner_admin`
-- Update `is_editor()` Postgres function to include `owner_admin`
-- Insert default `app_settings` rows for all new SETUP keys (see above) via `INSERT ... ON CONFLICT (key) DO NOTHING`
+**Migration 023 status:** Applied — `023_owner_admin_feature_flags.sql` (SETUP.0):
+- Updated `admin_users.role` CHECK to include `'owner_admin'`
+- Updated `calendar_editor` CHECK to allow `owner_admin`
+- Replaced `is_editor()` Postgres function to include `owner_admin`
+- Inserted 17 default `app_settings` rows for all SETUP keys via `INSERT ... ON CONFLICT (key) DO NOTHING`
+- Added `is_super_admin_or_owner_admin()` helper function (plain `LANGUAGE sql STABLE`, same pattern as `is_editor()`/`is_admin()`/`is_super_admin()` — not a SECURITY DEFINER RPC, so R28 does not apply) to fix a discovered gap: the `locations` table's RLS write policy used `is_super_admin()` exclusively, which would have blocked Owner Admin location-management writes despite the app-level guard passing — repointed to `is_super_admin_or_owner_admin()`
 
-**Next migration:** 023
+**Next migration:** 024
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1251,9 +1253,12 @@ created_at       timestamptz NOT NULL DEFAULT now()
 -- Seeded with 5 locations: Mainstage (#293994),
 -- Mainstage Lobby (#0D9488), Green Room (#15803D),
 -- Studio X (#F26522), Studio X Office (#7C3AED)
--- RLS: public_select_locations (SELECT, anon +
---   authenticated), super_admin_all (FOR ALL,
---   authenticated, is_super_admin())
+-- RLS on locations: public_select_locations (SELECT, anon +
+--   authenticated), super_admin_all (FOR ALL, authenticated,
+--   is_super_admin_or_owner_admin() — repointed SETUP.0;
+--   policy name unchanged, only the underlying function
+--   changed. Original is_super_admin() would have blocked
+--   Owner Admin location-management writes.)
 -- Migration 016 (016_locations_show_type_migration.sql)
 -- Migration 020 adds default_hours (nullable).
 -- Per-location default hours UI planned CAL.8.
@@ -2996,15 +3001,26 @@ placements. `CalendarShell.tsx`: `calendar-submit`,
 to buttons, not nested inside). `PendingQueueClient.tsx`:
 `calendar-pending` (inside h1). Final count: 26.
 
-### Phase SETUP — OpenCall OS Setup Panel (pending)
+### Phase SETUP — OpenCall OS Setup Panel
 
-**SETUP.0** (pending) — Migration 023 + role guard sweep.
-Adds `owner_admin` role to DB CHECK, updates `is_editor()`
-function, inserts default `app_settings` rows for all
-SETUP keys (`ON CONFLICT DO NOTHING`). Sweeps codebase for
-all `super_admin` role guards and evaluates which should
-pass `owner_admin` through. Updates `AdminRole` type in
-`types/admin.ts`. Must run before SETUP.1–4.
+**SETUP.0** ✓ — Migration 023 + role guard sweep.
+`023_owner_admin_feature_flags.sql` applied: `owner_admin`
+added to `admin_users.role` CHECK, `calendar_editor` CHECK
+updated to allow `owner_admin`, `is_editor()` replaced to
+include `owner_admin`, `is_super_admin_or_owner_admin()`
+helper added (locations RLS fix — discovered gap), 17
+`app_settings` SETUP keys seeded. Full grep of 47
+`super_admin` guard hits across codebase — each evaluated
+individually (not bulk-replaced). `AdminRole` type updated
+in `types/admin.ts`. `proxy.ts` updated: hard-redirect for
+any non-Super-Admin on `/crew/settings/setup`. 29 files
+modified total (actions, components, sidebar, help,
+settings pages). `TopBar.tsx` exhaustive `Record<AdminRole>`
+maps updated (caught by `tsc --noEmit`). Zero lint errors.
+Commit df8f907.
+
+**30BN-DOC.36** ✓ — Brief + Process Update v3.4 (SETUP.0
+complete — this prompt).
 
 **SETUP.1–4** (pending) — Setup Panel UI (six sections:
 Org Identity, Brand Colors, Logo, Email Config, Feature
@@ -3224,7 +3240,7 @@ on mount. Established ADMIN.14.
 The email blast body originates from TipTap's `getHTML()` output — it is already structured HTML and must NOT be passed through `escapeHtml()`. Doing so would encode all angle brackets and produce literal `&lt;p&gt;` text in the email body. Instead, `sanitizeHtml()` from the `sanitize-html` package is called in `sendBlastEmail()` before the body reaches `buildBlastEmailHtml()`. The sanitizer strips disallowed tags and attributes while preserving the HTML structure. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`, `h2`, `h3`, `blockquote`, `a[href]`. Schemes: `http`, `https`, `mailto` only. Established 13.4a.
 
 ### R32 — Feature Flags Always Via getFeatureFlags()
-All feature flag reads in the codebase must go through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never fetch individual feature flag keys inline with separate `app_settings` queries. This ensures: (1) all flags are fetched in one round trip, (2) the typed return object prevents typos in key names, (3) missing keys are handled consistently. Middleware checks flags for route-level blocking; sidebar conditionally renders links based on flags passed as props from layout; individual pages receive flags as props or re-fetch via the helper. Established Phase SETUP design (not yet built — enforced from SETUP.0 onward).
+All feature flag reads in the codebase must go through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never fetch individual feature flag keys inline with separate `app_settings` queries. This ensures: (1) all flags are fetched in one round trip, (2) the typed return object prevents typos in key names, (3) missing keys are handled consistently. Middleware checks flags for route-level blocking; sidebar conditionally renders links based on flags passed as props from layout; individual pages receive flags as props or re-fetch via the helper. Established Phase SETUP design; enforced from SETUP.0 onward. `getFeatureFlags()` in `lib/feature-flags.ts` not yet built — ships with SETUP.1.
 
 ### R33 — After Phase THEME: CSS Custom Properties for Brand Colors, Not Tailwind Utility Classes
 After Phase THEME ships, all components that reference brand-driven colors (`bg-navy`, `text-orange`, `border-navy`, `hover:bg-navy`, etc.) must use CSS custom properties (`var(--brand-primary)`, `var(--brand-accent)`) via inline styles or a small set of CSS utility classes in `globals.css` that reference these variables. Static Tailwind brand color utility classes are no longer permitted in new code after THEME ships — they reference static hex values and cannot respond to `app_settings` color changes. The `@theme` block in `globals.css` is NOT modified (R7 still applies — structural and non-brand colors stay as static hex in `@theme`). Phase THEME.A audits all current usages before any replacements are made. Established Phase THEME design (not yet built — enforced from THEME.1 onward).
@@ -3267,3 +3283,4 @@ Decision #7 resolved; DOC.21 logged)*
 *v3.0 (July 2026 — Beta Phase CAL active: §1 current phase updated (Beta underway, Phase CAL active); §1 public surfaces updated (/calendar added); §2 terminology table updated (Production role, Calendar Editor flag); §7 roles table updated (Production row, calendar_editor flag paragraph, middleware note); §8 Show Management updated (show_type → location, end time, buffer time); §8 Master Calendar section added (full feature spec: locations, auto-sync, event types, role access, calendar views, event creation, bulk rehearsal, pending queue, Book Space, public calendar); §8 General Defaults fallback note updated; §8 Location Management card added (planned CAL.8); §9 Migrations 016–020 status added, next migration 021; §9 locations table added; §9 shows.show_type replaced by location_id; §9 show_dates.end_time added; §9 show_date_buffer table added; §9 rehearsal_batches, calendar_events, calendar_event_contacts tables added; §9 admin_users.role extended + calendar_editor added; §10 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a added to prompt log; §11 Phase CAL added with CAL.1–CAL.5b marked complete + CAL.6–CAL.8 planned; DOC.25a/25b logged)*
 *v3.1 (July 2026 — Phase CAL complete: §9 Migrations 021–022 status added (021: admin calendar token; 022: recurring events schema); next migration updated to 023; admin_users calendar_subscription_token column + calendar_editor note updated (built not planned); calendar_events recurrence_group_id column + index + note added; recurrence_groups table schema block added; §8 F2 fixed (duplicate Key Files entries removed); §8 F3 fixed (stale 'planned for CAL.8' Locations note updated to built); §10 prompt log DOC.26–30 + CAL.6–CAL.10c + ADMIN.26 added; §11 Phase CAL marked complete (CAL.1–CAL.10c); DOC.28a/28b logged)*
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §1 current phase updated (13.4c complete, HELP complete, Phase 14 next); §1 OpenCall OS context paragraph added; §2 Owner Admin, OpenCall OS, Setup Panel terminology rows added; §3 TipTap row updated (extension-link + extension-underline + full toolbar list); §6 email design forward reference notes for dynamic from address and logo URL (Phase SETUP); §7 roles table updated (Owner Admin row added, Editor row corrected — Settings access removed, Production row updated with /crew/help); §7 calendar_editor flag note updated (owner_admin allowed); §7 middleware/proxy note updated (proxy.ts rename, Owner Admin access, Production /crew/help exception); §8 Settings hub card table corrected (all cards = SA + Owner Admin; Platform Setup card added); §8 Communication page Owner Admin access note added; §8 Help System section added (full HELP phase spec, role visibility, anchor inventory, HelpTooltip count 26, Production sidebar, Settings = SA + Owner Admin); §8 Platform Setup section added (full SETUP spec: 6 sections, all app_settings keys, feature flags, implementation notes); §9 is_editor() function update note added; §9 new SETUP app_settings keys added (17 keys); §9 Migration 023 scope added; §9 admin_users.role CHECK updated (owner_admin added); §9 calendar_editor CHECK note updated (owner_admin allowed); §10 prompt log updated (DOC.31–33, ADMIN.27–29, HELP.1–HELP.2d, ADMIN.29 added); §11 header updated (13.4c + HELP complete); §11 Phase 13 13.4c marked complete; §11 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29); §11 Phase SETUP section added (SETUP.0–4 forward spec); §11 Phase THEME section added (THEME.A/1–3 forward spec); §13 R32 added (feature flags via getFeatureFlags()); §13 R33 added (CSS custom properties post-THEME); DOC.34 logged)*
+*v3.4 (July 2026 — SETUP.0 complete: §1 current phase updated (SETUP.0 complete, Phase 14 next); §2 Calendar Editor terminology updated (Owner Admin added); §7 Owner Admin row updated (built SETUP.0); §8 User Management updated (calendar_editor toggle on OA rows, deactivate guard, role selector restriction, badge — SETUP.0); §9 Migration 023 marked applied (role CHECK, calendar_editor CHECK, is_editor() update, is_super_admin_or_owner_admin() added, 17 app_settings keys, locations RLS repointed); §9 locations table RLS note updated; §9 next migration updated to 024; §11 SETUP.0 marked complete with summary; §11 Phase SETUP header "(pending)" removed; §10/§11 prompt log updated (SETUP.0 ✓, DOC.36 ✓); §13 R32 note updated (not-yet-built language removed, SETUP.1 forward reference added); DOC.36 logged)*
