@@ -20,6 +20,16 @@ interface TocSection {
 // new entries). Role lists mirror the HELP.1 Task E role assignment map.
 const ALL_SECTIONS: TocSection[] = [
   {
+    id: 'dashboard',
+    label: 'Your Dashboard',
+    roles: ['super_admin', 'editor', 'viewer'],
+    children: [
+      { id: 'dashboard-stats', label: 'Quick Stats', roles: ['super_admin', 'editor', 'viewer'] },
+      { id: 'dashboard-season', label: 'Season at a Glance', roles: ['super_admin', 'editor', 'viewer'] },
+      { id: 'dashboard-feed', label: 'Activity Feed', roles: ['super_admin', 'editor', 'viewer'] },
+    ],
+  },
+  {
     id: 'volunteers',
     label: 'Your Volunteers',
     roles: ['super_admin', 'editor', 'viewer'],
@@ -78,6 +88,30 @@ const ALL_SECTIONS: TocSection[] = [
       { id: 'audit-log', label: 'Audit Log', roles: ['super_admin'] },
       { id: 'location-management', label: 'Location Management', roles: ['super_admin'] },
       { id: 'email-activity-log', label: 'Email Activity Log', roles: ['super_admin'] },
+    ],
+  },
+  {
+    id: 'calendar',
+    label: 'Master Calendar',
+    roles: ['super_admin', 'editor', 'viewer', 'production'],
+    children: [
+      { id: 'calendar-overview', label: 'Calendar Overview', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-submit', label: 'Submitting an Event', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-direct-create', label: 'Direct Event Creation', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-bulk-rehearsal', label: 'Bulk Rehearsal Schedules', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-recurring', label: 'Recurring Events', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-pending', label: 'Pending Approval Queue', roles: ['super_admin'] },
+      { id: 'calendar-book-space', label: 'Book Space', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-export', label: 'Calendar Export & Subscription', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'calendar-public', label: 'The Public Calendar', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+    ],
+  },
+  {
+    id: 'communication',
+    label: 'Communication',
+    roles: ['super_admin', 'editor'],
+    children: [
+      { id: 'blast-compose', label: 'Sending an Email Blast', roles: ['super_admin', 'editor'] },
     ],
   },
   { id: 'callboard', label: 'The Volunteer Call Board', roles: ['super_admin', 'editor', 'viewer'] },
@@ -193,6 +227,68 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
         </aside>
 
         <div className="flex-1 min-w-0">
+          {/* ───────── Your Dashboard ───────── */}
+          {show('dashboard') && (
+            <section id="dashboard">
+              <h2 className={h2Classes}>{`Your Dashboard`}</h2>
+              <p className={pClasses}>
+                {`The dashboard is the first thing you see when you log in. It gives you a quick look at what's happening across the platform.`}
+              </p>
+
+              {show('dashboard-stats') && (
+                <>
+                  <h3 id="dashboard-stats" className={h3Classes}>{`Quick Stats`}</h3>
+                  <p className={pClasses}>
+                    {`Four tiles at the top of the dashboard show you the numbers that matter most right now.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>{`Total Active Volunteers — everyone currently active in the system.`}</li>
+                    <li>{`Upcoming Shows This Month — live shows with at least one date in the current calendar month.`}</li>
+                    <li>{`Volunteers Needed — the total number of open slots across all live shows.`}</li>
+                    <li>{`New Volunteers (7 Days) — people who signed up in the last seven days.`}</li>
+                  </ul>
+                </>
+              )}
+
+              {show('dashboard-season') && (
+                <>
+                  <h3 id="dashboard-season" className={h3Classes}>{`Season at a Glance`}</h3>
+                  <p className={pClasses}>
+                    {`Below Quick Stats, you'll see a staffing overview for the current season. Each show is listed with its roles. A green indicator means a role is fully filled. Yellow means it's partially filled. Red means no one has signed up yet.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Super Admins can switch which season is displayed using the season selector at the top of this section. Editors and Viewers always see the currently pinned season.`}
+                  </p>
+                </>
+              )}
+
+              {show('dashboard-feed') && (
+                <>
+                  <h3 id="dashboard-feed" className={h3Classes}>{`Activity Feed`}</h3>
+                  <p className={pClasses}>
+                    {`The Activity Feed at the bottom of the dashboard shows you recent platform activity — new volunteer signups, slot claims, cancellations, and opportunity submissions. New items are highlighted so you can see what happened since your last visit.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Click "Mark all as read" to clear the highlights. Click "Load more" to see older activity.`}
+                  </p>
+                  <Tip>
+                    {`The Pending Hours and Pending Milestone Acknowledgments cards appear on the dashboard when action is needed. See `}
+                    <a href="#hours" className="text-navy underline dark:text-steel">
+                      {`How Hours Work`}
+                    </a>
+                    {` and `}
+                    <a href="#milestones" className="text-navy underline dark:text-steel">
+                      {`Milestones`}
+                    </a>
+                    {` for more detail.`}
+                  </Tip>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('dashboard') && <Divider />}
+
           {/* ───────── Your Volunteers ───────── */}
           {show('volunteers') && (
             <section id="volunteers">
@@ -645,6 +741,208 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
           )}
 
           {show('settings') && <Divider />}
+
+          {/* ───────── Master Calendar ───────── */}
+          {show('calendar') && (
+            <section id="calendar">
+              <h2 className={h2Classes}>{`Master Calendar`}</h2>
+              <p className={pClasses}>
+                {`The master calendar shows everything happening in your spaces — performances, rehearsals, meetings, rentals, and more. All roles can view the calendar. What you can do on it depends on your account type.`}
+              </p>
+
+              {show('calendar-overview') && (
+                <>
+                  <h3 id="calendar-overview" className={h3Classes}>{`Calendar Overview`}</h3>
+                  <p className={pClasses}>
+                    {`The calendar has three views. Switch between them using the buttons at the top.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>{`Month view — a traditional calendar grid. Click any day to see its full event list.`}</li>
+                    <li>{`Week view — a room-booking grid showing all locations side by side. Events appear as color-coded blocks. On a phone, this view switches to a simple list.`}</li>
+                    <li>{`Agenda view — a chronological list of upcoming events over the next 90 days.`}</li>
+                  </ul>
+                  <p className={pClasses}>
+                    {`Each location has its own color. The color legend below the filter bar shows you which color belongs to which space. Use the filters to narrow what you see by location, event type, or season.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Click any event to open the day panel. The day panel shows all events for that day and the available time windows for each location.`}
+                  </p>
+                </>
+              )}
+
+              {show('calendar-submit') && (
+                <>
+                  <h3 id="calendar-submit" className={h3Classes}>{`Submitting an Event`}</h3>
+                  <p className={pClasses}>
+                    {`To add an event to the calendar, click the "Submit Request" button at the top right and choose Single Event, Rehearsal Schedule, or Recurring Event.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Fill in the event details. Location is labeled "Preferred Location" — it's a request, not a guaranteed booking. A Super Admin will review your submission and assign a location before approving it.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Once submitted, your event goes to the pending queue. You'll see it on the calendar as pending until a Super Admin approves it.`}
+                  </p>
+                  <Tip>
+                    {`Performance events are added to the calendar automatically when you create a show. You do not need to add them manually.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('calendar-direct-create') && (
+                <>
+                  <h3 id="calendar-direct-create" className={h3Classes}>{`Direct Event Creation`}</h3>
+                  <p className={pClasses}>
+                    {`Super Admins and anyone with direct calendar access can create events that are approved immediately — no pending queue. The button at the top right says "Add Event" instead of "Submit Request" when you have this access.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`When creating an event directly, you can check for scheduling conflicts before saving. If a conflict is found, you can choose to override it or pick a different time.`}
+                  </p>
+                  <Tip>
+                    {`If your button says "Submit Request" and you need direct access, ask your Super Admin to turn on the Calendar Editor toggle for your account.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('calendar-bulk-rehearsal') && (
+                <>
+                  <h3 id="calendar-bulk-rehearsal" className={h3Classes}>{`Bulk Rehearsal Schedules`}</h3>
+                  <p className={pClasses}>
+                    {`Use the Rehearsal Schedule option to submit multiple rehearsal dates at once. This is faster than adding them one at a time.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Add each date and time you need. You can add a preferred location and contact information for each date. When you're done, submit the whole batch in one step.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Each date in the batch goes through the same review process as a single event. A Super Admin can approve or skip individual dates in the batch.`}
+                  </p>
+                </>
+              )}
+
+              {show('calendar-recurring') && (
+                <>
+                  <h3 id="calendar-recurring" className={h3Classes}>{`Recurring Events`}</h3>
+                  <p className={pClasses}>
+                    {`Use Recurring Event to create a series of events that repeat on a regular schedule — weekly, every two weeks, or monthly.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Set a start date, an end date (optional), and a frequency. The calendar will show you a preview of how many events will be created before you submit.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Recurring events show a "↻" symbol on the calendar so you can tell them apart from one-time events.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`When you edit or cancel a recurring event, you'll be asked which events to affect.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>{`Only this occurrence — changes just the one event you clicked.`}</li>
+                    <li>{`This and all future occurrences — changes this event and everything after it in the series.`}</li>
+                    <li>{`All occurrences — changes every event in the series.`}</li>
+                  </ul>
+                </>
+              )}
+
+              {show('calendar-pending') && (
+                <>
+                  <h3 id="calendar-pending" className={h3Classes}>{`Pending Approval Queue`}</h3>
+                  <p className={pClasses}>
+                    {`When someone submits an event for approval, it appears in the pending queue. You'll see a badge on the Pending Requests link at the top of the calendar showing how many are waiting.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`The queue is organized into three sections: Rehearsal Batches, Recurring Events, and Individual Requests. Each row shows the event details, a conflict indicator, and a location selector.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Assign a location and click Approve to add the event to the calendar. If a date has a scheduling conflict, the Approve button is disabled until you choose a different location or resolve the conflict. Use "Approve All Available" to approve every non-conflicted event in a batch at once.`}
+                  </p>
+                </>
+              )}
+
+              {show('calendar-book-space') && (
+                <>
+                  <h3 id="calendar-book-space" className={h3Classes}>{`Book Space`}</h3>
+                  <p className={pClasses}>
+                    {`The Book Space tool helps you find an open time slot before creating an event. Click "Book Space" at the top of the calendar to open the panel.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Enter a date and time range. The panel will show you which locations are available during that window. Click "Book This Slot" next to any available location to open the event form with that date, time, and location already filled in.`}
+                  </p>
+                  <Tip>
+                    {`Book Space is only available to Super Admins and admins with direct calendar access. If you don't see the Book Space button, ask your Super Admin about getting direct calendar access.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('calendar-export') && (
+                <>
+                  <h3 id="calendar-export" className={h3Classes}>{`Calendar Export & Subscription`}</h3>
+                  <p className={pClasses}>
+                    {`Click the Export button at the top of the calendar to open the export panel. You have two options.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>{`Subscribe — copy the subscription URL and add it to Google Calendar, Apple Calendar, or Outlook. Your calendar app will stay in sync automatically as events are added or changed.`}</li>
+                    <li>{`Download — download a snapshot of the calendar as an .ics file.`}</li>
+                  </ul>
+                  <Warning>
+                    {`Your subscription URL is unique to your account. Do not share it with others. If you think someone else has your URL, click "Rotate subscription URL" to generate a new one. The old URL will stop working immediately.`}
+                  </Warning>
+                </>
+              )}
+
+              {show('calendar-public') && (
+                <>
+                  <h3 id="calendar-public" className={h3Classes}>{`The Public Calendar`}</h3>
+                  <p className={pClasses}>
+                    {`There is a public-facing calendar at /calendar that anyone can view without logging in. It shows approved performance events only — not rehearsals, meetings, or other internal events.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Shows with open volunteer slots display an orange dot so visitors know where help is needed. Clicking a show opens a summary with a link to sign up.`}
+                  </p>
+                  <Tip>
+                    {`The public calendar is linked from your volunteer signup page and the Call Board. Volunteers can use it to plan ahead.`}
+                  </Tip>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('calendar') && <Divider />}
+
+          {/* ───────── Communication ───────── */}
+          {show('communication') && (
+            <section id="communication">
+              <h2 className={h2Classes}>{`Communication`}</h2>
+              <p className={pClasses}>
+                {`The Communication page lets you send an email to your volunteers directly from Production Crew — no need to use a separate email tool.`}
+              </p>
+
+              {show('blast-compose') && (
+                <>
+                  <h3 id="blast-compose" className={h3Classes}>{`Sending an Email Blast`}</h3>
+                  <p className={pClasses}>
+                    {`Go to Communication in the sidebar to open the email composer. Choose who should receive the email.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>{`All Volunteers — sends to every active volunteer in the system.`}</li>
+                    <li>{`By Category — sends to volunteers in one or more selected categories.`}</li>
+                    <li>{`Individual — search for specific volunteers by name or email and add them to the recipient list.`}</li>
+                  </ul>
+                  <p className={pClasses}>
+                    {`Write your subject and message. The editor supports bold, italic, underline, headings, lists, and links. When you're ready, click "Preview & Send" to see how many people will receive the email before you confirm.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`The Reply-To field controls where replies go. It is pre-filled with your default reply-to address from Settings.`}
+                  </p>
+                  <Tip>
+                    {`This tool sends to your full volunteer list or a filtered group. To message only the volunteers signed up for a specific show, use "Message Volunteers" on the show detail page instead.`}
+                  </Tip>
+                  <p className={pClasses}>
+                    {`Every email blast is logged in the Email Activity Log under Settings so you always have a record of what was sent and who received it.`}
+                  </p>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('communication') && <Divider />}
 
           {/* ───────── The Volunteer Call Board ───────── */}
           {show('callboard') && (
