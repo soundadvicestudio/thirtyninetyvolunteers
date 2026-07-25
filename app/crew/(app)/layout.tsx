@@ -32,7 +32,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
   }
 
   let pendingRegistrationCount = 0
-  if (admin.role === 'super_admin') {
+  if (admin.role === 'super_admin' || admin.role === 'owner_admin') {
     const supabase = await getServerClient()
     const { count } = await supabase
       .from('pending_registrations')

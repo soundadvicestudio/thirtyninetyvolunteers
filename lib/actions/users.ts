@@ -15,7 +15,7 @@ export type CreateUserResult = { success: true; emailFailed: boolean } | { error
 const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  role: z.enum(['editor', 'viewer']),
+  role: z.enum(['editor', 'viewer', 'owner_admin']),
 })
 
 const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
@@ -36,11 +36,11 @@ function isDuplicateEmailError(message: string | undefined): boolean {
 export async function createUser(
   name: string,
   email: string,
-  role: 'editor' | 'viewer',
+  role: 'editor' | 'viewer' | 'owner_admin',
   sendWelcome: boolean
 ): Promise<CreateUserResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -49,6 +49,12 @@ export async function createUser(
     return { error: 'Invalid input. Please check the form and try again.' }
   }
   const value = parsed.data
+
+  // Owner Admin can create Editor, Viewer, and Owner Admin accounts, but never
+  // Super Admin (not offered by this schema) or another Owner Admin.
+  if (admin.role === 'owner_admin' && value.role === 'owner_admin') {
+    return { error: 'Owner Admin accounts cannot create other Owner Admin accounts.' }
+  }
 
   const supabase = await getServerClient()
 
@@ -148,7 +154,7 @@ export async function createUser(
 
 export async function deactivateUser(targetId: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -172,6 +178,10 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
     return { error: 'Cannot deactivate a Super Admin account via this panel.' }
   }
 
+  if (target.role === 'owner_admin' && admin.role === 'owner_admin') {
+    return { error: 'Owner Admin accounts cannot deactivate other Owner Admin accounts.' }
+  }
+
   const { error } = await supabase
     .from('admin_users')
     .update({ is_active: false })
@@ -191,7 +201,7 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
 
 export async function reactivateUser(targetId: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -219,7 +229,7 @@ export async function changeRole(
   newRole: 'editor' | 'viewer'
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -228,11 +238,14 @@ export async function changeRole(
   }
 
   // Defense-in-depth: newRole is typed 'editor' | 'viewer' so no compile-time
-  // caller can pass 'production', but a raw/untyped call to the Server Action
-  // endpoint bypasses that. Compare via a widened cast since the literal
-  // union has no structural overlap with 'production'.
+  // caller can pass 'production', 'super_admin', or 'owner_admin', but a
+  // raw/untyped call to the Server Action endpoint bypasses that. Compare via
+  // a widened cast since the literal union has no structural overlap with them.
   if ((newRole as string) === 'production') {
     return { error: 'The Production role cannot be assigned via role change. Create a new Production account instead.' }
+  }
+  if ((newRole as string) === 'super_admin' || (newRole as string) === 'owner_admin') {
+    return { error: 'Super Admin and Owner Admin roles cannot be assigned via role change.' }
   }
 
   const supabase = await getServerClient()
@@ -249,6 +262,10 @@ export async function changeRole(
 
   if (target.role === 'super_admin') {
     return { error: 'Super Admin roles cannot be changed via this panel.' }
+  }
+
+  if (target.role === 'owner_admin' && admin.role === 'owner_admin') {
+    return { error: 'Owner Admin accounts cannot change the role of other Owner Admin accounts.' }
   }
 
   const { error } = await supabase
@@ -280,7 +297,7 @@ export async function toggleCalendarEditor(
   enabled: boolean
 ): Promise<{ success: boolean; error?: string }> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -296,10 +313,10 @@ export async function toggleCalendarEditor(
     return { success: false, error: 'User not found' }
   }
 
-  if (!['editor', 'viewer'].includes(target.role)) {
+  if (!['editor', 'viewer', 'owner_admin'].includes(target.role)) {
     return {
       success: false,
-      error: 'Calendar editor access can only be granted to Editor or Viewer accounts.',
+      error: 'Calendar editor access can only be granted to Editor, Viewer, or Owner Admin accounts.',
     }
   }
 

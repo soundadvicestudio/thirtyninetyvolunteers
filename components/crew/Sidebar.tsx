@@ -106,7 +106,7 @@ export default function Sidebar({
           )
         })}
 
-        {admin.role === 'super_admin' && (
+        {(admin.role === 'super_admin' || admin.role === 'owner_admin') && (
           <Link
             href="/crew/settings/users"
             className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${

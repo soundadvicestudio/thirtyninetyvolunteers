@@ -41,7 +41,7 @@ export default async function PendingQueuePage() {
   if (!adminUser) {
     redirect('/crew/login')
   }
-  if (adminUser.role !== 'super_admin') {
+  if (!['super_admin', 'owner_admin'].includes(adminUser.role)) {
     redirect('/crew/calendar')
   }
 

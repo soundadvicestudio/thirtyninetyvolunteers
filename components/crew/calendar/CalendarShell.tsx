@@ -321,7 +321,7 @@ export default function CalendarShell({
               </button>
               {moreMenuOpen && (
                 <div className="absolute right-0 z-20 mt-1 w-52 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg py-1">
-                  {adminRole === 'super_admin' && (
+                  {(adminRole === 'super_admin' || adminRole === 'owner_admin') && (
                     <Link
                       href="/crew/calendar/pending"
                       onClick={() => setMoreMenuOpen(false)}
@@ -365,7 +365,7 @@ export default function CalendarShell({
 
             {/* Desktop: full button row */}
             <div className="hidden md:flex items-center gap-2">
-              {adminRole === 'super_admin' && (
+              {(adminRole === 'super_admin' || adminRole === 'owner_admin') && (
                 <Link
                   href="/crew/calendar/pending"
                   className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline"

@@ -20,7 +20,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const canEdit = admin.role === 'super_admin' || admin.role === 'editor'
+  const canEdit = admin.role === 'super_admin' || admin.role === 'owner_admin' || admin.role === 'editor'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
   const publicUrl = `${siteUrl}/forms/${id}`
   const embedCode = `<iframe\n  src="${publicUrl}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  title="${form.title}">\n</iframe>`

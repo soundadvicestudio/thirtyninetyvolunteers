@@ -13,11 +13,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { createUser } from '@/lib/actions/users'
+import type { AdminRole } from '@/types/admin'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  role: z.enum(['editor', 'viewer']),
+  role: z.enum(['editor', 'viewer', 'owner_admin']),
   sendWelcome: z.boolean(),
 })
 
@@ -29,7 +30,10 @@ function reloadWithNotice(notice?: string) {
     : window.location.pathname
 }
 
-export default function CreateUserModal() {
+export default function CreateUserModal({ callerRole }: { callerRole: AdminRole }) {
+  // Owner Admin can create Editor and Viewer accounts only — never Super
+  // Admin (never offered here regardless of caller) or another Owner Admin.
+  const canAssignOwnerAdmin = callerRole === 'super_admin'
   const [open, setOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -119,6 +123,7 @@ export default function CreateUserModal() {
             >
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
+              {canAssignOwnerAdmin && <option value="owner_admin">Owner Admin</option>}
             </select>
           </div>
 

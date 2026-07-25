@@ -24,7 +24,7 @@ export default async function CommunicationPage() {
     .eq('is_visible', true)
     .order('sort_order')
 
-  const canSend = admin.role === 'editor' || admin.role === 'super_admin'
+  const canSend = admin.role === 'editor' || admin.role === 'super_admin' || admin.role === 'owner_admin'
 
   return (
     <div className="p-6 max-w-3xl">

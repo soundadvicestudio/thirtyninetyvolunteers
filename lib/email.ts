@@ -288,15 +288,16 @@ export async function sendInfoUpdatedEmail({
 
 // ─── Production Crew welcome email ───────────────────────────────
 
-const ROLE_LABELS: Record<'editor' | 'viewer', string> = {
+const ROLE_LABELS: Record<'editor' | 'viewer' | 'owner_admin', string> = {
   editor: 'Editor',
   viewer: 'Viewer',
+  owner_admin: 'Owner Admin',
 }
 
 type WelcomeEmailParams = {
   toEmail: string
   toName: string
-  role: 'editor' | 'viewer'
+  role: 'editor' | 'viewer' | 'owner_admin'
   tempPassword: string
 }
 

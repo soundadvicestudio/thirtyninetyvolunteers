@@ -11,7 +11,7 @@ const MAX_DESCRIPTION_LENGTH = 500
 
 export async function addCategory(name: string, description?: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -65,7 +65,7 @@ export async function renameCategory(
   description?: string
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -118,7 +118,7 @@ export async function renameCategory(
 
 export async function toggleVisibility(id: string, currentVisible: boolean): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -151,7 +151,7 @@ export async function reorderCategory(
   direction: 'up' | 'down'
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 

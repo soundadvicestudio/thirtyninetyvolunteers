@@ -64,7 +64,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
   const submissions = (submissionRows ?? []) as SubmissionRow[]
   const opp = opportunity as StandingOpportunity
-  const canEdit = admin.role === 'super_admin' || admin.role === 'editor'
+  const canEdit = admin.role === 'super_admin' || admin.role === 'owner_admin' || admin.role === 'editor'
   const publicUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/opportunities/${opp.id}`
 
   return (

@@ -52,7 +52,7 @@ export default function VolunteerProfileForm({
   role: AdminUser['role']
 }) {
   const router = useRouter()
-  const canEdit = role === 'super_admin' || role === 'editor'
+  const canEdit = role === 'super_admin' || role === 'owner_admin' || role === 'editor'
   const [isEditing, setIsEditing] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 

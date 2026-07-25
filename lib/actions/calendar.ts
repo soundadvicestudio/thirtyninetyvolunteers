@@ -124,7 +124,7 @@ export async function updateCalendarEvent(
   formData: CalendarEventFormData
 ): Promise<UpdateCalendarEventResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -302,7 +302,7 @@ export type ApproveCalendarEventResult = { success: boolean; error?: string }
 
 export async function approveCalendarEvent(eventId: string, locationId: string): Promise<ApproveCalendarEventResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -356,7 +356,7 @@ export async function approveBatch(
   approvals: { eventId: string; locationId: string }[]
 ): Promise<ApproveBatchResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -428,7 +428,8 @@ export async function cancelCalendarEvent(eventId: string): Promise<CancelCalend
     return { success: false, error: 'Event not found.' }
   }
 
-  const canCancel = admin.role === 'super_admin' || event.submitted_by === admin.id
+  const canCancel =
+    admin.role === 'super_admin' || admin.role === 'owner_admin' || event.submitted_by === admin.id
   if (!canCancel) {
     return { success: false, error: 'You do not have permission to cancel this event.' }
   }
@@ -673,7 +674,7 @@ export async function editRecurringOccurrence(
   formData: Partial<RecurringEventFormData>
 ): Promise<EditRecurringOccurrenceResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -779,7 +780,7 @@ export async function cancelRecurringOccurrence(
   scope: 'this' | 'future' | 'all'
 ): Promise<CancelRecurringOccurrenceResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { success: false, error: 'Unauthorized' }
   }
 

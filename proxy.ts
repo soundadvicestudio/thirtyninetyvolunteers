@@ -52,6 +52,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl)
   }
 
+  // Platform Setup: hard-blocked at the route level for every role except
+  // Super Admin, including Owner Admin. Additive check — runs only when a
+  // signed-in user is headed into /crew/settings/setup, so it never affects
+  // any other route's existing behavior.
+  if (user && pathname.startsWith('/crew/settings/setup')) {
+    const { data: setupAdminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (setupAdminUser?.role !== 'super_admin') {
+      const dashboardUrl = request.nextUrl.clone()
+      dashboardUrl.pathname = '/crew/dashboard'
+      return NextResponse.redirect(dashboardUrl)
+    }
+  }
+
   // Production role: restricted to /crew/calendar only. Additive check —
   // runs after all existing logic and only queries admin_users when a
   // signed-in user is headed somewhere under /crew that isn't already

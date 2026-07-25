@@ -62,7 +62,7 @@ export default async function VolunteersPage({
 
   const params = await searchParams
   const state = parseVolunteersUrlState(params)
-  const canManage = admin.role === 'super_admin' || admin.role === 'editor'
+  const canManage = admin.role === 'super_admin' || admin.role === 'owner_admin' || admin.role === 'editor'
 
   const supabase = await getServerClient()
 

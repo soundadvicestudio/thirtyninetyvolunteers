@@ -10,7 +10,7 @@ export default async function LocationsSettingsPage() {
   if (!admin) {
     redirect('/crew/login')
   }
-  if (admin.role !== 'super_admin') {
+  if (!['super_admin', 'owner_admin'].includes(admin.role)) {
     redirect('/crew/settings')
   }
 

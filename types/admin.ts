@@ -1,4 +1,4 @@
-export type AdminRole = 'super_admin' | 'editor' | 'viewer' | 'production'
+export type AdminRole = 'super_admin' | 'owner_admin' | 'editor' | 'viewer' | 'production'
 
 export type AdminUser = {
   id: string

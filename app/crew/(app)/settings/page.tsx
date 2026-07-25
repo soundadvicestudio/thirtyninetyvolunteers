@@ -59,7 +59,7 @@ export default async function SettingsPage() {
     redirect('/crew/login')
   }
 
-  const isSuperAdmin = admin.role === 'super_admin'
+  const canAccessAdminSettings = admin.role === 'super_admin' || admin.role === 'owner_admin'
   const isEditorOrAbove = admin.role !== 'viewer'
 
   return (
@@ -126,7 +126,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isSuperAdmin ? (
+        {canAccessAdminSettings ? (
           <LinkedCard
             href="/crew/settings/categories"
             title="Category Management"
@@ -139,7 +139,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isSuperAdmin ? (
+        {canAccessAdminSettings ? (
           <LinkedCard
             href="/crew/settings/users"
             title="User Management"
@@ -152,7 +152,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isSuperAdmin ? (
+        {canAccessAdminSettings ? (
           <LinkedCard
             href="/crew/settings/locations"
             title="Location Management"
@@ -179,7 +179,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isSuperAdmin ? (
+        {canAccessAdminSettings ? (
           <LinkedCard
             href="/crew/settings/email-activity"
             title="Email Activity"

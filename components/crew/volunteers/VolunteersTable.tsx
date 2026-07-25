@@ -56,7 +56,7 @@ export default function VolunteersTable({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const canManage = role === 'super_admin' || role === 'editor'
+  const canManage = role === 'super_admin' || role === 'owner_admin' || role === 'editor'
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
 

@@ -135,17 +135,24 @@ export async function registerAdminRequest(
   return { success: true }
 }
 
-const ROLE_VALUES = ['super_admin', 'editor', 'viewer'] as const
+const ROLE_VALUES = ['super_admin', 'owner_admin', 'editor', 'viewer'] as const
 type AdminRole = (typeof ROLE_VALUES)[number]
 
 export async function approveRegistration(pendingId: string, role: AdminRole): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
   if (!ROLE_VALUES.includes(role)) {
     return { error: 'Invalid role.' }
+  }
+
+  // Owner Admin can approve registrations as Editor or Viewer only — never
+  // Super Admin or Owner Admin. Only a Super Admin caller may assign either
+  // of those two roles.
+  if (admin.role === 'owner_admin' && (role === 'super_admin' || role === 'owner_admin')) {
+    return { error: 'Owner Admin accounts cannot approve requests as Super Admin or Owner Admin.' }
   }
 
   const client = getAdminClient()
@@ -231,7 +238,7 @@ export async function approveRegistration(pendingId: string, role: AdminRole): P
 
 export async function declineRegistration(pendingId: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 

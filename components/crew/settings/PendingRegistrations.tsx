@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { formatCT } from '@/lib/utils/date'
 import { approveRegistration, declineRegistration } from '@/lib/actions/admin-registration'
+import type { AdminRole as CallerAdminRole } from '@/types/admin'
 
 type PendingRegistrationRow = {
   id: string
@@ -11,10 +12,11 @@ type PendingRegistrationRow = {
   requested_at: string
 }
 
-type AdminRole = 'super_admin' | 'editor' | 'viewer'
+type RegistrationRole = 'super_admin' | 'owner_admin' | 'editor' | 'viewer'
 
-const ROLE_LABELS: Record<AdminRole, string> = {
+const ROLE_LABELS: Record<RegistrationRole, string> = {
   super_admin: 'Super Admin',
+  owner_admin: 'Owner Admin',
   editor: 'Editor',
   viewer: 'Viewer',
 }
@@ -23,8 +25,17 @@ function reloadWithNotice(notice: string) {
   window.location.href = `${window.location.pathname}?notice=${notice}`
 }
 
-function PendingRow({ registration }: { registration: PendingRegistrationRow }) {
-  const [role, setRole] = useState<AdminRole>('viewer')
+function PendingRow({
+  registration,
+  callerRole,
+}: {
+  registration: PendingRegistrationRow
+  callerRole: CallerAdminRole
+}) {
+  const [role, setRole] = useState<RegistrationRole>('viewer')
+  // Owner Admin can approve requests as Editor or Viewer only — never Super
+  // Admin or another Owner Admin.
+  const canAssignPrivilegedRoles = callerRole === 'super_admin'
   const [confirming, setConfirming] = useState<'approve' | 'decline' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
@@ -66,12 +77,17 @@ function PendingRow({ registration }: { registration: PendingRegistrationRow }) 
         <select
           value={role}
           disabled={isSubmitting || confirming !== null}
-          onChange={(e) => setRole(e.target.value as AdminRole)}
+          onChange={(e) => setRole(e.target.value as RegistrationRole)}
           className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
         >
           <option value="viewer">Viewer</option>
           <option value="editor">Editor</option>
-          <option value="super_admin">Super Admin</option>
+          {canAssignPrivilegedRoles && (
+            <>
+              <option value="owner_admin">Owner Admin</option>
+              <option value="super_admin">Super Admin</option>
+            </>
+          )}
         </select>
       </td>
       <td className="px-4 py-3">
@@ -145,8 +161,10 @@ function PendingRow({ registration }: { registration: PendingRegistrationRow }) 
 
 export default function PendingRegistrations({
   registrations,
+  callerRole,
 }: {
   registrations: PendingRegistrationRow[]
+  callerRole: CallerAdminRole
 }) {
   if (registrations.length === 0) return null
 
@@ -170,7 +188,7 @@ export default function PendingRegistrations({
           </thead>
           <tbody>
             {registrations.map((registration) => (
-              <PendingRow key={registration.id} registration={registration} />
+              <PendingRow key={registration.id} registration={registration} callerRole={callerRole} />
             ))}
           </tbody>
         </table>

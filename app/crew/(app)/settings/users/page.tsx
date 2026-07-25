@@ -15,7 +15,7 @@ export default async function UsersPage({
   if (!admin) {
     redirect('/crew/login')
   }
-  if (admin.role !== 'super_admin') {
+  if (!['super_admin', 'owner_admin'].includes(admin.role)) {
     redirect('/crew/dashboard')
   }
 
@@ -66,12 +66,12 @@ export default async function UsersPage({
 
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-dark dark:text-dark-text">User Management</h1>
-        <CreateUserModal />
+        <CreateUserModal callerRole={admin.role} />
       </div>
 
-      <PendingRegistrations registrations={pendingRegistrations ?? []} />
+      <PendingRegistrations registrations={pendingRegistrations ?? []} callerRole={admin.role} />
 
-      <UsersTable users={users ?? []} currentAdminId={admin.id} />
+      <UsersTable users={users ?? []} currentAdminId={admin.id} currentAdminRole={admin.role} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { useMobileSidebar } from './MobileSidebarContext'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
   super_admin: 'Super Admin',
+  owner_admin: 'Owner Admin',
   editor: 'Editor',
   viewer: 'Viewer',
   production: 'Production',
@@ -15,6 +16,7 @@ const ROLE_LABELS: Record<AdminUser['role'], string> = {
 
 const ROLE_BADGE_CLASSES: Record<AdminUser['role'], string> = {
   super_admin: 'bg-navy text-white',
+  owner_admin: 'bg-indigo-600 text-white',
   editor: 'bg-steel text-white',
   viewer: 'bg-mid-gray text-white',
   production: 'bg-orange text-white',

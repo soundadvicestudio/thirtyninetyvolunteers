@@ -128,7 +128,7 @@ export default async function CalendarPage({
     .order('start_time', { ascending: true })
 
   eventsQuery =
-    adminUser.role !== 'super_admin'
+    !['super_admin', 'owner_admin'].includes(adminUser.role)
       ? eventsQuery.eq('status', 'approved')
       : eventsQuery.in('status', ['approved', 'pending'])
 
@@ -193,10 +193,10 @@ export default async function CalendarPage({
 
   const locations = (locationRows ?? []) as unknown as Location[]
 
-  // Pending count is only meaningful (and only visible) to Super Admins,
-  // who are the sole role that can see/act on the approval queue.
+  // Pending count is only meaningful (and only visible) to Super Admin and
+  // Owner Admin, who can see/act on the approval queue.
   let pendingCount = 0
-  if (adminUser.role === 'super_admin') {
+  if (['super_admin', 'owner_admin'].includes(adminUser.role)) {
     const { count } = await supabase
       .from('calendar_events')
       .select('id', { count: 'exact', head: true })

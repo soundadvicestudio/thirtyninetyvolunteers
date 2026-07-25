@@ -35,7 +35,7 @@ async function upsertSetting(
 
 export async function setPinnedSeason(seasonId: string | null): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -511,7 +511,7 @@ export async function createLocation(
   defaultHours: number | null
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -565,7 +565,7 @@ export async function updateLocation(
   defaultHours: number | null
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -618,7 +618,7 @@ export async function reorderLocation(
   direction: 'up' | 'down'
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -677,7 +677,7 @@ export async function reorderLocation(
 
 export async function toggleLocationActive(id: string, isActive: boolean): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
