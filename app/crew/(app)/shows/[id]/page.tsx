@@ -24,6 +24,7 @@ type RawDateRow = {
   show_date: string
   show_time: string
   end_time: string | null
+  check_in_token: string
   volunteer_roles: { id: string; category_id: string | null; role_name: string; slots_available: number }[] | null
 }
 
@@ -39,7 +40,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
   const { data: showRow } = await supabase
     .from('shows')
     .select(
-      'id, season_id, name, location_id, location:locations(id, name, color), description, status, volunteer_instructions, default_hours, notifications_sent_at, created_at, updated_at, seasons ( id, name )'
+      'id, season_id, name, location_id, location:locations(id, name, color), description, status, volunteer_instructions, default_hours, notifications_sent_at, check_in_token, created_at, updated_at, seasons ( id, name )'
     )
     .eq('id', id)
     .maybeSingle()
@@ -59,7 +60,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       .from('show_dates')
       .select(
         `
-        id, show_id, show_date, show_time, end_time,
+        id, show_id, show_date, show_time, end_time, check_in_token,
         volunteer_roles ( id, category_id, role_name, slots_available )
       `
       )
@@ -88,6 +89,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     show_date: d.show_date,
     show_time: d.show_time,
     end_time: d.end_time,
+    check_in_token: d.check_in_token,
     // Buffer times aren't displayed on this page (only on the edit form) —
     // defaulted here purely to satisfy the shared ShowDate type.
     buffer_before_minutes: 0,
@@ -97,7 +99,15 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
 
   const roleIds = showDates.flatMap((d) => d.roles.map((r) => r.id))
 
-  const [{ data: claimRows }, qr] = await Promise.all([
+  // Whole-show check-in QR uses shows.check_in_token, which is nullable in
+  // the schema (even though every row gets one via its DEFAULT at insert
+  // time) — guard generation and let the Dates tab skip that section
+  // entirely when null.
+  const wholeShowCheckinUrl = showRow.check_in_token
+    ? `${process.env.NEXT_PUBLIC_SITE_URL}/checkin/${showRow.check_in_token}`
+    : null
+
+  const [{ data: claimRows }, qr, checkinQr, dateCheckinQrEntries] = await Promise.all([
     roleIds.length > 0
       ? supabase
           .from('slot_claims')
@@ -107,14 +117,24 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
           .in('volunteer_role_id', roleIds)
       : Promise.resolve({ data: [] as SlotClaim[] }),
     generateQR(`${process.env.NEXT_PUBLIC_SITE_URL}/shows/${id}`),
+    wholeShowCheckinUrl ? generateQR(wholeShowCheckinUrl) : Promise.resolve(null),
+    Promise.all(
+      showDates.map(
+        async (d) =>
+          [d.id, await generateQR(`${process.env.NEXT_PUBLIC_SITE_URL}/checkin/${d.check_in_token}`)] as const
+      )
+    ),
   ])
+
+  const dateCheckinQrs: Record<string, { svg: string; pngBase64: string }> =
+    Object.fromEntries(dateCheckinQrEntries)
 
   const claimIds = (claimRows ?? []).map((c) => c.id)
   const { data: attendanceRows } =
     claimIds.length > 0
       ? await supabase
           .from('attendance')
-          .select('id, slot_claim_id, status, hours_logged')
+          .select('id, slot_claim_id, status, hours_logged, source')
           .in('slot_claim_id', claimIds)
       : { data: [] as AttendanceRecord[] }
 
@@ -166,6 +186,8 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       allAdminUsers={(adminUserRows ?? []) as AdminUserSummary[]}
       defaultHours={defaultHours}
       qr={qr}
+      checkinQr={checkinQr}
+      dateCheckinQrs={dateCheckinQrs}
       adminRole={admin.role}
       adminId={admin.id}
       reportData={reportData}

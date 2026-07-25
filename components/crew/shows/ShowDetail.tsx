@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
@@ -414,6 +414,11 @@ function VolunteersTab({
                               {formatCT(claim.claimed_at, 'MMM d, yyyy h:mm a')}
                             </td>
                             <td className="px-4 py-2 align-top">
+                              {record?.source === 'checkin' && (
+                                <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-light-navy dark:bg-dark-nav text-navy dark:text-steel border border-navy/20 dark:border-steel/30 mb-1">
+                                  Self Check-In
+                                </span>
+                              )}
                               {!isPastSelected ? (
                                 <span className="text-mid-gray dark:text-dark-muted">—</span>
                               ) : canEdit ? (
@@ -518,41 +523,116 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
   )
 }
 
-function DatesTab({ showDates, todayCT }: { showDates: ShowDateWithRoles[]; todayCT: string }) {
+function DatesTab({
+  showDates,
+  todayCT,
+  checkinQr,
+  dateCheckinQrs,
+}: {
+  showDates: ShowDateWithRoles[]
+  todayCT: string
+  checkinQr: { svg: string; pngBase64: string } | null
+  dateCheckinQrs: Record<string, { svg: string; pngBase64: string }>
+}) {
   if (showDates.length === 0) {
     return <p className="text-sm text-mid-gray dark:text-dark-muted">No show dates scheduled.</p>
   }
   return (
-    <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
-            <th className="px-4 py-2 font-semibold">Date</th>
-            <th className="px-4 py-2 font-semibold">Time</th>
-            <th className="px-4 py-2 font-semibold">Day of Week</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-dark-surface">
-          {showDates.map((d, i) => {
-            const isPast = d.show_date < todayCT
-            return (
-              <tr
-                key={d.id}
-                className={`${i % 2 === 1 ? 'bg-gray-50 dark:bg-dark-bg' : ''} border-b border-divider dark:border-dark-border last:border-b-0 ${
-                  isPast ? 'text-mid-gray dark:text-dark-muted' : 'text-dark dark:text-dark-text'
-                }`}
-              >
-                <td className="px-4 py-2">{formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}</td>
-                <td className="px-4 py-2">
-                  {formatWallClockCT(d.show_date, d.show_time, 'h:mm a')}
-                  {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
-                </td>
-                <td className="px-4 py-2">{formatWallClockCT(d.show_date, null, 'EEEE')}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-8">
+      {checkinQr && (
+        <div>
+          <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1">Whole-Show Check-In QR</h2>
+          <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
+            Volunteers scan this QR at any performance. The system automatically selects their show date.
+          </p>
+          <div
+            className="w-[200px] h-[200px] [&>svg]:w-full [&>svg]:h-full bg-white p-2 rounded-lg border border-divider dark:border-dark-border"
+            dangerouslySetInnerHTML={{ __html: checkinQr.svg }}
+          />
+          <div className="flex gap-4 mt-3">
+            <a
+              href={`data:image/png;base64,${checkinQr.pngBase64}`}
+              download="checkin-whole-show.png"
+              className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            >
+              Download PNG
+            </a>
+            <a
+              href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(checkinQr.svg)}`}
+              download="checkin-whole-show.svg"
+              className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            >
+              Download SVG
+            </a>
+          </div>
+        </div>
+      )}
+
+      <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+              <th className="px-4 py-2 font-semibold">Date</th>
+              <th className="px-4 py-2 font-semibold">Time</th>
+              <th className="px-4 py-2 font-semibold">Day of Week</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-dark-surface">
+            {showDates.map((d, i) => {
+              const isPast = d.show_date < todayCT
+              const dateQr = dateCheckinQrs[d.id]
+              const rowBg = i % 2 === 1 ? 'bg-gray-50 dark:bg-dark-bg' : ''
+              return (
+                <Fragment key={d.id}>
+                  <tr
+                    className={`${rowBg} ${dateQr ? '' : 'border-b'} border-divider dark:border-dark-border last:border-b-0 ${
+                      isPast ? 'text-mid-gray dark:text-dark-muted' : 'text-dark dark:text-dark-text'
+                    }`}
+                  >
+                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-2 align-top">
+                      {formatWallClockCT(d.show_date, d.show_time, 'h:mm a')}
+                      {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
+                    </td>
+                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'EEEE')}</td>
+                  </tr>
+                  {dateQr && (
+                    <tr className={`${rowBg} border-b border-divider dark:border-dark-border last:border-b-0`}>
+                      <td colSpan={3} className="px-4 pb-4">
+                        <div className="pt-3 border-t border-divider dark:border-dark-border">
+                          <p className="text-xs font-semibold text-mid-gray dark:text-dark-muted mb-2">
+                            Check-In QR — {formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}
+                          </p>
+                          <div
+                            className="w-[120px] h-[120px] [&>svg]:w-full [&>svg]:h-full bg-white p-1.5 rounded-lg border border-divider dark:border-dark-border"
+                            dangerouslySetInnerHTML={{ __html: dateQr.svg }}
+                          />
+                          <div className="flex gap-3 mt-2">
+                            <a
+                              href={`data:image/png;base64,${dateQr.pngBase64}`}
+                              download={`checkin-${d.show_date}.png`}
+                              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                            >
+                              Download PNG
+                            </a>
+                            <a
+                              href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dateQr.svg)}`}
+                              download={`checkin-${d.show_date}.svg`}
+                              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                            >
+                              Download SVG
+                            </a>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -819,6 +899,8 @@ export default function ShowDetail({
   showEditors,
   allAdminUsers,
   qr,
+  checkinQr,
+  dateCheckinQrs,
   adminRole,
   reportData,
   bulkEmailRecipientCount,
@@ -833,6 +915,8 @@ export default function ShowDetail({
   allAdminUsers: AdminUserSummary[]
   defaultHours: { mainstage: number; studio_x: number; one_off: number }
   qr: { svg: string; pngBase64: string }
+  checkinQr: { svg: string; pngBase64: string } | null
+  dateCheckinQrs: Record<string, { svg: string; pngBase64: string }>
   adminRole: AdminUser['role']
   adminId: string
   reportData: PostShowReportData | null
@@ -885,7 +969,14 @@ export default function ShowDetail({
         />
       )}
       {activeTab === 'waitlist' && <WaitlistTab roles={allRoles} slotClaims={slotClaims} />}
-      {activeTab === 'dates' && <DatesTab showDates={showDates} todayCT={todayCT} />}
+      {activeTab === 'dates' && (
+        <DatesTab
+          showDates={showDates}
+          todayCT={todayCT}
+          checkinQr={checkinQr}
+          dateCheckinQrs={dateCheckinQrs}
+        />
+      )}
       {activeTab === 'report' && show.status === 'past' && reportData && (
         <PostShowReport data={reportData} />
       )}

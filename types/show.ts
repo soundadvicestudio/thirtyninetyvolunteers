@@ -26,6 +26,7 @@ export type Show = {
   volunteer_instructions: string | null
   default_hours: number | null
   notifications_sent_at: string | null
+  check_in_token: string | null
   created_at: string
   updated_at: string
 }
@@ -38,6 +39,9 @@ export type ShowDate = {
   end_time: string | null
   buffer_before_minutes: number
   buffer_after_minutes: number
+  // Optional — only fetched by the show detail page's Dates tab (Check-In
+  // QR feature). Other consumers (e.g. the show edit form) don't need it.
+  check_in_token?: string
 }
 
 export type ShowRole = {
@@ -90,6 +94,7 @@ export type AttendanceRecord = {
   slot_claim_id: string
   status: 'showed' | 'no_show' | 'excused'
   hours_logged: number
+  source: string
 }
 
 export type ShowEditor = {
