@@ -74,6 +74,10 @@ export type AuditAction =
   | 'recurring_event.edit'
   | 'recurring_event.cancel'
 
+  // Check-In
+  | 'attendance.checkin'
+  | 'volunteer.checkin_signup'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,
