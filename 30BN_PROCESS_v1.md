@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.2
-### Created: July 2026 | Last Updated: July 2026 — v3.2 (Phase 13 complete — Phase 14 next)
+## 30BN_PROCESS_v1.md — v3.3
+### Created: July 2026 | Last Updated: July 2026 — v3.3 (HELP phase + OpenCall OS additions — Phase 14 next)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -293,7 +293,34 @@ Confirmed failure pattern in CAL.7 F2: `filename="${show.name}.ics"` — fixed i
 `filename="volunteer-call.ics"`. Applies to all iCalendar routes and any other route handler
 that generates downloadable files.
 
+**Owner Admin role guard pattern (established SETUP.0 — not yet built):**
+After Migration 023 / SETUP.0 ships and the `owner_admin` role exists, role guards throughout the codebase must be evaluated:
+
+Operational features (email blast, attendance marking, show management, Settings hub sub-pages, email activity, audit log, location management, category management, user management, calendar admin): guards should pass `owner_admin` through alongside `super_admin`. Pattern: `role === 'super_admin' || role === 'owner_admin'` — or equivalently, checking that `role !== 'viewer' && role !== 'production'`.
+
+EXCEPTIONS that remain Super Admin only: (1) `/crew/settings/setup` and all its server actions — middleware hard-blocks Owner Admin at route level. (2) Assigning or creating `owner_admin` or `super_admin` accounts — Owner Admin can manage Editor, Viewer, and Production accounts only. (3) The `calendar_editor` toggle on Super Admin accounts (DB CHECK constraint prevents this).
+
+When writing a SETUP.0 role guard sweep prompt, every `role === 'super_admin'` check must be evaluated individually — most should become `['super_admin', 'owner_admin'].includes(role)` but the exceptions above must stay as `role === 'super_admin'`.
+
 **Never create a client inside a loop.** Create once per function, reuse.
+
+**Feature flag pattern via getFeatureFlags() (established Phase SETUP design — not yet built):**
+All feature flag values must be read through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never read individual feature flag keys inline from `app_settings` — always use the shared helper. Key rules:
+
+`getFeatureFlags()` uses `getServerClient()` — always called from Server Components or Server Actions with an active admin session. For public routes that need feature flags, use `getAdminClient()` (no session context on public routes).
+
+Middleware checks flags for route-level blocking (e.g., if `feature_calendar = 'false'`, `/crew/calendar` redirects to dashboard).
+
+Sidebar conditionally renders links based on flags passed as props from the layout.
+
+The typed return object prevents key-name typos and handles missing keys consistently.
+
+Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys.
+
+Enforced from SETUP.0 onward. See R32 in Brief §13 and §10 grep check.
+
+**`lib/actions/setup.ts` uses `getServerClient()` (established Phase SETUP design — not yet built):**
+Setup Panel server actions (`saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`) use `getServerClient()` — they are always called from authenticated Super Admin sessions. Same principle as calendar actions (CAL.5a) and blast actions (13.3a). Never use `getAdminClient()` in setup actions.
 
 **FK replacement migration pattern (established CAL.1):**
 When a text CHECK constraint column is replaced by a FK to a new lookup table (e.g.,
@@ -640,6 +667,39 @@ grep -n "export.*logEmailSent" lib/email.ts
 # Must return zero results — logEmailSent is internal only.
 ```
 
+```bash
+# Confirm proxy.ts exists and middleware.ts is gone (ADMIN.28)
+# Next.js 16 renamed the middleware convention to proxy
+ls proxy.ts 2>/dev/null || echo "proxy.ts MISSING — check for middleware.ts"
+ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been renamed to proxy.ts"
+```
+
+```bash
+# Confirm feature flags read through getFeatureFlags() (R32 / Phase SETUP)
+# No inline app_settings reads for feature_* keys outside lib/feature-flags.ts
+grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_opportunities\|feature_hours_milestones\|feature_documents" \
+  app/ components/ lib/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "feature-flags.ts" \
+  | grep -v "setup.ts"
+# Must return zero results after SETUP.0 ships.
+# Any hit = inline flag read that should use getFeatureFlags() instead.
+```
+
+```bash
+# Confirm Owner Admin role guards are correct (Phase SETUP.0 sweep)
+# After SETUP.0: any super_admin-only guard outside /crew/settings/setup
+# and account creation is likely missing owner_admin
+grep -rn "role === 'super_admin'\|role !== 'super_admin'" \
+  lib/actions/ app/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "setup"
+# Review hits after SETUP.0 role sweep. Most should have become
+# ['super_admin','owner_admin'].includes(role). Exceptions:
+# Setup Panel actions, owner_admin/super_admin account creation.
+# Run this after SETUP.0 to confirm sweep was complete.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -764,6 +824,18 @@ Run before every Vercel deployment:
   confirm no <form> elements are used. All state must
   be managed via controlled inputs and onClick handlers.
   (13.3a confirmed constraint)
+□ Any new server action or page guard that restricts
+  access by role: evaluate whether it should pass
+  owner_admin through alongside super_admin. After
+  SETUP.0 ships, only the Setup Panel and
+  super_admin/owner_admin account creation remain
+  super_admin-exclusive. All other operational guards
+  should use ['super_admin','owner_admin'].includes(role)
+  or equivalent. (Owner Admin role guard pattern — §7)
+□ Any route or component that reads feature flag values:
+  confirm it uses getFeatureFlags() from lib/feature-
+  flags.ts — never reads feature_* keys inline from
+  app_settings. (R32 / §7 feature flag pattern)
 □ Any new recurring event creation: confirm
   createRecurringEvent() uses generateOccurrenceDates()
   from lib/utils/calendar-recurrence.ts for date
@@ -1428,10 +1500,77 @@ Phase 13 — Email Blast System ✓ Complete (13.1–13.4b)
            table hidden below sm with mobile card
            layout above it. AboutSystemEmails.tsx:
            clean.
-  13.4c    npm vulnerability sweep (pending)
+  13.4c ✓ npm vulnerability sweep. npm audit fix applied
+           (brace-expansion + fast-uri resolved). next
+           16.2.9 → ^16.2.11 (9 Next.js CVEs resolved).
+           6 vulnerabilities remain (blocked upstream:
+           postcss/sharp inside next@16.2.11; shadcn/hono/
+           mcp chain requires major downgrade). All
+           remaining are build-time/dev-CLI only — not
+           runtime exploitable.
+
+Phase HELP — In-App Help System ✓ Complete
+  HELP.1 ✓ Read-only audit. Section inventory, staleness
+           findings, HelpTooltip dependency map (9
+           must-preserve anchors), missing content
+           inventory (18 areas), role assignment map,
+           proposed section structure.
+  HELP.2a ✓ Structural scaffold. proxy.ts /crew/help
+           exception for Production role. getAdminUser()
+           in page.tsx. HelpContent.tsx created (ALL_SECTIONS
+           registry, filterSections/isSectionVisible/
+           flattenSections helpers, role-aware TocList).
+           page.tsx: 494 → 10 lines.
+  HELP.2b ✓ Existing sections updated. Settings → SA+
+           Owner Admin only (owner decision — Editors
+           excluded). 3 new Settings subsections (audit-log,
+           location-management, email-activity-log). 3
+           MAJOR stale content fixes (show_type → location;
+           default hours hierarchy; four account types +
+           Production + calendar_editor). 8 subsection
+           role guards. Production Help sidebar link added.
+  HELP.2c ✓ 3 new h2 sections: Dashboard (3 subsections),
+           Master Calendar (9 subsections), Communication
+           (1 subsection). ALL_SECTIONS: 8 → 11 top-level.
+           HelpContent.tsx: 708 → 1006 lines.
+  HELP.2d ✓ 5 new HelpTooltip placements (SeasonAtAGlance,
+           communication/page.tsx, 3 settings pages).
+           Count: 17 → 22. 4 calendar placements deferred
+           to ADMIN.29 (Client Component heading issue).
+  ADMIN.27 ✓ TipTap rich formatting + light mode default.
+           @tiptap/extension-link + @tiptap/extension-
+           underline installed. Toolbar: 9 buttons (B/I/U/
+           H1/H2/—/•List/1.List/🔗). blast.ts allowlist
+           updated (u, hr, rel on a). ThemeProvider.tsx +
+           layout.tsx prefers-color-scheme branch removed —
+           always defaults to light.
+  ADMIN.28 ✓ middleware.ts → proxy.ts rename (Next.js 16).
+           Function renamed middleware → proxy. One line
+           changed. Deprecation warning resolved.
+  ADMIN.29 ✓ 4 deferred calendar HelpTooltip placements.
+           CalendarShell.tsx (×3 — calendar-submit,
+           calendar-export, calendar-book-space as button
+           siblings). PendingQueueClient.tsx (×1 —
+           calendar-pending inside h1). Count: 22 → 26.
+           Confirmed: HelpTooltip works correctly in
+           Client Components (no server-only imports).
 
 Phase 14 — Check-In System          (pending)
 Phase 15 — Document Management      (pending)
+Phase SETUP — OpenCall OS Setup Panel (pending)
+  SETUP.0 Migration 023 + role guard sweep (owner_admin
+           role, is_editor() update, default app_settings
+           keys). Prerequisite for all SETUP.1–4.
+  SETUP.1–4 Setup Panel UI (pending): org identity, brand
+           colors, logo, email config, feature flags,
+           instance label. lib/actions/setup.ts. Settings
+           hub Platform Setup card (SA only LinkedCard).
+Phase THEME — Dynamic CSS Brand System (pending)
+  THEME.A Read-only audit of brand color class usages.
+  THEME.1 Root layout CSS variable injection + public
+           pages sweep.
+  THEME.2 Admin UI sweep.
+  THEME.3 Email template sweep.
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
 
@@ -1477,6 +1616,24 @@ Phase 20 — Automated thank-you email after a show
 30BN-13.3b     ✓ (see Phase 13 above)
 30BN-13.4a     ✓ (see Phase 13 above)
 30BN-13.4b     ✓ (see Phase 13 above)
+30BN-DOC.33    ✓ Deferred Verifications v9 (Phase 13
+                 items added — 44 new verification items,
+                 11.1 V1 superseded, Quick Reference
+                 updated, Phase 13 seed data cleanup SQL
+                 added)
+30BN-DOC.34    ✓ Brief Update v3.3 (HELP phase + OpenCall
+                 OS: Owner Admin role, Phase SETUP/THEME
+                 specs, app_settings keys, Migration 023
+                 scope, Help System section, Platform Setup
+                 section, R32/R33 added, prompt log updated)
+30BN-HELP.1    ✓ (see Phase HELP above)
+30BN-HELP.2a   ✓ (see Phase HELP above)
+30BN-HELP.2b   ✓ (see Phase HELP above)
+30BN-HELP.2c   ✓ (see Phase HELP above)
+30BN-HELP.2d   ✓ (see Phase HELP above)
+30BN-ADMIN.27  ✓ (see Phase HELP above)
+30BN-ADMIN.28  ✓ (see Phase HELP above)
+30BN-ADMIN.29  ✓ (see Phase HELP above)
 ```
 
 ---
@@ -1674,6 +1831,54 @@ The email blast body originates from TipTap's getHTML() output and must NOT be p
 ### R31 — Blast Body Uses sanitize-html, Not escapeHtml() (cross-reference)
 Documented in Brief §13 R31. Referenced here for R-number continuity. Core rule: TipTap HTML output passed as the blast body in sendBlastEmail() must be processed by sanitizeHtml(), not escapeHtml(). Allowlist: p, strong, em, ul, ol, li, br, h1, h2, h3, blockquote, a[href]. Schemes: http, https, mailto only. Established 13.4a. See §10 grep check and §11 checklist item.
 
+### ADMIN.28 — middleware.ts Renamed to proxy.ts
+
+Next.js 16 deprecated the middleware.ts file convention in favor of proxy.ts. This project
+completed the rename in ADMIN.28. Going forward: route protection logic lives in proxy.ts at
+the repo root. Never create or reference middleware.ts — doing so will produce a deprecation
+warning and eventual build failure in future Next.js versions. The file exports a function named
+proxy (not middleware). The config export with the matcher array is unchanged. See §10
+grep check for verification.
+
+### ADMIN.27 — Theme Always Defaults to Light
+
+The prefers-color-scheme: dark media query branch was deliberately removed from both
+ThemeProvider.tsx and the pre-hydration inline script in app/crew/(app)/layout.tsx in
+ADMIN.27. The platform always defaults to light mode when no localStorage preference is stored.
+This was an explicit owner decision. Any future prompt touching ThemeProvider.tsx or the
+layout pre-hydration script must NOT re-introduce the prefers-color-scheme branch. The only
+two theme states are: (1) localStorage.getItem('crew-theme') === 'dark' → dark mode, and
+(2) anything else → light mode. No OS preference detection.
+
+### HelpTooltip Can Be Used in Client Components (confirmed ADMIN.29)
+
+HelpTooltip.tsx is a Server Component (next/link + lucide-react — no server-only imports).
+Despite this, it can be imported and used inside 'use client' component files without issue —
+React's Server Component boundary rules only prohibit passing server-side data (like Promises or
+DB results) from Server to Client, not importing Server Components into Client Component files
+when those Server Components are pure render functions with no server-only dependencies.
+Confirmed in ADMIN.29: 10 of the existing 26 HelpTooltip placements are in Client Components
+(from 12.2c onward), all functioning correctly. There is no requirement to restrict HelpTooltip
+placements to Server Component files only. When a UI heading lives inside a Client Component,
+place the tooltip there directly.
+
+### R32 — Owner Admin Role Guard Pattern (cross-reference)
+
+Documented in Brief §13 R32. Referenced here for R-number continuity. See also §7 Owner Admin
+role guard pattern note. Core rule: after SETUP.0, operational role guards should pass
+owner_admin through alongside super_admin. Only the Setup Panel (/crew/settings/setup),
+owner_admin / super_admin account creation, and calendar_editor on Super Admin accounts
+remain Super Admin exclusive. See §10 grep check and §11 checklist item.
+
+### R33 — CSS Custom Properties After Phase THEME (cross-reference)
+
+Documented in Brief §13 R33. Referenced here for R-number continuity. Core rule: after Phase
+THEME ships, all new code referencing brand-driven colors must use var(--brand-primary) and
+var(--brand-accent) CSS custom properties — not Tailwind brand utility classes (bg-navy,
+text-orange, etc.). The @theme block in globals.css is NOT modified (R7 still applies).
+Phase THEME.A audits all current usages before any replacements are made. Enforced from THEME.1
+onward.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -1689,7 +1894,8 @@ Documented in Brief §13 R31. Referenced here for R-number continuity. Core rule
 *v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
 *v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
 *v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
-*Cross-reference: 30BN_BRIEF_v1.md v3.2*
+*Cross-reference: 30BN_BRIEF_v1.md v3.3*
 *v3.0 (July 2026 — Beta Phase CAL active: §7 calendar client patterns added (getServerClient() for calendar actions, parameter-passing pattern for utility functions, calendar-availability.ts pure client-safe); §7 FK replacement migration pattern added (CAL.1); §8 commit-before-build-report standard added (CAL.5b); §10 show_type regression grep check added (CAL.1); §10 calendar contact phone grep check added (CAL.5a); §11 three new checklist items (calendar mutations + two routes to revalidate, contact phone normalization, performance type exclusion from manual creation); §13 Phase CAL added to Beta Build section (CAL.1–CAL.5b complete, CAL.6–CAL.8 planned); §13 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a/25b added to prompt log; §14 five new rules: codebase sweep before column removal, commit-before-build-report, post-build audit session pattern, calendar server action client rule, DOC prompt task tracker accuracy; DOC.26 logged)*
 *v3.1 (July 2026 — Phase CAL complete: §7 iCalendar route getAdminClient() exception added (CAL.7); createUser() auth.admin exception clarified (ADMIN.26 confirmed pattern); Content-Disposition fixed-filename rule added (ADMIN.26); calendar-recurrence.ts + calendar-layout.ts pure client-safe noted (CAL.10a, CAL.9); §11 three new checklist items (Content-Disposition filename safety, recurring event creation pattern, recurring event edit/cancel scope pattern); §13 Phase CAL marked complete (CAL.1–CAL.10c); §13 DOC.26–27 + CAL.6–CAL.10c + ADMIN.26 added to prompt log; §14 two new rules: Content-Disposition fixed filename, calendar-recurrence.ts pure client-safe; DOC.29 logged)*
 *v3.2 (July 2026 — Phase 13 complete: §2 header updated (Phase 13 complete, Phase 14 next); §14 logEmailSent() helper pattern added (13.1 — internal to lib/email.ts, getAdminClient(), errors swallowed, never before send, inline pattern for action/cron files); §14 blast.ts getServerClient() note added (13.3a — authenticated session, resolveBlastRecipients receives client as parameter); §8 single-fenced-code-block rule added for all prompts (13.3b/13.4a confirmed correction); §10 blast sanitization grep + logEmailSent export grep added; §11 three new checklist items (logEmailSent() after send, blast body sanitizeHtml not escapeHtml, no <form> in Client Components); §13 Phase 13 marked complete (13.1–13.4b each described, 13.4c pending); §13 prompt log updated (DOC.31–DOC.32 + 13.1–13.4b added); §14 single-fenced-code-block rule added; §14 escapeHtml() note updated (TipTap exception + blast.ts local copy); §14 R31 cross-reference added; DOC.32 logged)*
+*v3.3 (July 2026 — HELP phase + OpenCall OS additions: §2 header updated (HELP phase + OpenCall OS, Phase 14 next); §7 Owner Admin role guard pattern added (SETUP.0 design — checks super_admin || owner_admin for operational features, super_admin-only for Setup Panel + account escalation); §7 getFeatureFlags() pattern added (Phase SETUP design — all feature flag reads through lib/feature-flags.ts); §7 lib/actions/setup.ts getServerClient() note added (Phase SETUP design); §10 three new grep checks added (proxy.ts/middleware.ts, feature flags, owner_admin role guards); §11 two new checklist items (owner_admin role guards, feature flags via getFeatureFlags()); §13 13.4c marked complete (npm sweep: next 16.2.11, 6 remaining blocked upstream); §13 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29 all complete); §13 Phase SETUP section added (SETUP.0–4 pending); §13 Phase THEME section added (THEME.A/1–3 pending); §13 prompt log updated (DOC.33–34, HELP.1–HELP.2d, ADMIN.27–29); §14 ADMIN.28 proxy.ts rename note added; §14 ADMIN.27 light-mode-always note added; §14 HelpTooltip Client Component clarification added; §14 R32 cross-reference added (owner_admin role guard); §14 R33 cross-reference added (CSS custom properties post-THEME); DOC.35 logged)*
