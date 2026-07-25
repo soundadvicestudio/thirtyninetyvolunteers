@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import LocationsManager from '@/components/crew/settings/LocationsManager'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export default async function LocationsSettingsPage() {
   const admin = await getAdminUser()
@@ -28,7 +29,9 @@ export default async function LocationsSettingsPage() {
         ← Settings
       </Link>
 
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">Location Management</h1>
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">
+        Location Management <HelpTooltip anchor="location-management" label="Location Management" />
+      </h1>
       <p className="text-mid-gray dark:text-dark-muted text-sm mb-8">
         Manage bookable spaces in the theater. Locations appear in the master calendar, show
         booking form, and event creation. Deactivating a location hides it from new bookings

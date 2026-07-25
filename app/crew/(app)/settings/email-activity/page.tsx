@@ -4,6 +4,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { formatCT } from '@/lib/utils/date'
 import AboutSystemEmails from '@/components/crew/settings/AboutSystemEmails'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const PAGE_SIZE = 25
 
@@ -109,7 +110,9 @@ export default async function EmailActivityPage({
         ← Back to Settings
       </Link>
 
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">Email Activity</h1>
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">
+        Email Activity <HelpTooltip anchor="email-activity-log" label="Email Activity" />
+      </h1>
       <p className="text-mid-gray dark:text-dark-muted text-sm mb-6">
         A log of all emails sent by the platform.
       </p>

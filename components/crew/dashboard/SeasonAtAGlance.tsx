@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { getServerClient } from '@/lib/supabase/server'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { Location } from '@/types/show'
 
 type RoleRow = {
@@ -69,6 +70,7 @@ export default async function SeasonAtAGlance({
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-bold text-dark dark:text-dark-text">
           Season at a Glance — <span className="text-navy dark:text-steel">{headerLabel}</span>
+          <HelpTooltip anchor="dashboard-season" label="Season at a Glance" />
         </h2>
         {selectorSlot}
       </div>

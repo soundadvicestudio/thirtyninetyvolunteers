@@ -2,6 +2,7 @@ import { getAdminUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getServerClient } from '@/lib/supabase/server'
 import BlastComposer from '@/components/crew/communication/BlastComposer'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export default async function CommunicationPage() {
   const admin = await getAdminUser()
@@ -27,7 +28,9 @@ export default async function CommunicationPage() {
 
   return (
     <div className="p-6 max-w-3xl">
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-2">Communication</h1>
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-2">
+        Communication <HelpTooltip anchor="blast-compose" label="Email Blasts" />
+      </h1>
       <p className="text-mid-gray dark:text-dark-muted mb-6">Send an email to your volunteers.</p>
 
       {canSend ? (

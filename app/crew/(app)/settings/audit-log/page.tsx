@@ -5,6 +5,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import AuditLogFilters from '@/components/crew/settings/AuditLogFilters'
 import AuditLogTable, { type AuditLogEntry } from '@/components/crew/settings/AuditLogTable'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const PAGE_SIZE = 25
 const CT = 'America/Chicago'
@@ -121,7 +122,9 @@ export default async function AuditLogPage({
         ← Back to Settings
       </Link>
 
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">Audit Log</h1>
+      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">
+        Audit Log <HelpTooltip anchor="audit-log" label="Audit Log" />
+      </h1>
       <p className="text-mid-gray dark:text-dark-muted text-sm mb-8">
         Read-only record of all admin actions.
       </p>
