@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 13 | July 2026 | Phase 15 Complete + ADMIN.30 + HELP.2e
+## Version 14 | July 2026 | Phase SETUP Complete + ADMIN.31/31b
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -280,6 +280,15 @@ the role guard sweep (Migration 023, SETUP.0). The
 Owner Admin role and new app_settings keys are
 production configuration, not test data — do not
 delete them.
+
+Note for SETUP.2: Logo and favicon images uploaded
+to the brand bucket during Setup Panel testing (under
+brand/logo/ and brand/favicon/) are NOT SQL-managed.
+Delete test placeholder images manually via the
+Supabase dashboard → Storage → brand bucket before
+launch. Keep the production logo and favicon images
+you intend to use. No SQL needed — Storage objects
+are managed via the Storage API.
 
 ---
 
@@ -1423,6 +1432,44 @@ HELP.2e V1–V5 (all require Owner Admin login)
 ### Phase 15.4 — advanced/optional (devtools):
 15.4 V12 (robots noindex meta tag on player page)
 
+### SETUP.1 — requires feature flag toggled off:
+SETUP.1 V1–V9 (all proxy guard checks require
+feature_calendar or feature_checkin or
+feature_blast to be set to 'false' via the
+Setup Panel — restore to 'true' after verifying)
+
+### SETUP.2 — requires Super Admin (Setup Panel access):
+SETUP.2 V1–V14 (Setup Panel is Super Admin only;
+logo/favicon upload tests require the brand
+bucket to be accessible)
+
+### SETUP.2 — requires Owner Admin account:
+SETUP.2 V2 (confirm Setup Panel redirect for
+Owner Admin)
+
+### SETUP.2 — requires real email delivery:
+SETUP.3 V5 (confirm dynamic from address in email
+headers)
+
+### SETUP.4 — requires feature flag toggled off:
+SETUP.4 V5–V7 (sidebar link behavior after flag
+saves — see SETUP.1 for full proxy guard checks)
+
+### ADMIN.31 — requires landing page with org identity set:
+ADMIN.31 V1–V4 (confirm dynamic heading/footer —
+org_name, org_tagline, org_contact_email,
+org_website_url, org_location must be set in
+Setup Panel first)
+
+### ADMIN.31 — requires Supabase cross-check:
+ADMIN.31 V8 (volunteer.signup in audit_log)
+
+### ADMIN.31 — requires real email delivery:
+ADMIN.31 V5 (dynamic from address verification)
+
+### ADMIN.31 — requires a volunteer with formatted phone number:
+ADMIN.31 V6 (phone search strips non-digits)
+
 ---
 
 ## ADMIN.20 — Dashboard (Season at a Glance + Quick Stats)
@@ -2315,6 +2362,468 @@ from 12.2c):**
       the ? tooltip icon is still present next to the
       "Editor Notes" heading (it was moved to the
       component's internal heading in 12.4).
+
+---
+
+## SETUP.1 — Feature Flag Proxy Guards
+
+*SETUP.1 built the feature flag system and proxy.ts
+route guards. These checks verify that toggling a
+flag to 'false' in the Setup Panel actually blocks
+the guarded routes. Run these AFTER SETUP.4 is
+verified (you need the Setup Panel working to toggle
+flags). Restore all flags to 'true' when done.*
+
+*PREREQUISITE: At least one show with a future date
+must exist for the /checkin/ and /calendar checks
+to produce meaningful results. The Setup Panel
+(/crew/settings/setup) must be accessible
+(Super Admin only).*
+
+**Setup before testing — toggle a flag off:**
+
+- [ ] **SETUP.1 V1** — In the Setup Panel
+      (/crew/settings/setup), toggle "Calendar &
+      Space Management" to OFF and save. Confirm the
+      save succeeds with a success state. Reload the
+      page. Confirm the toggle remains OFF.
+
+**Calendar flag blocked routes (feature_calendar = 'false'):**
+
+- [ ] **SETUP.1 V2** — With feature_calendar = 'false':
+      navigate to /crew/calendar. Confirm you are
+      redirected to /crew/dashboard — NOT the
+      calendar page.
+
+- [ ] **SETUP.1 V3** — With feature_calendar = 'false':
+      navigate to the public /calendar page (no login).
+      Confirm you receive a 404 or "not found" response
+      — NOT the public calendar grid.
+
+- [ ] **SETUP.1 V4** — With feature_calendar = 'false':
+      confirm the "Calendar" link is absent from the
+      Production Crew sidebar. Navigate to the sidebar
+      — no Calendar nav link should appear.
+
+**Restore and verify calendar:**
+
+- [ ] **SETUP.1 V5** — Toggle "Calendar & Space
+      Management" back to ON. Save. Confirm the
+      Calendar link reappears in the sidebar without
+      a full page reload. Navigate to /crew/calendar.
+      Confirm it loads normally.
+
+**Check-In flag (feature_checkin = 'false'):**
+
+- [ ] **SETUP.1 V6** — Toggle "Check-In System" to
+      OFF and save. Navigate to /crew/tools/checkin.
+      Confirm redirect to /crew/dashboard. Navigate
+      to the public /checkin/[any-uuid]. Confirm 404
+      or blocked response. Restore the flag to ON
+      after verifying.
+
+**Blast flag (feature_blast = 'false'):**
+
+- [ ] **SETUP.1 V7** — Toggle "Email Blast Composer"
+      to OFF and save. Navigate to /crew/communication.
+      Confirm redirect to /crew/dashboard. Confirm
+      the "Communication" sidebar link is absent.
+      Restore the flag to ON after verifying.
+
+**Core features unaffected by any flag:**
+
+- [ ] **SETUP.1 V8** — With ALL flags back ON: confirm
+      /crew/shows, /crew/volunteers, /crew/forms,
+      /crew/media, /crew/settings all load normally.
+      Core features are never gated by feature flags.
+
+**Feature flags propagate without full reload:**
+
+- [ ] **SETUP.1 V9** — Toggle any flag in the Setup
+      Panel and save. WITHOUT a full page reload:
+      confirm the sidebar link for that feature
+      appears or disappears immediately. The
+      revalidatePath('/crew', 'layout') call in
+      saveFeatureFlags() should propagate changes
+      to the layout on the next navigation.
+      (May require navigating to another page
+      to trigger the layout re-render)
+
+---
+
+## SETUP.2 — Setup Panel UI Sections 1–4
+
+*SETUP.2 built the Setup Panel UI: Org Identity,
+Brand Colors, Logo, and Favicon sections. The
+Setup Panel is at /crew/settings/setup and is
+Super Admin only.*
+
+**Access control:**
+
+- [ ] **SETUP.2 V1** — Log in as Super Admin.
+      Navigate to /crew/settings/setup. Confirm
+      the Platform Setup page loads — showing
+      seven collapsible sections (or cards).
+
+- [ ] **SETUP.2 V2** — Log in as Owner Admin.
+      Navigate to /crew/settings/setup directly.
+      Confirm you are redirected to /crew/dashboard.
+      Confirm the sidebar does NOT show a "Platform
+      Setup" link for Owner Admin.
+      *(Requires Owner Admin account)*
+
+**Settings hub card:**
+
+- [ ] **SETUP.2 V3** — As Super Admin: navigate to
+      /crew/settings. Confirm "Platform Setup" is
+      a LinkedCard (clickable, links to
+      /crew/settings/setup). As Owner Admin: confirm
+      "Platform Setup" is a LockedCard ("Super Admin
+      only" label, not clickable).
+      *(Requires Owner Admin account)*
+
+**Section 1 — Org Identity:**
+
+- [ ] **SETUP.2 V4** — On /crew/settings/setup:
+      find Section 1 (Organization Identity).
+      Update the Organization Name field to a test
+      value (e.g. "Test Theatre"). Click Save.
+      Confirm a success state appears. Reload the
+      page. Confirm the saved value persists in
+      the field.
+
+- [ ] **SETUP.2 V5** — After setting org_name in V4:
+      navigate to the public landing page (/). Confirm
+      the page heading reads "Join the Test Theatre
+      Volunteer Community" (or reflects your test
+      value). Restore org_name to "30 By Ninety
+      Theatre" after verifying.
+
+**Section 2 — Brand Colors:**
+
+- [ ] **SETUP.2 V6** — On /crew/settings/setup:
+      find Section 2 (Brand Colors). Change the
+      primary color picker to a test value. Click
+      Save. Confirm a success state. Reload the page.
+      Confirm the color picker shows the saved value.
+      Restore to #293994 after verifying.
+      (Note: color changes affect email templates
+      and public pages only until Phase THEME ships —
+      admin UI uses static Tailwind classes)
+
+**Section 3 — Logo:**
+
+- [ ] **SETUP.2 V7** — On /crew/settings/setup:
+      find Section 3 (Logo). Test the URL input
+      path: paste a valid public image URL into
+      the URL field. Click Save. Confirm success.
+      Navigate to the landing page (/). Confirm
+      the logo in the email header reflects the
+      new URL. (Requires sending a test email to
+      verify logo in email — or check Resend
+      dashboard for next outbound email)
+
+- [ ] **SETUP.2 V8** — Test the file upload path
+      in Section 3: click the upload/crop option.
+      Select an image file. Confirm a crop editor
+      appears. Adjust the crop. Confirm clicking
+      "Save Logo" (or equivalent) uploads the
+      image and shows the cropped result. Confirm
+      the org_logo_url app_settings key is updated.
+      (Supabase cross-check optional)
+
+**Section 4 — Favicon:**
+
+- [ ] **SETUP.2 V9** — On /crew/settings/setup:
+      find Section 4 (Favicon). Test the file
+      upload path: click the upload option. Select
+      an image file. Confirm the crop editor
+      enforces a 1:1 square aspect ratio (you
+      cannot create a non-square crop). Confirm
+      clicking Save uploads and stores the favicon.
+
+- [ ] **SETUP.2 V10** — After saving a favicon
+      in V9: open a new browser tab and navigate
+      to any /crew/* page. Check the browser tab.
+      Confirm the favicon has changed to the
+      uploaded image (may require a hard reload
+      — Ctrl+Shift+R or Cmd+Shift+R).
+      (Owner manual action — browser tab check)
+
+- [ ] **SETUP.2 V11** — Check the page <title>
+      in the browser tab or devtools. Confirm it
+      includes the org_name set in Section 1
+      (dynamic title from generateMetadata()).
+
+**Section header instance label:**
+
+- [ ] **SETUP.2 V12** — On /crew/settings/setup:
+      scroll to Section 7 (Platform Identity) and
+      set an Instance Label value (e.g. "30BN Test").
+      Save. Confirm the Setup Panel page header
+      updates to show the instance label beside
+      "Platform Setup" (e.g. "Platform Setup · 30BN
+      Test"). Reload and confirm it persists.
+
+**All sections visible:**
+
+- [ ] **SETUP.2 V13** — Confirm all seven sections
+      are present on /crew/settings/setup:
+      Organization Identity, Brand Colors, Logo,
+      Favicon, Email Configuration, Feature Flags,
+      Platform Identity. Each section has its own
+      Save button (no "Save All").
+
+- [ ] **SETUP.2 V14** — Saving one section does NOT
+      affect the values in any other section. After
+      saving Section 1, verify Section 2 still shows
+      its previously saved value unchanged.
+
+---
+
+## SETUP.3 — Email Configuration Section
+
+*SETUP.3 built Section 5 of the Setup Panel (Email
+Configuration) and wired resolveEmailSettings() to
+all 16 Resend send functions. Verification confirms
+the dynamic from address and name propagate to
+real outbound emails.*
+
+**Section 5 — Email Config:**
+
+- [ ] **SETUP.3 V1** — On /crew/settings/setup:
+      find Section 5 (Email Configuration). Confirm
+      two editable fields: Sending Address and
+      Sending Name. Confirm Default Reply-To is
+      displayed read-only with a link to General
+      Defaults (/crew/settings/general).
+
+- [ ] **SETUP.3 V2** — Update the Sending Name
+      to a test value (e.g. "30BN Test Volunteers").
+      Click Save. Confirm success. Reload the page.
+      Confirm the saved value persists.
+
+- [ ] **SETUP.3 V3** — Restore the Sending Name
+      to "30 By Ninety Theatre Volunteers" after V2.
+      Confirm save succeeds and value restores.
+
+**Dynamic from address in outbound emails:**
+
+- [ ] **SETUP.3 V4** — *(Requires real email delivery)*
+      After setting a custom Sending Name in V2:
+      trigger any system email (e.g. sign up a test
+      volunteer at /). Confirm the email arrives
+      with the FROM name matching the custom value
+      set in the Setup Panel — NOT the hardcoded
+      "30 By Ninety Theatre Volunteers" default.
+
+- [ ] **SETUP.3 V5** — *(Requires real email delivery)*
+      Check the email headers (Resend dashboard
+      or email client). Confirm the from address
+      matches email_from_address from app_settings
+      — not a hardcoded volunteers@ address (unless
+      that IS the value in app_settings).
+
+**Section renders correctly:**
+
+- [ ] **SETUP.3 V6** — Confirm Section 5 is the
+      5th section on the page (after Org Identity,
+      Brand Colors, Logo, Favicon in that order).
+      Confirm sections are ordered 1–7 top to
+      bottom without gaps.
+
+---
+
+## SETUP.4 — Feature Flags + Instance Label Sections
+
+*SETUP.4 built Sections 6 and 7 of the Setup Panel:
+Feature Flags (three toggle switches) and Platform
+Identity (instance label). Full proxy guard testing
+is in SETUP.1 — these items focus on the Setup
+Panel UI behavior.*
+
+**Section 6 — Feature Flags:**
+
+- [ ] **SETUP.4 V1** — On /crew/settings/setup:
+      find Section 6 (Feature Flags). Confirm three
+      toggle rows are present:
+      - Calendar & Space Management
+      - Check-In System
+      - Email Blast Composer
+      Confirm each row shows the feature label, a
+      one-sentence description, and a toggle switch
+      showing current ON/OFF state.
+
+- [ ] **SETUP.4 V2** — Toggle the "Calendar & Space
+      Management" switch to OFF (if currently ON).
+      Confirm the toggle visually switches — pill
+      changes from navy to gray, circle moves left.
+      Confirm NO automatic save fires — the toggle
+      change is optimistic (local state only until
+      Save is clicked).
+
+- [ ] **SETUP.4 V3** — Click "Save Feature Flags".
+      Confirm a success state appears. WITHOUT
+      reloading: navigate to /crew/calendar via the
+      sidebar or address bar. Confirm redirect to
+      /crew/dashboard. Restore the flag to ON
+      and save again before proceeding.
+
+- [ ] **SETUP.4 V4** — With all flags ON: reload
+      /crew/settings/setup. Confirm all three
+      toggles show in the ON position (matching
+      the saved state in app_settings).
+
+**Section 7 — Platform Identity (Instance Label):**
+
+- [ ] **SETUP.4 V5** — On /crew/settings/setup:
+      find Section 7 (Platform Identity). Confirm
+      an "Instance Label" text field is present
+      with a placeholder like "e.g. Pelican
+      Playhouse." Confirm the current saved value
+      is pre-filled (e.g. "30 By Ninety Theatre").
+
+- [ ] **SETUP.4 V6** — Update the instance label
+      to a test value. Click "Save Identity Label."
+      Confirm success. Confirm the page header
+      updates to show the test label beside
+      "Platform Setup."
+
+- [ ] **SETUP.4 V7** — Log in as Owner Admin.
+      Navigate to /crew/settings. Confirm the
+      Platform Setup card shows as a LockedCard —
+      the instance label is NOT displayed to Owner
+      Admin (it's Super Admin Setup Panel only).
+      *(Requires Owner Admin account)*
+
+- [ ] **SETUP.4 V8** — Restore the instance label
+      to its production value (e.g. "30 By Ninety
+      Theatre"). Save. Confirm it persists on reload.
+
+---
+
+## ADMIN.31 — Deferred Item Sweep
+
+*ADMIN.31 closed seven deferred items: landing page
+org identity from app_settings, email payload builders
+dynamic from/logo, phone search strip, reminder cron
+DST fix, volunteer.signup audit logging, and waitlist
+renumbering RPC. ADMIN.31b removed the dead documents
+query and made the copyright line dynamic.*
+
+**Landing page — dynamic org identity (ADMIN.31):**
+
+- [ ] **ADMIN.31 V1** — Navigate to the public
+      landing page (/). Confirm the main heading
+      reads "Join the [org_name] Volunteer
+      Community" — where [org_name] is the value
+      set in Setup Panel Section 1 (e.g. "Join the
+      30 By Ninety Theatre Volunteer Community").
+      (Requires org_name to be set in app_settings)
+
+- [ ] **ADMIN.31 V2** — On the landing page footer:
+      if org_contact_email is set in app_settings,
+      confirm it appears as a mailto link. If
+      org_website_url is set, confirm it appears
+      as an external link. If org_location is set,
+      confirm it appears as plain text.
+      (At least one field must be set to verify)
+
+- [ ] **ADMIN.31 V3** — On the landing page footer:
+      confirm the copyright line reads
+      "© [org_name]" using the dynamic org_name —
+      NOT the hardcoded "© 30 By Ninety Theatre"
+      (ADMIN.31b fix). (Requires org_name to be
+      set — confirms dynamic copyright)
+
+- [ ] **ADMIN.31 V4** — Temporarily update org_name
+      in the Setup Panel to a test value (e.g.
+      "Pelican Playhouse"). Save. Navigate to
+      the landing page. Confirm the heading and
+      copyright BOTH update to reflect the new
+      org_name. Restore org_name to "30 By Ninety
+      Theatre" after verifying.
+
+**Landing page — no console errors (ADMIN.31b):**
+
+- [ ] **ADMIN.31 V5** — Open browser developer
+      tools (F12 → Console). Navigate to the
+      landing page (/). Confirm NO console errors
+      appear related to a missing documents query
+      or invalid column references. The dead
+      pre-Migration-025 documents query was removed
+      in ADMIN.31b — no errors should appear.
+      *(Advanced — devtools required)*
+
+**Phone search (ADMIN.31):**
+
+- [ ] **ADMIN.31 V6** — Navigate to /crew/volunteers.
+      In the search box, type a formatted phone
+      number that exists in the volunteers table
+      (e.g. "(985) 555-1234" if a volunteer has
+      phone stored as "9855551234"). Confirm the
+      correct volunteer appears in results.
+      (Previously, formatted phone searches
+      would return no results because the DB
+      stores digits-only. ADMIN.31 fixed this
+      by stripping non-digits before the ilike
+      query.)
+
+**Waitlist renumbering (ADMIN.31):**
+
+- [ ] **ADMIN.31 V7** — Set up a test scenario:
+      claim a role to fill all slots (creating a
+      waitlist). Add at least 2–3 waitlisted claims.
+      Note the waitlist_position values (e.g. 1, 2, 3).
+      Cancel the waitlisted claim at position 1
+      (not a claimed slot). Confirm:
+      - The remaining waitlisted claims renumber
+      to 1 and 2 (gap closed).
+      - No duplicate position numbers remain.
+      (Supabase cross-check: SELECT waitlist_position,
+      volunteer_name FROM slot_claims WHERE
+      volunteer_role_id = [role_id] AND
+      status = 'waitlisted' ORDER BY
+      waitlist_position)
+
+**volunteer.signup in audit log (ADMIN.31):**
+
+- [ ] **ADMIN.31 V8** — Complete a new volunteer
+      signup at /. Navigate to /crew/settings/audit-log
+      as Super Admin or Editor. In the Action Type
+      filter, look for "volunteer.signup" or "Volunteer
+      Signup" (human-readable label). Confirm an entry
+      appears for the signup just completed showing
+      the volunteer's name and email in the details.
+      (Supabase cross-check: SELECT * FROM audit_log
+      WHERE action = 'volunteer.signup' ORDER BY
+      created_at DESC LIMIT 5)
+
+**Dynamic email from address (ADMIN.31):**
+
+- [ ] **ADMIN.31 V9** — *(Requires real email delivery)*
+      Trigger a transactional email (e.g. sign up
+      a test volunteer). Check the email in an inbox
+      or the Resend dashboard. Confirm the FROM name
+      matches the Sending Name set in Setup Panel
+      Section 5. Confirm the FROM address matches
+      the Sending Address from Section 5.
+      (This confirms resolveEmailSettings() is
+      working across the full send pipeline)
+
+**Reminder cron DST consistency (ADMIN.31):**
+
+- [ ] **ADMIN.31 V10** — *(Advanced — Vercel logs)*
+      After the next scheduled cron run (5 AM UTC
+      daily): check Vercel → Functions → Cron Jobs
+      logs for app/api/cron/reminders/route.ts.
+      Confirm no timezone errors appear in logs.
+      Confirm the cron ran and sent emails to
+      volunteers with shows the following day
+      in CT time. (This is best verified around
+      daylight saving time transitions — deferred
+      to next DST transition if not immediately
+      testable)
 
 ---
 
@@ -5341,20 +5850,23 @@ If none exists, create one via /crew/settings/users
 
 ---
 
-*Total items in this carry-forward list: 693*
-*(688 v12 items + 5 new v13 items)*
-*Prior (v12): 688 items*
-*v13 additions: 5 new items (HELP.2e: 5).*
-*v13 superseded: none.*
-*v13 updated: none.*
-*Quick Reference: 1 new group added (HELP.2e —
-requires Owner Admin account).*
-*Seed Data Cleanup: unchanged from v12.*
+*Total items in this carry-forward list: 742*
+*(693 v13 items + 49 new v14 items)*
+*Prior (v13): 693 items*
+*v14 additions: 49 new items (SETUP.1: 9, SETUP.2: 14,
+SETUP.3: 6, SETUP.4: 8, ADMIN.31/31b: 10 combined,
+Quick Reference: 2 new groups).*
+*v14 superseded: none.*
+*v14 updated: none.*
+*Seed Data Cleanup: brand bucket note added (SETUP.2
+logo/favicon test uploads — Storage API only, no SQL).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v13 (HELP.2e owner_admin
-sweep verification: 5 new Owner Admin help page
-checks. Quick Reference expanded.)*
+*Last updated: July 2026 — v14 (Phase SETUP.1–4 +
+ADMIN.31/31b verification items: feature flag proxy
+guards, Setup Panel UI sections 1–7, email config
+dynamic from, landing page org identity, phone search,
+waitlist renumbering, volunteer.signup audit log.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
