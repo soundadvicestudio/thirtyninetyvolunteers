@@ -289,3 +289,102 @@ export async function saveEmailConfig(formData: FormData): Promise<ActionResult>
 
   return { success: true }
 }
+
+function isValidFlagValue(value: string | null): value is 'true' | 'false' {
+  return value === 'true' || value === 'false'
+}
+
+export async function saveFeatureFlags(formData: FormData): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const calendar = formData.get('feature_calendar') as string | null
+  const checkin = formData.get('feature_checkin') as string | null
+  const blast = formData.get('feature_blast') as string | null
+
+  if (!isValidFlagValue(calendar) || !isValidFlagValue(checkin) || !isValidFlagValue(blast)) {
+    return { error: 'Invalid flag value.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast']
+  const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
+  const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
+
+  const { error } = await supabase.from('app_settings').upsert(
+    [
+      { key: 'feature_calendar', value: calendar, updated_by: admin.id },
+      { key: 'feature_checkin', value: checkin, updated_by: admin.id },
+      { key: 'feature_blast', value: blast, updated_by: admin.id },
+    ],
+    { onConflict: 'key' }
+  )
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  // The 'layout' second argument propagates the flag change through the
+  // crew layout to the Sidebar, which renders nav links conditionally
+  // based on flags — this is the critical revalidation for this action.
+  revalidatePath('/crew', 'layout')
+  revalidatePath('/')
+  revalidatePath('/shows')
+  revalidatePath('/calendar')
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'feature_flags',
+    {
+      feature_calendar: previousMap.get('feature_calendar') ?? '',
+      feature_checkin: previousMap.get('feature_checkin') ?? '',
+      feature_blast: previousMap.get('feature_blast') ?? '',
+    },
+    { feature_calendar: calendar, feature_checkin: checkin, feature_blast: blast }
+  )
+
+  return { success: true }
+}
+
+export async function saveInstanceLabel(formData: FormData): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const instanceLabel = (formData.get('instance_label') as string | null)?.trim() || ''
+  if (instanceLabel.length > 100) {
+    return { error: 'Instance label must be 100 characters or fewer.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: previous } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'instance_label')
+    .maybeSingle()
+
+  const { error: upsertError } = await upsertSetting(supabase, 'instance_label', instanceLabel, admin.id)
+  if (upsertError) {
+    return { error: upsertError.message }
+  }
+
+  revalidatePath('/crew/settings/setup')
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'instance_label',
+    { value: previous?.value ?? '' },
+    { value: instanceLabel }
+  )
+
+  return { success: true }
+}

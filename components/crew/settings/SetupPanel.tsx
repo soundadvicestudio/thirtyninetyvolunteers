@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { saveOrgIdentity, saveBrandColors, saveEmailConfig } from '@/lib/actions/setup'
+import {
+  saveOrgIdentity,
+  saveBrandColors,
+  saveEmailConfig,
+  saveFeatureFlags,
+  saveInstanceLabel,
+} from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -20,6 +26,10 @@ export type SetupPanelInitialValues = {
   email_from_address: string
   email_from_name: string
   default_reply_to: string
+  feature_calendar: string
+  feature_checkin: string
+  feature_blast: string
+  instance_label: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -270,6 +280,159 @@ function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitia
   )
 }
 
+function ToggleRow({
+  label,
+  description,
+  enabled,
+  onToggle,
+}: {
+  label: string
+  description: string
+  enabled: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-dark dark:text-dark-text">{label}</p>
+        <p className="text-sm text-mid-gray dark:text-dark-muted">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={label}
+        onClick={onToggle}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+          enabled ? 'bg-navy' : 'bg-gray-300'
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            enabled ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </div>
+  )
+}
+
+function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [calendarEnabled, setCalendarEnabled] = useState(initialValues.feature_calendar === 'true')
+  const [checkinEnabled, setCheckinEnabled] = useState(initialValues.feature_checkin === 'true')
+  const [blastEnabled, setBlastEnabled] = useState(initialValues.feature_blast === 'true')
+  const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
+  const [flagErrorMessage, setFlagErrorMessage] = useState('')
+
+  async function handleSave() {
+    setFlagSaveStatus('saving')
+    const fd = new FormData()
+    fd.append('feature_calendar', calendarEnabled ? 'true' : 'false')
+    fd.append('feature_checkin', checkinEnabled ? 'true' : 'false')
+    fd.append('feature_blast', blastEnabled ? 'true' : 'false')
+
+    const result = await saveFeatureFlags(fd)
+    if ('error' in result) {
+      setFlagSaveStatus('error')
+      setFlagErrorMessage(result.error)
+      return
+    }
+    setFlagSaveStatus('saved')
+    setTimeout(() => setFlagSaveStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Feature Flags</h2>
+        <p className={descriptionClasses}>
+          Enable or disable optional platform features. Changes take effect immediately for all
+          users.
+        </p>
+      </div>
+      <ToggleRow
+        label="Calendar & Space Management"
+        description="Enables the master calendar, space booking, and public /calendar page. When off, these are hidden from all users."
+        enabled={calendarEnabled}
+        onToggle={() => setCalendarEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Check-In System"
+        description="Enables QR check-in and the public self-check-in page. When off, all check-in routes are inaccessible."
+        enabled={checkinEnabled}
+        onToggle={() => setCheckinEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Email Blast Composer"
+        description="Enables the email blast composer under Communication. When off, the Communication page is hidden."
+        enabled={blastEnabled}
+        onToggle={() => setBlastEnabled((v) => !v)}
+      />
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={flagSaveStatus === 'saving'}
+          className={saveButtonClasses}
+        >
+          {flagSaveStatus === 'saving' ? 'Saving...' : 'Save Feature Flags'}
+        </button>
+        <SaveFeedback status={flagSaveStatus} errorMessage={flagErrorMessage} />
+      </div>
+    </div>
+  )
+}
+
+function InstanceLabelSection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [instanceLabel, setInstanceLabel] = useState(initialValues.instance_label)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    const formData = new FormData()
+    formData.append('instance_label', instanceLabel)
+
+    const result = await saveInstanceLabel(formData)
+    if ('error' in result) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Platform Identity</h2>
+        <p className={descriptionClasses}>
+          An internal label for this deployment. Only visible to you on this page — never shown
+          to other users.
+        </p>
+      </div>
+      <div>
+        <label className={labelClasses}>Instance Label</label>
+        <input
+          type="text"
+          maxLength={100}
+          value={instanceLabel}
+          onChange={(e) => setInstanceLabel(e.target.value)}
+          placeholder="e.g. Pelican Playhouse"
+          className={inputClasses}
+        />
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
+          {status === 'saving' ? 'Saving...' : 'Save Identity Label'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
+}
+
 export default function SetupPanel({ initialValues }: { initialValues: SetupPanelInitialValues }) {
   const [logoUrl, setLogoUrl] = useState(initialValues.org_logo_url)
   const [faviconUrl, setFaviconUrl] = useState(initialValues.favicon_url)
@@ -317,6 +480,8 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
       </div>
 
       <EmailConfigSection initialValues={initialValues} />
+      <FeatureFlagsSection initialValues={initialValues} />
+      <InstanceLabelSection initialValues={initialValues} />
     </div>
   )
 }

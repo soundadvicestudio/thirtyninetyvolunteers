@@ -16,6 +16,10 @@ const SETUP_KEYS = [
   'email_from_address',
   'email_from_name',
   'default_reply_to',
+  'feature_calendar',
+  'feature_checkin',
+  'feature_blast',
+  'instance_label',
 ] as const
 
 export default async function SetupPage() {
@@ -50,12 +54,25 @@ export default async function SetupPage() {
     email_from_address: settingsMap.get('email_from_address') ?? '',
     email_from_name: settingsMap.get('email_from_name') ?? '',
     default_reply_to: settingsMap.get('default_reply_to') ?? '',
+    feature_calendar: settingsMap.get('feature_calendar') ?? 'true',
+    feature_checkin: settingsMap.get('feature_checkin') ?? 'true',
+    feature_blast: settingsMap.get('feature_blast') ?? 'true',
+    instance_label: settingsMap.get('instance_label') ?? '',
   }
+
+  const instanceLabel = settingsMap.get('instance_label') ?? ''
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Platform Setup</h1>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Platform Setup</h1>
+          {instanceLabel && (
+            <span className="text-sm font-normal text-mid-gray dark:text-dark-muted">
+              · {instanceLabel}
+            </span>
+          )}
+        </div>
         <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
           Configure this OpenCall OS deployment. Changes take effect immediately.
         </p>
