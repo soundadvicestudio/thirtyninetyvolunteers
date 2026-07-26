@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.6
-### Created: July 2026 | Last Updated: July 2026 — v3.6 (Phase 15 complete + ADMIN.30 — SETUP.1–4 + THEME pending)
+## 30BN_PROCESS_v1.md — v3.7
+### Created: July 2026 | Last Updated: July 2026 — v3.7 (HELP.2e owner_admin sweep + DOC.41/42 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -1908,6 +1908,19 @@ Phase 15 — Document & Media System ✓ Complete
                Library/Document Management, §9 schema
                blocks, §11, version history)
   30BN-DOC.39  ✓ Process Update v3.6 (this prompt)
+  30BN-HELP.2e ✓ ALL_SECTIONS owner_admin sweep.
+               HelpContent.tsx: owner_admin added to
+               12 top-level + 35 subsection role arrays
+               (47 total). Settings entries (1 top-level
+               + 10 subsections) correctly excluded —
+               already had owner_admin. Zero lint/tsc
+               errors. Commit: f4394bd.
+  30BN-DOC.41  ✓ Brief Update v3.7 (§7 Production row
+               + §9 two stale CAL.8 notes corrected +
+               HELP.2e prompt log entry). Commit: f4394bd.
+  30BN-DOC.42  ✓ Doc Update v3.8/v3.7/v13 — HELP.2e
+               completion logging across Brief, Process,
+               Deferred Verifications (this prompt).
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
@@ -2361,3 +2374,4 @@ onward.
 *v3.4 (July 2026 — SETUP.0 complete: §2 header updated (SETUP.0 complete, Phase 14 next); §7 Owner Admin role guard pattern note updated (not-yet-built language removed); §10 owner_admin grep check comment updated (post-sweep standing verification); §13 Phase SETUP updated (SETUP.0 ✓ with full summary, "(pending)" removed from header, DOC.36 added to prompt log); SETUP.1–4 still pending; DOC.36 logged)*
 *v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §2 header updated (Phase 14 complete, Phase 15.3 next); §7 five new patterns added: public-route action file invariant (getAdminClient() only + header comment + *-admin.ts split — 14.1/15.2), P-DC upload pattern (signedUploadUrl → client PUT → confirm action, XHR for progress, media bucket only — 15.2), lib/data/*.ts parameter-passing pattern (client as parameter, never construct internally — 15.1/CAL.3 principle), conditional zod schema factory pattern (runtime flag → factory function in both client and server — 14.1-FIX), storage bucket single-bucket note; §8 XHR-over-fetch convention added (ConsentUploadForm.tsx — only sanctioned XHR use, must include deviation comment); §10 three new grep checks: media bucket (no documents bucket), getServerClient in public-route files (must be zero), XHR usage (ConsentUploadForm only); §11 five new checklist items: P-DC pattern, public-route file invariant, storage bucket + path namespacing, attendance slot_claim_id explicit, zod factory for conditional schemas; §13 Phase 14 marked complete (14.1, 14.1-FIX, 14.2, 14.3); §13 Phase 15 added (15.1 ✓, 15.2 ✓, 15.2-AUDIT ✓, 15.2-FIX ✓, DOC.37a ✓, DOC.37b ✓, DOC.38 ✓, 15.3–15.4 pending); §14 post-build audit session pattern updated (compaction mid-build = mandatory AUDIT trigger, extended from CAL.5b-AUDIT with 15.2-AUDIT evidence); §14 three new rules: public-route action file invariant, storage bucket naming (single media bucket), escapeHtml() storage path exemption; DOC.38 logged)*
 *v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §2 header updated (Phase 15 complete, SETUP.1–4 + THEME pending); §7 P-DC upload path note updated (library/ forward reference removed); §7 detectLinkType() independence pattern added (three intentional implementations — route handler, Client Component, Server Component — recognized DRY exception, do not extract to shared utility); §8 XHR-over-fetch note extended (MediaLibrary.tsx added as second sanctioned XHR use alongside ConsentUploadForm.tsx — both for upload progress); §10 XHR grep check updated (two sanctioned files: ConsentUploadForm.tsx + MediaLibrary.tsx); §11 one new checklist item (detectLinkType() / isViewableMimeType() evaluation for new document entry types); §13 Phase 15 marked complete (15.3 ✓ with commit 26a4585, 15.4 ✓ with commit 63570b8); §13 prompt log updated (15.3 ✓, 15.4 ✓, ADMIN.30 ✓, DOC.37c ✓, DOC.39 ✓); §14 HelpTooltip Client Component note updated (26 → 32 total placements); §14 Storage Bucket Naming library/ note updated (forward reference removed); §14 two new rules: detectLinkType() independence DRY exception (15.3/15.4); sidebar nav exact-vs-prefix matching pattern (ADMIN.30 — special-case parent link, never modify isActivePath() globally); document header v3.6; DOC.39 logged)*
+*v3.7 (July 2026 — HELP.2e + DOC.41/42: §2 header updated (HELP.2e owner_admin sweep + DOC.41/42 logged); §13 prompt log updated (HELP.2e ✓ — 47 HelpContent.tsx ALL_SECTIONS entries updated, commit f4394bd; DOC.41 ✓ — Brief v3.7; DOC.42 ✓ — this prompt); document header v3.7; DOC.42 logged)*

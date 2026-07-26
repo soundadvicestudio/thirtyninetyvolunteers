@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.7
-### Created: July 2026 | Last Updated: July 2026 — v3.7 (§7 Production row + §9 CAL.8 stale fixes + HELP.2e)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.8
+### Created: July 2026 | Last Updated: July 2026 — v3.8 (HELP.2e completion logged — §8 Help System gap note removed)
 
 ---
 
@@ -919,7 +919,7 @@ Page structure: Server Component shell at `app/crew/(app)/help/page.tsx` passes 
 
 Role visibility:
 - Super Admin: all 13 sections
-- Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access). Note: most non-Settings ALL_SECTIONS entries do not yet include `owner_admin` in their roles arrays — a known gap (ADMIN.30 Q1) to be fixed in a dedicated HELP.2e sweep.
+- Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access). All non-Settings ALL_SECTIONS entries now include `owner_admin` — fixed in HELP.2e (47 entries updated).
 - Editor: all sections except Settings
 - Viewer: all sections except Settings and Communication; no edit-only subsections
 - Production: Master Calendar, Media Library, and Getting Help only
@@ -3829,3 +3829,4 @@ updated (HELP.2e + DOC.41); HELP.2e: HelpContent.tsx
 ALL_SECTIONS sweep — owner_admin added to all non-Settings
 section and subsection role arrays (47 entries); DOC.41
 logged)*
+*v3.8 (July 2026 — HELP.2e completion: §8 Help System Owner Admin bullet updated (removed "known gap (ADMIN.30 Q1)" forward-reference note — HELP.2e fixed all 47 non-Settings ALL_SECTIONS entries; replaced with confirmation that the gap is closed); document header + §1 header bumped to v3.8; §11 prompt log unchanged (HELP.2e + DOC.41 already logged in v3.7); DOC.42 logged)*

@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 12 | July 2026 | Phase 15 Complete + ADMIN.30
+## Version 13 | July 2026 | Phase 15 Complete + ADMIN.30 + HELP.2e
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -1403,6 +1403,9 @@ SETUP.0 V4, V5 (confirming OA-only vs SA-only distinctions)
 ### ADMIN.30 — requires Production account:
 ADMIN.30 V5 (Media Library visible, Check-In absent),
 ADMIN.30 V3 (Opportunities sub-routes still active)
+
+### HELP.2e — requires Owner Admin account:
+HELP.2e V1–V5 (all require Owner Admin login)
 
 ### Phase 15.3 — requires Production account:
 15.3 V2, 15.3 V3 (Production role access to /crew/media)
@@ -5288,24 +5291,70 @@ testing. The /documents/[token] and
 
 ---
 
-*Total items in this carry-forward list: 688*
-*(650 v11 items + 38 new v12 items)*
-*Prior (v11): 650 items*
-*v12 additions: 38 new items (ADMIN.30: 14, Phase 15.3:
-12, Phase 15.4: 12).*
-*v12 superseded: none.*
-*v12 updated: none.*
-*Quick Reference: 7 new groups added (ADMIN.30, Phase
-15.3–15.4 prerequisite categories).*
-*Seed Data Cleanup: Phase 15.3 cleanup SQL added
-(test documents rows, test media_folders rows, media
-bucket library/ prefix cleanup note).*
+## HELP.2e — ALL_SECTIONS Owner Admin Sweep
+
+*Prerequisite: an Owner Admin account must exist.
+If none exists, create one via /crew/settings/users
+(Super Admin only) before running these checks.*
+
+- [ ] **HELP.2e V1** — Log in as Owner Admin. Navigate
+      to /crew/help. Confirm the left-side TOC shows
+      all 13 sections — the same full list that Super
+      Admin sees. Previously, Owner Admin would have
+      seen a reduced set (Editor-level visibility)
+      because owner_admin was missing from most
+      ALL_SECTIONS role arrays. The full list should
+      include: Dashboard, Your Volunteers, Shows,
+      Attendance and Hours, The Volunteer Signup Form,
+      Settings, Master Calendar, Communication,
+      Check-In System, Media Library, The Volunteer
+      Call Board, Standing Opportunities, Getting Help.
+
+- [ ] **HELP.2e V2** — As Owner Admin on /crew/help:
+      confirm the Communication section is visible
+      (including the "Sending an Email Blast" subsection).
+      Prior to HELP.2e, this section was ['super_admin',
+      'editor'] — Owner Admin was excluded.
+
+- [ ] **HELP.2e V3** — As Owner Admin on /crew/help:
+      confirm the Settings section is visible with all
+      its subsections (Announcement Banner, Hearing
+      Options, Signup Form, General Defaults, Categories,
+      User Accounts, Audit Log, Location Management,
+      Email Activity, Document Types, Consent Form
+      Submissions). Settings was already correct (SA/OA
+      only) — this is a confirmatory check.
+
+- [ ] **HELP.2e V4** — As Owner Admin on /crew/help:
+      scroll to the Master Calendar section. Confirm
+      the "Pending Approval Queue" subsection is visible.
+      This entry previously had ['super_admin'] only —
+      Owner Admin was excluded despite having full
+      operational access to the pending queue.
+
+- [ ] **HELP.2e V5** — As Owner Admin: navigate to
+      /crew/calendar/pending. Confirm the page loads
+      the full Pending Approval Queue — no redirect to
+      dashboard. This confirms the app-level access
+      matches the help page role visibility fixed in
+      HELP.2e.
+
+---
+
+*Total items in this carry-forward list: 693*
+*(688 v12 items + 5 new v13 items)*
+*Prior (v12): 688 items*
+*v13 additions: 5 new items (HELP.2e: 5).*
+*v13 superseded: none.*
+*v13 updated: none.*
+*Quick Reference: 1 new group added (HELP.2e —
+requires Owner Admin account).*
+*Seed Data Cleanup: unchanged from v12.*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v12 (Phase 15 complete:
-ADMIN.30 sidebar + help page verification, Phase 15.3
-Master Media Library, Phase 15.4 media players + embed
-detection. Quick Reference expanded.)*
+*Last updated: July 2026 — v13 (HELP.2e owner_admin
+sweep verification: 5 new Owner Admin help page
+checks. Quick Reference expanded.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
