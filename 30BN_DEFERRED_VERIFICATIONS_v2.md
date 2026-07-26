@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 11 | July 2026 | Phase 14 Complete + Phase 15.1–15.2 Complete + SETUP.0
+## Version 12 | July 2026 | Phase 15 Complete + ADMIN.30
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -244,6 +244,36 @@ should be reviewed and deleted manually via the
 Supabase dashboard → Storage → media bucket before
 launch. No SQL needed — Storage objects are managed
 via the Storage API, not directly via SQL.
+
+Also clean up any test documents or media_folders rows
+created during Phase 15.3 testing:
+
+  -- Remove any test documents added via the Media Library
+  -- during verification (not real production documents):
+  -- DELETE FROM documents
+  -- WHERE uploaded_by IN (
+  --   SELECT id FROM admin_users
+  --   WHERE email LIKE '%@30bn-test.invalid'
+  -- )
+  -- AND created_at > '2026-07-01';
+  -- (Review before running — only remove test uploads,
+  -- not any real media library files added for production)
+
+  -- Remove any test media_folders created during testing:
+  -- DELETE FROM media_folders
+  -- WHERE created_by IN (
+  --   SELECT id FROM admin_users
+  --   WHERE email LIKE '%@30bn-test.invalid'
+  -- )
+  -- AND created_at > '2026-07-01';
+  -- (Review before running)
+
+Note: Supabase Storage files uploaded to the 'media'
+bucket under library/ during Phase 15.3 testing should
+be reviewed and deleted manually via the Supabase
+dashboard → Storage → media bucket before launch.
+Files are under the library/ prefix. No SQL needed for
+Storage objects.
 
 Note for SETUP.0: No new test data was introduced by
 the role guard sweep (Migration 023, SETUP.0). The
@@ -1369,6 +1399,26 @@ SETUP.0 V4, V5 (confirming OA-only vs SA-only distinctions)
 
 ### Phase 15.2 — requires phone-width viewport:
 15.2 V16 (mobile responsiveness of /consent/[token])
+
+### ADMIN.30 — requires Production account:
+ADMIN.30 V5 (Media Library visible, Check-In absent),
+ADMIN.30 V3 (Opportunities sub-routes still active)
+
+### Phase 15.3 — requires Production account:
+15.3 V2, 15.3 V3 (Production role access to /crew/media)
+
+### Phase 15.3 — requires Supabase cross-check
+(optional):
+15.3 V11 (access tier badge vs documents table)
+
+### Phase 15.4 — requires backend-tier document:
+15.4 V9 (unauthenticated redirect to /crew/login)
+
+### Phase 15.4 — requires phone-width viewport:
+15.4 V11 (mobile responsiveness of player page)
+
+### Phase 15.4 — advanced/optional (devtools):
+15.4 V12 (robots noindex meta tag on player page)
 
 ---
 
@@ -4960,30 +5010,302 @@ consent_form_submissions row with a known upload_token.*
 
 ---
 
-*Total items in this carry-forward list: 650*
-*(582 v10 items + 68 new v11 items)*
-*Prior (v10): 582 items*
-*v11 additions: 68 new items (SETUP.0: 6, Phase 14.1:
-12, Phase 14.2: 6, Phase 14.3: 10, Phase 15.1: 18,
-Phase 15.2: 16).*
-*v11 superseded: 3 items struck through (11.1 V2:
-checkin stub → live dashboard; 11.1 V3: documents stub
-→ live settings page; 11.1 V4: stub dark mode →
-partially superseded).*
-*v11 updated: 11.2 V1 (Document Management card Beta
-badge removed).*
-*Quick Reference: 18 new groups added (SETUP.0, Phase
-14.1–14.3, Phase 15.1–15.2).*
-*Seed Data Cleanup: Phase 15.1–15.2 cleanup SQL added
-(consent_form_submissions, test document_types, media
-bucket note).*
+## ADMIN.30 — Sidebar Fix + Help Page Updates
+
+**Sidebar dual-highlight fix:**
+
+- [ ] **ADMIN.30 V1** — Navigate to /crew/shows. Confirm
+      the "Shows" sidebar link is active (highlighted).
+      Confirm the "Opportunities" link is NOT highlighted
+      simultaneously.
+
+- [ ] **ADMIN.30 V2** — Navigate to /crew/shows/
+      opportunities. Confirm the "Opportunities" sidebar
+      link is active. Confirm the "Shows" link is NOT
+      highlighted simultaneously.
+
+- [ ] **ADMIN.30 V3** — Navigate to /crew/shows/
+      opportunities/new and then /crew/shows/
+      opportunities/[id]/edit (if an opportunity exists).
+      Confirm the "Opportunities" link remains active on
+      both sub-routes — prefix matching still works
+      correctly for Opportunities' own sub-pages.
+
+**Help page: new sections in TOC:**
+
+- [ ] **ADMIN.30 V4** — Navigate to /crew/help as Super
+      Admin. Confirm the left-side TOC now shows 13
+      sections including "Check-In System" and "Media
+      Library" (which were not present before ADMIN.30).
+
+- [ ] **ADMIN.30 V5** — Navigate to /crew/help as
+      Production role. Confirm "Media Library" section is
+      visible in the TOC alongside "Master Calendar" and
+      "Getting Help." Confirm "Check-In System" is NOT
+      visible to Production (Production has no access to
+      /crew/tools/checkin).
+
+- [ ] **ADMIN.30 V6** — As Super Admin on /crew/help:
+      scroll to or click the "Check-In System" section.
+      Confirm it has two subsections: "Check-In QR Codes"
+      and "Live Check-In Dashboard." Confirm the content
+      explains QR placement on the Dates tab and the
+      auto-refreshing dashboard.
+
+- [ ] **ADMIN.30 V7** — As Super Admin on /crew/help:
+      scroll to or click the "Media Library" section.
+      Confirm it has two subsections: "Uploading Files and
+      Links" and "Sharing and Access." Confirm the content
+      describes access tiers (public/link_only/backend)
+      and the distribution link/QR pattern.
+
+- [ ] **ADMIN.30 V8** — As Super Admin on /crew/help:
+      scroll to the Settings section. Confirm two new
+      subsections are present: "Document Types" and
+      "Consent Form Submissions." Confirm this content
+      does NOT appear when logged in as Editor.
+
+- [ ] **ADMIN.30 V9** — Log in as Editor. Navigate to
+      /crew/help. Confirm "Check-In System" and "Media
+      Library" sections are visible. Confirm the
+      "Settings" section is still absent (Settings is
+      SA/OA only). Confirm all other sections render as
+      expected.
+
+**New HelpTooltip placements:**
+
+- [ ] **ADMIN.30 V10** — Navigate to /crew/tools/checkin.
+      Confirm a HelpTooltip (? icon) appears near the
+      page heading. Click it. Confirm it navigates to
+      /crew/help#check-in-dashboard.
+
+- [ ] **ADMIN.30 V11** — Navigate to /crew/shows/[id] →
+      Dates tab. Confirm a HelpTooltip appears near the
+      "Whole-Show Check-In QR" heading or the check-in
+      QR section. Click it. Confirm it navigates to
+      /crew/help#check-in-qr.
+
+- [ ] **ADMIN.30 V12** — Navigate to /crew/settings/
+      documents. Confirm a HelpTooltip appears near the
+      "Document Types" section heading. Click it. Confirm
+      it navigates to /crew/help#document-types.
+
+- [ ] **ADMIN.30 V13** — On /crew/settings/documents:
+      confirm a HelpTooltip appears near the "Consent
+      Form Submissions" heading — this heading appears in
+      both the empty state and the populated state. Click
+      it in either state. Confirm it navigates to
+      /crew/help#consent-forms.
+
+- [ ] **ADMIN.30 V14** — Navigate to /crew/media.
+      Confirm a HelpTooltip appears near the "Tier"
+      column header in the document table. Click it.
+      Confirm it navigates to /crew/help#media-library-
+      access.
+
+---
+
+## PHASE 15.3 — MASTER MEDIA LIBRARY
+
+*Prerequisite: /crew/media must be accessible (all roles
+including Production). For upload tests, at least one
+media_folder must exist, or the interface must handle a
+no-folders state gracefully.*
+
+**Page loads (not a stub):**
+
+- [ ] **15.3 V1** — Navigate to /crew/media as Super
+      Admin. Confirm the page shows a live Media Library
+      interface — a folder browser panel on the left and
+      a document table on the right. NOT a "Coming Soon"
+      stub.
+
+- [ ] **15.3 V2** — Log in as Production role. Navigate
+      to /crew/media. Confirm access is granted — the
+      Media Library is visible to Production (unlike most
+      /crew pages). Confirm no admin-only actions are
+      visible (edit/upload controls may differ by role).
+
+- [ ] **15.3 V3** — Log in as Production role. Confirm
+      the sidebar shows a "Media Library" link (or
+      equivalent nav entry). Confirm clicking it
+      navigates to /crew/media.
+
+**File upload (P-DC pattern):**
+
+- [ ] **15.3 V4** — As Super Admin or Editor: click
+      "Upload File" (or equivalent button). Select a
+      supported file type (PDF or image). Confirm a
+      progress indicator or progress bar appears during
+      upload. Confirm the upload completes without error.
+
+- [ ] **15.3 V5** — After successful upload: confirm
+      the new file appears in the document table with a
+      title, file type badge (PDF/Image/etc.), and an
+      access tier badge (default: Backend).
+
+**Link entry:**
+
+- [ ] **15.3 V6** — Click "Add Link" (or equivalent).
+      Enter a YouTube URL and a title. Save. Confirm the
+      new entry appears in the table as a link-type entry
+      with a "Play" action button.
+
+- [ ] **15.3 V7** — Add a generic external link (non-
+      YouTube, non-Vimeo). Confirm it appears with a
+      "View" or "Open" button — not a "Play" button.
+
+**Play/View button eligibility:**
+
+- [ ] **15.3 V8** — Confirm Play/View buttons appear on
+      the following entry types: video files, audio files,
+      image files, PDF files, YouTube links, Vimeo links.
+      Confirm Play/View does NOT appear on generic
+      external links.
+
+**Copy Link and QR:**
+
+- [ ] **15.3 V9** — Click "Copy Link" on any document
+      row. Paste the copied URL. Confirm it is a
+      /documents/[token] URL — not a direct Supabase
+      Storage URL or a raw YouTube/Vimeo URL.
+
+- [ ] **15.3 V10** — Click "QR" on any document row.
+      Confirm a QR code file downloads (PNG or SVG).
+
+**Access tier badges:**
+
+- [ ] **15.3 V11** — Confirm each document row shows an
+      access tier badge: "Public," "Link Only," or
+      "Backend." Confirm the badge reflects the actual
+      access_tier value in the documents table.
+      *(Supabase cross-check optional)*
+
+**Dark mode and mobile:**
+
+- [ ] **15.3 V12** — Toggle to dark mode. Navigate to
+      /crew/media. Confirm the folder browser and
+      document table render correctly without broken
+      colors or layout issues.
+
+---
+
+## PHASE 15.4 — MEDIA PLAYERS + EMBED DETECTION
+
+*Prerequisite: at least one document of each type
+(YouTube link, video file, audio file, image file, PDF)
+should exist in the Media Library from Phase 15.3
+testing. The /documents/[token] and
+/documents/view/[token] routes are public pages.*
+
+**Player page — YouTube embed:**
+
+- [ ] **15.4 V1** — On /crew/media: click Play on a
+      YouTube link entry. Confirm the browser navigates
+      to /documents/view/[token]. Confirm the page shows
+      a YouTube embed iframe — not a redirect to YouTube
+      itself.
+
+**Player page — video file:**
+
+- [ ] **15.4 V2** — Click Play on a video file entry
+      (e.g. MP4). Confirm /documents/view/[token]
+      renders a native `<video>` element with the video
+      content. Confirm it plays on click.
+
+**Player page — audio file:**
+
+- [ ] **15.4 V3** — Click Play on an audio file entry.
+      Confirm /documents/view/[token] renders a native
+      `<audio>` element. Confirm audio plays on click.
+
+**Player page — PDF:**
+
+- [ ] **15.4 V4** — Click View on a PDF file entry.
+      Confirm /documents/view/[token] renders the PDF
+      inline (iframe or embedded viewer). Confirm the PDF
+      is readable without needing to download.
+
+**Player page — image:**
+
+- [ ] **15.4 V5** — Click View on an image entry
+      (JPG, PNG, etc.). Confirm /documents/view/[token]
+      renders the image inline in the page.
+
+**Route redirect behavior:**
+
+- [ ] **15.4 V6** — Copy the /documents/[token] link
+      for a YouTube document and navigate to it directly
+      (not via the Play button). Confirm the URL
+      redirects to /documents/view/[token] — the player
+      page — rather than redirecting directly to YouTube.
+
+- [ ] **15.4 V7** — Navigate to /documents/[token] for
+      a file-type document with a viewable mime type
+      (video/mp4 or image/jpeg). Confirm the URL
+      redirects to /documents/view/[token] rather than
+      directly to the Supabase signed URL.
+
+- [ ] **15.4 V8** — Navigate to /documents/[token] for
+      a generic external link (not YouTube/Vimeo/audio/
+      viewable file). Confirm it redirects directly to
+      the external URL — no player page intermediate.
+
+**Access tier enforcement on player page:**
+
+- [ ] **15.4 V9** — Navigate to /documents/view/[token]
+      for a document with access_tier = 'backend' while
+      NOT logged in (use incognito or log out). Confirm
+      the page redirects to /crew/login (with a redirect
+      param back to the player page). *(May require an
+      active backend-tier document in the system)*
+
+**Public page characteristics:**
+
+- [ ] **15.4 V10** — Navigate to /documents/view/[token]
+      while logged in as any admin role. Confirm the page
+      is light mode only — the sidebar and top bar are
+      absent (it's a public page, not in the /crew layout).
+      Confirm it renders correctly without dark mode styles.
+
+**Mobile:**
+
+- [ ] **15.4 V11** — On a mobile viewport (375px):
+      navigate to /documents/view/[token] for a YouTube
+      or video entry. Confirm the embed or video player
+      is responsive — fills width without horizontal
+      scroll.
+      *(Owner — phone or narrow browser required)*
+
+**Robots / indexing:**
+
+- [ ] **15.4 V12** — *(Advanced/optional)* Use browser
+      devtools to inspect the HTML `<head>` on
+      /documents/view/[token]. Confirm a
+      `<meta name="robots" content="noindex">` tag is
+      present (access-controlled content should not be
+      indexed by search engines).
+
+---
+
+*Total items in this carry-forward list: 688*
+*(650 v11 items + 38 new v12 items)*
+*Prior (v11): 650 items*
+*v12 additions: 38 new items (ADMIN.30: 14, Phase 15.3:
+12, Phase 15.4: 12).*
+*v12 superseded: none.*
+*v12 updated: none.*
+*Quick Reference: 7 new groups added (ADMIN.30, Phase
+15.3–15.4 prerequisite categories).*
+*Seed Data Cleanup: Phase 15.3 cleanup SQL added
+(test documents rows, test media_folders rows, media
+bucket library/ prefix cleanup note).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v11 (SETUP.0 Owner Admin
-role verification, Phase 14 Check-In System, Phase 15
-Document & Media System foundation + consent flow,
-stale stub items struck through, Quick Reference
-expanded)*
+*Last updated: July 2026 — v12 (Phase 15 complete:
+ADMIN.30 sidebar + help page verification, Phase 15.3
+Master Media Library, Phase 15.4 media players + embed
+detection. Quick Reference expanded.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
