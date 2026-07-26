@@ -541,7 +541,10 @@ function DatesTab({
     <div className="space-y-8">
       {checkinQr && (
         <div>
-          <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1">Whole-Show Check-In QR</h2>
+          <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
+            Whole-Show Check-In QR
+            <HelpTooltip anchor="check-in-qr" label="Check-In QR Codes" />
+          </h2>
           <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
             Volunteers scan this QR at any performance. The system automatically selects their show date.
           </p>

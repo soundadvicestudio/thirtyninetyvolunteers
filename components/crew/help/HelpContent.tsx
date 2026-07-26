@@ -88,6 +88,8 @@ const ALL_SECTIONS: TocSection[] = [
       { id: 'audit-log', label: 'Audit Log', roles: ['super_admin', 'owner_admin'] },
       { id: 'location-management', label: 'Location Management', roles: ['super_admin', 'owner_admin'] },
       { id: 'email-activity-log', label: 'Email Activity Log', roles: ['super_admin', 'owner_admin'] },
+      { id: 'document-types', label: 'Document Types', roles: ['super_admin', 'owner_admin'] },
+      { id: 'consent-forms', label: 'Consent Form Submissions', roles: ['super_admin', 'owner_admin'] },
     ],
   },
   {
@@ -112,6 +114,24 @@ const ALL_SECTIONS: TocSection[] = [
     roles: ['super_admin', 'editor'],
     children: [
       { id: 'blast-compose', label: 'Sending an Email Blast', roles: ['super_admin', 'editor'] },
+    ],
+  },
+  {
+    id: 'check-in',
+    label: 'Check-In System',
+    roles: ['super_admin', 'editor', 'viewer'],
+    children: [
+      { id: 'check-in-qr', label: 'Check-In QR Codes', roles: ['super_admin', 'editor', 'viewer'] },
+      { id: 'check-in-dashboard', label: 'Live Check-In Dashboard', roles: ['super_admin', 'editor', 'viewer'] },
+    ],
+  },
+  {
+    id: 'media-library',
+    label: 'Media Library',
+    roles: ['super_admin', 'editor', 'viewer', 'production'],
+    children: [
+      { id: 'media-library-upload', label: 'Uploading Files and Links', roles: ['super_admin', 'editor', 'viewer', 'production'] },
+      { id: 'media-library-access', label: 'Sharing and Access', roles: ['super_admin', 'editor', 'viewer', 'production'] },
     ],
   },
   { id: 'callboard', label: 'The Volunteer Call Board', roles: ['super_admin', 'editor', 'viewer'] },
@@ -737,6 +757,31 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
               <Tip>
                 {`If a volunteer says they never got a confirmation email, check the Email Activity Log first. You can see exactly what was sent and when.`}
               </Tip>
+
+              <h3 id="document-types" className={h3Classes}>{`Document Types`}</h3>
+              <p className={pClasses}>
+                {`Document Types define the categories of documents your organization distributes through the platform. Go to Settings, then Document Management to manage them.`}
+              </p>
+              <p className={pClasses}>
+                {`The platform comes with five built-in types: Volunteer Consent Form, Cast / Auditioner Consent Form, Volunteer Handbook, Production Schedule, and Audition Materials. The two consent form types are system types — you can deactivate them but not delete them.`}
+              </p>
+              <p className={pClasses}>
+                {`Each document type can have one active document assigned to it. When a volunteer signs up as a minor, the system automatically emails them the active Volunteer Consent Form. If no active document is set, the email tells them their coordinator will provide the form.`}
+              </p>
+              <Tip>
+                {`Add your own document types for anything else you regularly share — show programs, audition sides, cast lists. Keep the name short and clear.`}
+              </Tip>
+
+              <h3 id="consent-forms" className={h3Classes}>{`Consent Form Submissions`}</h3>
+              <p className={pClasses}>
+                {`When a volunteer signs up and marks their age as under 18, the platform automatically sends them an email with a link to upload a signed consent form. You review those submissions here.`}
+              </p>
+              <p className={pClasses}>
+                {`The Consent Form Submissions queue has three tabs: Pending, Approved, and Rejected. Pending means a form has been received and is waiting for your review. Click Approve to accept it or Reject to decline it — you can add a note when rejecting.`}
+              </p>
+              <Tip>
+                {`A submission appears here as soon as the volunteer uploads the file. You do not need to follow up with them — the platform handles the collection automatically.`}
+              </Tip>
             </section>
           )}
 
@@ -943,6 +988,108 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
           )}
 
           {show('communication') && <Divider />}
+
+          {/* ───────── Check-In System ───────── */}
+          {show('check-in') && (
+            <section id="check-in">
+              <h2 className={h2Classes}>{`Check-In System`}</h2>
+              <p className={pClasses}>
+                {`The check-in system lets volunteers scan a QR code to mark themselves present at a show. No app download required — it works in any phone browser.`}
+              </p>
+
+              {show('check-in-qr') && (
+                <>
+                  <h3 id="check-in-qr" className={h3Classes}>{`Check-In QR Codes`}</h3>
+                  <p className={pClasses}>
+                    {`Each show and each show date has its own QR code. You can find them on the show detail page — click into any show, then go to the Dates tab.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`At the top of the Dates tab you'll see a whole-show QR code. This is the one to use when you only have one upcoming date — it automatically sends the volunteer to check in for the next upcoming date. Each date row also has its own QR code for that specific date.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Download the QR as a PNG to print it, or as an SVG for digital use. Print it and post it at the door, or display it on a tablet. QR containers are always white so the code scans correctly in any lighting.`}
+                  </p>
+                  <Tip>
+                    {`For a single-date show, use the whole-show QR. For a run with multiple dates, use the per-date QR at each performance so check-ins are attributed to the correct date.`}
+                  </Tip>
+                  <p className={pClasses}>
+                    {`When a volunteer scans the QR, they'll see a simple check-in form. They enter their email or phone number. If they're on the roster for that date, the system marks them as present. If they're not on the roster, they can fill out a quick walk-in form to sign up on the spot.`}
+                  </p>
+                </>
+              )}
+
+              {show('check-in-dashboard') && (
+                <>
+                  <h3 id="check-in-dashboard" className={h3Classes}>{`Live Check-In Dashboard`}</h3>
+                  <p className={pClasses}>
+                    {`Go to Check-In in the sidebar to open the live check-in dashboard. It shows every rostered volunteer for your next upcoming show, grouped by role, with their current check-in status.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Status indicators: a green checkmark with "QR" means the volunteer checked themselves in. A green checkmark with "Admin" means you or an Editor marked them. A dash means they haven't checked in yet. Red means no-show, amber means excused.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`The dashboard refreshes automatically every 10 seconds. The "Last updated" line at the top tells you exactly how recently the data was updated.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`If you have multiple upcoming dates, use the date selector to switch between them. Other shows with upcoming dates appear in a collapsible list below the main roster.`}
+                  </p>
+                  <Tip>
+                    {`Set up a tablet at the door showing the check-in dashboard. As volunteers scan the QR on their phones, you can watch them appear on the dashboard in real time.`}
+                  </Tip>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('check-in') && <Divider />}
+
+          {/* ───────── Media Library ───────── */}
+          {show('media-library') && (
+            <section id="media-library">
+              <h2 className={h2Classes}>{`Media Library`}</h2>
+              <p className={pClasses}>
+                {`The Media Library at /crew/media is where you store and share documents, videos, links, and other files with your team. Anyone with a Production Crew login can view the library.`}
+              </p>
+              <p className={pClasses}>
+                {`Files are organized into folders. Click a folder in the left panel to see its contents. Each document or link appears as a row with its title, type, and action buttons.`}
+              </p>
+
+              {show('media-library-upload') && (
+                <>
+                  <h3 id="media-library-upload" className={h3Classes}>{`Uploading Files and Links`}</h3>
+                  <p className={pClasses}>
+                    {`To upload a file, click Upload File in the current folder. Select a PDF, image, video, or audio file. A progress bar shows the upload status. The file goes directly to secure storage — it does not pass through the server.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`To add a YouTube video, Vimeo video, or any external link, click Add Link instead. Paste the URL and give it a title. YouTube and Vimeo links open a built-in player when someone views them.`}
+                  </p>
+                  <Tip>
+                    {`You can upload PDFs, images (JPG, PNG), videos (MP4), and audio files (MP3). For large video files, add a YouTube or Vimeo link instead of uploading directly.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('media-library-access') && (
+                <>
+                  <h3 id="media-library-access" className={h3Classes}>{`Sharing and Access`}</h3>
+                  <p className={pClasses}>
+                    {`Each document has an access level. Public means anyone with the link can view it — no login required. Link Only means the same, but the file won't appear in any public directory. Backend means only logged-in Production Crew members can access it.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`To share a document, click Copy Link on any row. The link routes through the platform — the platform checks the access level before showing the file. You can also download a QR code for the link.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Videos and audio files open in a built-in player page. PDFs and images also display inline — no download required.`}
+                  </p>
+                  <Warning>
+                    {`If you set a document to Public, anyone with the link can view it without logging in. Use Public only for content you're comfortable sharing openly.`}
+                  </Warning>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('media-library') && <Divider />}
 
           {/* ───────── The Volunteer Call Board ───────── */}
           {show('callboard') && (

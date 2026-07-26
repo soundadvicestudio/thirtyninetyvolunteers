@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatCT } from '@/lib/utils/date'
 import { approveConsentSubmission, rejectConsentSubmission } from '@/lib/actions/documents'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export type ConsentSubmissionRow = {
   id: string
@@ -169,7 +170,10 @@ export function ConsentSubmissionsQueue({ submissions }: { submissions: ConsentS
   if (submissions.length === 0) {
     return (
       <div>
-        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Consent Form Submissions</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3 flex items-center gap-1.5">
+          Consent Form Submissions
+          <HelpTooltip anchor="consent-forms" label="Consent Form Submissions" />
+        </h2>
         <p className="text-sm text-mid-gray dark:text-dark-muted">
           No consent form submissions have been received yet. Submissions appear here when volunteers under 18
           complete the signup form.
@@ -188,7 +192,10 @@ export function ConsentSubmissionsQueue({ submissions }: { submissions: ConsentS
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Consent Form Submissions</h2>
+      <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3 flex items-center gap-1.5">
+        Consent Form Submissions
+        <HelpTooltip anchor="consent-forms" label="Consent Form Submissions" />
+      </h2>
 
       <div className="flex flex-wrap gap-1 border-b border-divider dark:border-dark-border mb-4">
         {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => (

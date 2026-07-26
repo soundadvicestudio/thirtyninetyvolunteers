@@ -93,7 +93,10 @@ export default function Sidebar({
 
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {visibleNavItems.map(({ label, href, icon: Icon }) => {
-          const active = isActivePath(pathname, href)
+          const active =
+            href === '/crew/shows'
+              ? isActivePath(pathname, href) && !isActivePath(pathname, '/crew/shows/opportunities')
+              : isActivePath(pathname, href)
           return (
             <Link
               key={href}

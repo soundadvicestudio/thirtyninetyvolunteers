@@ -11,6 +11,7 @@ import {
   reorderDocumentType,
   setTypeActiveDocument,
 } from '@/lib/actions/documents'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { AdminRole } from '@/types/admin'
 
 export type DocumentTypeRow = {
@@ -531,7 +532,10 @@ export function DocumentTypesManager({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-dark dark:text-dark-text">Document Types</h2>
+        <h2 className="text-lg font-bold text-dark dark:text-dark-text flex items-center gap-1.5">
+          Document Types
+          <HelpTooltip anchor="document-types" label="Document Types" />
+        </h2>
       </div>
       {canManage && <AddTypeForm />}
       {sorted.length === 0 ? (

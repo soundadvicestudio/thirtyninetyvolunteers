@@ -14,6 +14,7 @@ import {
   updateFolder,
   deleteFolder,
 } from '@/lib/actions/media'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { AdminRole } from '@/types/admin'
 
 type AccessTier = 'public' | 'link_only' | 'backend'
@@ -1039,7 +1040,9 @@ export function MediaLibrary({
                 <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Title</th>
                 <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Type</th>
                 <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Entry</th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Tier</th>
+                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text whitespace-nowrap">
+                  Tier <HelpTooltip anchor="media-library-access" label="Sharing and Access" />
+                </th>
                 <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Uploaded</th>
                 <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Actions</th>
               </tr>
