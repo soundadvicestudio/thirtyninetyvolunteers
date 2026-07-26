@@ -1,0 +1,246 @@
+'use client'
+
+import { useState } from 'react'
+import { saveOrgIdentity, saveBrandColors } from '@/lib/actions/setup'
+import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+export type SetupPanelInitialValues = {
+  org_name: string
+  org_tagline: string
+  org_contact_email: string
+  org_website_url: string
+  org_location: string
+  brand_primary: string
+  brand_accent: string
+  org_logo_url: string
+  favicon_url: string
+}
+
+const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
+const headingClasses = 'text-lg font-semibold text-dark dark:text-dark-text'
+const descriptionClasses = 'text-sm text-mid-gray dark:text-dark-muted mb-4'
+const labelClasses = 'block text-sm font-medium text-dark dark:text-dark-text mb-1'
+const inputClasses =
+  'w-full border border-divider dark:border-dark-border rounded-md px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy'
+const saveButtonClasses =
+  'bg-navy text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-steel transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+
+function SaveFeedback({ status, errorMessage }: { status: SaveStatus; errorMessage: string }) {
+  if (status === 'saved') return <span className="text-sm text-green-600">✓ Saved</span>
+  if (status === 'error') return <span className="text-sm text-red-600">{errorMessage}</span>
+  return null
+}
+
+function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [orgName, setOrgName] = useState(initialValues.org_name)
+  const [orgTagline, setOrgTagline] = useState(initialValues.org_tagline)
+  const [orgContactEmail, setOrgContactEmail] = useState(initialValues.org_contact_email)
+  const [orgWebsiteUrl, setOrgWebsiteUrl] = useState(initialValues.org_website_url)
+  const [orgLocation, setOrgLocation] = useState(initialValues.org_location)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    const formData = new FormData()
+    formData.append('org_name', orgName)
+    formData.append('org_tagline', orgTagline)
+    formData.append('org_contact_email', orgContactEmail)
+    formData.append('org_website_url', orgWebsiteUrl)
+    formData.append('org_location', orgLocation)
+
+    const result = await saveOrgIdentity(formData)
+    if ('error' in result) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Organization Identity</h2>
+        <p className={descriptionClasses}>
+          {"Your organization's name and contact information. Used in email templates, the public landing page, and the platform footer."}
+        </p>
+      </div>
+      <div>
+        <label className={labelClasses}>Organization Name</label>
+        <input
+          type="text"
+          maxLength={100}
+          value={orgName}
+          onChange={(e) => setOrgName(e.target.value)}
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Tagline</label>
+        <input
+          type="text"
+          maxLength={200}
+          value={orgTagline}
+          onChange={(e) => setOrgTagline(e.target.value)}
+          placeholder="A short tagline for your organization"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Contact Email</label>
+        <input
+          type="email"
+          value={orgContactEmail}
+          onChange={(e) => setOrgContactEmail(e.target.value)}
+          placeholder="contact@yourtheater.org"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Website URL</label>
+        <input
+          type="url"
+          value={orgWebsiteUrl}
+          onChange={(e) => setOrgWebsiteUrl(e.target.value)}
+          placeholder="https://yourtheater.org"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>City / State</label>
+        <input
+          type="text"
+          maxLength={100}
+          value={orgLocation}
+          onChange={(e) => setOrgLocation(e.target.value)}
+          placeholder="New Orleans, LA"
+          className={inputClasses}
+        />
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
+          {status === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
+}
+
+function BrandColorsSection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [brandPrimary, setBrandPrimary] = useState(initialValues.brand_primary)
+  const [brandAccent, setBrandAccent] = useState(initialValues.brand_accent)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    const formData = new FormData()
+    formData.append('brand_primary', brandPrimary)
+    formData.append('brand_accent', brandAccent)
+
+    const result = await saveBrandColors(formData)
+    if ('error' in result) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Brand Colors</h2>
+        <p className={descriptionClasses}>
+          Your primary and accent colors. These will be used in email templates. After Phase THEME
+          ships, they will also update the admin UI.
+        </p>
+      </div>
+      <div>
+        <label className={labelClasses}>Primary Color</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={brandPrimary}
+            onChange={(e) => setBrandPrimary(e.target.value)}
+            className="w-10 h-10 rounded cursor-pointer border border-divider"
+          />
+          <span className="text-sm font-mono text-mid-gray dark:text-dark-muted">{brandPrimary}</span>
+        </div>
+      </div>
+      <div>
+        <label className={labelClasses}>Accent Color</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={brandAccent}
+            onChange={(e) => setBrandAccent(e.target.value)}
+            className="w-10 h-10 rounded cursor-pointer border border-divider"
+          />
+          <span className="text-sm font-mono text-mid-gray dark:text-dark-muted">{brandAccent}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
+          {status === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
+}
+
+export default function SetupPanel({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [logoUrl, setLogoUrl] = useState(initialValues.org_logo_url)
+  const [faviconUrl, setFaviconUrl] = useState(initialValues.favicon_url)
+
+  return (
+    <div className="space-y-6">
+      <OrgIdentitySection initialValues={initialValues} />
+      <BrandColorsSection initialValues={initialValues} />
+
+      <div className={cardClasses}>
+        <div>
+          <h2 className={headingClasses}>Organization Logo</h2>
+          <p className={descriptionClasses}>
+            Your logo appears in email templates and on the public landing page. Upload a file or
+            paste a URL to a publicly hosted image.
+          </p>
+        </div>
+        <BrandImageUploader
+          label="Logo"
+          settingsKey="org_logo_url"
+          storagePath="logo"
+          aspectRatio={undefined}
+          currentValue={logoUrl}
+          onSave={(url) => setLogoUrl(url)}
+        />
+      </div>
+
+      <div className={cardClasses}>
+        <div>
+          <h2 className={headingClasses}>Browser Favicon</h2>
+          <p className={descriptionClasses}>
+            The small icon that appears in browser tabs and bookmarks. Must be square. Upload a
+            file (PNG, JPG, or WebP — cropped to square automatically) or paste a URL to a square
+            image.
+          </p>
+        </div>
+        <BrandImageUploader
+          label="Favicon"
+          settingsKey="favicon_url"
+          storagePath="favicon"
+          aspectRatio={1}
+          currentValue={faviconUrl}
+          onSave={(url) => setFaviconUrl(url)}
+        />
+      </div>
+    </div>
+  )
+}

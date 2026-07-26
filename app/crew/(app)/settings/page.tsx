@@ -204,6 +204,19 @@ export default async function SettingsPage() {
             description="Upload and manage the volunteer consent form PDF linked on the public signup page."
           />
         )}
+
+        {admin.role === 'super_admin' ? (
+          <LinkedCard
+            href="/crew/settings/setup"
+            title="Platform Setup"
+            description="Configure org identity, branding, email, and feature flags for this deployment."
+          />
+        ) : (
+          <LockedCard
+            title="Platform Setup"
+            description="Configure org identity, branding, email, and feature flags for this deployment."
+          />
+        )}
       </div>
     </div>
   )
