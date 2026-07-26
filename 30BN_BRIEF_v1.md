@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.5
-### Created: July 2026 | Last Updated: July 2026 — v3.5 (Phase 14 complete + Phase 15.1–15.2 complete — Phase 15.3 next)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.6
+### Created: July 2026 | Last Updated: July 2026 — v3.6 (Phase 15 complete — SETUP.1–4 + THEME pending)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 14 complete (14.1–14.3 + 14.1-FIX). Phase 15 underway (15.1–15.2 + 15.2-AUDIT/FIX complete). Phase 15.3 (Master Media Library) next.
+**Current phase:** Phase 15 complete (15.1–15.4 + 15.2-AUDIT/FIX + ADMIN.30). Phase SETUP.1–4 and Phase THEME pending next.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -39,7 +39,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
-| **Production** | New admin role (CAL.2). Calendar-only access. Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. |
+| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), and `/crew/help`. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can manage Editor, Viewer, and Production accounts but cannot create Super Admin or other Owner Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
@@ -54,7 +54,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Framework** | Next.js (App Router, TypeScript) | Use `create-next-app@latest`. Do not pin to a version. |
 | **Database** | Supabase (PostgreSQL) | Project: `thirtyninetyvolunteers` |
 | **Auth** | Supabase Auth (email/password + Google OAuth) | Google SSO live in Alpha. Admin self-registration with pending approval flow added in ADMIN.15. Super Admin must approve before access is granted. |
-| **File Storage** | Supabase Storage | Active. Private bucket `media` stores all platform media files (consent form submissions, future media library uploads). P-DC pattern (direct browser upload to Supabase Storage via signed upload URL — bypasses Vercel 4.5MB serverless limit). All file types supported: PDF, image, video, audio. Access controlled via signed URLs generated server-side. |
+| **File Storage** | Supabase Storage | Active. Private bucket `media` stores all platform media files (consent form submissions, media library files — Phase 15.3 built the library). P-DC pattern (direct browser upload to Supabase Storage via signed upload URL — bypasses Vercel 4.5MB serverless limit). All file types supported: PDF, image, video, audio. Access controlled via signed URLs generated server-side. Viewable files (video, audio, image, PDF) and YouTube/Vimeo links redirect to `/documents/view/[token]` player page (Phase 15.4). |
 | **Styling** | Tailwind CSS v4 | CSS-first. See §4 Critical Constraint. |
 | **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
 | **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
@@ -386,12 +386,12 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 ### Admin — Production Crew (`/crew`)
 
 **General:**
-- **Light/Dark Mode:** The admin UI supports a Light/Dark mode toggle in the crew sidebar (sun/moon icon, bottom of sidebar). Preference persisted to localStorage. System preference (`prefers-color-scheme`) used as default when no saved preference exists. Implemented via Tailwind v4 `@variant dark` scoped to `[data-theme="dark"]` on the admin layout wrapper. Dark palette uses static hex values in `@theme` (dark-bg, dark-surface, dark-border, dark-nav, dark-text, dark-muted). Public pages unaffected.
+- **Light/Dark Mode:** The admin UI supports a Light/Dark mode toggle in the crew sidebar (sun/moon icon, bottom of sidebar). Preference persisted to localStorage. Always defaults to light mode when no saved preference exists — `prefers-color-scheme` OS detection was explicitly removed in ADMIN.27. Implemented via Tailwind v4 `@variant dark` scoped to `[data-theme="dark"]` on the admin layout wrapper. Dark palette uses static hex values in `@theme` (dark-bg, dark-surface, dark-border, dark-nav, dark-text, dark-muted). Public pages unaffected.
 - **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`.
 - **Mobile sidebar** (built 12.1): Hamburger button (Menu icon) in TopBar, visible only below the `md` breakpoint (768px). Opens a full-height slide-in drawer with overlay. Three close methods: tap overlay, tap X button inside drawer, or navigate to any route (auto-close via `usePathname()` effect). State managed via `MobileSidebarContext` (see §3). Sidebar renders as a fixed left column on tablet+ (768px+) — unchanged from original desktop behavior.
 
 - **Help page** (`/crew/help`, built 12.2b, all roles): Single-page how-to guide. Two-column layout on desktop (sticky TOC on left, content on right). Mobile: "Jump to section" block at top collapses to full-width content. Sections: Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · The Volunteer Call Board · Standing Opportunities · Getting Help. 8 h2 sections, 23 h3 subsections, all with named anchor IDs. Tip callouts (blue left border) and Warning callouts (orange left border). Server Component, no data fetching. scroll-behavior: smooth. "Help" nav link added to `components/crew/Sidebar.tsx` (HelpCircle icon, all roles, bottom of nav list).
-- **Tooltip system** (`components/crew/HelpTooltip.tsx`, built 12.2c): Shared Server Component wrapping a `next/link` to `/crew/help#[anchor]`. Renders a small HelpCircle icon (muted, hover-brightens). Named export. No 'use client'. 16 placements across Production Crew on non-obvious UI elements: dashboard card headings, volunteer profile sections (hours, milestones, editor notes, SH badge, communication history), show detail (notifications, waitlist, report), show form (default hours, notifications toggle), volunteer list (milestone tier filter), settings (category visibility, general defaults). Each links directly to the relevant help page anchor — no popovers.
+- **Tooltip system** (`components/crew/HelpTooltip.tsx`, built 12.2c): Shared Server Component wrapping a `next/link` to `/crew/help#[anchor]`. Renders a small HelpCircle icon (muted, hover-brightens). Named export. No 'use client'. 32 placements across Production Crew (see Help System section below for full list). Each links directly to the relevant help page anchor — no popovers. Safe to use in Client Components (confirmed ADMIN.29 — no server-only imports).
 
 **Login (`/crew/login`):**
 - Email/password form
@@ -912,25 +912,27 @@ Mobile (13.4b): Recipient mode tab bar stacks vertically below `sm` breakpoint. 
 
 Component: `components/crew/communication/BlastComposer.tsx` ('use client'). Page: `app/crew/(app)/communication/page.tsx` (Server Component — fetches `default_reply_to` and visible categories).
 
-**In-App Help System (`/crew/help`, HELP phase — complete):**
+**In-App Help System (`/crew/help`, HELP phase + ADMIN.30 — complete):**
 Role-filtered single-page help guide. The page reads the current admin's role and `calendar_editor` flag via `getAdminUser()` and renders only the sections relevant to that role. TOC is dynamically built from the same role-filtered section registry (`ALL_SECTIONS` array in `components/crew/help/HelpContent.tsx`).
 
-Page structure: Server Component shell at `app/crew/(app)/help/page.tsx` passes role and `calendarEditor` to `HelpContent` component. `HelpContent.tsx` contains: `TocSection` type, `ALL_SECTIONS` registry, `filterSections()` + `isSectionVisible()` + `flattenSections()` helpers, Tip/Warning callout components, role-aware `TocList`, and all section JSX.
+Page structure: Server Component shell at `app/crew/(app)/help/page.tsx` passes role and `calendarEditor` to `HelpContent` component. `HelpContent.tsx` contains: `TocSection` type, `ALL_SECTIONS` registry, `filterSections()` + `isSectionVisible()` + `flattenSections()` helpers, Tip/Warning callout components, role-aware `TocList`, and all section JSX. Note: ALL_SECTIONS is a pure TOC/role registry — section content lives in guarded JSX blocks in the component return body.
 
 Role visibility:
-- Super Admin: all 11 sections (Dashboard, Your Volunteers, Shows, Attendance and Hours, The Signup Form, Settings, Master Calendar, Communication, The Volunteer Call Board, Standing Opportunities, Getting Help)
-- Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access)
-- Editor: all sections except Settings entirely
-- Viewer: all sections except Settings and Communication; no edit-only subsections (create, edit, archive, attendance marking, announcement banner, form settings)
-- Production: Master Calendar and Getting Help only
+- Super Admin: all 13 sections
+- Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access). Note: most non-Settings ALL_SECTIONS entries do not yet include `owner_admin` in their roles arrays — a known gap (ADMIN.30 Q1) to be fixed in a dedicated HELP.2e sweep.
+- Editor: all sections except Settings
+- Viewer: all sections except Settings and Communication; no edit-only subsections
+- Production: Master Calendar, Media Library, and Getting Help only
 
-Sections and anchors: 11 h2 sections, ~36 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. New anchors added in HELP phase: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`.
+All 13 sections (in order): Dashboard · Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · Master Calendar · Communication · Check-In System · Media Library · The Volunteer Call Board · Standing Opportunities · Getting Help
 
-HelpTooltip placements: 26 total (17 original from 12.2c, 5 added in HELP.2d for new sections, 4 added in ADMIN.29 for calendar UI). New placements: `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`; `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`.
+Sections and anchors: 13 h2 sections, ~46 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`.
 
-Production sidebar: Help link added to Production role's visible nav items (HELP.2b) alongside Calendar. Prior to HELP.2a, `proxy.ts` blocked Production from `/crew/help`; exception added in HELP.2a.
+HelpTooltip placements: 32 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`.
 
-Settings section (owner decision): Settings is Super Admin + Owner Admin only in the help page (`roles: ['super_admin', 'owner_admin']` in `ALL_SECTIONS`). Editors and Viewers do not see the Settings section or any Settings subsection.
+Production sidebar: Help link added (HELP.2b). Media Library link also visible to Production (ADMIN.30 confirmed — Production has `/crew/media` sidebar access).
+
+Settings section (owner decision): Settings is Super Admin + Owner Admin only (`roles: ['super_admin', 'owner_admin']`). The two new Settings subsections added in ADMIN.30 (`document-types`, `consent-forms`) follow the same SA/OA-only guard.
 
 Key files: `app/crew/(app)/help/page.tsx` (thin shell), `components/crew/help/HelpContent.tsx` (full content + role logic).
 
@@ -1108,8 +1110,10 @@ Route handler at `app/documents/[token]/route.ts`. Looks up `documents` by
 - Inactive document → redirects to `/not-found`
 For `entry_type = 'file'`: generates 1-hour signed URL from `media` bucket
 (`supabase.storage.from('media').createSignedUrl(storage_path, 3600)`) and redirects.
-For `entry_type = 'link'`: redirects directly to `external_url` (Phase 15.4 will
-add embed detection and player routing for YouTube/Vimeo/audio links).
+For `entry_type = 'link'`: `detectLinkType()` helper classifies the URL as
+YouTube, Vimeo, audio, or generic link. YouTube/Vimeo/audio links redirect to
+`/documents/view/[token]` player page (Phase 15.4). Generic links redirect
+directly to `external_url`.
 Uses `getAdminClient()` for document lookup and storage (no session on public route);
 `getServerClient()` only for backend-tier session check.
 
@@ -1129,13 +1133,50 @@ download CTA (only when `activeFormUrl` is not null). When null: "Your coordinat
 will provide you with the consent form." Logged with
 `trigger:consent_form_request`. `escapeHtml()` on volunteer name only.
 
-**Planned (Phase 15.3–15.4):**
-- `/crew/media` — Master media library: all roles, folder browser, upload interface
-  (P-DC for files, link entry for embeds), per-document QR + distribution link,
-  role/user visibility controls, attachment context (show/rehearsal/audition).
-  Supports: PDF, image (preview), video (native player + YouTube/Vimeo embed),
-  audio (native player), generic links.
-- Phase 15.4: video and audio player UI, embed detection, PDF inline viewer.
+**Master Media Library (`/crew/media`, built Phase 15.3):**
+All roles (including Production). Folder browser (left panel) + document table
+(right panel). Each document row shows: title, type badge, access tier badge,
+action buttons (Copy Link, QR download, Play/View).
+
+Upload and link entry: "Upload File" button triggers P-DC pattern (signed
+upload URL from `getConsentUploadUrl()` variant in `lib/actions/documents.ts`,
+client XHR PUT to `media` bucket under `library/[folder_id]/[doc_id]/`,
+confirmation server action records path in DB). "Add Link" button opens a
+form for external URL + title. Both go to the currently selected folder.
+
+Access tiers: `public` (anyone with the link, no login required), `link_only`
+(same — having the URL is the credential), `backend` (authenticated admin
+session required; others redirected to `/crew/login`). Tier displayed as a
+badge on each row and enforced by `/documents/[token]` redirect route.
+
+Distribution: "Copy Link" copies the `/documents/[token]` URL (access-tier-
+enforced). "QR" downloads a QR code for the link. Play/View button appears
+on playable/viewable entries (video, audio, image, PDF, YouTube, Vimeo) and
+opens `/documents/view/[token]`.
+
+Component: `components/crew/media/MediaLibrary.tsx` (Client Component).
+Helpers inside: `detectLinkType()`, `isPlayable()`, `getPlayLabel()`.
+
+**Media Player Page (`/documents/view/[token]`, built Phase 15.4):**
+Public Server Component at `app/documents/view/[token]/page.tsx`. Enforces
+access tier (backend tier → redirects unauthenticated users to login). Generates
+signed URL for file entries. Renders appropriate player based on content type:
+- YouTube/Vimeo: embed iframe
+- Video files: native `<video>` element
+- Audio files: native `<audio>` element
+- Images: `<img>` element
+- PDF: `<iframe>` or download link
+- Generic links: auto-redirect to external URL
+Robots: `noindex` (access-controlled content). Light mode only (public page).
+
+**`/documents/[token]` route updates (Phase 15.4):**
+`detectLinkType()` and `isViewableMimeType()` helpers added to
+`app/documents/[token]/route.ts`. Viewable files (video, audio, image, PDF by
+mime type) and YouTube/Vimeo/audio links now redirect to `/documents/view/[token]`
+instead of directly to the signed URL or external URL. Generic/non-viewable links
+still redirect directly. `detectLinkType()` implementations are independent
+per-file (route handler, MediaLibrary.tsx, view/page.tsx) — intentional given
+server/client boundary.
 
 **Key files:**
 `lib/actions/documents.ts` — document type CRUD + consent submission review
@@ -1144,9 +1185,17 @@ will provide you with the consent form." Logged with
   `lib/actions/checkin.ts` which is public-route `getAdminClient()` only)
 `lib/data/checkin.ts` — `getCheckInDashboardData(supabase)`
 `app/documents/[token]/route.ts` — universal document redirect route handler
+  (Phase 15.4: `detectLinkType()` + `isViewableMimeType()` helpers added;
+  YouTube/Vimeo/audio/viewable-file → redirect to player page)
+`app/documents/view/[token]/page.tsx` — public player page (Phase 15.4):
+  video/audio/image/PDF/YouTube/Vimeo player, access tier enforcement, noindex
 `app/consent/[token]/page.tsx` — public consent form upload page
+`app/crew/(app)/tools/checkin/page.tsx` — server component shell for check-in
+  dashboard (HelpTooltip added ADMIN.30)
 `components/consent/ConsentUploadForm.tsx` — Client Component, XHR P-DC upload
-`components/crew/tools/CheckInDashboard.tsx` — live check-in dashboard
+`components/crew/tools/CheckInDashboard.tsx` — live check-in dashboard Client Component
+`components/crew/media/MediaLibrary.tsx` — master media library (Phase 15.3)
+  Client Component; helpers: `detectLinkType()`, `isPlayable()`, `getPlayLabel()`
 `components/crew/settings/DocumentTypesManager.tsx`
 `components/crew/settings/ConsentSubmissionsQueue.tsx`
 `lib/validations/checkin.ts` — `createCheckInSignupSchema(showAgeRange)` factory
@@ -2004,10 +2053,64 @@ created_at          timestamptz NOT NULL DEFAULT now()
 -- Migration 025 (025_document_system.sql)
 ```
 
-**Media library tables (Migration 025 — schema pending DOC.37c):**
-`media_folders`, `media_folder_access`, `document_access` created
-in Migration 025. Full schema blocks will be documented in DOC.37c
-when Phase 15.3 (master media library UI) ships.
+**Media library tables (Migration 025 — documented DOC.37c):**
+
+### media_folders
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name         text NOT NULL
+description  text
+sort_order   integer NOT NULL DEFAULT 0
+created_by   uuid REFERENCES admin_users(id)
+created_at   timestamptz NOT NULL DEFAULT now()
+updated_at   timestamptz NOT NULL DEFAULT now()
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: authenticated SELECT; is_editor() INSERT/UPDATE;
+--   is_super_admin_or_owner_admin() DELETE
+-- Folders are the organizational layer for /crew/media.
+-- Each document optionally belongs to one folder via
+--   documents.folder_id FK (ON DELETE SET NULL).
+-- Migration 025 (025_document_system.sql)
+```
+
+### media_folder_access
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+folder_id    uuid NOT NULL
+  REFERENCES media_folders(id) ON DELETE CASCADE
+role         text CHECK (role IN (
+  'super_admin','owner_admin','editor','viewer','production'
+))
+admin_id     uuid REFERENCES admin_users(id)
+-- Either role or admin_id is set (not both). When role is set:
+--   all accounts with that role can access this folder.
+-- When admin_id is set: only that specific admin can access.
+created_at   timestamptz NOT NULL DEFAULT now()
+-- RLS: authenticated SELECT; is_editor() INSERT/DELETE
+-- Governs folder-level visibility grants beyond default
+--   authenticated access. Phase 15.3 built the UI but
+--   per-folder access control UI is deferred to a later
+--   prompt — all folders currently visible to all roles.
+-- Migration 025 (025_document_system.sql)
+```
+
+### document_access
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+document_id  uuid NOT NULL
+  REFERENCES documents(id) ON DELETE CASCADE
+role         text CHECK (role IN (
+  'super_admin','owner_admin','editor','viewer','production'
+))
+admin_id     uuid REFERENCES admin_users(id)
+-- Same pattern as media_folder_access: role or admin_id.
+created_at   timestamptz NOT NULL DEFAULT now()
+-- RLS: authenticated SELECT; is_editor() INSERT/DELETE
+-- Document-level visibility grants beyond the access_tier
+--   enforcement in /documents/[token]/route.ts.
+--   Per-document access control UI deferred to a later phase.
+-- Migration 025 (025_document_system.sql)
+```
 
 ### app_settings
 ```sql
@@ -3130,7 +3233,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase 14 complete (14.1–14.3 + 14.1-FIX). Phase 15 underway (15.1–15.2 + 15.2-AUDIT/FIX complete). Phase 15.3 (Master Media Library) next.*
+*Phase 15 complete (15.1–15.4 + 15.2-AUDIT/FIX + ADMIN.30). Phase SETUP.1–4 and Phase THEME pending.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3355,9 +3458,27 @@ Phase 15 — Document & Media System (underway)
   30BN-DOC.37a ✓ Brief Update v3.5 Part A (§1, §3, §5,
                §7, §8, §12 feature spec updates)
   30BN-DOC.37b ✓ Brief Update v3.5 Part B (§9 schema,
-               §11 phase tracking, version — this prompt)
-  30BN-15.3  (pending) — Master media library /crew/media
-  30BN-15.4  (pending) — Media players + embed detection
+               §11 phase tracking, version)
+  30BN-15.3  ✓ (see §11 Phase 15 above)
+  30BN-15.4  ✓ (see §11 Phase 15 above)
+  30BN-DOC.38  ✓ Process Update v3.5 (Phases 14 +
+               15.1–15.2 lessons learned — see Process
+               doc v3.5 history entry)
+  30BN-ADMIN.30 ✓ Sidebar dual-highlight fix (Shows
+               link special-case excludes /crew/shows/
+               opportunities subtree; isActivePath()
+               untouched globally). HelpContent.tsx:
+               2 new h2 sections (Check-In System +
+               Media Library); 2 new Settings subsections
+               (document-types, consent-forms); ALL_SECTIONS
+               11 → 13. 6 new HelpTooltip placements
+               (checkin/page.tsx, ShowDetail.tsx Dates tab,
+               DocumentTypesManager, ConsentSubmissionsQueue
+               ×2, MediaLibrary.tsx). Count: 26 → 32.
+               7 files modified. Zero lint/tsc errors.
+               Commit: 05f52e6.
+  30BN-DOC.37c ✓ Brief Update v3.6 (this prompt —
+               see v3.6 history entry)
 
 **SETUP.1–4** (pending) — Setup Panel UI (six sections:
 Org Identity, Brand Colors, Logo, Email Config, Feature
@@ -3451,13 +3572,21 @@ to email function, trigger upgraded to look up active document, `is_active` filt
 to document_types query, file picker UX fixed (hidden input + trigger button), "Try
 Again" button added, `volunteerName` added to success state.
 
-**15.3** (pending) — Master media library at `/crew/media` (all roles, folder browser,
-P-DC upload for files, link entry, QR + distribution link per document, role/user
-visibility controls, attachment context for shows/rehearsals/auditions).
+**15.3 ✓** Master media library at `/crew/media` (all roles including Production).
+`components/crew/media/MediaLibrary.tsx`: folder browser (left panel), document
+table (right panel), Copy Link, QR download, Play/View button per row. Access tier
+badges. `detectLinkType()`, `isPlayable()`, `getPlayLabel()` helpers. P-DC upload
+flow (file picker → signed URL → client PUT → confirmation action). Link entry form
+for YouTube/Vimeo/audio/generic. Commit: 26a4585.
 
-**15.4** (pending) — Media players: video (native `<video>` + YouTube/Vimeo embed),
-audio (native `<audio>`), PDF inline viewer, image preview. Embed detection in
-`/documents/[token]` route.
+**15.4 ✓** Media players + embed detection. `app/documents/view/[token]/page.tsx`
+(new public Server Component): access tier enforcement, signed URL for files,
+YouTube/Vimeo iframe embed, native `<video>` / `<audio>` players, `<img>` for
+images, PDF inline viewer. Robots noindex. `/documents/[token]/route.ts` updated:
+`detectLinkType()` + `isViewableMimeType()` helpers; YouTube/Vimeo/audio links and
+viewable-mime-type files now route to player page instead of direct redirect.
+`MediaLibrary.tsx` updated: Play/View button uses `detectLinkType()` and
+`isPlayable()` to determine eligibility; "no folders" empty state added. Commit: 63570b8.
 
 ### Phase 16 — Google SSO ✓ Completed in Alpha (30BN-1.3)
 - Configure Google OAuth in Supabase Auth
@@ -3680,3 +3809,4 @@ Decision #7 resolved; DOC.21 logged)*
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §1 current phase updated (13.4c complete, HELP complete, Phase 14 next); §1 OpenCall OS context paragraph added; §2 Owner Admin, OpenCall OS, Setup Panel terminology rows added; §3 TipTap row updated (extension-link + extension-underline + full toolbar list); §6 email design forward reference notes for dynamic from address and logo URL (Phase SETUP); §7 roles table updated (Owner Admin row added, Editor row corrected — Settings access removed, Production row updated with /crew/help); §7 calendar_editor flag note updated (owner_admin allowed); §7 middleware/proxy note updated (proxy.ts rename, Owner Admin access, Production /crew/help exception); §8 Settings hub card table corrected (all cards = SA + Owner Admin; Platform Setup card added); §8 Communication page Owner Admin access note added; §8 Help System section added (full HELP phase spec, role visibility, anchor inventory, HelpTooltip count 26, Production sidebar, Settings = SA + Owner Admin); §8 Platform Setup section added (full SETUP spec: 6 sections, all app_settings keys, feature flags, implementation notes); §9 is_editor() function update note added; §9 new SETUP app_settings keys added (17 keys); §9 Migration 023 scope added; §9 admin_users.role CHECK updated (owner_admin added); §9 calendar_editor CHECK note updated (owner_admin allowed); §10 prompt log updated (DOC.31–33, ADMIN.27–29, HELP.1–HELP.2d, ADMIN.29 added); §11 header updated (13.4c + HELP complete); §11 Phase 13 13.4c marked complete; §11 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29); §11 Phase SETUP section added (SETUP.0–4 forward spec); §11 Phase THEME section added (THEME.A/1–3 forward spec); §13 R32 added (feature flags via getFeatureFlags()); §13 R33 added (CSS custom properties post-THEME); DOC.34 logged)*
 *v3.4 (July 2026 — SETUP.0 complete: §1 current phase updated (SETUP.0 complete, Phase 14 next); §2 Calendar Editor terminology updated (Owner Admin added); §7 Owner Admin row updated (built SETUP.0); §8 User Management updated (calendar_editor toggle on OA rows, deactivate guard, role selector restriction, badge — SETUP.0); §9 Migration 023 marked applied (role CHECK, calendar_editor CHECK, is_editor() update, is_super_admin_or_owner_admin() added, 17 app_settings keys, locations RLS repointed); §9 locations table RLS note updated; §9 next migration updated to 024; §11 SETUP.0 marked complete with summary; §11 Phase SETUP header "(pending)" removed; §10/§11 prompt log updated (SETUP.0 ✓, DOC.36 ✓); §13 R32 note updated (not-yet-built language removed, SETUP.1 forward reference added); DOC.36 logged)*
 *v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §1 current phase updated (Phase 14 complete, Phase 15.3 next); §3 File Storage updated (media bucket, P-DC, all file types); §5 Storage Buckets updated (media private bucket replaces documents spec); §7 Public routes updated (/consent/*, /documents/*); §8 landing page consent form bullet replaced (auto-trigger on is_minor); §8 Public Check-In Page replaced (full 14.1–14.3 spec: per-date + whole-show tokens, walk-in signup, all result states, /consent/[token] doc); §8 Check-In Admin section replaced (live dashboard spec: 10s refresh, roster, walk-ins, accordion); §8 Show Management Dates tab updated (check-in QRs); §8 Volunteers tab updated (Self Check-In badge); §8 Document Management replaced (15.1–15.2 spec: document types manager, consent submissions queue, /documents/[token] redirect route, consent trigger, sendConsentFormRequestEmail, 15.3–15.4 pending); §8 Settings hub card Document Management updated (Beta badge removed); §9 show_dates check_in_token column added (Migration 024); §9 attendance slot_claim_id made nullable (Migration 024); §9 old documents table schema replaced with new 6-table schema (Migration 025): documents, document_types, consent_form_submissions (with full schema blocks) + media_folders, media_folder_access, document_access (deferred to DOC.37c); §9 Migration 024–025 status blocks added; §9 next migration updated to 026; §9 AuditAction types note added (14.1 + 15.1 + 15.2 additions); §11 header updated (Phase 15.3 next); §11 Phase 14 marked complete (14.1–14.3 + 14.1-FIX summaries); §11 Phase 15 section replaced (15.1–15.2 ✓ + 15.3–15.4 pending); §11 prompt log updated (14.1–14.3, 14.1-FIX, 15.1, 15.2, 15.2-AUDIT, 15.2-FIX, DOC.37a, DOC.37b added); §12 Open Decision #5 updated (infrastructure built, PDF content pending); DOC.37b logged)*
+*v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §1 current phase updated (Phase 15 complete); §3 File Storage updated (media library built + player page noted); §7 Production role updated (/crew/media + /crew/help access confirmed); §8 Light/Dark Mode corrected (prefers-color-scheme note removed — ADMIN.27 removed this branch); §8 Help System section replaced (13 sections, ~46 subsections, full anchor inventory, 32 HelpTooltip placements, Production visibility updated, ADMIN.30 Q1 gap noted); §8 Tooltip system description updated (count 16→32, Client Component note added); §8 /documents/[token] route stale "Phase 15.4 will add" line replaced with built description; §8 Document Management "Planned" block replaced with built Media Library + Player Page specs; §8 Key Files updated (view/[token]/page.tsx, MediaLibrary.tsx, checkin/page.tsx added, route.ts updated); §9 media_folders + media_folder_access + document_access schema blocks added (deferred from DOC.37b); §11 header updated (Phase 15 complete); §11 Phase 15 15.3 and 15.4 entries marked complete with build summaries; §11 prompt log updated (15.3 ✓, 15.4 ✓, DOC.38 ✓, ADMIN.30 ✓, DOC.37c ✓); document header v3.6; DOC.37c logged)*
