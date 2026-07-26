@@ -13,6 +13,9 @@ const SETUP_KEYS = [
   'brand_accent',
   'org_logo_url',
   'favicon_url',
+  'email_from_address',
+  'email_from_name',
+  'default_reply_to',
 ] as const
 
 export default async function SetupPage() {
@@ -44,6 +47,9 @@ export default async function SetupPage() {
     brand_accent: settingsMap.get('brand_accent') ?? '',
     org_logo_url: settingsMap.get('org_logo_url') ?? '',
     favicon_url: settingsMap.get('favicon_url') ?? '',
+    email_from_address: settingsMap.get('email_from_address') ?? '',
+    email_from_name: settingsMap.get('email_from_name') ?? '',
+    default_reply_to: settingsMap.get('default_reply_to') ?? '',
   }
 
   return (

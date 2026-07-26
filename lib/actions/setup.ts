@@ -242,3 +242,50 @@ export async function getSignedBrandUploadUrl(data: {
 
   return { signedUrl: signed.signedUrl, path, publicUrl }
 }
+
+export async function saveEmailConfig(formData: FormData): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const emailFromAddress = (formData.get('email_from_address') as string | null)?.trim() || ''
+  const emailFromName = (formData.get('email_from_name') as string | null)?.trim() || ''
+
+  if (emailFromAddress && !EMAIL_RE.test(emailFromAddress)) {
+    return { error: 'Invalid email address format.' }
+  }
+  if (emailFromName.length > 100) {
+    return { error: 'Sending name must be 100 characters or fewer.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const keys = ['email_from_address', 'email_from_name']
+  const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
+  const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
+
+  const values: Record<string, string> = {
+    email_from_address: emailFromAddress,
+    email_from_name: emailFromName,
+  }
+
+  const results = await Promise.all(keys.map((key) => upsertSetting(supabase, key, values[key], admin.id)))
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    return { error: failed.error.message }
+  }
+
+  revalidatePath('/crew/settings/setup')
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'email_config',
+    { ...Object.fromEntries(keys.map((k) => [k, previousMap.get(k) ?? ''])) },
+    values
+  )
+
+  return { success: true }
+}

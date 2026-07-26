@@ -13,6 +13,31 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// Internal helper — fetches dynamic email settings
+// from app_settings in one query. Falls back to
+// 30BN defaults so existing behavior is preserved
+// if keys are absent or empty.
+type EmailSettings = {
+  from: string
+  logoUrl: string
+}
+
+async function resolveEmailSettings(): Promise<EmailSettings> {
+  const supabase = getAdminClient()
+  const { data } = await supabase
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['email_from_address', 'email_from_name', 'org_logo_url'])
+  const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+  const address = map['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
+  const name = map['email_from_name'] || '30 By Ninety Theatre Volunteers'
+  const logoUrl = map['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+  return {
+    from: `${name} <${address}>`,
+    logoUrl,
+  }
+}
+
 // ─── Shared branded email wrapper (30BN-13.2) ────────────────────
 // Table-based layout, inline styles only — required for Outlook/email
 // client compatibility. subject and preheader are escaped internally
@@ -25,15 +50,17 @@ function buildEmailHtml({
   preheader,
   body,
   footerNote,
+  logoUrl,
 }: {
   subject: string
   preheader: string
   body: string
   footerNote?: string
+  logoUrl?: string
 }): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  const logoHtml = siteUrl
-    ? `<img src="${siteUrl}/logo.png" height="50" width="auto" alt="30 By Ninety Theatre" style="display:block;margin:0 auto;">`
+  const resolvedLogoUrl = logoUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+  const logoHtml = resolvedLogoUrl
+    ? `<img src="${resolvedLogoUrl}" height="50" width="auto" alt="30 By Ninety Theatre" style="display:block;margin:0 auto;">`
     : ''
   const safeTitle = escapeHtml(subject)
   const safePreheader = escapeHtml(preheader)
@@ -157,14 +184,16 @@ export async function sendVolunteerConfirmationEmail({
   `
 
   const subject = `Welcome to 30 By Ninety Theatre, ${name}!`
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Welcome to the 30 By Ninety volunteer community!',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -231,14 +260,16 @@ export async function sendConsentFormRequestEmail({
   `
 
   const subject = 'Action needed: submit your volunteer consent form'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Please submit your volunteer consent form to get started.',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -285,14 +316,16 @@ export async function sendUpdateLinkEmail({
   `
 
   const subject = 'Your link to update your volunteer information'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: "Here's your link to update your volunteer info.",
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -337,14 +370,16 @@ export async function sendInfoUpdatedEmail({
   `
 
   const subject = 'Your volunteer information has been updated'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your volunteer information has been updated.',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -417,16 +452,18 @@ export async function sendWelcomeEmail({
   `
 
   const subject = 'Welcome to 30 By Ninety Theatre Production Crew'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your Production Crew account is ready.',
     body,
     footerNote:
       'This email was sent because a Production Crew account was created for you at 30 By Ninety Theatre.',
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     replyTo: 'info@30byninety.com',
     to: toEmail,
     subject,
@@ -461,14 +498,16 @@ export async function sendOpportunityEOIEmail({
     ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
 
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'We received your expression of interest.',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -496,14 +535,16 @@ export async function sendOpportunitySlotClaimEmail({
     ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
 
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your volunteer position is confirmed!',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    from: emailSettings.from,
     to,
     subject,
     html,
@@ -648,14 +689,16 @@ export async function sendSlotClaimEmail({
   `
 
   const subject = `You're signed up! — ${showName}`
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your volunteer spot is confirmed!',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to,
     subject,
@@ -701,14 +744,16 @@ export async function sendWaitlistConfirmationEmail({
   `
 
   const subject = `You're on the waitlist — ${showName}`
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: `You're on the waitlist for ${showName}.`,
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to,
     subject,
@@ -742,14 +787,16 @@ export async function sendWaitlistPromotionEmail({
   `
 
   const subject = `Good news — a spot opened up! — ${showName}`
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Good news — a volunteer spot just opened up!',
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to,
     subject,
@@ -797,10 +844,12 @@ export async function sendCancellationEditorNotificationEmail({
     </a>
   `)
 
+  const emailSettings = await resolveEmailSettings()
+
   // R8 — multi-recipient send uses resend.batch.send(), one entry per editor.
   await resend.batch.send(
     to.map((address) => ({
-      from: FROM_ADDRESS,
+      from: emailSettings.from,
       replyTo: REPLY_TO,
       to: address,
       subject,
@@ -984,7 +1033,8 @@ export function buildCategoryMatchNotificationPayload({
 export async function sendCategoryMatchNotificationEmail(
   params: CategoryMatchNotificationEmailParams
 ): Promise<void> {
-  await resend.emails.send(buildCategoryMatchNotificationPayload(params))
+  const emailSettings = await resolveEmailSettings()
+  await resend.emails.send({ ...buildCategoryMatchNotificationPayload(params), from: emailSettings.from })
 }
 
 // ─── Show bulk email — "Message Volunteers" quick action (30BN-ADMIN.23) ─
@@ -1082,16 +1132,18 @@ export async function sendPendingRegistrationEmail({
     ${buildCtaButton('Review Request', reviewUrl)}
   `
 
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'A new Production Crew access request is waiting.',
     body,
     footerNote: 'This email was sent to Production Crew administrators of 30 By Ninety Theatre.',
+    logoUrl: emailSettings.logoUrl,
   })
 
   if (to.length === 1) {
     await resend.emails.send({
-      from: FROM_ADDRESS,
+      from: emailSettings.from,
       to: to[0],
       subject,
       html,
@@ -1102,7 +1154,7 @@ export async function sendPendingRegistrationEmail({
   // R8 — multi-recipient send uses resend.batch.send(), one entry per Super Admin.
   await resend.batch.send(
     to.map((address) => ({
-      from: FROM_ADDRESS,
+      from: emailSettings.from,
       to: address,
       subject,
       html,
@@ -1131,15 +1183,17 @@ export async function sendRegistrationApprovedEmail({
   `
 
   const subject = 'Your access request has been approved'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your Production Crew access has been approved.',
     body,
     footerNote: 'This email was sent because your Production Crew access request was approved.',
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to,
     subject,
@@ -1169,15 +1223,17 @@ export async function sendRegistrationDeclinedEmail({
   `
 
   const subject = 'Your access request was not approved'
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Update on your Production Crew access request.',
     body,
     footerNote: 'This email was sent in response to your Production Crew access request at 30 By Ninety Theatre.',
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to,
     subject,
@@ -1343,14 +1399,16 @@ export async function sendMilestoneEmail(
     </p>
   `
 
+  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: "You've reached a new volunteer milestone!",
     body,
+    logoUrl: emailSettings.logoUrl,
   })
 
   await resend.emails.send({
-    from: FROM_ADDRESS,
+    from: emailSettings.from,
     replyTo: REPLY_TO,
     to: email,
     subject,

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { saveOrgIdentity, saveBrandColors } from '@/lib/actions/setup'
+import Link from 'next/link'
+import { saveOrgIdentity, saveBrandColors, saveEmailConfig } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -16,6 +17,9 @@ export type SetupPanelInitialValues = {
   brand_accent: string
   org_logo_url: string
   favicon_url: string
+  email_from_address: string
+  email_from_name: string
+  default_reply_to: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -196,6 +200,76 @@ function BrandColorsSection({ initialValues }: { initialValues: SetupPanelInitia
   )
 }
 
+function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [emailFromAddress, setEmailFromAddress] = useState(initialValues.email_from_address)
+  const [emailFromName, setEmailFromName] = useState(initialValues.email_from_name)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    const formData = new FormData()
+    formData.append('email_from_address', emailFromAddress)
+    formData.append('email_from_name', emailFromName)
+
+    const result = await saveEmailConfig(formData)
+    if ('error' in result) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Email Configuration</h2>
+        <p className={descriptionClasses}>
+          The sending address and name that appear on all outgoing emails from this platform.
+        </p>
+      </div>
+      <div>
+        <label className={labelClasses}>Sending Address</label>
+        <input
+          type="email"
+          value={emailFromAddress}
+          onChange={(e) => setEmailFromAddress(e.target.value)}
+          placeholder="volunteers@yourtheater.org"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Sending Name</label>
+        <input
+          type="text"
+          value={emailFromName}
+          onChange={(e) => setEmailFromName(e.target.value)}
+          placeholder="Your Theater Name Volunteers"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Default Reply-To</label>
+        <p className="text-sm text-dark dark:text-dark-text">{initialValues.default_reply_to}</p>
+        <Link
+          href="/crew/settings/general"
+          className="text-sm text-navy dark:text-steel hover:underline"
+        >
+          Edit in General Defaults →
+        </Link>
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
+          {status === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
+}
+
 export default function SetupPanel({ initialValues }: { initialValues: SetupPanelInitialValues }) {
   const [logoUrl, setLogoUrl] = useState(initialValues.org_logo_url)
   const [faviconUrl, setFaviconUrl] = useState(initialValues.favicon_url)
@@ -241,6 +315,8 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
           onSave={(url) => setFaviconUrl(url)}
         />
       </div>
+
+      <EmailConfigSection initialValues={initialValues} />
     </div>
   )
 }
