@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 10 | July 2026 | Phase 13 + HELP Phase Complete (13.1–13.4c + HELP.1–HELP.2d + ADMIN.27–29)
+## Version 11 | July 2026 | Phase 14 Complete + Phase 15.1–15.2 Complete + SETUP.0
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -14,7 +14,9 @@ Sections cover: ADMIN.14 re-verify, Phases 5–7 remaining,
 ADMIN.15–19, Phase 8 (Call Board), Phase 9 (Hours &
 Milestones), Phase 10 (Audit Log), ADMIN.20 (Dashboard),
 Phase 11.1–11.2 (Stubs/404/Settings), ADMIN.21–24,
-Phase 12 (12.1–12.4), ADMIN.25, CAL.1–CAL.10c, ADMIN.26.
+Phase 12 (12.1–12.4), ADMIN.25, CAL.1–CAL.10c, ADMIN.26,
+Phase 13 (13.1–13.4c), HELP.1–HELP.2d, ADMIN.27–29,
+SETUP.0, Phase 14 (14.1–14.3), Phase 15 (15.1–15.2).
 
 ---
 
@@ -210,6 +212,44 @@ by the existing thank-you cron cleanup block above).
 Review all deletes carefully before running — only
 remove test data, not any real volunteer interactions
 that may have occurred.
+
+Also clean up any consent_form_submissions rows
+created during Phase 15.2 testing:
+
+  DELETE FROM consent_form_submissions
+  WHERE volunteer_id IN (
+    SELECT id FROM volunteers
+    WHERE email LIKE '%@30bn-test.invalid'
+      OR email LIKE '%@test.invalid'
+  );
+
+Also clean up any test documents rows created during
+Phase 15.1 testing (if any were added via the
+Document Types Manager during verification):
+
+  -- Remove any test document_types added (not the
+  -- seeded system types — is_system = true ones
+  -- should be kept). Only remove any test entries
+  -- you added manually:
+  -- DELETE FROM document_types
+  -- WHERE is_system = false
+  --   AND created_at > '2026-07-01'
+  --   AND name LIKE 'Test%';
+  -- (Review before running — only remove test rows,
+  -- not any real document types added for production use)
+
+Note: Supabase Storage files uploaded to the 'media'
+bucket during testing (consent forms, test documents)
+should be reviewed and deleted manually via the
+Supabase dashboard → Storage → media bucket before
+launch. No SQL needed — Storage objects are managed
+via the Storage API, not directly via SQL.
+
+Note for SETUP.0: No new test data was introduced by
+the role guard sweep (Migration 023, SETUP.0). The
+Owner Admin role and new app_settings keys are
+production configuration, not test data — do not
+delete them.
 
 ---
 
@@ -1267,6 +1307,69 @@ HELP.2c V4
 ### ADMIN.29 — requires calendar_editor or Super Admin:
 ADMIN.29 V8
 
+### SETUP.0 — requires Owner Admin account:
+SETUP.0 V1, V2, V3, V5, V6 (Owner Admin access checks)
+
+### SETUP.0 — requires Super Admin:
+SETUP.0 V4, V5 (confirming OA-only vs SA-only distinctions)
+
+### Phase 14.1 — requires upcoming show with claims:
+14.1 V1–V12 (all check-in page items require a live
+  show with future show_dates and slot_claims)
+
+### Phase 14.1 — requires real email delivery:
+14.1 V12 (minor consent form email trigger)
+
+### Phase 14.1 — requires Supabase cross-check:
+14.1 V3, V4, V6 (attendance row creation, idempotency,
+  walk-in slot_claim_id = null)
+
+### Phase 14.1 — requires phone (QR scan):
+14.1 V11 (scan per-date check-in QR with real phone)
+
+### Phase 14.2 — requires show with show_dates:
+14.2 V1–V5 (Dates tab QRs require shows with dates)
+
+### Phase 14.2 — requires phone (QR scan):
+14.2 V5 (scan whole-show and per-date QRs)
+
+### Phase 14.2 — requires attendance with source='checkin':
+14.2 V6 (Self Check-In badge — requires a real check-in
+  event to have occurred via public check-in page)
+
+### Phase 14.3 — requires upcoming shows:
+14.3 V3–V9 (dashboard roster and accordion require
+  shows with future show_dates)
+
+### Phase 15.1 — requires Super Admin or Owner Admin:
+15.1 V1–V18 (entire Document Management settings page
+  is SA/OA only)
+
+### Phase 15.1 — requires Supabase cross-check:
+15.1 V16 (approve submission → status = 'approved')
+
+### Phase 15.2 — requires document row with known token:
+15.2 V2, V3, V4, V5 (redirect route tests require
+  real document records in the documents table)
+
+### Phase 15.2 — requires file in media bucket:
+15.2 V5 (file-type document redirect requires an actual
+  uploaded file — defer to Phase 15.3 build completion)
+
+### Phase 15.2 — requires consent_form_submissions row:
+15.2 V6–V12 (consent upload page requires a real
+  pending submission with known upload_token)
+
+### Phase 15.2 — requires real email delivery:
+15.2 V13 (consent form trigger email delivery check)
+
+### Phase 15.2 — requires Supabase cross-check:
+15.2 V10, V14 (submitted_file_path populated, submission
+  row created on minor signup)
+
+### Phase 15.2 — requires phone-width viewport:
+15.2 V16 (mobile responsiveness of /consent/[token])
+
 ---
 
 ## ADMIN.20 — Dashboard (Season at a Glance + Quick Stats)
@@ -1370,20 +1473,30 @@ ADMIN.29 V8
       is now the full blast composer. See Phase 13
       verification items below.
 
-- [ ] **11.1 V2** — Navigate to /crew/tools/checkin.
+- [~] **11.1 V2** — ~~Navigate to /crew/tools/checkin.
       Confirm the page renders with sidebar layout,
       "Coming Soon" badge, and the check-in feature
-      description.
+      description.~~ SUPERSEDED: /crew/tools/checkin
+      is now the live check-in dashboard (Phase 14.3).
+      See Phase 14.3 verification items.
 
-- [ ] **11.1 V3** — Navigate to /crew/settings/documents.
+- [~] **11.1 V3** — ~~Navigate to /crew/settings/documents.
       Confirm the page renders with sidebar layout,
       "Coming Soon" badge, and document management
-      description.
+      description.~~ SUPERSEDED: /crew/settings/documents
+      is now the live Document Management settings page
+      (Phase 15.1). See Phase 15.1 verification items.
 
-- [ ] **11.1 V4** — Toggle to dark mode. Navigate to
+- [~] **11.1 V4** — ~~Toggle to dark mode. Navigate to
       each of the three stub pages. Confirm all text
       and backgrounds render correctly — no invisible
-      text or missing dark: variants.
+      text or missing dark: variants.~~ PARTIALLY
+      SUPERSEDED: /crew/communication replaced in 13.3a,
+      /crew/tools/checkin replaced in 14.3,
+      /crew/settings/documents replaced in 15.1.
+      Dark mode on /crew/communication verified under
+      Phase 13. Dark mode on live checkin/documents
+      pages: see Phase 14.3 and Phase 15.1 items.
 
 **Check-In sidebar link:**
 
@@ -1442,12 +1555,16 @@ ADMIN.29 V8
 **Settings hub (/crew/settings):**
 
 - [ ] **11.2 V1** — Navigate to /crew/settings as Super
-      Admin. Confirm all 8 cards are visible:
+      Admin. Confirm all expected cards are visible:
       Announcement Banner, Hearing Options, Signup Form,
       General Defaults, Category Management, User
-      Management, Audit Log, Document Management.
-      Confirm "Document Management" card has a "Beta"
-      or "Coming Soon" badge.
+      Management, Audit Log, Document Management,
+      Email Activity, Location Management.
+      Note: the Document Management card no longer has
+      a "Beta" badge — it was removed in Phase 15.1.
+      Confirm the card links to /crew/settings/documents
+      and is accessible (SA/OA only — Editors and Viewers
+      see a LockedCard). See Phase 15.1 V4.
 
 - [ ] **11.2 V2** — As Super Admin: confirm Category
       Management and User Management cards are linked
@@ -2145,6 +2262,286 @@ from 12.2c):**
       the ? tooltip icon is still present next to the
       "Editor Notes" heading (it was moved to the
       component's internal heading in 12.4).
+
+---
+
+## SETUP.0 — Owner Admin Role + Feature Flags
+
+*SETUP.0 added the `owner_admin` role and ran a
+role guard sweep across 29 files. Verification items
+focus on the new role's access boundaries.*
+
+**Owner Admin access boundaries:**
+
+- [ ] **SETUP.0 V1** — Log in as Owner Admin. Confirm
+      you can access all /crew/* pages EXCEPT
+      /crew/settings/setup. Confirm /crew/settings/setup
+      redirects to /crew/dashboard (hard-blocked by
+      proxy.ts).
+      *(Requires Owner Admin account)*
+
+- [ ] **SETUP.0 V2** — As Owner Admin: confirm you can
+      access /crew/settings (hub), /crew/settings/users,
+      /crew/settings/categories, /crew/settings/locations,
+      /crew/settings/audit-log, and /crew/settings/
+      email-activity — all should load without redirect.
+      *(Requires Owner Admin account)*
+
+- [ ] **SETUP.0 V3** — As Owner Admin on
+      /crew/settings/users: confirm the create-account
+      form's role selector shows Editor and Viewer only
+      — NOT Owner Admin or Super Admin. Confirm Owner
+      Admin rows in the user list show as locked
+      (deactivate button absent for Owner Admin caller
+      on Owner Admin rows).
+      *(Requires Owner Admin account)*
+
+- [ ] **SETUP.0 V4** — As Super Admin on
+      /crew/settings/users: confirm Owner Admin rows are
+      present and actionable — deactivate button visible,
+      role badge distinct (different color from Super
+      Admin and Editor).
+
+**Settings hub card:**
+
+- [ ] **SETUP.0 V5** — As Owner Admin: confirm the
+      Settings hub (/crew/settings) shows "Platform
+      Setup" as a LockedCard (not linked). As Super
+      Admin: confirm "Platform Setup" is a LinkedCard
+      to /crew/settings/setup.
+      *(Requires Owner Admin account)*
+
+**calendar_editor toggle on Owner Admin accounts:**
+
+- [ ] **SETUP.0 V6** — As Super Admin on
+      /crew/settings/users: confirm the calendar_editor
+      toggle is visible on Owner Admin rows (same as
+      Editor rows). Toggle it on for an Owner Admin.
+      Confirm the Owner Admin now has direct-write
+      calendar access (events they create are approved
+      immediately, no pending queue).
+      *(Requires Owner Admin account + calendar access)*
+
+---
+
+## PHASE 14 — CHECK-IN SYSTEM
+
+---
+
+### 14.1 — Public Check-In Page
+
+*Prerequisite: at least one live show with a future
+show_date and at least one slot_claims row for that
+date. The show's check_in_token (whole-show) and the
+show_date's check_in_token (per-date) must exist
+(added by Migration 024 — present on all show_dates).*
+
+**Per-date token:**
+
+- [ ] **14.1 V1** — Navigate to /checkin/[show_date_
+      check_in_token] for a future show date. Confirm
+      the page loads with show name, date, time, and
+      an email/phone lookup form. Confirm the page is
+      public — no admin login required.
+
+- [ ] **14.1 V2** — Enter a valid email/phone of a
+      volunteer who has a slot_claims row for this
+      date. Confirm the page transitions to a success
+      state showing the volunteer's name and
+      "You're checked in!" or equivalent.
+
+- [ ] **14.1 V3** — *(Supabase)* After a successful
+      check-in: confirm an attendance row was created
+      with status = 'showed', source = 'checkin',
+      marked_by = null, and slot_claim_id matching
+      the volunteer's slot claim for this date.
+
+- [ ] **14.1 V4** — Try to check in the same volunteer
+      again using the same token. Confirm an
+      idempotent success state appears — "You're
+      already checked in" or similar. Confirm no
+      duplicate attendance row is created.
+      *(Supabase cross-check)*
+
+- [ ] **14.1 V5** — Enter an email/phone not on the
+      roster for this date. Confirm a "you're not
+      on the list" state appears with an option to
+      sign up (inline walk-in form visible).
+
+- [ ] **14.1 V6** — Fill out the walk-in inline signup
+      form (name, email, phone, required fields).
+      Submit. Confirm a success state appears.
+      *(Supabase)* Confirm a new volunteers row was
+      created and an attendance row with
+      slot_claim_id = null and source = 'checkin'.
+
+- [ ] **14.1 V7** — Navigate to /checkin/[invalid-uuid].
+      Confirm a branded error page appears — not a
+      crash or blank page.
+
+- [ ] **14.1 V8** — Navigate to /checkin/[token] for
+      a show_date that was in the past (show_date < today
+      in CT). Confirm a "check-in period has ended"
+      message appears — the form is not shown.
+
+**Whole-show token:**
+
+- [ ] **14.1 V9** — Navigate to /checkin/[show_
+      check_in_token] (the whole-show token from
+      shows.check_in_token). Confirm the page resolves
+      to the nearest upcoming date automatically.
+
+- [ ] **14.1 V10** — When a show has multiple upcoming
+      dates: confirm a date picker or selector appears
+      so the volunteer can confirm or switch the date.
+      Confirm the lookup form does not appear until
+      a date is selected/confirmed.
+
+**QR scan:**
+
+- [ ] **14.1 V11** — *(Owner — phone required)* Scan
+      the per-date check-in QR from the Dates tab of
+      a show in /crew/shows/[id]. Confirm it navigates
+      to the correct /checkin/[token] URL on a real
+      phone.
+
+**Minor consent trigger:**
+
+- [ ] **14.1 V12** — Complete a walk-in signup (14.1
+      V6) with age_range = 'under_18'. Confirm in
+      Supabase that a consent_form_submissions row was
+      created with status = 'pending' for that volunteer.
+      *(Supabase)* *(Requires real email delivery to
+      confirm the email was sent with the upload link)*
+
+---
+
+### 14.2 — Show Detail Check-In QRs + Source Badge
+
+*Prerequisite: a show in /crew/shows/[id] with at
+least one show_date.*
+
+**Dates tab QRs:**
+
+- [ ] **14.2 V1** — Navigate to /crew/shows/[id]
+      → Dates tab. Confirm a whole-show QR code is
+      visible at the top of the tab (above the
+      individual dates list). Confirm it has PNG and
+      SVG download links.
+
+- [ ] **14.2 V2** — On the same Dates tab: for each
+      individual show date row, confirm a per-date
+      QR code is visible. Confirm PNG and SVG download
+      links appear for each date.
+
+- [ ] **14.2 V3** — Confirm the QR codes are always
+      visible — not hidden or conditional on the date
+      being in the future. Past dates should also show
+      the QR (for record-keeping).
+
+- [ ] **14.2 V4** — Click "Download PNG" on any QR
+      code. Confirm a PNG file downloads. *(Owner manual
+      action — phone required for full scan test)*
+      Confirm the QR container has a white background
+      regardless of dark/light mode (QR scan requirement).
+
+- [ ] **14.2 V5** — *(Owner — phone required)* Scan
+      the whole-show QR. Confirm it navigates to
+      /checkin/[shows.check_in_token] on a real phone.
+      Scan a per-date QR. Confirm it navigates to
+      /checkin/[show_dates.check_in_token].
+
+**Volunteers tab source badge:**
+
+- [ ] **14.2 V6** — Navigate to /crew/shows/[id] →
+      Volunteers tab. Select a past show date that has
+      at least one attendance record with source =
+      'checkin'. Confirm a "Self Check-In" badge (or
+      equivalent label) is visible on that row. Confirm
+      rows with source = 'manual' show no such badge.
+
+---
+
+### 14.3 — Live Check-In Dashboard
+
+*Navigate to /crew/tools/checkin as any admin role.*
+
+**Page loads as live dashboard (not stub):**
+
+- [ ] **14.3 V1** — Navigate to /crew/tools/checkin
+      as Super Admin. Confirm the page shows a live
+      check-in dashboard — NOT a "Coming Soon" stub.
+      Confirm the page title is something like "Check-In
+      Dashboard" and roster data is visible (or an
+      appropriate empty state if no upcoming shows).
+
+- [ ] **14.3 V2** — Log in as Viewer or Editor.
+      Navigate to /crew/tools/checkin. Confirm the
+      dashboard loads correctly for all roles
+      (no role restriction on this page).
+
+**Next show and roster display:**
+
+- [ ] **14.3 V3** — If a show with upcoming dates
+      exists: confirm the top section shows that show's
+      name and the nearest upcoming show_date's full
+      roster — all slot_claims with status = 'claimed',
+      grouped by role.
+
+- [ ] **14.3 V4** — Confirm each roster row shows the
+      volunteer name, role name, and an attendance
+      status indicator:
+      - No attendance record → "— Awaiting" (gray)
+      - source = 'checkin', status = 'showed' →
+        "✓ Checked In (QR)" (green)
+      - source = 'manual', status = 'showed' →
+        "✓ Checked In (Admin)" (green)
+      - status = 'no_show' → "✗ No-Show" (red)
+      - status = 'excused' → "Excused" (amber)
+
+- [ ] **14.3 V5** — Confirm a summary line appears
+      near the top of the roster section showing
+      "[X] of [Y] checked in" (where X = showed count,
+      Y = rostered count).
+
+**Auto-refresh:**
+
+- [ ] **14.3 V6** — Wait approximately 10–15 seconds
+      on the dashboard page. Confirm a "Last updated
+      Xs ago" indicator increments. After 10 seconds:
+      confirm it resets to "Last updated 0s ago" or
+      similar (indicating a refresh fired). Confirm
+      the roster data did not disappear during the
+      refresh.
+
+**Walk-in section:**
+
+- [ ] **14.3 V7** — If any attendance rows exist with
+      slot_claim_id = null for the selected show date:
+      confirm a "Walk-In Check-Ins" section appears
+      below the main roster showing walk-in names and
+      check-in times.
+
+**Date selector and accordion:**
+
+- [ ] **14.3 V8** — If the top show has multiple
+      upcoming dates: confirm a date selector (dropdown
+      or similar) is visible. Changing the selected date
+      updates the roster to reflect that date's claims.
+
+- [ ] **14.3 V9** — If other shows have upcoming
+      dates: confirm they appear below the top show
+      in a collapsed accordion. Each row shows show
+      name, nearest date, and "X / Y checked in"
+      summary. Click/tap to expand an accordion row.
+      Confirm it shows that show's roster.
+
+**Empty state:**
+
+- [ ] **14.3 V10** — If no upcoming shows exist:
+      confirm an appropriate empty state appears
+      ("No upcoming shows" or similar) — no crash
+      or blank page.
 
 ---
 
@@ -4318,23 +4715,275 @@ relevant /crew/help anchor.
 
 ---
 
-*Total items in this carry-forward list: 582*
-*Prior (v9): 549 items*
-*v10 additions: 33 new items (13.4c: 0, ADMIN.27: 8,
-HELP.2a: 4, HELP.2b: 5, HELP.2c: 7, HELP.2d+ADMIN.29: 9).
-1 item superseded and struck through (13.3b V1 — stale
-4-button toolbar description, replaced by ADMIN.27 V1).*
-*Quick Reference: 8 new groups added.*
-*Seed Data Cleanup: no new SQL needed (ADMIN.27–29 and
-HELP phase added no new test data).*
-*Quick Reference retained — references item IDs only
-and remains accurate.*
+## PHASE 15 — DOCUMENT & MEDIA SYSTEM
+
+---
+
+### 15.1 — Document Types Manager + Consent Queue
+
+*Navigate to /crew/settings/documents as Super Admin
+or Owner Admin.*
+
+**Settings page (no longer a stub):**
+
+- [ ] **15.1 V1** — Navigate to /crew/settings/documents
+      as Super Admin. Confirm the page shows two live
+      sections: "Document Types" and "Consent Form
+      Submissions" — NOT a "Coming Soon" stub.
+
+- [ ] **15.1 V2** — As Editor: navigate to
+      /crew/settings/documents. Confirm you are
+      redirected to /crew/settings (Editors cannot
+      access this page).
+
+**Settings hub card:**
+
+- [ ] **15.1 V3** — Navigate to /crew/settings as
+      Editor. Confirm the "Document Management" card
+      shows as a LockedCard ("Super Admin only" label).
+      Confirm there is NO "Beta" badge on the card
+      for any role — that badge was removed.
+
+- [ ] **15.1 V4** — As Super Admin: confirm the
+      "Document Management" card on /crew/settings
+      is a LinkedCard that navigates to
+      /crew/settings/documents.
+
+**Document Types Manager:**
+
+- [ ] **15.1 V5** — On /crew/settings/documents:
+      confirm the Document Types section lists all
+      5 seeded types:
+      - Volunteer Consent Form (system badge)
+      - Cast / Auditioner Consent Form (system badge)
+      - Volunteer Handbook
+      - Production Schedule
+      - Audition Materials
+
+- [ ] **15.1 V6** — Confirm system types
+      (Volunteer Consent Form and Cast / Auditioner
+      Consent Form) show a "System" badge and have
+      their delete button disabled or absent. Confirm
+      a tooltip or label indicates they cannot be
+      deleted.
+
+- [ ] **15.1 V7** — Add a new non-system document type
+      (e.g. "Test Type"). Confirm it appears at the
+      bottom of the list. Confirm an auto-generated
+      slug is shown.
+
+- [ ] **15.1 V8** — Rename the test type using the
+      inline edit. Confirm the new name persists on
+      reload.
+
+- [ ] **15.1 V9** — Use ↑↓ arrows to reorder the test
+      type. Confirm the visual order changes. Reload
+      the page. Confirm the order persists.
+
+- [ ] **15.1 V10** — Toggle the test type to inactive.
+      Confirm its status changes. Toggle it back to
+      active. Confirm it returns to active status.
+
+- [ ] **15.1 V11** — Delete the test type (the one
+      added in V7). Confirm it disappears from the
+      list. Confirm system types (V6) cannot be
+      deleted — clicking delete shows an error or
+      has no effect.
+
+- [ ] **15.1 V12** — On any document type row: confirm
+      an "Active Document" subsection shows either the
+      current active document (title + date) or a "No
+      active document" empty state. *(At launch, all
+      types will show "No active document" until a
+      document is uploaded in Phase 15.3.)*
+
+**Consent Form Submissions Queue:**
+
+- [ ] **15.1 V13** — On /crew/settings/documents:
+      confirm the "Consent Form Submissions" section
+      is visible with three tab options:
+      Pending / Approved / Rejected.
+
+- [ ] **15.1 V14** — With no submissions in the system:
+      confirm the Pending tab shows an appropriate
+      empty state — something like "No pending consent
+      form submissions have been received yet."
+
+- [ ] **15.1 V15** — If a pending submission exists
+      (e.g. created by testing 14.1 V12 or 15.2 V11):
+      confirm the Pending tab shows the volunteer name,
+      form type, submitted date/time, a file link, and
+      Approve / Reject action buttons.
+
+- [ ] **15.1 V16** — Click Approve on a pending
+      submission. Confirm the row moves from the
+      Pending tab to the Approved tab. Confirm the
+      submission's status in Supabase is now
+      'approved'. *(Supabase cross-check)*
+
+- [ ] **15.1 V17** — Click Reject on another pending
+      submission (or the same one if only one exists).
+      A notes field should appear for entering a reason.
+      Submit the rejection. Confirm the row moves to
+      the Rejected tab.
+
+- [ ] **15.1 V18** — Toggle to dark mode. Navigate
+      to /crew/settings/documents. Confirm both
+      sections render correctly — no invisible text
+      or missing dark: variants.
+
+---
+
+### 15.2 — Redirect Route + Consent Upload Page
+
+*The /documents/[token] route requires an actual
+document record with a known access_token. The
+/consent/[token] page requires an actual
+consent_form_submissions row with a known upload_token.*
+
+**`/documents/[token]` redirect route:**
+
+- [ ] **15.2 V1** — Navigate to /documents/[invalid-
+      uuid]. Confirm you are redirected to /not-found
+      — not a crash or blank page.
+
+- [ ] **15.2 V2** — *(Requires an active document row
+      in the documents table with access_tier = 'public'
+      or 'link_only' and entry_type = 'link')* Navigate
+      to /documents/[access_token] for that document.
+      Confirm you are redirected to the external_url
+      without being prompted to log in.
+
+- [ ] **15.2 V3** — *(Requires an active document row
+      with access_tier = 'backend' and entry_type =
+      'link')* While NOT logged in to /crew: navigate
+      to /documents/[access_token]. Confirm you are
+      redirected to /crew/login?redirect=/documents/
+      [token] — not the external URL.
+
+- [ ] **15.2 V4** — Repeat V3 while logged in as an
+      admin. Confirm you are redirected to the
+      external_url (backend-tier document accessible
+      to authenticated admins).
+
+- [ ] **15.2 V5** — *(Requires an active document row
+      with entry_type = 'file' and a real file in the
+      media bucket)* Navigate to /documents/[token].
+      Confirm you are redirected to a Supabase Storage
+      signed URL (the URL will contain 'supabase' or
+      'storage' in the hostname). Confirm the file
+      opens or downloads correctly.
+      *(This requires a file to have been uploaded via
+      Phase 15.3 — defer if 15.3 is not yet built)*
+
+**`/consent/[token]` upload page:**
+
+- [ ] **15.2 V6** — Navigate to /consent/[invalid-uuid].
+      Confirm a branded error page appears: "This link
+      is not valid" or equivalent. Confirm no upload
+      form is shown.
+
+- [ ] **15.2 V7** — *(Requires a consent_form_submissions
+      row with status = 'pending' and a known
+      upload_token)* Navigate to /consent/[upload_token].
+      Confirm a branded upload page appears with:
+      - A greeting mentioning the volunteer's name
+      - A file picker area with "Choose File" button
+      - Accepted formats note (PDF, JPG, PNG)
+      - An "Upload & Submit" button (disabled until
+        a file is selected)
+      Confirm the page is light mode only (no dark
+      mode applied — public page).
+
+- [ ] **15.2 V8** — On the /consent/[token] page:
+      select a PDF file. Confirm the filename appears
+      in the file picker area and the "Upload & Submit"
+      button becomes enabled.
+
+- [ ] **15.2 V9** — Click "Upload & Submit" with a
+      valid file selected. Confirm a progress bar or
+      progress indicator appears during upload. Confirm
+      the page transitions to a success state:
+      "Thank you, [name]!" or equivalent message.
+      Confirm the upload button and file picker are
+      gone — no further submission possible.
+
+- [ ] **15.2 V10** — *(Supabase)* After a successful
+      upload: confirm the consent_form_submissions row
+      now has submitted_file_path populated (not null)
+      and submitted_at set. Confirm status is still
+      'pending' (awaiting admin review).
+
+- [ ] **15.2 V11** — Navigate back to /consent/[same_
+      token]. Confirm the page shows an "already
+      submitted" state — the upload form is NOT
+      shown again.
+
+- [ ] **15.2 V12** — Try uploading a file with an
+      unsupported type (e.g. a .txt or .docx file).
+      Confirm the browser's file picker or the app
+      rejects it — the "Upload & Submit" button should
+      not proceed with an invalid file type.
+
+**Consent form email (under-18 signup trigger):**
+
+- [ ] **15.2 V13** — *(Requires real email delivery)*
+      Complete a volunteer signup at / with age_range =
+      'under_18'. Confirm a consent form request email
+      arrives with:
+      - Subject containing "Consent Form"
+      - An "Upload Signed Form" CTA button linking to
+        /consent/[a real token]
+      - If no active Volunteer Consent Form document
+        is set: "Your coordinator will provide you
+        with the consent form" language (no download
+        button). If an active document IS set: a
+        "Download Consent Form" button appears before
+        the upload CTA.
+
+- [ ] **15.2 V14** — *(Supabase)* After the signup
+      (15.2 V13): confirm a consent_form_submissions
+      row exists for the new volunteer with
+      status = 'pending' and submitted_file_path = null.
+
+- [ ] **15.2 V15** — Navigate to
+      /crew/settings/documents → Consent Form Submissions
+      → Pending tab. Confirm the new submission appears
+      with the volunteer's name and "Volunteer Consent
+      Form" type.
+
+- [ ] **15.2 V16** — On a mobile viewport (375px):
+      confirm /consent/[token] renders without horizontal
+      scroll. Confirm the file picker and button are
+      tap-friendly.
+      *(Owner — phone or narrow browser required)*
+
+---
+
+*Total items in this carry-forward list: 650*
+*(582 v10 items + 68 new v11 items)*
+*Prior (v10): 582 items*
+*v11 additions: 68 new items (SETUP.0: 6, Phase 14.1:
+12, Phase 14.2: 6, Phase 14.3: 10, Phase 15.1: 18,
+Phase 15.2: 16).*
+*v11 superseded: 3 items struck through (11.1 V2:
+checkin stub → live dashboard; 11.1 V3: documents stub
+→ live settings page; 11.1 V4: stub dark mode →
+partially superseded).*
+*v11 updated: 11.2 V1 (Document Management card Beta
+badge removed).*
+*Quick Reference: 18 new groups added (SETUP.0, Phase
+14.1–14.3, Phase 15.1–15.2).*
+*Seed Data Cleanup: Phase 15.1–15.2 cleanup SQL added
+(consent_form_submissions, test document_types, media
+bucket note).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v10 (ADMIN.27 rich toolbar +
-light mode default, HELP phase role-filtered help page,
-HELP.2d + ADMIN.29 HelpTooltip placements, 13.3b V1
-superseded, Quick Reference updated)*
+*Last updated: July 2026 — v11 (SETUP.0 Owner Admin
+role verification, Phase 14 Check-In System, Phase 15
+Document & Media System foundation + consent flow,
+stale stub items struck through, Quick Reference
+expanded)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
