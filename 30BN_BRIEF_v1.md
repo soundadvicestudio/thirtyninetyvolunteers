@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.8
-### Created: July 2026 | Last Updated: July 2026 — v3.8 (HELP.2e completion logged — §8 Help System gap note removed)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.9
+### Created: July 2026 | Last Updated: July 2026 — v3.9 (Phase SETUP complete, ADMIN.31/31b, Migrations 026–027, Phase 21 + CAST added, R34)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 15 complete (15.1–15.4 + 15.2-AUDIT/FIX + ADMIN.30). Phase SETUP.1–4 and Phase THEME pending next.
+**Current phase:** Phase SETUP complete (SETUP.0–4 + ADMIN.31/31b). Phase THEME pending next. Phase 17 (Launch) after THEME. Phase 21 (Rehearsal Management) and Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -65,6 +65,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
 | **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. Installed 13.3b; extensions added ADMIN.27. |
+| **Image Cropping** | react-easy-crop v6.2.3 | Client-side image crop editor for brand asset uploads in the Setup Panel (BrandImageUploader.tsx). Used for logo (free aspect ratio) and favicon (1:1 square lock). Installed SETUP.2. |
 | **HTML Sanitization** | `sanitize-html` + `@types/sanitize-html` | Server-side sanitization of TipTap HTML output in `sendBlastEmail()` before the email payload is built. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href]` only. HTTP/HTTPS/mailto schemes only. Strips `<script>`, event handlers, and `javascript:` hrefs. Installed 13.4a. |
 | **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
 
@@ -141,6 +142,7 @@ CRON_SECRET=                     # Secret for Vercel Cron Job auth — must matc
 
 **Storage Buckets:**
 - `media` — all platform media files (private; signed URLs required for access). Created Phase 15.2. Path namespacing within the bucket: `consent-forms/[volunteer_id]/[submission_id]/` for consent submissions; `library/[folder_id]/[document_id]/` for media library files (Phase 15.3); `attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments (future phases). No public access — all reads go through the `/documents/[token]` redirect route which enforces access tier and generates signed URLs.
+- `brand` — brand asset files (public; direct URL access without auth). Created SETUP.2. Stores logo and favicon uploads from the Setup Panel. Path namespacing: `brand/logo/[uuid].png` for logo uploads, `brand/favicon/[uuid].png` for favicon uploads. Public because these assets are served directly on public pages (landing page logo, browser favicon `<link rel="icon">`) without any auth layer. Never use this bucket for sensitive or access-controlled content.
 
 ---
 
@@ -173,10 +175,10 @@ Mid Gray:             #555555  --color-mid-gray
 - **Background:** Transparent — works on white and navy backgrounds
 
 ### Email Design
-- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). OpenCall OS note: In client deployments, the from address becomes dynamic via `app_settings.email_from_address` and `email_from_name` (Phase SETUP). `lib/email.ts` will read these at send time instead of using a hardcoded string.
+- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). Dynamic from-address implemented (SETUP.3/ADMIN.31): `resolveEmailSettings()` internal helper in `lib/email.ts` fetches `email_from_address`, `email_from_name`, and `org_logo_url` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string }`. Falls back to 30BN defaults (`volunteers@30byninetyvolunteers.com` / `30 By Ninety Theatre Volunteers` / `${NEXT_PUBLIC_SITE_URL}/logo.png`) if keys are absent or empty. Called in all 16 direct-call send functions (SETUP.3) and in `lib/actions/shows.ts` + both cron routes via inline `app_settings` queries (ADMIN.31). Never exported — internal to `lib/email.ts`.
 - Default Reply-To: `info@30byninety.com` (editable per send by Editor)
 - All emails use branded HTML templates (built Phase 13.2): table-based layout, inline styles only (email client compatibility), max 600px content width, navy (`#293994`) header, white content area, footer-gray (`#F5F5F5`) footer.
-- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote? })` in `lib/email.ts` (internal, not exported). Logo uses `${NEXT_PUBLIC_SITE_URL}/logo.png` with graceful fallback to text-only header if env var is absent. OpenCall OS note: In client deployments, the logo URL becomes dynamic via `app_settings.org_logo_url` (Phase SETUP), with fallback to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset.
+- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote?, logoUrl? })` in `lib/email.ts` (internal, not exported). Now accepts optional `logoUrl` param (added SETUP.3). When provided, uses it for the email header logo; falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when absent. `logoUrl` value comes from `resolveEmailSettings()` at the call site — never hardcoded per-function. Public page org identity: `resolveOrgIdentity()` in `lib/utils/org-identity.ts` fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location` from `app_settings` for use in public Server Components (landing page heading, footer, copyright). Uses `getAdminClient()` — safe for public pages with no admin session. Falls back to 30BN defaults.
 - CTA buttons built via `buildCtaButton(label, url, color)` helper (internal). Volunteer-facing CTAs link to `/callboard`. Admin-facing CTAs link to `/crew/login` or `/crew/`.
 - All user-supplied values interpolated into HTML email strings must be wrapped in `escapeHtml()` (internal to `lib/email.ts`). Exception: the blast body passed from TipTap is sanitized via `sanitize-html` instead of escaped — escaping would corrupt the HTML structure. See `sendBlastEmail()` in `lib/actions/blast.ts`.
 - All outbound emails (system-triggered and admin-triggered) logged to `email_log` + `email_log_recipients` as of Phase 13.1.
@@ -200,7 +202,7 @@ Mid Gray:             #555555  --color-mid-gray
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they identify themselves via email or phone lookup on the Call Board; a match sets a 7-day cookie session with no magic link or email step required.
 **Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts use the same Request Access flow — assigned `role = 'production'` by the Super Admin on approval. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
 
-**Proxy/Middleware (CAL.2, renamed ADMIN.28):** Route protection is handled by `proxy.ts` at the repo root (renamed from `middleware.ts` to `proxy.ts` in ADMIN.28 — Next.js 16 convention). Production-role users are restricted — any `/crew/*` route other than `/crew/calendar`, `/crew/calendar/*`, and `/crew/help` redirects to `/crew/calendar` (`/crew/help` exception added HELP.2a). Owner Admin is permitted on all `/crew/*` routes EXCEPT `/crew/settings/setup` (hard-redirect to `/crew/dashboard`). Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request.
+**Proxy/Middleware (CAL.2, renamed ADMIN.28):** Route protection is handled by `proxy.ts` at the repo root (renamed from `middleware.ts` to `proxy.ts` in ADMIN.28 — Next.js 16 convention). Production-role users are restricted — any `/crew/*` route other than `/crew/calendar`, `/crew/calendar/*`, and `/crew/help` redirects to `/crew/calendar` (`/crew/help` exception added HELP.2a). Owner Admin is permitted on all `/crew/*` routes EXCEPT `/crew/settings/setup` (hard-redirect to `/crew/dashboard`). Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request. Feature flag route guards (SETUP.1): `proxy.ts` matcher extended to include public routes `/calendar` and `/checkin/:path*`. When a flagged feature is off, proxy blocks: `/crew/calendar` and `/crew/calendar/*` (`feature_calendar`); `/crew/tools/checkin` (`feature_checkin`); `/crew/communication` (`feature_blast`); `/calendar` (`feature_calendar`); `/checkin/*` (`feature_checkin`). Flag fetch is conditional — only fires when the request path matches one of the five guarded paths. Uses `getAdminClient()` and `getFeatureFlags()`.
 
 ---
 
@@ -209,7 +211,7 @@ Mid Gray:             #555555  --color-mid-gray
 ### Public — Volunteer Signup Landing Page (`/`)
 - Branded, mobile-first landing page in 30 By Ninety visual identity
 - Accessible via QR code (in programs and print)
-- Heading reads "Join the 30 By Ninety Theatre Volunteer Community" (not "Join Our Next Production")
+- Heading reads "Join the {org_name} Volunteer Community" — dynamic from `app_settings.org_name` via `resolveOrgIdentity()` (ADMIN.31). Falls back to "30 By Ninety Theatre" if unset. Footer displays `org_contact_email` (mailto link), `org_website_url` (link), and `org_location` (text) when set. Copyright line uses `{org_name}` dynamically (ADMIN.31b). `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session (corrected ADMIN.31).
 - Redundant "30 By Ninety Theatre" text under the logo has been removed
 - Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
 - Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
@@ -754,9 +756,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - Phase 11 AuditAction types pre-defined in type union: `settings.update`,
   `hearing_options.create`, `hearing_options.update`, `hearing_options.reorder`,
   `hearing_options.deactivate`. logAction() calls added in Phase 11.2.
-- **Known gap:** `submitVolunteerForm()` (public signup action, `app/actions/volunteer.ts`)
-  has no `logAction()` call. Public signup with null admin_id is valid per R25, but this
-  action predates that pattern. Deferred — decision pending on whether to backfill.
+- **Gap closed (ADMIN.31):** `submitVolunteerForm()` now calls `logAction(null, 'volunteer.signup', 'volunteer', newVolunteerId, undefined, { name, email })` after successful insert. Non-blocking (try/catch, errors swallowed). `volunteer.signup` is the first entry in the Volunteers AuditAction group — distinct from `volunteer.create` (admin-created) which does not exist as a type since all volunteer creation is via public self-registration.
 - All admin actions logged: see complete AuditAction union in lib/audit.ts.
 - Permanent, tamper-proof.
 
@@ -1016,63 +1016,42 @@ in `lib/actions/settings.ts` (created in ADMIN.20 for
 Viewers redirected to `/crew/settings` hub if they
 navigate directly to any sub-page.
 
-**Platform Setup (`/crew/settings/setup`) — Phase SETUP (pending):**
-Super Admin-only configuration panel for OpenCall OS deployments. Hard-blocked for all other roles including Owner Admin (middleware redirect to `/crew/dashboard`). Not visible in sidebar for non-Super-Admin accounts.
+**Platform Setup (`/crew/settings/setup`) — Built Phase SETUP (SETUP.0–4 complete):**
+Super Admin-only configuration panel for OpenCall OS deployments. Hard-blocked for all other roles including Owner Admin (`proxy.ts` hard-redirect to `/crew/dashboard`). Not visible in sidebar for non-Super-Admin accounts. Settings hub: "Platform Setup" LinkedCard for Super Admin; LockedCard ("Super Admin only") for all other roles. Page double-guarded: `proxy.ts` + server-side role check.
 
-Section 1 — Organization Identity:
+Seven independently-saving sections (each has its own Save button — no "Save All"):
 
-| Field | app_settings key | Notes |
-|---|---|---|
-| Organization name | `org_name` | Used in email templates, page titles, public landing page heading |
-| Tagline | `org_tagline` | Optional. Public landing page below org name |
-| Primary contact email | `org_contact_email` | Footer and help page |
-| Website URL | `org_website_url` | Optional. Footer link |
-| City / State | `org_location` | Optional. Footer display |
+Section 1 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
-Section 2 — Brand Colors:
+Section 2 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME must ship for colors to propagate into the admin UI — until then, colors update email templates and public pages from `app_settings` but the admin UI uses static Tailwind classes.
 
-| Field | app_settings key | Default |
-|---|---|---|
-| Primary color | `brand_primary` | `#293994` |
-| Accent color | `brand_accent` | `#F26522` |
+Section 3 — Logo: `org_logo_url`. Two input modes: (a) URL input (paste any public image URL), or (b) file upload via BrandImageUploader — P-DC pattern to `brand/logo/` in the `brand` public bucket, crop editor (react-easy-crop, free aspect ratio, PNG output). Whichever was used last wins. Falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset. Used in email templates (via `resolveEmailSettings()`) and public landing page.
 
-Color pickers use `<input type="color">` (native OS picker, same as Location Management). Phase THEME must ship for colors to propagate into the admin UI — until then, email templates and public pages update correctly from `app_settings` but the admin UI uses static Tailwind classes.
+Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 square aspect ratio lock in the crop editor. Stored in `brand/favicon/` in the `brand` public bucket. `generateMetadata()` in `app/layout.tsx` reads this and injects `<link rel="icon">`. Falls back to static `app/favicon.ico` when unset.
 
-Section 3 — Logo:
+Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-| Field | app_settings key | Notes |
-|---|---|---|
-| Logo URL | `org_logo_url` | Full URL to organization logo. Used in emails and public landing page. URL input (not file upload — avoids Vercel 4.5MB limit). `buildEmailHtml()` reads this with fallback to `${NEXT_PUBLIC_SITE_URL}/logo.png`. |
+Section 6 — Feature Flags: Three toggles, one per flag. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation.
 
-Section 4 — Email Configuration:
+| Feature | app_settings key | Default | What disabling blocks |
+|---|---|---|---|
+| Calendar & Space Management | `feature_calendar` | `'true'` | `/crew/calendar/*`, public `/calendar`, `syncShowDateToCalendar()`, calendar links in emails, .ics links on Call Board |
+| Check-In System | `feature_checkin` | `'true'` | `/crew/tools/checkin`, public `/checkin/*`, check-in action guards |
+| Email Blast Composer | `feature_blast` | `'true'` | `/crew/communication`, blast action guards |
 
-| Field | app_settings key | Notes |
-|---|---|---|
-| Sending address | `email_from_address` | e.g. volunteers@theirclient.com. All Resend sends read this dynamically |
-| Sending name | `email_from_name` | e.g. Pelican Playhouse Volunteers |
-| Default reply-to | `default_reply_to` | Already exists. Read-only display here with link to General Defaults |
+Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
-Section 5 — Feature Flags:
-Each flag is an `app_settings` key with value `'true'` or `'false'` (text, parsed as boolean). All reads go through `getFeatureFlags()` in `lib/feature-flags.ts` — never fetched inline. Toggled via toggle switches in the Setup Panel.
+Section 7 — Platform Identity: `instance_label`. Internal deployment label (e.g. "Pelican Playhouse"). Displayed in the Setup Panel page header only — never visible to other roles. Helps Jonathan identify which client's backend he is managing across multiple deployments.
 
-| Feature | app_settings key | Default |
-|---|---|---|
-| Calendar & Space Management | `feature_calendar` | `'true'` |
-| Check-In System | `feature_checkin` | `'true'` |
-| Email Blast Composer | `feature_blast` | `'true'` |
-| Standing Opportunities | `feature_opportunities` | `'true'` |
-| Volunteer Hours & Milestones | `feature_hours_milestones` | `'true'` |
-| Document Management | `feature_documents` | `'false'` |
-
-Section 6 — Platform Identity:
-
-| Field | app_settings key | Notes |
-|---|---|---|
-| Instance label | `instance_label` | Internal label (e.g. "Pelican Playhouse"). Setup Panel header only — not visible to other roles |
-
-Implementation: Page: `app/crew/(app)/settings/setup/page.tsx` (Server Component, double-guarded). Component: `components/crew/settings/SetupPanel.tsx` (Client Component). Server actions: `lib/actions/setup.ts` (`saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`). All mutations audit-logged as `settings.update`. Each section saves independently (no "Save All"). Sections save via `ON CONFLICT (key) DO UPDATE`. Settings hub: "Platform Setup" card is Super Admin LinkedCard only — all other roles (including Owner Admin) see LockedCard.
-
-Phase SETUP.0 (prerequisite): Migration 023 + role guard sweep must run first (adds `owner_admin` role, updates `is_editor()`, inserts default `app_settings` rows for all new keys).
+Key files (Phase SETUP):
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 14 `app_settings` keys
+- `components/crew/settings/SetupPanel.tsx` — Client Component, seven sections
+- `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
+- `lib/actions/setup.ts` — eight server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `getSignedBrandUploadUrl()`
+- `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
+- `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
+- `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31)
+- `app/layout.tsx` — `generateMetadata()` reads `favicon_url` + `org_name` from `app_settings`
 
 **Document Management (`/crew/settings/documents`) — Built Phase 15.1–15.2:**
 Super Admin + Owner Admin only. "Beta" badge removed from the Settings hub card
@@ -1388,7 +1367,31 @@ zero live rows at drop time). Created six new tables:
   authenticated all; anon SELECT WHERE status = 'pending' (for public upload page
   token validation via `getAdminClient()`).
 
-**Next migration:** 026
+**Migration 026 status:** Applied —
+`026_feature_flag_cleanup.sql` (SETUP.1):
+- Deleted stale flag rows from `app_settings`:
+  `feature_documents`, `feature_opportunities`,
+  `feature_hours_milestones` (these features are core
+  — not optional flags. Rows seeded in Migration 023
+  via `ON CONFLICT DO NOTHING`; deleted here.)
+- Inserted `favicon_url` with default `''`
+  (not included in Migration 023 seed set).
+
+**Migration 027 status:** Applied —
+`027_renumber_waitlist_function.sql` (ADMIN.31):
+Creates `renumber_waitlist(p_role_id uuid, p_cancelled_position integer)` plain SQL function.
+Atomically decrements `waitlist_position` for all
+`slot_claims` with `status = 'waitlisted'` and
+`waitlist_position > p_cancelled_position` in a
+given role. Single UPDATE eliminates the prior
+sequential-JS-update race condition in
+`cancelClaim()`. NOT SECURITY DEFINER — runs with
+caller (authenticated admin) privileges. REVOKE/GRANT
+applied defensively (`authenticated` has EXECUTE;
+PUBLIC and anon do not). `proacl` confirmed:
+`{postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres}`.
+
+**Next migration:** 028
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -2176,8 +2179,10 @@ submitted_at     timestamptz NOT NULL DEFAULT now()
 `volunteer.checkin_signup`. Documents (15.1): `document_type.create`,
 `document_type.update`, `document_type.delete`, `document_type.reorder`,
 `consent_submission.approve`, `consent_submission.reject`. Consent file receipt
-(15.2): `consent_submission.file_received`. All added to the AuditAction union
-in `lib/audit.ts` and visible in the audit log viewer.
+(15.2): `consent_submission.file_received`. Public signup (ADMIN.31):
+`volunteer.signup` — first entry in the Volunteers AuditAction group. Public
+self-registration with null admin_id (R25). Logged non-blocking in
+`submitVolunteerForm()`. All types in `lib/audit.ts`, visible in audit log viewer.
 
 **Default `app_settings` seed values:**
 ```
@@ -2207,11 +2212,15 @@ email_from_name           → '30 By Ninety Theatre Volunteers'
 feature_calendar          → 'true'
 feature_checkin           → 'true'
 feature_blast             → 'true'
-feature_opportunities     → 'true'
-feature_hours_milestones  → 'true'
-feature_documents         → 'false'
 instance_label            → '30 By Ninety Theatre'
+favicon_url               → ''
 ```
+
+Note: feature_opportunities, feature_hours_milestones,
+and feature_documents were seeded in Migration 023 but
+deleted in Migration 026 — these are core features, not
+optional flags. favicon_url was added in Migration 026.
+Total active SETUP keys: 15.
 
 Runtime-added key (not seeded in Migration 001):
 ```
@@ -3126,20 +3135,22 @@ Claim flow:
   `get_show_notification_targets()`. See R28.
 
 **Deferred polish items (carry to Beta):**
-- Waitlist renumbering in `cancelClaim()` — sequential
-  JS updates. Postgres function candidate if concurrent
-  cancellations become a concern at scale.
 - `slot_claims.show_date_id` denormalization — schema
-  review deferred to Beta.
-- Phone search: volunteer list search uses
-  `phone.ilike.%term%` against raw search input. With
-  phone stored digits-only, formatted searches
-  (e.g. "985-555-1234") won't match. Beta fix candidate.
-- Reminder cron (`app/api/cron/reminders/route.ts`)
-  uses raw UTC Date math rather than the DST-safe CT
-  approach used in the thank-you cron and QuickStats.
-  Low practical impact (reminder window is forgiving)
-  but inconsistent. Beta fix candidate.
+  review deferred. ADMIN.31b planned as follow-up.
+
+**Completed since v2.1 (removed from deferred list):**
+- Waitlist renumbering in `cancelClaim()` — Fixed
+  ADMIN.31: `renumber_waitlist()` Postgres function
+  (Migration 027). `cancelClaim()` now calls
+  `supabase.rpc('renumber_waitlist', ...)` — single
+  atomic UPDATE eliminates the race condition.
+- Phone search formatted input mismatch — Fixed
+  ADMIN.31: `lib/volunteers/list.ts` strips non-digits
+  from search term before ilike when input looks like
+  a phone number.
+- Reminder cron UTC date math — Fixed ADMIN.31:
+  `fromZonedTime()` pattern applied (same as thank-you
+  cron). DST-safe CT date boundary now used.
 
 **Completed since v1.2 (removed from deferred list):**
 - ~~PDF export column for `requires_service_hours`~~ — Added in ADMIN.17 (9-column table).
@@ -3234,7 +3245,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase 15 complete (15.1–15.4 + 15.2-AUDIT/FIX + ADMIN.30). Phase SETUP.1–4 and Phase THEME pending.*
+*Phase SETUP complete (SETUP.0–4 + ADMIN.31/31b). Migrations 026–027 applied. Phase THEME pending next. Phase 17 (Launch) after THEME.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3433,7 +3444,7 @@ Phase 14 — Check-In System ✓ Complete
                + CheckInDashboard.tsx (10s refresh,
                accordion, roster, walk-ins)
 
-Phase 15 — Document & Media System (underway)
+Phase 15 — Document & Media System ✓ Complete
   30BN-15.1  ✓ Migration 025 (6 new tables) + media
                bucket + lib/actions/documents.ts +
                DocumentTypesManager.tsx +
@@ -3488,14 +3499,86 @@ Phase 15 — Document & Media System (underway)
   30BN-DOC.41  ✓ Brief Update v3.7 (§7 Production row
                + §9 two stale CAL.8 notes fixed +
                HELP.2e logged — this prompt)
+  30BN-DOC.42 ✓ Doc Update v3.8/v3.7/v13 — HELP.2e
+               completion logged across all three
+               governance documents.
+  30BN-SETUP.1 ✓ Feature flag infrastructure +
+               Migration 026. Commit 2c2a388.
+  30BN-SETUP.2 ✓ Setup Panel UI Sections 1–4 + brand
+               bucket + BrandImageUploader + react-
+               easy-crop. Commit b63fae0.
+  30BN-SETUP.3 ✓ Email Configuration section +
+               resolveEmailSettings() + 16-function
+               sweep. Commit 2cfb880.
+  30BN-SETUP.4 ✓ Feature Flags + Instance Label
+               sections. Phase SETUP complete.
+               Commit 562f9d4.
+  30BN-ADMIN.31 ✓ Seven-item deferred sweep: payload
+               builder logoUrl threading + call sites,
+               resolveOrgIdentity() + landing page
+               org identity, getAdminClient on page.tsx,
+               phone search strip, reminder cron DST fix,
+               volunteer.signup audit logging,
+               renumber_waitlist() RPC (Migration 027).
+               Commit a6ab89c.
+  30BN-ADMIN.31b ✓ Dead pre-Migration-025 documents
+               query deleted from app/page.tsx
+               (consentDoc + showConsentLink + JSX —
+               24 lines). Footer copyright © {org_name}
+               dynamic. Commit 6540df9.
+  30BN-DOC.43a ✓ Brief Update v3.9 (this prompt)
 
-**SETUP.1–4** (pending) — Setup Panel UI (six sections:
-Org Identity, Brand Colors, Logo, Email Config, Feature
-Flags, Instance Label). Full spec in §8 Platform Setup.
-Server actions in `lib/actions/setup.ts`. Settings hub
-"Platform Setup" card (Super Admin LinkedCard; all others
-LockedCard). Feature flag system via `getFeatureFlags()`
-in `lib/feature-flags.ts`.
+**SETUP.1** ✓ — Feature flag infrastructure.
+`lib/feature-flags.ts`: `getFeatureFlags()` + `FeatureFlags`
+type (three flags: calendar, checkin, blast). Migration 026
+(delete 3 stale flag rows; insert favicon_url). `proxy.ts`
+extended: five guarded routes (3 crew + 2 public), matcher
+extended, conditional flag fetch. `app/crew/(app)/layout.tsx`
+fetches flags, passes to Sidebar. Sidebar.tsx conditional
+rendering for Calendar/Check-In/Communication links.
+Per-page guards on 6 pages. Per-action guards: 16 functions
+across blast.ts, calendar.ts, checkin.ts, checkin-admin.ts.
+`syncShowDateToCalendar()` no-op when calendar off.
+`sendSlotClaimEmail()` / `sendWaitlistPromotionEmail()` accept
+calendarEnabled param. Call Board .ics links conditional.
+22 files. Commit 2c2a388.
+
+**SETUP.2** ✓ — Setup Panel UI Sections 1–4 (Org Identity,
+Brand Colors, Logo, Favicon). `lib/actions/setup.ts` created
+(6 actions + `getSignedBrandUploadUrl()`). `lib/utils/
+image-crop.ts` (`getCroppedImg()` — pure canvas utility).
+BrandImageUploader.tsx: URL input OR file upload with
+react-easy-crop editor; free aspect ratio for logo, 1:1
+square lock for favicon; P-DC to brand public bucket.
+SetupPanel.tsx (Sections 1–4). setup/page.tsx (Server
+Component, double-guarded). `generateMetadata()` in
+`app/layout.tsx` reads favicon_url + org_name. Settings
+hub Platform Setup card (SA LinkedCard; all others
+LockedCard). brand public bucket created. react-easy-crop
+v6.2.3 installed. 8 files created/modified. Commit b63fae0.
+
+**SETUP.3** ✓ — Section 5 (Email Configuration) +
+`resolveEmailSettings()` internal helper in `lib/email.ts`
+(fetches email_from_address, email_from_name, org_logo_url
+in one query; falls back to 30BN defaults). `buildEmailHtml()`
+extended with optional logoUrl param. All 16 direct-call
+send functions swept to use emailSettings.from and
+emailSettings.logoUrl. 4 payload builders
+(buildReminderEmailPayload, buildThankYouEmailPayload,
+buildShowBulkEmailPayload, buildCategoryMatchNotification Payload) extended with logoUrl? param; call sites in
+`lib/actions/shows.ts` and both cron routes use inline
+app_settings fetch (ADMIN.31). `saveEmailConfig()` added to
+setup.ts. 5 files modified. Commit 2cfb880.
+
+**SETUP.4** ✓ — Sections 6–7 (Feature Flags + Instance Label).
+`saveFeatureFlags()` + `saveInstanceLabel()` added to setup.ts.
+Flag section: three toggle rows, one Save button, optimistic
+local state. `saveFeatureFlags()` revalidates: /crew layout
+(propagates to sidebar) + / + /shows + /calendar. Instance
+label displayed in setup page header when set. setup/page.tsx
+fetches 14 keys total (9 SETUP.2 + default_reply_to SETUP.3 +
+4 new: flag keys + instance_label). Phase SETUP complete.
+4 files modified. Commit 562f9d4.
 
 ### Phase THEME — Dynamic CSS Brand System (pending)
 
@@ -3552,7 +3635,7 @@ RosterTable with all 5 status states, walk-in section, "Last updated Xs ago" cou
 Additional types in `types/checkin.ts`: `CheckInRosterEntry`, `CheckInWalkIn`,
 `CheckInRoster`, `CheckInShowSummary`, `CheckInDashboardData`.
 
-### Phase 15 — Document & Media System (underway)
+### Phase 15 — Document & Media System ✓ Complete
 
 **15.1 ✓** Migration 025 (drop old documents table + create 6 new tables: document_types,
 media_folders, media_folder_access, documents, document_access, consent_form_submissions;
@@ -3621,13 +3704,55 @@ These features were added to Alpha scope and are now built:
 - **Bulk email from show detail** ✓ Built ADMIN.23. "Message Volunteers" on Overview tab.
   See §8 Show Management.
 
-### New Beta features (confirmed)
-- **Waitlist → claim promotion notification preferences**
-  — volunteer opt-in for notification method (email vs.
-  future SMS). Requires infrastructure decision.
+### Phase 19 — Volunteer Communication Preferences (pending, post-launch)
+
+Expanded scope (decided this session — supersedes original "waitlist notification only" description):
+
+- New `communication_preference` column on `volunteers` (nullable text, CHECK constraint: 'email' / 'phone' / 'either'). No migration yet — planned for Phase 19 build.
+- Signup form: optional "Preferred contact method" field (Email / Phone / No preference)
+- `/update` flow: preference field included, pre-filled
+- Call Board volunteer card: shows preference; volunteer can update
+- Admin volunteer profile: preference displayed as informational badge alongside contact fields
+- Volunteer list: preference visible (display-only in Phase 19; filter deferred)
+- No system enforcement — advisory only. SMS/automated phone delivery is future infrastructure.
+- Original scope (waitlist promotion notification opt-in) subsumed — general preference field serves that purpose and is broader.
 
 ~~**Automated thank-you email after a show**~~ —
 ✓ Built in Alpha (30BN-12.4). See §8 Show Management.
+
+### Phase 21 — Rehearsal Management System (planned, post-launch)
+
+Master rehearsal schedule management surface, distinct from the Master Calendar (which handles space booking and conflict resolution). Phase 21 is about who is called, what is assigned, and tracking attendance.
+
+Access model:
+- Production role: sees only rehearsal schedules they are personally assigned to. Can submit new rehearsal schedules (bulk entry, same form as CAL.5b). Can add individual rehearsal calls within their assigned schedules.
+- Viewers: see all schedules, read-only
+- Editors: see all, can manage
+- Owner Admin + Super Admin: see all, full control
+
+Calendar integration: Rehearsal schedule submissions through the Rehearsals tab follow the identical flow as CAL.5b — they create `rehearsal_batches` and `calendar_events` rows, enter the pending approval queue, and require Owner Admin or Super Admin location assignment and approval. The Rehearsals tab is the management surface; the Calendar is the booking surface. Both remain in sync.
+
+Core feature set:
+- `/crew/rehearsals` sidebar nav link (all roles; Production sees filtered view)
+- Master rehearsal schedule list with role-filtered visibility
+- Rehearsal schedule CRUD — CalendarBulkRehearsalForm surfaced here as primary entry point
+- Admin user assignment to schedules (individual or by role group)
+- Individual rehearsal call management within a schedule — specific calls with per-call user assignment
+- Rehearsal attendance tracking using existing check-in infrastructure (Phase 14 model applied to rehearsals)
+- Feature flag: `feature_rehearsals` (default `'true'`, gates sidebar link + routes per R34)
+
+Pre-Phase 21 required:
+- ADMIN.32 — Owner Admin comprehensive permission audit (read-only sweep to confirm all operational contexts pass owner_admin through correctly — added late in SETUP.0, may have edge cases)
+- ADMIN.33 — Production role permission audit (confirm all Production access restrictions are still correct and intentional as the platform grows)
+
+### Phase CAST — Cast Member Portal (named future phase, post-Phase 21)
+
+Grows from Phase 21 infrastructure. Not yet fully specced. Key planned features:
+- Cast member entity (separate from admin_users, own Supabase Auth accounts, own frontend login)
+- Cast-facing rehearsal schedule view — which dates they are called for
+- Materials distribution to cast via media library
+- Cast check-in system (QR-based, parallel to Phase 14 volunteer check-in)
+- Production information hub for cast members
 
 ---
 
@@ -3773,10 +3898,14 @@ on mount. Established ADMIN.14.
 The email blast body originates from TipTap's `getHTML()` output — it is already structured HTML and must NOT be passed through `escapeHtml()`. Doing so would encode all angle brackets and produce literal `&lt;p&gt;` text in the email body. Instead, `sanitizeHtml()` from the `sanitize-html` package is called in `sendBlastEmail()` before the body reaches `buildBlastEmailHtml()`. The sanitizer strips disallowed tags and attributes while preserving the HTML structure. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`, `h2`, `h3`, `blockquote`, `a[href]`. Schemes: `http`, `https`, `mailto` only. Established 13.4a.
 
 ### R32 — Feature Flags Always Via getFeatureFlags()
-All feature flag reads in the codebase must go through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never fetch individual feature flag keys inline with separate `app_settings` queries. This ensures: (1) all flags are fetched in one round trip, (2) the typed return object prevents typos in key names, (3) missing keys are handled consistently. Middleware checks flags for route-level blocking; sidebar conditionally renders links based on flags passed as props from layout; individual pages receive flags as props or re-fetch via the helper. Established Phase SETUP design; enforced from SETUP.0 onward. `getFeatureFlags()` in `lib/feature-flags.ts` not yet built — ships with SETUP.1.
+All feature flag reads in the codebase must go through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never fetch individual feature flag keys inline with separate `app_settings` queries. This ensures: (1) all flags are fetched in one round trip, (2) the typed return object prevents typos in key names, (3) missing keys are handled consistently. Middleware checks flags for route-level blocking; sidebar conditionally renders links based on flags passed as props from layout; individual pages receive flags as props or re-fetch via the helper. Established Phase SETUP design; built SETUP.1. grep exclusion: The inline flag-key-name grep check in Process §10 must exclude `components/crew/settings/SetupPanel.tsx` (in addition to `lib/feature-flags.ts` and `lib/actions/setup.ts`) — the Setup Panel UI uses flag key name strings as FormData keys to build the toggle controls, which is the sanctioned use of those strings in that file and does not constitute an inline flag read.
 
 ### R33 — After Phase THEME: CSS Custom Properties for Brand Colors, Not Tailwind Utility Classes
 After Phase THEME ships, all components that reference brand-driven colors (`bg-navy`, `text-orange`, `border-navy`, `hover:bg-navy`, etc.) must use CSS custom properties (`var(--brand-primary)`, `var(--brand-accent)`) via inline styles or a small set of CSS utility classes in `globals.css` that reference these variables. Static Tailwind brand color utility classes are no longer permitted in new code after THEME ships — they reference static hex values and cannot respond to `app_settings` color changes. The `@theme` block in `globals.css` is NOT modified (R7 still applies — structural and non-brand colors stay as static hex in `@theme`). Phase THEME.A audits all current usages before any replacements are made. Established Phase THEME design (not yet built — enforced from THEME.1 onward).
+
+### R34 — All Non-Core Features Must Be Built Flag-Ready
+
+Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (feature_calendar), Check-In (feature_checkin), Email Blast (feature_blast). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
 
 ---
 
@@ -3830,3 +3959,4 @@ ALL_SECTIONS sweep — owner_admin added to all non-Settings
 section and subsection role arrays (47 entries); DOC.41
 logged)*
 *v3.8 (July 2026 — HELP.2e completion: §8 Help System Owner Admin bullet updated (removed "known gap (ADMIN.30 Q1)" forward-reference note — HELP.2e fixed all 47 non-Settings ALL_SECTIONS entries; replaced with confirmation that the gap is closed); document header + §1 header bumped to v3.8; §11 prompt log unchanged (HELP.2e + DOC.41 already logged in v3.7); DOC.42 logged)*
+*v3.9 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §1 current phase updated (SETUP complete, THEME next); §3 react-easy-crop added; §5 brand public bucket added; §6 email design forward references replaced with implementation facts (resolveEmailSettings, buildEmailHtml logoUrl param, resolveOrgIdentity); §7 proxy feature flag guards documented; §8 Platform Setup section fully replaced (pending spec → built spec: 7 sections, BrandImageUploader, 3-flag set, correct action list, key files); §8 landing page heading/footer dynamic org identity noted; §8 Phase 12 deferred list: 3 items closed (waitlist RPC, phone search, reminder cron DST), 1 remaining; §8 Audit Log known gap closed (volunteer.signup); §9 Migrations 026–027 status blocks added, next migration 028; §9 app_settings seed list corrected (3 flag keys removed, favicon_url added, total 15); §9 AuditAction types: volunteer.signup added; §11 header status updated; §11 Phase SETUP entries SETUP.1–4 all marked complete with summaries; §11 prompt log updated (DOC.42, SETUP.1–4, ADMIN.31, ADMIN.31b, DOC.43a); §11 Phase 15 marked complete; §11 Phase 19 expanded to full communication preference spec; §11 Phase 21 Rehearsal Management System forward spec added; §11 Phase CAST named future phase added; §13 R32 SetupPanel.tsx grep exclusion noted; §13 R34 added (non-core features flag-ready); DOC.43a logged)*
