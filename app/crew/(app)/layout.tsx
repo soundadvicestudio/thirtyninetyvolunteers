@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import Sidebar from '@/components/crew/Sidebar'
 import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
@@ -31,15 +32,18 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
     redirect('/crew/login')
   }
 
+  const supabase = await getServerClient()
+
   let pendingRegistrationCount = 0
   if (admin.role === 'super_admin' || admin.role === 'owner_admin') {
-    const supabase = await getServerClient()
     const { count } = await supabase
       .from('pending_registrations')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending')
     pendingRegistrationCount = count ?? 0
   }
+
+  const flags = await getFeatureFlags(supabase)
 
   return (
     <>
@@ -62,7 +66,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       <ThemeProvider>
         <MobileSidebarProvider>
           <div className="flex h-screen">
-            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} />
+            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} flags={flags} />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar admin={admin} />
               <main className="flex-1 overflow-y-auto bg-light-navy dark:bg-dark-bg p-6">{children}</main>

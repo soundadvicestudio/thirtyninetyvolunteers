@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { formatCT } from '@/lib/utils/date'
 import { normalizePhone } from '@/lib/utils/phone'
 import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
@@ -21,6 +22,11 @@ type AdminClient = ReturnType<typeof getAdminClient>
 
 export async function resolveCheckInToken(token: string): Promise<CheckInTokenResolution> {
   const supabase = getAdminClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.checkin) {
+    return { type: 'invalid' }
+  }
 
   const { data: dateMatch } = await supabase
     .from('show_dates')
@@ -184,6 +190,11 @@ export async function checkInVolunteer(
 
     const supabase = getAdminClient()
 
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.checkin) {
+      return { error: 'invalid_token' }
+    }
+
     const isEmail = input.includes('@')
     const normalized = isEmail ? input.toLowerCase().trim() : normalizePhone(input)
 
@@ -310,6 +321,11 @@ export async function checkInNewVolunteer(
     }
 
     const supabase = getAdminClient()
+
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.checkin) {
+      return { error: 'invalid_token' }
+    }
 
     // Duplicate detection — sequential, matching submitVolunteerForm()
     // (app/actions/volunteer.ts): email first, then phone.

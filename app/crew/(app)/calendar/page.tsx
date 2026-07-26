@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { getMonthGridDays, getWeekGridDays } from '@/lib/utils/calendar-availability'
 import CalendarShell from '@/components/crew/calendar/CalendarShell'
 import type {
@@ -87,6 +88,9 @@ export default async function CalendarPage({
   const rangeEnd = fromZonedTime(`${rangeEndStr} 23:59:59`, CT)
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) redirect('/crew/dashboard')
 
   // Season filter requires a join through shows (calendar_events carries no
   // season_id directly) — resolved before the main event query so the

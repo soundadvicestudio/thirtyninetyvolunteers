@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
 import type { PublicShow } from '@/types/show-public'
@@ -67,6 +69,7 @@ function ShowCard({ show }: { show: PublicShow }) {
 
 export default async function ShowsListingPage() {
   const shows = await getPublicShows()
+  const flags = await getFeatureFlags(getAdminClient())
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -83,9 +86,11 @@ export default async function ShowsListingPage() {
           <p className="text-dark text-base leading-relaxed max-w-xl mx-auto mt-4">
             Pick a show below and claim your spot — every role helps make the production happen.
           </p>
-          <Link href="/calendar" className="inline-block text-sm text-navy hover:underline mt-4">
-            📅 View Calendar →
-          </Link>
+          {flags.calendar && (
+            <Link href="/calendar" className="inline-block text-sm text-navy hover:underline mt-4">
+              📅 View Calendar →
+            </Link>
+          )}
         </div>
       </section>
 

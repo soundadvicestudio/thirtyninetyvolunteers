@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/auth'
+import type { FeatureFlags } from '@/lib/feature-flags'
 import { ThemeToggle } from './ThemeToggle'
 import { useMobileSidebar } from './MobileSidebarContext'
 
@@ -46,18 +47,31 @@ function isActivePath(pathname: string, href: string) {
 export default function Sidebar({
   admin,
   pendingRegistrationCount = 0,
+  flags,
 }: {
   admin: AdminUser
   pendingRegistrationCount?: number
+  flags: FeatureFlags
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
   const isProduction = admin.role === 'production'
+
+  // Flag check and role check are independent — both must be true for a
+  // gated link to render. NAV_ITEMS is a flat data-driven array (not
+  // discrete per-link JSX), so gating is a filter keyed by href.
+  const FLAG_GATED_HREFS: Record<string, boolean> = {
+    '/crew/calendar': flags.calendar,
+    '/crew/tools/checkin': flags.checkin,
+    '/crew/communication': flags.blast,
+  }
+  const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
+
   const visibleNavItems = isProduction
-    ? NAV_ITEMS.filter(
+    ? flagFilteredNavItems.filter(
         (item) => item.href === '/crew/calendar' || item.href === '/crew/help' || item.href === '/crew/media'
       )
-    : NAV_ITEMS
+    : flagFilteredNavItems
 
   useEffect(() => {
     close()

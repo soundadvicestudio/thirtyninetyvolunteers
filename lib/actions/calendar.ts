@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { hasConflict } from '@/lib/utils/calendar-conflict'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
@@ -76,6 +77,11 @@ export async function createCalendarEvent(formData: CalendarEventFormData): Prom
 
   const supabase = await getServerClient()
 
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
+
   const { data: event, error: eventError } = await supabase
     .from('calendar_events')
     .insert({
@@ -144,6 +150,11 @@ export async function updateCalendarEvent(
 
   const supabase = await getServerClient()
 
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
+
   const { error: updateError } = await supabase
     .from('calendar_events')
     .update({
@@ -208,6 +219,11 @@ export async function createRehearsalBatch(formData: RehearsalBatchFormData): Pr
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
 
   const { data: batch, error: batchError } = await supabase
     .from('rehearsal_batches')
@@ -308,6 +324,11 @@ export async function approveCalendarEvent(eventId: string, locationId: string):
 
   const supabase = await getServerClient()
 
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
+
   const { data: event, error: fetchError } = await supabase
     .from('calendar_events')
     .select('id, start_time, end_time')
@@ -361,6 +382,12 @@ export async function approveBatch(
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
+
   let approvedCount = 0
   const skipped: { eventId: string; error: string }[] = []
 
@@ -417,6 +444,11 @@ export async function cancelCalendarEvent(eventId: string): Promise<CancelCalend
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
 
   const { data: event, error: fetchError } = await supabase
     .from('calendar_events')
@@ -584,6 +616,11 @@ export async function createRecurringEvent(formData: RecurringEventFormData): Pr
 
   const supabase = await getServerClient()
 
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
+
   const { data: group, error: groupError } = await supabase
     .from('recurrence_groups')
     .insert({
@@ -679,6 +716,11 @@ export async function editRecurringOccurrence(
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
 
   const { data: targetEvent, error: fetchError } = await supabase
     .from('calendar_events')
@@ -785,6 +827,11 @@ export async function cancelRecurringOccurrence(
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) {
+    return { success: false, error: 'Feature not enabled.' }
+  }
 
   const { data: targetEvent, error: fetchError } = await supabase
     .from('calendar_events')

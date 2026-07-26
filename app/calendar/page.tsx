@@ -1,7 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { getMonthGridDays } from '@/lib/utils/calendar-availability'
 import PublicCalendarGrid from '@/components/calendar/PublicCalendarGrid'
 
@@ -37,6 +39,9 @@ export default async function PublicCalendarPage({
   const rangeEndStr = gridDays[gridDays.length - 1]
 
   const supabase = getAdminClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) redirect('/')
 
   const { data: eventRows } = await supabase
     .from('calendar_events')

@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getCallboardSession } from '@/lib/callboard/session'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
@@ -247,6 +248,8 @@ function OpportunityCard({ opportunity }: { opportunity: StandingOpportunityRow 
 export default async function CallboardPage() {
   const volunteer = await getCallboardSession()
 
+  const flags = await getFeatureFlags(getAdminClient())
+
   const [shows, opportunities] = await Promise.all([getPublicShows(), getActiveOpportunities()])
 
   let categories: string[] = []
@@ -342,6 +345,7 @@ export default async function CallboardPage() {
                 milestones={milestones}
                 callHistory={callHistory}
                 manualHoursEntries={manualHoursEntries}
+                calendarEnabled={flags.calendar}
               />
             ) : (
               <CallboardLookupForm />

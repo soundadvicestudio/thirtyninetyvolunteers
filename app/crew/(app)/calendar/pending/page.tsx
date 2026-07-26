@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { hasConflict } from '@/lib/utils/calendar-conflict'
 import PendingQueueClient from '@/components/crew/calendar/PendingQueueClient'
 import type { CalendarEventType, RecurrenceGroup } from '@/types/calendar'
@@ -46,6 +47,9 @@ export default async function PendingQueuePage() {
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.calendar) redirect('/crew/dashboard')
 
   const [{ data: eventRows }, { data: locationRows }] = await Promise.all([
     supabase

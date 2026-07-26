@@ -43,9 +43,11 @@ type ShowGroup = {
 function CallHistoryBreakdown({
   showGroups,
   manualHoursEntries,
+  calendarEnabled,
 }: {
   showGroups: ShowGroup[]
   manualHoursEntries: CallboardManualHoursEntry[]
+  calendarEnabled: boolean
 }) {
   if (showGroups.length === 0 && manualHoursEntries.length === 0) {
     return <p className="text-mid-gray text-sm py-4">No calls on record yet.</p>
@@ -75,7 +77,7 @@ function CallHistoryBreakdown({
                     {call.attendance_status === 'showed' && call.hours_logged !== null && (
                       <span className="text-mid-gray">{formatHoursValue(call.hours_logged)} hrs</span>
                     )}
-                    {showsCalendarLink && call.claim_token && (
+                    {calendarEnabled && showsCalendarLink && call.claim_token && (
                       <a
                         href={`/api/calendar/claim.ics?token=${call.claim_token}`}
                         target="_blank"
@@ -127,12 +129,14 @@ export default function VolunteerCard({
   milestones,
   callHistory,
   manualHoursEntries,
+  calendarEnabled,
 }: {
   volunteer: CallboardVolunteer
   categories: string[]
   milestones: CallboardMilestone[]
   callHistory: CallboardCallHistoryRow[]
   manualHoursEntries: CallboardManualHoursEntry[]
+  calendarEnabled: boolean
 }) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
@@ -223,7 +227,13 @@ export default function VolunteerCard({
         Call History ({callHistory.length} calls) {expanded ? '▲' : '▼'}
       </button>
 
-      {expanded && <CallHistoryBreakdown showGroups={showGroups} manualHoursEntries={manualHoursEntries} />}
+      {expanded && (
+        <CallHistoryBreakdown
+          showGroups={showGroups}
+          manualHoursEntries={manualHoursEntries}
+          calendarEnabled={calendarEnabled}
+        />
+      )}
 
       <div className="border-t border-divider mt-6 pt-4 flex items-center justify-between">
         <a href={`/update?token=${volunteer.update_token}`} className="text-navy text-sm font-semibold underline">

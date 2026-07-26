@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { getCheckInDashboardData } from '@/lib/data/checkin'
 import { CheckInDashboard } from '@/components/crew/tools/CheckInDashboard'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
@@ -12,6 +13,10 @@ export default async function CheckInPage() {
   }
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.checkin) redirect('/crew/dashboard')
+
   const data = await getCheckInDashboardData(supabase)
 
   return (

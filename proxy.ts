@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags, type FeatureFlags } from '@/lib/feature-flags'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -33,6 +35,30 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
+  // Feature flags: fetched once per request, only when the path is one of
+  // the five guarded routes (perf — skips the app_settings query entirely
+  // for every other request).
+  const needsFlagCheck =
+    pathname.startsWith('/crew/calendar') ||
+    pathname.startsWith('/crew/tools/checkin') ||
+    pathname.startsWith('/crew/communication') ||
+    pathname === '/calendar' ||
+    pathname.startsWith('/checkin/')
+
+  let flags: FeatureFlags | null = null
+  if (needsFlagCheck) {
+    flags = await getFeatureFlags(getAdminClient())
+  }
+
+  // Public route blocks — run before auth checks; public (unauthenticated)
+  // users must be blocked from disabled features too.
+  if (pathname === '/calendar' && flags && !flags.calendar) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  if (pathname.startsWith('/checkin/') && flags && !flags.checkin) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
 
   // Protect all /crew/* routes except /crew/login
   if (
@@ -99,6 +125,18 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Crew route blocks — run after the existing auth/role checks above;
+  // flags only matter for authenticated users who have already passed them.
+  if (pathname.startsWith('/crew/calendar') && flags && !flags.calendar) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+  if (pathname.startsWith('/crew/tools/checkin') && flags && !flags.checkin) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+  if (pathname.startsWith('/crew/communication') && flags && !flags.blast) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+
   return supabaseResponse
 }
 
@@ -106,5 +144,7 @@ export const config = {
   matcher: [
     '/crew/:path*',
     '/auth/callback',
+    '/calendar',
+    '/checkin/:path*',
   ],
 }

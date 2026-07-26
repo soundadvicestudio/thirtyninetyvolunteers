@@ -1,6 +1,7 @@
 import 'server-only'
 import { fromZonedTime } from 'date-fns-tz'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getFeatureFlags } from '@/lib/feature-flags'
 
 const CT = 'America/Chicago'
 
@@ -20,6 +21,9 @@ export async function syncShowDateToCalendar(
   supabase: SupabaseClient
 ): Promise<void> {
   try {
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.calendar) return
+
     const { data: showDateRaw } = await supabase
       .from('show_dates')
       .select(

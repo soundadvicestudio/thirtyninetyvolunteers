@@ -1,5 +1,7 @@
 import Image from 'next/image'
+import { redirect } from 'next/navigation'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveCheckInToken } from '@/lib/actions/checkin'
 import CheckInClient from '@/components/checkin/CheckInClient'
 
@@ -23,6 +25,10 @@ function PublicHeader() {
 
 export default async function CheckInPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
+
+  const flags = await getFeatureFlags(getAdminClient())
+  if (!flags.checkin) redirect('/')
+
   const resolution = await resolveCheckInToken(token)
 
   if (resolution.type === 'invalid') {

@@ -621,7 +621,7 @@ type SlotClaimEmailParams = {
   cancelUrl: string
 }
 
-type SendSlotClaimEmailParams = SlotClaimEmailParams & { claimToken: string }
+type SendSlotClaimEmailParams = SlotClaimEmailParams & { claimToken: string; calendarEnabled?: boolean }
 
 export async function sendSlotClaimEmail({
   to,
@@ -633,6 +633,7 @@ export async function sendSlotClaimEmail({
   volunteerInstructions,
   cancelUrl,
   claimToken,
+  calendarEnabled = true,
 }: SendSlotClaimEmailParams): Promise<void> {
   const body = `
     <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
@@ -641,7 +642,7 @@ export async function sendSlotClaimEmail({
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
     ${instructionsBlockHtml(volunteerInstructions)}
-    ${addToCalendarLinkHtml(claimToken)}
+    ${calendarEnabled ? addToCalendarLinkHtml(claimToken) : ''}
     ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
     ${cancelLinkHtml(cancelUrl)}
   `
@@ -715,7 +716,7 @@ export async function sendWaitlistConfirmationEmail({
   })
 }
 
-type SendWaitlistPromotionEmailParams = SlotClaimEmailParams & { claimToken: string }
+type SendWaitlistPromotionEmailParams = SlotClaimEmailParams & { claimToken: string; calendarEnabled?: boolean }
 
 export async function sendWaitlistPromotionEmail({
   to,
@@ -726,6 +727,7 @@ export async function sendWaitlistPromotionEmail({
   roleName,
   cancelUrl,
   claimToken,
+  calendarEnabled = true,
 }: SendWaitlistPromotionEmailParams): Promise<void> {
   const body = `
     <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
@@ -734,7 +736,7 @@ export async function sendWaitlistPromotionEmail({
       from the waitlist to a confirmed spot.
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${addToCalendarLinkHtml(claimToken)}
+    ${calendarEnabled ? addToCalendarLinkHtml(claimToken) : ''}
     ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
     ${cancelLinkHtml(cancelUrl)}
   `

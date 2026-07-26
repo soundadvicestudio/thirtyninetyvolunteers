@@ -1,6 +1,7 @@
 import { getAdminUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import BlastComposer from '@/components/crew/communication/BlastComposer'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
@@ -9,6 +10,9 @@ export default async function CommunicationPage() {
   if (!admin) redirect('/crew/login')
 
   const supabase = await getServerClient()
+
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.blast) redirect('/crew/dashboard')
 
   const { data: replyToSetting } = await supabase
     .from('app_settings')

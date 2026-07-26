@@ -1,6 +1,7 @@
 'use server'
 
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import type { CheckInRoster, CheckInRosterEntry, CheckInWalkIn } from '@/types/checkin'
 
 // Admin-session check-in actions for the /crew/tools/checkin dashboard
@@ -24,6 +25,11 @@ type RawWalkInRow = {
 export async function getCheckInRosterForDate(showDateId: string): Promise<CheckInRoster> {
   try {
     const supabase = await getServerClient()
+
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.checkin) {
+      return { claims: [], walkIns: [], checkedInCount: 0, totalRostered: 0 }
+    }
 
     const [{ data: claimRows }, { data: walkInRows }] = await Promise.all([
       supabase

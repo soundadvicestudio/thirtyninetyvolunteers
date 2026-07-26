@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import sanitizeHtml from 'sanitize-html'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser } from '@/lib/auth'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { sendBatchEmails } from '@/lib/email'
 
 type BlastPayload = {
@@ -171,6 +172,8 @@ export async function searchVolunteers(
   const term = query.trim()
   if (term.length < 2) return []
   const supabase = await getServerClient()
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.blast) return []
   const { data, error } = await supabase
     .from('volunteers')
     .select('id, full_name, email')
@@ -193,6 +196,12 @@ export async function previewBlast(payload: BlastPayload): Promise<BlastPreview>
     const admin = await getAdminUser()
     if (!admin || admin.role === 'viewer' || admin.role === 'production') {
       return { recipientCount: 0, sampleEmails: [], error: 'Insufficient permissions' }
+    }
+
+    const supabase = await getServerClient()
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.blast) {
+      return { recipientCount: 0, sampleEmails: [], error: 'Feature not enabled.' }
     }
 
     const recipients = await resolveBlastRecipients(payload)
@@ -227,6 +236,12 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
     const admin = await getAdminUser()
     if (!admin || admin.role === 'viewer' || admin.role === 'production') {
       return { success: false, recipientCount: 0, error: 'Insufficient permissions' }
+    }
+
+    const supabase = await getServerClient()
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.blast) {
+      return { success: false, recipientCount: 0, error: 'Feature not enabled.' }
     }
 
     const parsed = blastSchema.safeParse(payload)
@@ -281,7 +296,6 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
         ? `category:${parsed.data.categoryIds.join(',')}`
         : parsed.data.recipientMode
 
-    const supabase = await getServerClient()
     const { data: logRow, error: logError } = await supabase
       .from('email_log')
       .insert({

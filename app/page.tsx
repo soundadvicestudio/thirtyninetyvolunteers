@@ -1,4 +1,5 @@
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
@@ -6,6 +7,7 @@ import VolunteerForm from '@/components/VolunteerForm'
 
 export default async function HomePage() {
   const supabase = await getServerClient()
+  const flags = await getFeatureFlags(supabase)
 
   // Banner settings
   const [{ data: bannerActive }, { data: bannerText }] = await Promise.all([
@@ -117,12 +119,14 @@ export default async function HomePage() {
             >
               View Opportunities
             </Link>
-            <Link
-              href="/calendar"
-              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
-            >
-              View Calendar
-            </Link>
+            {flags.calendar && (
+              <Link
+                href="/calendar"
+                className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+              >
+                View Calendar
+              </Link>
+            )}
           </div>
 
           <h4 className="font-semibold text-navy text-lg text-center mb-4">

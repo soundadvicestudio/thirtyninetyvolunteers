@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
@@ -53,6 +54,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
     }
 
     const client = getAdminClient()
+    const flags = await getFeatureFlags(client)
 
     // A. Fetch role and show context
     const { data: role, error: roleError } = await client
@@ -245,6 +247,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
           volunteerInstructions: show.volunteer_instructions,
           cancelUrl,
           claimToken: inserted.claim_token,
+          calendarEnabled: flags.calendar,
         })
       }
 
@@ -290,6 +293,7 @@ export type CancelClaimResult = { success: boolean; error?: string }
 export async function cancelClaim(token: string, confirmedEmail: string): Promise<CancelClaimResult> {
   try {
     const client = getAdminClient()
+    const flags = await getFeatureFlags(client)
 
     // A. Look up claim by claim_token.
     const { data: claim, error: claimError } = await client
@@ -443,6 +447,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
                 volunteerInstructions: showRow.volunteer_instructions,
                 cancelUrl: promoCancelUrl,
                 claimToken: promotedClaim.claim_token,
+                calendarEnabled: flags.calendar,
               })
 
               const { data: logRow } = await client
