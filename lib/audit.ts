@@ -87,6 +87,15 @@ export type AuditAction =
   | 'consent_submission.reject'
   | 'consent_submission.file_received'
 
+  // Media Library
+  | 'media.upload'
+  | 'media.link_add'
+  | 'media.update'
+  | 'media.delete'
+  | 'media_folder.create'
+  | 'media_folder.update'
+  | 'media_folder.delete'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

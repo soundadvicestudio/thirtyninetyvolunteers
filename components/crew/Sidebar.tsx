@@ -14,6 +14,7 @@ import {
   QrCode,
   ScanLine,
   Mail,
+  FolderOpen,
   Settings,
   UserCog,
   HelpCircle,
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { label: 'QR Generator', href: '/crew/tools/qr-generator', icon: QrCode },
   { label: 'Check-In', href: '/crew/tools/checkin', icon: ScanLine },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
+  { label: 'Media', href: '/crew/media', icon: FolderOpen },
   { label: 'Settings', href: '/crew/settings', icon: Settings },
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
@@ -52,7 +54,9 @@ export default function Sidebar({
   const { isOpen, close } = useMobileSidebar()
   const isProduction = admin.role === 'production'
   const visibleNavItems = isProduction
-    ? NAV_ITEMS.filter((item) => item.href === '/crew/calendar' || item.href === '/crew/help')
+    ? NAV_ITEMS.filter(
+        (item) => item.href === '/crew/calendar' || item.href === '/crew/help' || item.href === '/crew/media'
+      )
     : NAV_ITEMS
 
   useEffect(() => {

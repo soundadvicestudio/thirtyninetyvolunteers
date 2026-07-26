@@ -75,12 +75,15 @@ export async function proxy(request: NextRequest) {
   // runs after all existing logic and only queries admin_users when a
   // signed-in user is headed somewhere under /crew that isn't already
   // /crew/calendar, so it never affects other roles' existing behavior.
+  // /crew/media exception added 15.3 (Media Library, all roles) — same
+  // pattern as the /crew/help exception added in HELP.2a.
   if (
     user &&
     pathname.startsWith('/crew') &&
     pathname !== '/crew/login' &&
     !pathname.startsWith('/crew/calendar') &&
-    pathname !== '/crew/help'
+    pathname !== '/crew/help' &&
+    pathname !== '/crew/media'
   ) {
     const { data: adminUser } = await supabase
       .from('admin_users')
