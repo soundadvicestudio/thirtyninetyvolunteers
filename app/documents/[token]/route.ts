@@ -7,6 +7,32 @@ import { getServerClient } from '@/lib/supabase/server'
 // All storage operations use the 'media' bucket (confirmed live, private,
 // Task A6).
 
+// YouTube/Vimeo embeds and direct audio links route through the player page
+// (/documents/view/[token], built 15.4) instead of redirecting straight to
+// external_url. Same logic duplicated (not imported) in
+// components/crew/media/MediaLibrary.tsx and app/documents/view/[token]/page.tsx
+// — one is a server route handler, one a client component, one a server page;
+// none can share a module across those boundaries cleanly for a function this small.
+function detectLinkType(url: string): 'youtube' | 'vimeo' | 'audio' | 'other' {
+  // YouTube: standard watch URL or youtu.be short URL
+  if (/youtube\.com\/watch|youtu\.be\//.test(url)) return 'youtube'
+  // Vimeo: standard vimeo.com/[numeric-id] URLs
+  if (/vimeo\.com\/\d+/.test(url)) return 'vimeo'
+  // Direct audio files by extension
+  if (/\.(mp3|wav|ogg|m4a|flac|aac)(\?|$)/i.test(url)) return 'audio'
+  return 'other'
+}
+
+function isViewableMimeType(mimeType: string | null): boolean {
+  if (!mimeType) return false
+  return (
+    mimeType.startsWith('video/') ||
+    mimeType.startsWith('audio/') ||
+    mimeType.startsWith('image/') ||
+    mimeType === 'application/pdf'
+  )
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = getAdminClient()
@@ -52,6 +78,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
       return Response.redirect(new URL('/not-found', siteUrl), 302)
     }
 
+    // Viewable file types route through the player page for an inline
+    // viewing experience instead of a raw signed-URL download.
+    if (isViewableMimeType(doc.mime_type)) {
+      return Response.redirect(new URL(`/documents/view/${token}`, siteUrl), 302)
+    }
+
+    // Non-viewable files: generate signed URL for download
     const { data: signedData, error } = await supabase.storage
       .from('media')
       .createSignedUrl(doc.storage_path, 3600)
@@ -67,8 +100,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     if (!doc.external_url) {
       return Response.redirect(new URL('/not-found', siteUrl), 302)
     }
-    // Phase 15.4 will add embed detection and player routing here.
-    // For now, redirect directly.
+
+    // Embeds and audio links route through the player page
+    const linkType = detectLinkType(doc.external_url)
+    if (linkType !== 'other') {
+      return Response.redirect(new URL(`/documents/view/${token}`, siteUrl), 302)
+    }
+
+    // Generic links: redirect directly
     return Response.redirect(doc.external_url, 302)
   }
 

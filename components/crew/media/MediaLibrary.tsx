@@ -70,6 +70,47 @@ function hasAccessGrantMatch(grants: AccessGrantRow[], role: AdminRole, adminId:
   )
 }
 
+// Duplicated from app/documents/[token]/route.ts (not imported — this is a
+// Client Component; the route handler is server-only). Same logic again in
+// app/documents/view/[token]/page.tsx.
+function detectLinkType(url: string): 'youtube' | 'vimeo' | 'audio' | 'other' {
+  if (/youtube\.com\/watch|youtu\.be\//.test(url)) return 'youtube'
+  if (/vimeo\.com\/\d+/.test(url)) return 'vimeo'
+  if (/\.(mp3|wav|ogg|m4a|flac|aac)(\?|$)/i.test(url)) return 'audio'
+  return 'other'
+}
+
+function isPlayable(doc: MediaDocument): boolean {
+  if (doc.entry_type === 'file') {
+    if (!doc.mime_type) return false
+    return (
+      doc.mime_type.startsWith('video/') ||
+      doc.mime_type.startsWith('audio/') ||
+      doc.mime_type.startsWith('image/') ||
+      doc.mime_type === 'application/pdf'
+    )
+  }
+  if (doc.entry_type === 'link' && doc.external_url) {
+    return detectLinkType(doc.external_url) !== 'other'
+  }
+  return false
+}
+
+function getPlayLabel(doc: MediaDocument): string {
+  if (doc.entry_type === 'file') {
+    if (doc.mime_type?.startsWith('video/')) return '▶ Play'
+    if (doc.mime_type?.startsWith('audio/')) return '♪ Play'
+    if (doc.mime_type?.startsWith('image/')) return 'Preview'
+    if (doc.mime_type === 'application/pdf') return 'View PDF'
+  }
+  if (doc.entry_type === 'link' && doc.external_url) {
+    const t = detectLinkType(doc.external_url)
+    if (t === 'youtube' || t === 'vimeo') return '▶ Play'
+    if (t === 'audio') return '♪ Play'
+  }
+  return 'View'
+}
+
 // XHR (not fetch) is required here specifically for upload progress events
 // (xhr.upload.onprogress) — fetch has no equivalent for upload progress.
 // Same pattern as components/consent/ConsentUploadForm.tsx.
@@ -962,6 +1003,11 @@ export function MediaLibrary({
             )}
           </div>
         ))}
+        {visibleFolders.length === 0 && (
+          <span className="text-sm text-mid-gray dark:text-dark-muted whitespace-nowrap">
+            No folders yet. Create a folder to organize your media.
+          </span>
+        )}
       </div>
 
       {editingFolderId &&
@@ -1036,6 +1082,16 @@ export function MediaLibrary({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {isPlayable(doc) && (
+                          <a
+                            href={`/documents/${doc.access_token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold px-2 py-1 rounded bg-navy text-white hover:opacity-80 transition-opacity whitespace-nowrap"
+                          >
+                            {getPlayLabel(doc)}
+                          </a>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleCopyLink(doc)}
