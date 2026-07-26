@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.7
-### Created: July 2026 | Last Updated: July 2026 — v3.7 (HELP.2e owner_admin sweep + DOC.41/42 logged)
+## 30BN_PROCESS_v1.md — v3.8
+### Created: July 2026 | Last Updated: July 2026 — v3.8 (Phase SETUP complete + ADMIN.31/31b, new patterns, R34)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -338,35 +338,42 @@ Actions or route handlers. The two-step flow:
 3. Client calls a confirmation server action with the `path`. The action records the
    storage path in the DB.
 
-All storage operations use the `media` bucket — never `documents` or any other bucket
-name. Storage paths within the `media` bucket are namespaced by purpose:
-`consent-forms/[volunteer_id]/[submission_id]/` for consent form submissions;
-`library/[folder_id]/[document_id]/` for media library files (built Phase 15.3);
-`attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments.
+Two sanctioned storage buckets exist in this project:
 
-Path namespacing enforces separation of concerns within the single private bucket.
-All reads go through the `/documents/[token]` redirect route, which generates signed
-download URLs for files and enforces access tier.
+`media` (private) — all platform media files. Signed URLs required for access. Namespaced paths:
+- `consent-forms/[volunteer_id]/[submission_id]/` — consent form uploads
+- `library/[folder_id]/[document_id]/` — media library files
+- `attachments/[type]/[record_id]/[document_id]/` — show/rehearsal/audition attachments
+
+`brand` (public) — brand asset files uploaded via the Setup Panel. Direct URL access without auth. Namespaced paths:
+- `brand/logo/[uuid].png` — org logo uploads
+- `brand/favicon/[uuid].png` — favicon uploads
+
+`media` reads go through the `/documents/[token]` redirect route (access tier + signed URL generation). `brand` files are served directly via public URL — never through the redirect route (they're intentionally public). Never use `brand` for any access-controlled content. Never use `media` for brand assets that must be publicly accessible on landing pages.
 
 **Never create a client inside a loop.** Create once per function, reuse.
 
-**Feature flag pattern via getFeatureFlags() (established Phase SETUP design — not yet built):**
-All feature flag values must be read through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object. Never read individual feature flag keys inline from `app_settings` — always use the shared helper. Key rules:
+**Feature flag pattern via getFeatureFlags() (built SETUP.1):**
+All feature flag values must be read through `getFeatureFlags()` in `lib/feature-flags.ts`. This helper fetches all `feature_*` keys from `app_settings` in a single query and returns a typed object (`FeatureFlags`). Never read individual feature flag keys inline from `app_settings` — always use the shared helper. Key rules:
 
-`getFeatureFlags()` uses `getServerClient()` — always called from Server Components or Server Actions with an active admin session. For public routes that need feature flags, use `getAdminClient()` (no session context on public routes).
+`getFeatureFlags()` uses `getServerClient()` — always called from Server Components or Server Actions with an active admin session. For public routes that need feature flags, use `getAdminClient()` (no session context on public routes). For `proxy.ts` (middleware context), use `getAdminClient()` — no cookie session in Edge runtime.
 
-Middleware checks flags for route-level blocking (e.g., if `feature_calendar = 'false'`, `/crew/calendar` redirects to dashboard).
+Middleware (`proxy.ts`) checks flags for route-level blocking. Flags are fetched conditionally — only when the request path matches one of the five guarded routes — not on every request. This avoids a DB call on every page load.
 
-Sidebar conditionally renders links based on flags passed as props from the layout.
+Sidebar conditionally renders links based on flags passed as props from the crew layout.
 
-The typed return object prevents key-name typos and handles missing keys consistently.
+The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys.
+Active feature flags (three only — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`. `feature_opportunities`, `feature_hours_milestones`, `feature_documents` were deleted in Migration 026 — those are core features.
 
-Enforced from SETUP.0 onward. See R32 in Brief §13 and §10 grep check.
+Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
 
-**`lib/actions/setup.ts` uses `getServerClient()` (established Phase SETUP design — not yet built):**
-Setup Panel server actions (`saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`) use `getServerClient()` — they are always called from authenticated Super Admin sessions. Same principle as calendar actions (CAL.5a) and blast actions (13.3a). Never use `getAdminClient()` in setup actions.
+Enforced from SETUP.1 onward. See R32 in Brief §13 and §10 grep check.
+
+**`lib/actions/setup.ts` dual-client pattern (built SETUP.2):**
+Setup Panel settings mutations (`saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`) use `getServerClient()` — always called from authenticated Super Admin sessions. Same principle as calendar actions (CAL.5a) and blast actions (13.3a).
+
+Single exception: `getSignedBrandUploadUrl()` uses `getAdminClient()` for the Supabase Storage `createSignedUploadUrl()` call. The Storage Admin API requires the service role key regardless of session context. This is the only server action file in the project that uses both clients. Do not "normalize" by switching everything to one client — the dual-client pattern here is intentional and correct.
 
 **Conditional zod schema factory pattern (established 14.1-FIX):**
 When a zod schema has field requirements that depend on a runtime flag (e.g.,
@@ -560,11 +567,12 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
-**XHR over fetch for upload progress (established 15.2; extended 15.3):**
-The project's default HTTP pattern is `fetch()`. There are two sanctioned deviations,
-both in file upload components with progress tracking:
+**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2):**
+The project's default HTTP pattern is `fetch()`. There are three sanctioned deviations,
+all in file upload components with progress tracking:
 - `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
 - `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
+- `components/crew/settings/BrandImageUploader.tsx` — brand asset upload / logo + favicon (SETUP.2)
 
 `fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
 is the only browser-native way to report real-time upload progress to the user. Any
@@ -803,15 +811,19 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 ```
 
 ```bash
-# Confirm feature flags read through getFeatureFlags() (R32 / Phase SETUP)
-# No inline app_settings reads for feature_* keys outside lib/feature-flags.ts
-grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_opportunities\|feature_hours_milestones\|feature_documents" \
+# Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
+# Only three active flags remain after Migration 026:
+#   feature_calendar, feature_checkin, feature_blast
+# (feature_opportunities, feature_hours_milestones, feature_documents deleted — core features)
+grep -rn "feature_calendar\|feature_checkin\|feature_blast" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
-  | grep -v "setup.ts"
-# Must return zero results after SETUP.0 ships.
-# Any hit = inline flag read that should use getFeatureFlags() instead.
+  | grep -v "setup.ts" \
+  | grep -v "SetupPanel.tsx"
+# SetupPanel.tsx uses these key strings as FormData keys in the
+# toggle UI — sanctioned. All other hits = R32 violation.
+# Must return zero results.
 ```
 
 ```bash
@@ -831,13 +843,18 @@ grep -rn "role === 'super_admin'\|role !== 'super_admin'" \
 ```
 
 ```bash
-# Confirm all storage uses 'media' bucket (not 'documents'
-# or any other name) — established 15.2
+# Confirm storage uses only the two sanctioned buckets (SETUP.2)
+# Sanctioned: 'media' (private, all platform files)
+#             'brand' (public, Setup Panel brand assets)
 grep -rn "\.storage\.from(['\"]documents['\"])" \
   app/ lib/ components/
-# Must return zero results. All Supabase Storage operations
-# in this project use .from('media'). The old 'documents'
-# bucket spec was superseded in Migration 025.
+# Must return zero results — 'documents' bucket was never built
+# (superseded in Migration 025). Any hit is a stale reference.
+
+grep -rn "\.storage\.from(" \
+  app/ lib/ components/
+# Review ALL hits. Only 'media' and 'brand' are sanctioned.
+# Any other bucket name is a bug.
 ```
 
 ```bash
@@ -852,14 +869,31 @@ grep -n "getServerClient" \
 ```
 
 ```bash
-# Confirm XHR usage is intentional (established 15.2/15.3)
+# Confirm XHR usage is intentional (established 15.2/15.3/SETUP.2)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Sanctioned XHR locations (upload progress tracking):
+# Sanctioned XHR locations (upload progress tracking — three total):
 #   - components/consent/ConsentUploadForm.tsx (15.2)
 #   - components/crew/media/MediaLibrary.tsx (15.3)
-# Both use XHR because fetch() does not support upload
-# progress events. Both must include the deviation comment.
-# Any hit outside these two files requires review.
+#   - components/crew/settings/BrandImageUploader.tsx (SETUP.2)
+# All three use XHR because fetch() does not support upload
+# progress events. All must include the deviation comment.
+# Any hit outside these three files requires review.
+```
+
+```bash
+# Confirm proxy.ts matcher includes all guarded routes (SETUP.1 F1)
+# When adding flag guards or role blocks to proxy.ts, the matcher
+# array must include the paths being guarded — guards on unmatched
+# paths never fire. Confirmed failure mode: flag guards for /calendar
+# and /checkin/* were added but the matcher didn't include public
+# routes, so guards were silently skipped. Fixed SETUP.1.
+grep -n "matcher" proxy.ts
+# Review output. Matcher must include:
+#   /crew/:path* (admin routes)
+#   /calendar (feature_calendar public guard)
+#   /checkin/:path* (feature_checkin public guard)
+# And any other paths that have active flag or role guards.
+# Any guarded path absent from the matcher = silent no-op.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -1058,6 +1092,42 @@ Run before every Vercel deployment:
   (route.ts, MediaLibrary.tsx, view/[token]/page.tsx)
   consistently — they are intentionally independent (§7
   DRY exception). (15.3/15.4 pattern)
+□ Any new non-core feature (defined in R34): confirm it
+  is built flag-ready at the time of initial build. Flag-
+  ready requires: (1) feature_X key seeded in migration;
+  (2) getFeatureFlags() updated in lib/feature-flags.ts;
+  (3) proxy.ts blocks the route when flag is 'false';
+  (4) sidebar link conditional on the flag; (5) public
+  routes return 404 when flag off; (6) server action
+  early-return when flag off. Do NOT retrofit flag-ready
+  after the fact — build it right the first time. (R34)
+□ Any new email send function added to lib/email.ts:
+  confirm resolveEmailSettings() is called to get the
+  dynamic from address and logo URL — NOT hardcoded
+  FROM_ADDRESS constant or static logo URL. Thread
+  emailSettings.from into the Resend send call and
+  emailSettings.logoUrl into the buildEmailHtml() call.
+  (SETUP.3/ADMIN.31 pattern)
+□ Any new payload builder function (batch email, cron
+  route): confirm it accepts logoUrl?: string parameter
+  and passes it to buildEmailHtml(). Confirm the call
+  site calls resolveEmailSettings() (or equivalent inline
+  app_settings fetch) before building the payload.
+  FROM_ADDRESS must not appear in any Resend send call
+  outside lib/email.ts resolveEmailSettings() fallback.
+  (ADMIN.31 pattern)
+□ Any saveFeatureFlags() call or equivalent: confirm
+  revalidatePath('/crew', 'layout') is included alongside
+  individual route revalidations. The layout second
+  argument propagates flag changes to the sidebar
+  immediately. Without it, sidebar links remain stale
+  until the next full navigation. (SETUP.4 pattern)
+□ Any prompt that adds flag guards or role blocks to
+  proxy.ts: audit the matcher array at the TOP of
+  proxy.ts FIRST. Confirm all paths being guarded are
+  included in the matcher. A guard on a path not in the
+  matcher silently never fires. Extend the matcher before
+  writing any guard logic. (SETUP.1 F1 / §14 rule)
 ```
 
 ---
@@ -1761,7 +1831,7 @@ Phase HELP — In-App Help System ✓ Complete
 
 Phase 14 — Check-In System          (pending)
 Phase 15 — Document Management      (pending)
-Phase SETUP — OpenCall OS Setup Panel
+Phase SETUP — OpenCall OS Setup Panel ✓ Complete
   SETUP.0 ✓ Migration 023 + role guard sweep. owner_admin
            role CHECK, is_editor() update, is_super_admin_
            or_owner_admin() helper + locations RLS fix, 17
@@ -1774,10 +1844,56 @@ Phase SETUP — OpenCall OS Setup Panel
            Record<AdminRole> maps (tsc --noEmit catch).
            29 files. Zero lint errors. Commit df8f907.
   30BN-DOC.36 ✓ Brief + Process Update v3.4 (this prompt)
-  SETUP.1–4 Setup Panel UI (pending): org identity, brand
-           colors, logo, email config, feature flags,
-           instance label. lib/actions/setup.ts. Settings
-           hub Platform Setup card (SA only LinkedCard).
+  SETUP.1 ✓ lib/feature-flags.ts (getFeatureFlags() +
+           FeatureFlags type). Migration 026 (delete 3
+           stale flag rows; insert favicon_url). proxy.ts
+           extended: 5 guarded routes (3 crew + 2 public),
+           matcher extended, conditional flag fetch.
+           Layout flag prop to Sidebar. Per-page guards
+           (6 pages). Per-action guards (16 functions).
+           syncShowDateToCalendar() no-op when calendar
+           off. Email calendar link threading. Call Board
+           .ics conditional. 22 files. Commit 2c2a388.
+  SETUP.2 ✓ Setup Panel UI Sections 1–4 (Org Identity,
+           Brand Colors, Logo, Favicon). lib/actions/
+           setup.ts (6 actions + getSignedBrandUploadUrl).
+           lib/utils/image-crop.ts (getCroppedImg).
+           BrandImageUploader.tsx (URL input OR crop
+           editor; free ratio for logo, 1:1 for favicon;
+           P-DC to brand public bucket). SetupPanel.tsx
+           (Sections 1–4). setup/page.tsx. generateMetadata
+           reads favicon_url + org_name. Settings hub
+           Platform Setup card. brand bucket created.
+           react-easy-crop installed. Commit b63fae0.
+  SETUP.3 ✓ Section 5 (Email Config). resolveEmailSettings()
+           internal helper in lib/email.ts (fetches
+           email_from_address, email_from_name, org_logo_url;
+           falls back to 30BN defaults). buildEmailHtml()
+           extended with logoUrl? param. All 16 direct-call
+           send functions swept. saveEmailConfig() added.
+           Commit 2cfb880.
+  SETUP.4 ✓ Sections 6–7 (Feature Flags + Instance Label).
+           saveFeatureFlags() + saveInstanceLabel() added.
+           Flag section: 3 toggle rows, optimistic state.
+           saveFeatureFlags() revalidates /crew layout +
+           public routes. Instance label in page header.
+           Phase SETUP complete. Commit 562f9d4.
+  30BN-ADMIN.31 ✓ Seven-item deferred sweep: payload
+           builder logoUrl threading (4 builders + 3 call
+           sites in shows.ts/cron routes), resolveOrgIdentity()
+           (lib/utils/org-identity.ts) + public pages org
+           identity (landing page heading/footer/copyright
+           dynamic), getAdminClient() fix on app/page.tsx,
+           phone search strip, reminder cron DST fix
+           (fromZonedTime pattern), volunteer.signup
+           AuditAction + logAction() in submitVolunteerForm(),
+           renumber_waitlist() RPC (Migration 027).
+           Commit a6ab89c.
+  30BN-ADMIN.31b ✓ Dead pre-Migration-025 documents query
+           deleted from app/page.tsx (consentDoc +
+           showConsentLink + JSX — 24 lines). Footer
+           copyright © {org_name} dynamic. Commit 6540df9.
+  30BN-DOC.43a ✓ Brief Update v3.9 (this session)
 Phase THEME — Dynamic CSS Brand System (pending)
   THEME.A Read-only audit of brand color class usages.
   THEME.1 Root layout CSS variable injection + public
@@ -1921,6 +2037,26 @@ Phase 15 — Document & Media System ✓ Complete
   30BN-DOC.42  ✓ Doc Update v3.8/v3.7/v13 — HELP.2e
                completion logging across Brief, Process,
                Deferred Verifications (this prompt).
+  30BN-SETUP.1 ✓ Feature flag infrastructure + Migration
+               026. Commit 2c2a388.
+  30BN-SETUP.2 ✓ Setup Panel UI Sections 1–4 + brand
+               bucket + BrandImageUploader + react-
+               easy-crop. Commit b63fae0.
+  30BN-SETUP.3 ✓ Email Configuration section +
+               resolveEmailSettings() + 16-function
+               sweep. Commit 2cfb880.
+  30BN-SETUP.4 ✓ Feature Flags + Instance Label
+               sections. Phase SETUP complete.
+               Commit 562f9d4.
+  30BN-ADMIN.31 ✓ Seven-item deferred sweep: payload
+               builders, org identity, getAdminClient
+               fix, phone search, reminder cron DST,
+               volunteer.signup audit, renumber_waitlist
+               RPC (Migration 027). Commit a6ab89c.
+  30BN-ADMIN.31b ✓ Dead documents query removed +
+               dynamic copyright. Commit 6540df9.
+  30BN-DOC.43a ✓ Brief Update v3.9.
+  30BN-DOC.43b ✓ Process Update v3.8 (this prompt).
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
@@ -1936,10 +2072,38 @@ Phase 18 — Additional Alpha Features ✓ Complete
     "Other Hours" section, simplified summary line)
   - Bulk email from show detail
     ✓ Built ADMIN.23 (BulkEmailSection.tsx)
-Phase 19 — Waitlist notification preferences
-  (volunteer opt-in for notification method)
+Phase 19 — Volunteer Communication Preferences
+  (pending, post-launch) — general volunteer
+  communication preference field (email/phone/either)
+  on volunteers table. Advisory only, no enforcement.
+  Original "waitlist notification only" scope subsumed.
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
+Phase 21 — Rehearsal Management System
+  (planned, post-launch) — /crew/rehearsals sidebar
+  tab; role-filtered visibility (Production sees only
+  assigned schedules); bulk rehearsal submission
+  (surfacing CalendarBulkRehearsalForm as primary
+  entry point); admin user assignment to schedules;
+  individual rehearsal call management; rehearsal
+  attendance tracking (Phase 14 check-in model).
+  feature_rehearsals flag (R34). Calendar integration
+  preserved (submissions → same pending queue flow).
+  Owner Admin approval authority in pending queue.
+  Pre-requisites: ADMIN.32 (Owner Admin permission
+  audit) + ADMIN.33 (Production role audit).
+Phase CAST — Cast Member Portal (named future phase,
+  post-Phase 21) — cast member entity (separate from
+  admin_users), cast frontend login, rehearsal schedule
+  view, materials distribution, cast check-in.
+ADMIN.32 — Owner Admin comprehensive permission audit
+  (planned pre-Phase 21): read-only sweep confirming all
+  operational contexts pass owner_admin correctly. Added
+  late in SETUP.0 — edge cases may exist.
+ADMIN.33 — Production role permission audit (planned
+  pre-Phase 21): confirm all Production access
+  restrictions are current and intentional as
+  the platform grows.
 
 30BN-DOC.31    ✓ Brief Update v3.2 (Phase 13
                  complete: §1 phase updated; §3
@@ -2342,6 +2506,37 @@ Path namespacing within the `media` bucket provides organizational separation:
 The single-bucket design simplifies access control (one set of signed URL policies)
 and avoids cross-bucket complexity in route handlers.
 
+### proxy.ts Matcher Must Include All Guarded Paths (established SETUP.1 F1)
+
+`proxy.ts` uses a `matcher` array (Next.js middleware config) to declare which request paths the middleware function runs on. If a path is not in the matcher, the middleware never executes for that path — including any flag guards or role blocks targeting it.
+
+Confirmed failure mode (SETUP.1): Feature flag guards were written for the public `/calendar` and `/checkin/:path*` routes, but the matcher only declared `/crew/:path*`. The guards were silently skipped for all public path requests until the matcher was extended.
+
+Rule: Before writing any new guard in `proxy.ts`, inspect the matcher array first. Confirm the paths being guarded are present. Extend the matcher if needed. The matcher extension must be the FIRST change — write guards only after confirming the matcher covers them.
+
+Applies to: feature flag route blocks, Owner Admin setup route block, Production role route restriction, and any future role or flag guard on any path.
+
+### lib/actions/setup.ts Dual-Client Pattern (established SETUP.2)
+
+`lib/actions/setup.ts` is the only server action file in the project that uses both `getServerClient()` and `getAdminClient()` within the same file. This is intentional:
+
+- All settings mutations (`saveOrgIdentity()`, `saveBrandColors()`, etc.) use `getServerClient()` — called from authenticated Super Admin sessions where session context and RLS should apply.
+- `getSignedBrandUploadUrl()` uses `getAdminClient()` for the `supabase.storage.from('brand').createSignedUploadUrl()` call — the Supabase Storage Admin API requires the service role key regardless of session context.
+
+Do not "normalize" this file to use a single client. The dual-client pattern is correct and documented. If a future storage-related setup action is added, use `getAdminClient()` for the storage call only — not for any `app_settings` reads/writes.
+
+Cross-reference §7 for the dual-client pattern detail.
+
+### resolveEmailSettings() and resolveOrgIdentity() Use getAdminClient() (established SETUP.3/ADMIN.31)
+
+Two new `app_settings` helper functions were introduced in SETUP.3 and ADMIN.31. Both use `getAdminClient()` internally — not `getServerClient()`:
+
+`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url` from `app_settings`. Returns `{ from: string, logoUrl: string }` with 30BN defaults when keys are absent. Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. `getAdminClient()` ensures it works correctly in all contexts.
+
+`resolveOrgIdentity()` (exported from `lib/utils/org-identity.ts`): Fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location` from `app_settings`. Returns `OrgIdentity` with 30BN defaults. Uses `getAdminClient()` because it is called from public Server Components (`app/page.tsx`) with no Supabase Auth session. Never import `resolveOrgIdentity()` from a Client Component.
+
+Pattern principle: `app_settings` helper functions should use `getAdminClient()` rather than `getServerClient()` when they need to work in both authenticated and unauthenticated contexts (public pages, cron routes, email functions). This avoids context-dependency errors.
+
 ### R33 — CSS Custom Properties After Phase THEME (cross-reference)
 
 Documented in Brief §13 R33. Referenced here for R-number continuity. Core rule: after Phase
@@ -2350,6 +2545,17 @@ var(--brand-accent) CSS custom properties — not Tailwind brand utility classes
 text-orange, etc.). The @theme block in globals.css is NOT modified (R7 still applies).
 Phase THEME.A audits all current usages before any replacements are made. Enforced from THEME.1
 onward.
+
+### R34 — All Non-Core Features Must Be Built Flag-Ready (cross-reference)
+
+Documented in Brief §13 R34. Referenced here for R-number continuity. Core rule: any new
+non-core feature must be built flag-ready at initial build time — not retrofitted. Flag-ready
+requires: (1) feature_X seeded in migration; (2) getFeatureFlags() updated; (3) proxy.ts
+route block; (4) sidebar conditional; (5) public route 404 when off; (6) action-level early
+return. Core features (volunteer management, show/slot management, user management, forms,
+media library, hours, opportunities, Call Board) are never flagged. Current flagged features:
+feature_calendar, feature_checkin, feature_blast. Enforced from SETUP.4 onward.
+See §11 checklist for the required verification item.
 
 ---
 
@@ -2375,3 +2581,4 @@ onward.
 *v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §2 header updated (Phase 14 complete, Phase 15.3 next); §7 five new patterns added: public-route action file invariant (getAdminClient() only + header comment + *-admin.ts split — 14.1/15.2), P-DC upload pattern (signedUploadUrl → client PUT → confirm action, XHR for progress, media bucket only — 15.2), lib/data/*.ts parameter-passing pattern (client as parameter, never construct internally — 15.1/CAL.3 principle), conditional zod schema factory pattern (runtime flag → factory function in both client and server — 14.1-FIX), storage bucket single-bucket note; §8 XHR-over-fetch convention added (ConsentUploadForm.tsx — only sanctioned XHR use, must include deviation comment); §10 three new grep checks: media bucket (no documents bucket), getServerClient in public-route files (must be zero), XHR usage (ConsentUploadForm only); §11 five new checklist items: P-DC pattern, public-route file invariant, storage bucket + path namespacing, attendance slot_claim_id explicit, zod factory for conditional schemas; §13 Phase 14 marked complete (14.1, 14.1-FIX, 14.2, 14.3); §13 Phase 15 added (15.1 ✓, 15.2 ✓, 15.2-AUDIT ✓, 15.2-FIX ✓, DOC.37a ✓, DOC.37b ✓, DOC.38 ✓, 15.3–15.4 pending); §14 post-build audit session pattern updated (compaction mid-build = mandatory AUDIT trigger, extended from CAL.5b-AUDIT with 15.2-AUDIT evidence); §14 three new rules: public-route action file invariant, storage bucket naming (single media bucket), escapeHtml() storage path exemption; DOC.38 logged)*
 *v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §2 header updated (Phase 15 complete, SETUP.1–4 + THEME pending); §7 P-DC upload path note updated (library/ forward reference removed); §7 detectLinkType() independence pattern added (three intentional implementations — route handler, Client Component, Server Component — recognized DRY exception, do not extract to shared utility); §8 XHR-over-fetch note extended (MediaLibrary.tsx added as second sanctioned XHR use alongside ConsentUploadForm.tsx — both for upload progress); §10 XHR grep check updated (two sanctioned files: ConsentUploadForm.tsx + MediaLibrary.tsx); §11 one new checklist item (detectLinkType() / isViewableMimeType() evaluation for new document entry types); §13 Phase 15 marked complete (15.3 ✓ with commit 26a4585, 15.4 ✓ with commit 63570b8); §13 prompt log updated (15.3 ✓, 15.4 ✓, ADMIN.30 ✓, DOC.37c ✓, DOC.39 ✓); §14 HelpTooltip Client Component note updated (26 → 32 total placements); §14 Storage Bucket Naming library/ note updated (forward reference removed); §14 two new rules: detectLinkType() independence DRY exception (15.3/15.4); sidebar nav exact-vs-prefix matching pattern (ADMIN.30 — special-case parent link, never modify isActivePath() globally); document header v3.6; DOC.39 logged)*
 *v3.7 (July 2026 — HELP.2e + DOC.41/42: §2 header updated (HELP.2e owner_admin sweep + DOC.41/42 logged); §13 prompt log updated (HELP.2e ✓ — 47 HelpContent.tsx ALL_SECTIONS entries updated, commit f4394bd; DOC.41 ✓ — Brief v3.7; DOC.42 ✓ — this prompt); document header v3.7; DOC.42 logged)*
+*v3.8 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §2 header updated (SETUP complete + ADMIN.31/31b); §7 feature flag pattern updated (built SETUP.1 — "not yet built" removed, three active flags noted, proxy.ts conditional fetch noted, missing key behavior noted); §7 setup.ts note updated (dual-client pattern documented — getServerClient() for mutations, getAdminClient() for getSignedBrandUploadUrl()); §7 P-DC storage bucket note updated (two sanctioned buckets: media + brand, path namespacing for each); §7 XHR sanctioned files updated (ConsentUploadForm + MediaLibrary + BrandImageUploader — count 2 → 3); §10 feature flags grep updated (flag list trimmed to 3 active flags, SetupPanel.tsx exclusion added); §10 XHR grep updated (3 sanctioned files); §10 storage grep updated (brand bucket note + second grep for all buckets); §10 new proxy.ts matcher grep check added (SETUP.1 F1); §11 six new checklist items: R34 flag-ready for new features, resolveEmailSettings() in new email functions, payload builder logoUrl param, revalidatePath layout cascade on flag saves, proxy.ts matcher audit before public guards; §13 Phase SETUP marked complete (SETUP.1–4 all ✓ with commit hashes); §13 ADMIN.31 + ADMIN.31b + DOC.43a logged; §13 Phase 19 description updated (expanded scope); §13 Phase 21 + Phase CAST + ADMIN.32/33 added; §14 four new rules: proxy.ts matcher must include all guarded paths (SETUP.1 F1), setup.ts dual-client pattern (SETUP.2), resolveEmailSettings/resolveOrgIdentity use getAdminClient() (SETUP.3/ADMIN.31), R34 cross-reference added; DOC.43b logged)*
