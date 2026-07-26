@@ -30,14 +30,6 @@ export default async function HomePage() {
       .maybeSingle(),
   ])
 
-  // Consent form document
-  const { data: consentDoc } = await supabase
-    .from('documents')
-    .select('file_path, name')
-    .eq('document_type', 'consent_under18')
-    .eq('is_active', true)
-    .maybeSingle()
-
   // Categories and hearing options
   const { data: categories } = await supabase
     .from('volunteer_categories')
@@ -67,8 +59,6 @@ export default async function HomePage() {
     ])
 
   const showBanner = bannerActive?.value === 'true' && !!bannerText?.value
-
-  const showConsentLink = !!consentDoc
 
   const showSchool = showSchoolSetting?.value !== 'false'
   const showAgeRange = showAgeRangeSetting?.value !== 'false'
@@ -149,19 +139,6 @@ export default async function HomePage() {
             showSchool={showSchool}
             showAgeRange={showAgeRange}
           />
-
-          {showConsentLink && (
-            <div className="mt-4 text-center">
-              <a
-                href={`/storage/v1/object/public/documents/${consentDoc!.file_path}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-steel text-sm underline"
-              >
-                Download Volunteer Consent Form (Under 18)
-              </a>
-            </div>
-          )}
         </div>
       </section>
 
@@ -189,7 +166,7 @@ export default async function HomePage() {
             </div>
           )}
           <div className="flex flex-col md:flex-row items-center justify-between gap-2">
-            <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+            <p className="text-mid-gray text-xs">© {org.org_name}</p>
             <Link
               href="/crew/login"
               className="text-mid-gray text-xs hover:text-navy transition-colors"
