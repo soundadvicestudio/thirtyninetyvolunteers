@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.6
-### Created: July 2026 | Last Updated: July 2026 — v3.6 (Phase 15 complete — SETUP.1–4 + THEME pending)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.7
+### Created: July 2026 | Last Updated: July 2026 — v3.7 (§7 Production row + §9 CAL.8 stale fixes + HELP.2e)
 
 ---
 
@@ -191,7 +191,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can manage Editor, Viewer, and Production accounts. Cannot create Super Admin or other Owner Admin accounts. Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. |
 | Editor | All `/crew/*` except Settings hub and user management | Yes | Yes | Full operational access. Cannot access Settings sub-pages (owner decision — Settings is Super Admin and Owner Admin only). Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
-| Production | `/crew/calendar` and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. |
+| Production | `/crew/calendar`, `/crew/media`, and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar, Media Library, and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library (`/crew/media`) access confirmed ADMIN.30. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
 | Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). |
 
@@ -1338,7 +1338,8 @@ has been sent for each show date.
 
 **Migration 019 status:** Applied — `019_show_dates_end_time.sql` (CAL.4a). Adds `end_time time without time zone` (nullable, no default) to `show_dates`. Null = end time not yet set; sync utility falls back to startTime + 3 hours when null.
 
-**Migration 020 status:** Applied — `020_locations_default_hours.sql` (ADMIN.25). Adds `default_hours numeric(4,2)` (nullable, no default) to `locations`. When set, takes precedence over the `app_settings` name→bucket fallback in `getLocationHoursBucket()`. Per-location UI planned for CAL.8.
+**Migration 020 status:** Applied — `020_locations_default_hours.sql` (ADMIN.25). Adds `default_hours numeric(4,2)` (nullable, no default) to `locations`. When set, takes precedence over the `app_settings` name→bucket fallback in `getLocationHoursBucket()`. Per-location default hours UI built in CAL.8
+(/crew/settings/locations).
 
 **Migration 021 status:** Applied — `021_admin_calendar_token.sql` (CAL.7). Adds `calendar_subscription_token uuid NOT NULL DEFAULT gen_random_uuid()` to `admin_users`. Creates UNIQUE index `idx_admin_users_calendar_token` on `admin_users(calendar_subscription_token)`. Gives every existing admin a unique subscription token on migration; new admins get one via the DEFAULT. Used by the iCalendar admin feed route (`/api/calendar/feed.ics`) to authenticate calendar app subscription requests without a session cookie.
 
@@ -1494,7 +1495,7 @@ created_at       timestamptz NOT NULL DEFAULT now()
 --   Owner Admin location-management writes.)
 -- Migration 016 (016_locations_show_type_migration.sql)
 -- Migration 020 adds default_hours (nullable).
--- Per-location default hours UI planned CAL.8.
+-- Per-location default hours UI built in CAL.8.
 ```
 
 ### shows
@@ -3477,8 +3478,16 @@ Phase 15 — Document & Media System (underway)
                ×2, MediaLibrary.tsx). Count: 26 → 32.
                7 files modified. Zero lint/tsc errors.
                Commit: 05f52e6.
-  30BN-DOC.37c ✓ Brief Update v3.6 (this prompt —
-               see v3.6 history entry)
+  30BN-DOC.37c ✓ Brief Update v3.6 (see v3.6 history
+               entry)
+  30BN-HELP.2e ✓ ALL_SECTIONS owner_admin sweep.
+               HelpContent.tsx: owner_admin added to
+               all non-Settings section and subsection
+               role arrays. 47 entries updated. Zero
+               lint/tsc errors.
+  30BN-DOC.41  ✓ Brief Update v3.7 (§7 Production row
+               + §9 two stale CAL.8 notes fixed +
+               HELP.2e logged — this prompt)
 
 **SETUP.1–4** (pending) — Setup Panel UI (six sections:
 Org Identity, Brand Colors, Logo, Email Config, Feature
@@ -3810,3 +3819,13 @@ Decision #7 resolved; DOC.21 logged)*
 *v3.4 (July 2026 — SETUP.0 complete: §1 current phase updated (SETUP.0 complete, Phase 14 next); §2 Calendar Editor terminology updated (Owner Admin added); §7 Owner Admin row updated (built SETUP.0); §8 User Management updated (calendar_editor toggle on OA rows, deactivate guard, role selector restriction, badge — SETUP.0); §9 Migration 023 marked applied (role CHECK, calendar_editor CHECK, is_editor() update, is_super_admin_or_owner_admin() added, 17 app_settings keys, locations RLS repointed); §9 locations table RLS note updated; §9 next migration updated to 024; §11 SETUP.0 marked complete with summary; §11 Phase SETUP header "(pending)" removed; §10/§11 prompt log updated (SETUP.0 ✓, DOC.36 ✓); §13 R32 note updated (not-yet-built language removed, SETUP.1 forward reference added); DOC.36 logged)*
 *v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §1 current phase updated (Phase 14 complete, Phase 15.3 next); §3 File Storage updated (media bucket, P-DC, all file types); §5 Storage Buckets updated (media private bucket replaces documents spec); §7 Public routes updated (/consent/*, /documents/*); §8 landing page consent form bullet replaced (auto-trigger on is_minor); §8 Public Check-In Page replaced (full 14.1–14.3 spec: per-date + whole-show tokens, walk-in signup, all result states, /consent/[token] doc); §8 Check-In Admin section replaced (live dashboard spec: 10s refresh, roster, walk-ins, accordion); §8 Show Management Dates tab updated (check-in QRs); §8 Volunteers tab updated (Self Check-In badge); §8 Document Management replaced (15.1–15.2 spec: document types manager, consent submissions queue, /documents/[token] redirect route, consent trigger, sendConsentFormRequestEmail, 15.3–15.4 pending); §8 Settings hub card Document Management updated (Beta badge removed); §9 show_dates check_in_token column added (Migration 024); §9 attendance slot_claim_id made nullable (Migration 024); §9 old documents table schema replaced with new 6-table schema (Migration 025): documents, document_types, consent_form_submissions (with full schema blocks) + media_folders, media_folder_access, document_access (deferred to DOC.37c); §9 Migration 024–025 status blocks added; §9 next migration updated to 026; §9 AuditAction types note added (14.1 + 15.1 + 15.2 additions); §11 header updated (Phase 15.3 next); §11 Phase 14 marked complete (14.1–14.3 + 14.1-FIX summaries); §11 Phase 15 section replaced (15.1–15.2 ✓ + 15.3–15.4 pending); §11 prompt log updated (14.1–14.3, 14.1-FIX, 15.1, 15.2, 15.2-AUDIT, 15.2-FIX, DOC.37a, DOC.37b added); §12 Open Decision #5 updated (infrastructure built, PDF content pending); DOC.37b logged)*
 *v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §1 current phase updated (Phase 15 complete); §3 File Storage updated (media library built + player page noted); §7 Production role updated (/crew/media + /crew/help access confirmed); §8 Light/Dark Mode corrected (prefers-color-scheme note removed — ADMIN.27 removed this branch); §8 Help System section replaced (13 sections, ~46 subsections, full anchor inventory, 32 HelpTooltip placements, Production visibility updated, ADMIN.30 Q1 gap noted); §8 Tooltip system description updated (count 16→32, Client Component note added); §8 /documents/[token] route stale "Phase 15.4 will add" line replaced with built description; §8 Document Management "Planned" block replaced with built Media Library + Player Page specs; §8 Key Files updated (view/[token]/page.tsx, MediaLibrary.tsx, checkin/page.tsx added, route.ts updated); §9 media_folders + media_folder_access + document_access schema blocks added (deferred from DOC.37b); §11 header updated (Phase 15 complete); §11 Phase 15 15.3 and 15.4 entries marked complete with build summaries; §11 prompt log updated (15.3 ✓, 15.4 ✓, DOC.38 ✓, ADMIN.30 ✓, DOC.37c ✓); document header v3.6; DOC.37c logged)*
+*v3.7 (July 2026 — Targeted fixes: §7 Production row
+updated (Media Library access confirmed ADMIN.30 — added
+/crew/media to Production sidebar note); §9 two stale
+"planned CAL.8" notes corrected to "built in CAL.8" in
+locations table schema block and Migration 020 status
+paragraph (DOC.28b F3 carry-forward); §11 prompt log
+updated (HELP.2e + DOC.41); HELP.2e: HelpContent.tsx
+ALL_SECTIONS sweep — owner_admin added to all non-Settings
+section and subsection role arrays (47 entries); DOC.41
+logged)*
