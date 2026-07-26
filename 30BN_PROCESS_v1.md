@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.5
-### Created: July 2026 | Last Updated: July 2026 — v3.5 (Phase 14 complete + Phase 15.1–15.2 complete — Phase 15.3 next)
+## 30BN_PROCESS_v1.md — v3.6
+### Created: July 2026 | Last Updated: July 2026 — v3.6 (Phase 15 complete + ADMIN.30 — SETUP.1–4 + THEME pending)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -341,7 +341,7 @@ Actions or route handlers. The two-step flow:
 All storage operations use the `media` bucket — never `documents` or any other bucket
 name. Storage paths within the `media` bucket are namespaced by purpose:
 `consent-forms/[volunteer_id]/[submission_id]/` for consent form submissions;
-`library/[folder_id]/[document_id]/` for media library files (Phase 15.3);
+`library/[folder_id]/[document_id]/` for media library files (built Phase 15.3);
 `attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments.
 
 Path namespacing enforces separation of concerns within the single private bucket.
@@ -413,6 +413,30 @@ When a text CHECK constraint column is replaced by a FK to a new lookup table (e
 7. Drop the old text column.
 The RAISE EXCEPTION safety guard in step 4 is mandatory — it prevents silent data loss if any
 rows had an unmapped value. Confirmed in CAL.1 Migration 016.
+
+**`detectLinkType()` independence — recognized DRY exception (established 15.3/15.4):**
+Three independent implementations of `detectLinkType()` (and related helpers
+`isViewableMimeType()`, `isPlayable()`, `getPlayLabel()`) exist across the codebase:
+- `app/documents/[token]/route.ts` — server-side route handler
+- `components/crew/media/MediaLibrary.tsx` — `'use client'` Client Component
+- `app/documents/view/[token]/page.tsx` — Server Component
+
+This triplication is intentional and correct. The server/client boundary prevents
+sharing a single implementation:
+- A `'use client'` file cannot import from a server-only module
+- A server module cannot be imported into a Client Component import chain without
+  a `*-shared.ts` extraction — and these helpers have no server-only deps, but
+  extracting them to a shared file adds complexity for three functions that are
+  short and stable
+- The route handler, the Client Component, and the Server Component all need
+  slightly different behavior (the route handler redirects; the Client Component
+  determines button labels; the Server Component renders the player)
+
+Do not attempt to extract `detectLinkType()` to a shared utility. If the link
+classification logic changes in the future, update all three locations. This is a
+documented exception to the project's DRY principle — similar in rationale to the
+`lib/milestones-shared.ts` split (§7), but applied differently because the three
+contexts have divergent outputs.
 
 **`lib/data/*.ts` parameter-passing pattern (confirmed 15.1, from showReport.ts):**
 Data utility functions in `lib/data/` receive the supabase client as a parameter.
@@ -536,13 +560,15 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
-**XHR over fetch for upload progress (established 15.2):**
-The project's default HTTP pattern is `fetch()`. There is one sanctioned deviation:
-`XMLHttpRequest` is used in `components/consent/ConsentUploadForm.tsx` for file uploads
-because `fetch()` does not support upload progress events in any browser.
-`XHR.upload.onprogress` is the only browser-native way to report real-time upload
-progress to the user. Any component using XHR must include a comment explaining this
-deliberate deviation:
+**XHR over fetch for upload progress (established 15.2; extended 15.3):**
+The project's default HTTP pattern is `fetch()`. There are two sanctioned deviations,
+both in file upload components with progress tracking:
+- `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
+- `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
+
+`fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
+is the only browser-native way to report real-time upload progress to the user. Any
+component using XHR must include a comment explaining this deliberate deviation:
 
 ```typescript
 // XHR used instead of fetch() — fetch() does not support upload progress events.
@@ -826,12 +852,14 @@ grep -n "getServerClient" \
 ```
 
 ```bash
-# Confirm XHR usage is intentional (established 15.2)
+# Confirm XHR usage is intentional (established 15.2/15.3)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Any hit must be in ConsentUploadForm.tsx only (upload
-# progress tracking — the one sanctioned XHR use in this
-# project). Any other hit requires review and must include
-# a comment explaining the deliberate deviation from fetch.
+# Sanctioned XHR locations (upload progress tracking):
+#   - components/consent/ConsentUploadForm.tsx (15.2)
+#   - components/crew/media/MediaLibrary.tsx (15.3)
+# Both use XHR because fetch() does not support upload
+# progress events. Both must include the deviation comment.
+# Any hit outside these two files requires review.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -1020,6 +1048,16 @@ Run before every Vercel deployment:
   client zodResolver and the server action safeParse.
   A static schema that ignores the flag is a server-
   side validation gap. (14.1-FIX pattern)
+□ Any new document entry type or external URL type added
+  to the media library or document system: evaluate
+  against detectLinkType() in app/documents/[token]/
+  route.ts and isViewableMimeType() to determine
+  whether it should route to the /documents/view/[token]
+  player page or redirect directly to the file/URL.
+  Update all three detectLinkType() implementations
+  (route.ts, MediaLibrary.tsx, view/[token]/page.tsx)
+  consistently — they are intentionally independent (§7
+  DRY exception). (15.3/15.4 pattern)
 ```
 
 ---
@@ -1777,7 +1815,7 @@ Phase 14 — Check-In System ✓ Complete
                grouped by role, walk-in section, accordion
                for other shows, "Last updated Xs ago".
 
-Phase 15 — Document & Media System (underway)
+Phase 15 — Document & Media System ✓ Complete
   30BN-15.1  ✓ Migration 025 (drop old documents table;
                create document_types, media_folders,
                media_folder_access, documents, document_
@@ -1822,9 +1860,54 @@ Phase 15 — Document & Media System (underway)
                §7, §8, §12)
   30BN-DOC.37b ✓ Brief Update v3.5 Part B (§9, §11,
                version history)
-  30BN-DOC.38  ✓ Process Update v3.5 (this prompt)
-  30BN-15.3  (pending) — Master media library /crew/media
-  30BN-15.4  (pending) — Media players + embed detection
+  30BN-DOC.38  ✓ Process Update v3.5 (Phases 14 +
+               15.1–15.2 lessons learned)
+  30BN-15.3  ✓ Master media library at /crew/media (all
+               roles including Production).
+               components/crew/media/MediaLibrary.tsx
+               (Client Component): folder browser (left
+               panel), document table (right panel), Copy
+               Link, QR download, Play/View button per
+               row, access tier badges. detectLinkType(),
+               isPlayable(), getPlayLabel() helpers. P-DC
+               upload via XHR (same pattern as
+               ConsentUploadForm.tsx). Link entry form
+               (URL + title). Commit: 26a4585.
+  30BN-15.4  ✓ Media players + embed detection.
+               app/documents/view/[token]/page.tsx (new
+               public Server Component): access tier
+               enforcement, signed URL for files, YouTube/
+               Vimeo iframe embed, native <video>/<audio>
+               players, <img> for images, PDF inline
+               viewer, robots noindex.
+               /documents/[token]/route.ts updated:
+               detectLinkType() + isViewableMimeType()
+               helpers; YouTube/Vimeo/audio links and
+               viewable-mime-type files now redirect to
+               player page. MediaLibrary.tsx updated:
+               Play/View button, "no folders" empty state.
+               Commit: 63570b8.
+  30BN-ADMIN.30 ✓ Sidebar dual-highlight fix (Shows link
+               special-case excludes /crew/shows/
+               opportunities subtree; isActivePath()
+               untouched globally). HelpContent.tsx: 2
+               new h2 sections (Check-In System + Media
+               Library); 2 new Settings subsections
+               (document-types, consent-forms);
+               ALL_SECTIONS 11 → 13. 6 new HelpTooltip
+               placements (checkin/page.tsx →
+               check-in-dashboard; ShowDetail.tsx Dates
+               tab → check-in-qr; DocumentTypesManager →
+               document-types; ConsentSubmissionsQueue ×2
+               → consent-forms; MediaLibrary.tsx →
+               media-library-access). Count: 26 → 32.
+               7 files modified. Zero lint/tsc errors.
+               Commit: 05f52e6.
+  30BN-DOC.37c ✓ Brief Update v3.6 (Phase 15 complete +
+               ADMIN.30: §1, §3, §7, §8 Help System/Media
+               Library/Document Management, §9 schema
+               blocks, §11, version history)
+  30BN-DOC.39  ✓ Process Update v3.6 (this prompt)
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
@@ -2136,9 +2219,36 @@ React's Server Component boundary rules only prohibit passing server-side data (
 DB results) from Server to Client, not importing Server Components into Client Component files
 when those Server Components are pure render functions with no server-only dependencies.
 Confirmed in ADMIN.29: 10 of the existing 26 HelpTooltip placements are in Client Components
-(from 12.2c onward), all functioning correctly. There is no requirement to restrict HelpTooltip
-placements to Server Component files only. When a UI heading lives inside a Client Component,
-place the tooltip there directly.
+(from 12.2c onward), all functioning correctly. ADMIN.30 added 6 more placements (total now
+32), several in Client Components, all functioning correctly. There is no requirement to
+restrict HelpTooltip placements to Server Component files only. When a UI heading lives
+inside a Client Component, place the tooltip there directly.
+
+### detectLinkType() Independence — Recognized DRY Exception (established 15.3/15.4)
+
+`detectLinkType()` and related helpers (`isViewableMimeType()`, `isPlayable()`,
+`getPlayLabel()`) exist as independent implementations in three files:
+
+- `app/documents/[token]/route.ts` — route handler (server-side)
+- `components/crew/media/MediaLibrary.tsx` — `'use client'` Client Component
+- `app/documents/view/[token]/page.tsx` — Server Component
+
+This triplication is intentional. The server/client boundary makes a shared
+implementation impractical:
+
+- The route handler needs to determine redirect target (player page vs. direct URL)
+- The Client Component needs to determine Play/View button eligibility and label
+- The Server Component needs to determine which player element to render
+
+Extracting to a shared utility would require either a server-only or client-safe
+constraint, but the helpers are used in all three contexts. The functions are short,
+stable, and their logic is consistent — they just produce different outputs for each
+context.
+
+Do not attempt to DRY these implementations. If link classification logic changes,
+update all three files. This is a documented exception to the DRY principle — similar
+in structure to the `lib/milestones-shared.ts` split (§7), but the correct answer here
+is independent implementations rather than extraction.
 
 ### Public-Route Action File Invariant (established 14.1 / 15.2)
 
@@ -2171,6 +2281,36 @@ owner_admin through alongside super_admin. Only the Setup Panel (/crew/settings/
 owner_admin / super_admin account creation, and calendar_editor on Super Admin accounts
 remain Super Admin exclusive. See §10 grep check and §11 checklist item.
 
+### Sidebar Nav Exact-vs-Prefix Matching (established ADMIN.30)
+
+`isActivePath(pathname, href)` uses prefix matching: it returns true when `pathname`
+starts with `href`. This is correct for most nav links — e.g., `/crew/shows` should
+highlight whenever the user is anywhere in the shows subtree (`/crew/shows/[id]`, etc.).
+
+The dual-highlight bug: When two nav items share a prefix (e.g., `/crew/shows` and
+`/crew/shows/opportunities`), prefix matching falsely activates the parent link when the
+child route is active. The fix is to special-case the parent link in the `.map()`
+render loop, not the child.
+
+Pattern (established ADMIN.30):
+
+```typescript
+const active = href === '/crew/shows'
+  ? isActivePath(pathname, href) &&
+    !isActivePath(pathname, '/crew/shows/opportunities')
+  : isActivePath(pathname, href)
+```
+
+Rules:
+- Never modify `isActivePath()` globally — it is used correctly for all other links.
+- Never use pure exact match on a parent link that has legitimate sub-routes.
+- The special case belongs in the render-time active-state computation, not in the helper.
+- When Opportunities has its own sub-routes (`/new`, `/[id]`, `/[id]/edit`), the child
+  still uses prefix matching — only the parent needs the exclusion.
+
+Any future nav link that would create a similar parent/child prefix collision must
+follow the same pattern: special-case the parent, never touch the helper.
+
 ### Storage Bucket Naming — Single 'media' Bucket (established 15.2)
 
 All Supabase Storage operations in this project use a single private bucket named
@@ -2183,7 +2323,7 @@ a bug.
 
 Path namespacing within the `media` bucket provides organizational separation:
 - `consent-forms/` — under-18 consent form uploads
-- `library/` — media library files (Phase 15.3)
+- `library/` — media library files (built Phase 15.3)
 - `attachments/` — show/rehearsal/audition attachments (future phases)
 
 The single-bucket design simplifies access control (one set of signed URL policies)
@@ -2220,3 +2360,4 @@ onward.
 *v3.3 (July 2026 — HELP phase + OpenCall OS additions: §2 header updated (HELP phase + OpenCall OS, Phase 14 next); §7 Owner Admin role guard pattern added (SETUP.0 design — checks super_admin || owner_admin for operational features, super_admin-only for Setup Panel + account escalation); §7 getFeatureFlags() pattern added (Phase SETUP design — all feature flag reads through lib/feature-flags.ts); §7 lib/actions/setup.ts getServerClient() note added (Phase SETUP design); §10 three new grep checks added (proxy.ts/middleware.ts, feature flags, owner_admin role guards); §11 two new checklist items (owner_admin role guards, feature flags via getFeatureFlags()); §13 13.4c marked complete (npm sweep: next 16.2.11, 6 remaining blocked upstream); §13 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29 all complete); §13 Phase SETUP section added (SETUP.0–4 pending); §13 Phase THEME section added (THEME.A/1–3 pending); §13 prompt log updated (DOC.33–34, HELP.1–HELP.2d, ADMIN.27–29); §14 ADMIN.28 proxy.ts rename note added; §14 ADMIN.27 light-mode-always note added; §14 HelpTooltip Client Component clarification added; §14 R32 cross-reference added (owner_admin role guard); §14 R33 cross-reference added (CSS custom properties post-THEME); DOC.35 logged)*
 *v3.4 (July 2026 — SETUP.0 complete: §2 header updated (SETUP.0 complete, Phase 14 next); §7 Owner Admin role guard pattern note updated (not-yet-built language removed); §10 owner_admin grep check comment updated (post-sweep standing verification); §13 Phase SETUP updated (SETUP.0 ✓ with full summary, "(pending)" removed from header, DOC.36 added to prompt log); SETUP.1–4 still pending; DOC.36 logged)*
 *v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §2 header updated (Phase 14 complete, Phase 15.3 next); §7 five new patterns added: public-route action file invariant (getAdminClient() only + header comment + *-admin.ts split — 14.1/15.2), P-DC upload pattern (signedUploadUrl → client PUT → confirm action, XHR for progress, media bucket only — 15.2), lib/data/*.ts parameter-passing pattern (client as parameter, never construct internally — 15.1/CAL.3 principle), conditional zod schema factory pattern (runtime flag → factory function in both client and server — 14.1-FIX), storage bucket single-bucket note; §8 XHR-over-fetch convention added (ConsentUploadForm.tsx — only sanctioned XHR use, must include deviation comment); §10 three new grep checks: media bucket (no documents bucket), getServerClient in public-route files (must be zero), XHR usage (ConsentUploadForm only); §11 five new checklist items: P-DC pattern, public-route file invariant, storage bucket + path namespacing, attendance slot_claim_id explicit, zod factory for conditional schemas; §13 Phase 14 marked complete (14.1, 14.1-FIX, 14.2, 14.3); §13 Phase 15 added (15.1 ✓, 15.2 ✓, 15.2-AUDIT ✓, 15.2-FIX ✓, DOC.37a ✓, DOC.37b ✓, DOC.38 ✓, 15.3–15.4 pending); §14 post-build audit session pattern updated (compaction mid-build = mandatory AUDIT trigger, extended from CAL.5b-AUDIT with 15.2-AUDIT evidence); §14 three new rules: public-route action file invariant, storage bucket naming (single media bucket), escapeHtml() storage path exemption; DOC.38 logged)*
+*v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §2 header updated (Phase 15 complete, SETUP.1–4 + THEME pending); §7 P-DC upload path note updated (library/ forward reference removed); §7 detectLinkType() independence pattern added (three intentional implementations — route handler, Client Component, Server Component — recognized DRY exception, do not extract to shared utility); §8 XHR-over-fetch note extended (MediaLibrary.tsx added as second sanctioned XHR use alongside ConsentUploadForm.tsx — both for upload progress); §10 XHR grep check updated (two sanctioned files: ConsentUploadForm.tsx + MediaLibrary.tsx); §11 one new checklist item (detectLinkType() / isViewableMimeType() evaluation for new document entry types); §13 Phase 15 marked complete (15.3 ✓ with commit 26a4585, 15.4 ✓ with commit 63570b8); §13 prompt log updated (15.3 ✓, 15.4 ✓, ADMIN.30 ✓, DOC.37c ✓, DOC.39 ✓); §14 HelpTooltip Client Component note updated (26 → 32 total placements); §14 Storage Bucket Naming library/ note updated (forward reference removed); §14 two new rules: detectLinkType() independence DRY exception (15.3/15.4); sidebar nav exact-vs-prefix matching pattern (ADMIN.30 — special-case parent link, never modify isActivePath() globally); document header v3.6; DOC.39 logged)*
