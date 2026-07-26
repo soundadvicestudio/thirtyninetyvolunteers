@@ -3,6 +3,8 @@ import { getAdminClient } from '@/lib/supabase/admin'
 
 export type AuditAction =
   // Volunteers
+  // Public self-registration (submitVolunteerForm)
+  | 'volunteer.signup'
   | 'volunteer.update'
   | 'volunteer.archive'
   | 'volunteer.unarchive'

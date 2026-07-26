@@ -368,40 +368,28 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
             .update({ status: 'claimed', waitlist_position: null })
             .eq('id', nextWaitlisted.id)
 
-          const { data: remaining } = await client
-            .from('slot_claims')
-            .select('id, waitlist_position')
-            .eq('volunteer_role_id', claim.volunteer_role_id)
-            .eq('status', 'waitlisted')
-            .neq('id', nextWaitlisted.id)
-
-          for (const row of remaining ?? []) {
-            if (row.waitlist_position != null) {
-              await client
-                .from('slot_claims')
-                .update({ waitlist_position: row.waitlist_position - 1 })
-                .eq('id', row.id)
-            }
+          const { error: renumberError } = await client.rpc('renumber_waitlist', {
+            p_role_id: claim.volunteer_role_id,
+            p_cancelled_position: nextWaitlisted.waitlist_position ?? 0,
+          })
+          if (renumberError) {
+            console.error('Waitlist renumber failed:', renumberError)
+            // Non-fatal — cancellation succeeded, renumbering
+            // failure is logged but does not block the response
           }
 
           promotedClaim = nextWaitlisted
         }
       } else if (wasWaitlistPosition != null) {
         // Cancelling a waitlisted entry — renumber only those behind it.
-        const { data: remaining } = await client
-          .from('slot_claims')
-          .select('id, waitlist_position')
-          .eq('volunteer_role_id', claim.volunteer_role_id)
-          .eq('status', 'waitlisted')
-          .gt('waitlist_position', wasWaitlistPosition)
-
-        for (const row of remaining ?? []) {
-          if (row.waitlist_position != null) {
-            await client
-              .from('slot_claims')
-              .update({ waitlist_position: row.waitlist_position - 1 })
-              .eq('id', row.id)
-          }
+        const { error: renumberError } = await client.rpc('renumber_waitlist', {
+          p_role_id: claim.volunteer_role_id,
+          p_cancelled_position: wasWaitlistPosition,
+        })
+        if (renumberError) {
+          console.error('Waitlist renumber failed:', renumberError)
+          // Non-fatal — cancellation succeeded, renumbering
+          // failure is logged but does not block the response
         }
       }
 

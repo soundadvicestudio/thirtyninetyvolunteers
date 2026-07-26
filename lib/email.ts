@@ -866,6 +866,7 @@ type ReminderEmailParams = {
   showTime: string
   roleName: string
   volunteerInstructions: string | null
+  logoUrl?: string
 }
 
 // Exported so the 24hr reminder cron (app/api/cron/reminders) can build
@@ -879,6 +880,7 @@ export function buildReminderEmailPayload({
   showTime,
   roleName,
   volunteerInstructions,
+  logoUrl,
 }: ReminderEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const body = `
     <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
@@ -898,6 +900,7 @@ export function buildReminderEmailPayload({
     subject,
     preheader: 'Your volunteer call is tomorrow!',
     body,
+    logoUrl,
   })
 
   return {
@@ -915,6 +918,7 @@ type ThankYouEmailParams = {
   showName: string
   showDate: string
   siteUrl: string
+  logoUrl?: string
 }
 
 // Exported so the post-show thank-you cron (app/api/cron/thankyou) can build
@@ -926,6 +930,7 @@ export function buildThankYouEmailPayload({
   showName,
   showDate,
   siteUrl,
+  logoUrl,
 }: ThankYouEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const body = `
     <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Thank you, ${escapeHtml(recipientName)}!</h1>
@@ -947,6 +952,7 @@ export function buildThankYouEmailPayload({
     subject,
     preheader: 'Thank you for volunteering with us!',
     body,
+    logoUrl,
   })
 
   return {
@@ -979,6 +985,7 @@ type CategoryMatchNotificationEmailParams = {
   volunteerName: string
   showName: string
   matchingRoles: string[]
+  logoUrl?: string
 }
 
 // Exported so sendShowNotifications() (lib/actions/shows.ts) can build
@@ -991,6 +998,7 @@ export function buildCategoryMatchNotificationPayload({
   volunteerName,
   showName,
   matchingRoles,
+  logoUrl,
 }: CategoryMatchNotificationEmailParams): {
   from: string
   replyTo: string
@@ -1019,6 +1027,7 @@ export function buildCategoryMatchNotificationPayload({
     subject,
     preheader: 'A volunteer opportunity matching your interests is now open.',
     body,
+    logoUrl,
   })
 
   return {
@@ -1047,6 +1056,7 @@ type ShowBulkEmailParams = {
   replyTo: string
   showName: string
   siteUrl: string
+  logoUrl?: string
 }
 
 // Exported so sendShowBulkEmail() (lib/actions/shows.ts) can build payload
@@ -1063,6 +1073,7 @@ export function buildShowBulkEmailPayload({
   replyTo,
   showName,
   siteUrl,
+  logoUrl,
 }: ShowBulkEmailParams): {
   from: string
   replyTo: string
@@ -1092,6 +1103,7 @@ export function buildShowBulkEmailPayload({
     preheader,
     body: bodyHtml,
     footerNote: 'This message was sent to you by the production team at 30 By Ninety Theatre.',
+    logoUrl,
   })
 
   return {

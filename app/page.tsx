@@ -1,13 +1,20 @@
-import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
 import VolunteerForm from '@/components/VolunteerForm'
 
 export default async function HomePage() {
-  const supabase = await getServerClient()
+  // Public page — no Supabase Auth session exists, so the admin client is
+  // required here (never the cookie-based session client). One client
+  // instance for every DB read on this page; resolveOrgIdentity() is the
+  // one exception — it's a self-contained helper that constructs its own
+  // admin client internally.
+  const supabase = getAdminClient()
   const flags = await getFeatureFlags(supabase)
+  const org = await resolveOrgIdentity()
 
   // Banner settings
   const [{ data: bannerActive }, { data: bannerText }] = await Promise.all([
@@ -101,10 +108,13 @@ export default async function HomePage() {
       {/* Sign-up section */}
       <section className="w-full bg-white py-10 px-6 flex-1">
         <div className="max-w-2xl mx-auto">
-          <h3 className="text-navy font-bold text-xl mb-6 text-center">
-            Join the <span className="font-extrabold">30 By Ninety Theatre</span> Volunteer
+          <h3 className={`text-navy font-bold text-xl text-center ${org.org_tagline ? 'mb-2' : 'mb-6'}`}>
+            Join the <span className="font-extrabold">{org.org_name}</span> Volunteer
             Community
           </h3>
+          {org.org_tagline && (
+            <p className="text-mid-gray text-sm text-center mb-6">{org.org_tagline}</p>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Link
@@ -157,14 +167,36 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
-        <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
-          <Link
-            href="/crew/login"
-            className="text-mid-gray text-xs hover:text-navy transition-colors"
-          >
-            Production Crew
-          </Link>
+        <div className="max-w-2xl mx-auto">
+          {(org.org_contact_email || org.org_website_url || org.org_location) && (
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-mid-gray text-xs mb-2">
+              {org.org_contact_email && (
+                <a href={`mailto:${org.org_contact_email}`} className="hover:text-navy transition-colors">
+                  {org.org_contact_email}
+                </a>
+              )}
+              {org.org_website_url && (
+                <a
+                  href={org.org_website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-navy transition-colors"
+                >
+                  {org.org_website_url}
+                </a>
+              )}
+              {org.org_location && <span>{org.org_location}</span>}
+            </div>
+          )}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2">
+            <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+            <Link
+              href="/crew/login"
+              className="text-mid-gray text-xs hover:text-navy transition-colors"
+            >
+              Production Crew
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

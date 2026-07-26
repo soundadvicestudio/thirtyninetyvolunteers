@@ -637,15 +637,32 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
       return { sent: 0 }
     }
 
-    // C. Build payloads — one per volunteer, with their own matching roles.
-    const payloads = targets.map((t) =>
-      buildCategoryMatchNotificationPayload({
+    // C. Dynamic email settings, then build payloads — one per volunteer,
+    // with their own matching roles. resolveEmailSettings() is internal to
+    // lib/email.ts, so this action queries app_settings directly using the
+    // same fallback defaults.
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url'])
+    const settingsMap = Object.fromEntries(
+      (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
+    )
+    const emailFrom = `${settingsMap['email_from_name'] || '30 By Ninety Theatre Volunteers'} <${
+      settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
+    }>`
+    const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+
+    const payloads = targets.map((t) => ({
+      ...buildCategoryMatchNotificationPayload({
         to: t.email,
         volunteerName: t.full_name,
         showName: show.name,
         matchingRoles: t.matching_roles,
-      })
-    )
+        logoUrl,
+      }),
+      from: emailFrom,
+    }))
 
     // D. Batch send (R8) — log failures, do not abort. Partial sends are
     // better than no send.
@@ -776,11 +793,24 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
       return { success: false, sentCount: 0, error: 'no_recipients' }
     }
 
-    // C. Build payloads and send in batch (R8) — sendBatchEmails() chunks
-    // into groups of 100, matching sendShowNotifications() above.
+    // C. Dynamic email settings, then build payloads and send in batch (R8)
+    // — sendBatchEmails() chunks into groups of 100, matching
+    // sendShowNotifications() above.
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
-    const payloads = recipients.map((r) =>
-      buildShowBulkEmailPayload({
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url'])
+    const settingsMap = Object.fromEntries(
+      (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
+    )
+    const emailFrom = `${settingsMap['email_from_name'] || '30 By Ninety Theatre Volunteers'} <${
+      settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
+    }>`
+    const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+
+    const payloads = recipients.map((r) => ({
+      ...buildShowBulkEmailPayload({
         recipientEmail: r.email,
         recipientName: r.name,
         subject,
@@ -788,8 +818,10 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
         replyTo,
         showName: params.showName,
         siteUrl,
-      })
-    )
+        logoUrl,
+      }),
+      from: emailFrom,
+    }))
 
     try {
       await sendBatchEmails(payloads)

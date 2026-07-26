@@ -64,6 +64,22 @@ export async function GET(request: Request) {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+
+    // Dynamic email settings — from address + logo URL. resolveEmailSettings()
+    // is internal to lib/email.ts, so this cron queries app_settings directly
+    // using the same fallback defaults.
+    const { data: settingsData } = await client
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url'])
+    const settingsMap = Object.fromEntries(
+      (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
+    )
+    const emailFrom = `${settingsMap['email_from_name'] || '30 By Ninety Theatre Volunteers'} <${
+      settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
+    }>`
+    const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+
     let totalSent = 0
     let skipped = 0
 
@@ -94,15 +110,17 @@ export async function GET(request: Request) {
 
       // D. Build payloads.
       const formattedDate = formatWallClockCT(date.show_date, null, 'MMMM d, yyyy')
-      const payloads = recipients.map((r) =>
-        buildThankYouEmailPayload({
+      const payloads = recipients.map((r) => ({
+        ...buildThankYouEmailPayload({
           recipientEmail: r.email,
           recipientName: r.name,
           showName: show.name,
           showDate: formattedDate,
           siteUrl,
-        })
-      )
+          logoUrl,
+        }),
+        from: emailFrom,
+      }))
 
       try {
         // E. Send.

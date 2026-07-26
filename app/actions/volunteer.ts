@@ -3,6 +3,7 @@
 import { getAdminClient } from '@/lib/supabase/admin'
 import { sendVolunteerConfirmationEmail, sendConsentFormRequestEmail } from '@/lib/email'
 import { normalizePhone } from '@/lib/utils/phone'
+import { logAction } from '@/lib/audit'
 import { VolunteerFormData } from '@/types/volunteer'
 
 export type SubmitResult =
@@ -186,6 +187,23 @@ export async function submitVolunteerForm(
       } catch (consentError) {
         console.error('Consent form trigger failed:', consentError)
       }
+    }
+
+    // Non-blocking audit log — public signup, null admin
+    try {
+      await logAction(
+        null,                    // R25 — public, no admin
+        'volunteer.signup',
+        'volunteer',
+        newVolunteer.id,
+        undefined,                // no before value
+        {                        // after: identity only
+          name: data.full_name,
+          email: data.email,
+        }
+      )
+    } catch {
+      // Swallowed — logging never blocks signup
     }
 
     return { status: 'success' }

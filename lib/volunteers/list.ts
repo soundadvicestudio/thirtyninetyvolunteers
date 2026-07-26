@@ -51,7 +51,13 @@ function applyBaseFilters(query: any, filters: VolunteersUrlState) {
   if (filters.q) {
     const term = filters.q.replace(/[%,()]/g, ' ').trim()
     if (term) {
-      q = q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`)
+      // Normalize phone search term — DB stores digits only (normalizePhone
+      // pattern from ADMIN.21). Only strip non-digits when input looks like
+      // a phone number to avoid mangling name searches.
+      const phoneSearchTerm = /^[\d\s().+-]+$/.test(filters.q.trim())
+        ? filters.q.replace(/\D/g, '')
+        : term
+      q = q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${phoneSearchTerm}%`)
     }
   }
   if (filters.status !== 'all') {
