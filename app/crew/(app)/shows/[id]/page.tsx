@@ -3,6 +3,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { generateQR } from '@/lib/qr'
 import { getPostShowReportData } from '@/lib/data/showReport'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import ShowDetail from '@/components/crew/shows/ShowDetail'
 import type {
   Show,
@@ -55,6 +56,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
     { data: adminUserRows },
     { data: settingsRows },
     { data: replyToRow },
+    org,
   ] = await Promise.all([
     supabase
       .from('show_dates')
@@ -81,6 +83,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       .select('key, value')
       .in('key', ['default_hours_mainstage', 'default_hours_studio_x', 'default_hours_one_off']),
     supabase.from('app_settings').select('value').eq('key', 'default_reply_to').maybeSingle(),
+    resolveOrgIdentity(),
   ])
 
   const showDates: ShowDateWithRoles[] = ((dateRows ?? []) as unknown as RawDateRow[]).map((d) => ({
@@ -153,6 +156,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
   )
   const bulkEmailRecipientCount = bulkEmailRecipientEmails.size
   const defaultReplyTo = replyToRow?.value ?? 'info@30byninety.com'
+  const defaultSubject = `Message from ${org.org_name}`
 
   const settingsMap = new Map((settingsRows ?? []).map((r) => [r.key, r.value]))
   const defaultHours = {
@@ -193,6 +197,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       reportData={reportData}
       bulkEmailRecipientCount={bulkEmailRecipientCount}
       defaultReplyTo={defaultReplyTo}
+      defaultSubject={defaultSubject}
     />
   )
 }

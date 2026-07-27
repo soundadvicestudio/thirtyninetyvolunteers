@@ -1,23 +1,24 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPublicShow } from '@/lib/data/shows'
+import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import ShowDatePicker from './ShowDatePicker'
 
-function PublicHeader() {
+function PublicHeader({ org }: { org: OrgIdentity }) {
   return (
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
         <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
       </div>
     </header>
   )
 }
 
-function Unavailable() {
+function Unavailable({ org }: { org: OrgIdentity }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-navy font-bold text-xl mb-3">This show is no longer accepting volunteers</h1>
@@ -39,14 +40,15 @@ function Unavailable() {
 export default async function ShowClaimPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const show = await getPublicShow(id)
+  const org = await resolveOrgIdentity()
 
   if (!show) {
-    return <Unavailable />
+    return <Unavailable org={org} />
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
@@ -74,7 +76,7 @@ export default async function ShowClaimPage({ params }: { params: Promise<{ id: 
 
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+          <p className="text-mid-gray text-xs">© {org.org_name}</p>
           <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
             Production Crew
           </Link>

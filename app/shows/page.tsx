@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import type { PublicShow } from '@/types/show-public'
 
 function dateRangeLabel(show: PublicShow): string | null {
@@ -70,12 +71,13 @@ function ShowCard({ show }: { show: PublicShow }) {
 export default async function ShowsListingPage() {
   const shows = await getPublicShows()
   const flags = await getFeatureFlags(getAdminClient())
+  const org = await resolveOrgIdentity()
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-          <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
           <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
         </div>
       </header>
@@ -117,7 +119,7 @@ export default async function ShowsListingPage() {
 
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+          <p className="text-mid-gray text-xs">© {org.org_name}</p>
           <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
             Production Crew
           </Link>

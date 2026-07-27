@@ -12,13 +12,14 @@ type PendingRegistrationRow = {
   requested_at: string
 }
 
-type RegistrationRole = 'super_admin' | 'owner_admin' | 'editor' | 'viewer'
+type RegistrationRole = 'super_admin' | 'owner_admin' | 'editor' | 'viewer' | 'production'
 
 const ROLE_LABELS: Record<RegistrationRole, string> = {
   super_admin: 'Super Admin',
   owner_admin: 'Owner Admin',
   editor: 'Editor',
   viewer: 'Viewer',
+  production: 'Production',
 }
 
 function reloadWithNotice(notice: string) {
@@ -82,6 +83,7 @@ function PendingRow({
         >
           <option value="viewer">Viewer</option>
           <option value="editor">Editor</option>
+          <option value="production">Production</option>
           {canAssignPrivilegedRoles && (
             <>
               <option value="owner_admin">Owner Admin</option>

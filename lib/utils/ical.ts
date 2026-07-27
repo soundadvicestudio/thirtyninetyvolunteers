@@ -61,8 +61,8 @@ export function wrapInCalendar(events: string[], calName?: string): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//30 By Ninety Theatre//Volunteer Platform//EN',
-    `X-WR-CALNAME:${escapeICalText(calName ?? '30 By Ninety Theatre')}`,
+    'PRODID:-//OpenCall OS//Volunteer Platform//EN',
+    `X-WR-CALNAME:${escapeICalText(calName ?? 'Volunteer Calendar')}`,
   ]
   const header = lines.map((line) => line + '\r\n').join('')
   return `${header}${events.join('')}END:VCALENDAR\r\n`
@@ -77,7 +77,7 @@ export function buildClaimICalEvent(params: {
   endTime: Date
 }): string {
   return generateVEvent({
-    uid: `${params.claimId}@30byninetyvolunteers.com`,
+    uid: `${params.claimId}@opencallos.com`,
     summary: `${params.showName} — ${params.roleName}`,
     dtstart: params.startTime,
     dtend: params.endTime,
@@ -103,7 +103,7 @@ export function buildAdminCalendarEvents(
 ): string[] {
   return events.map((e) =>
     generateVEvent({
-      uid: `${e.id}@30byninetyvolunteers.com`,
+      uid: `${e.id}@opencallos.com`,
       summary: e.location ? `${e.title} — ${e.location.name}` : e.title,
       dtstart: new Date(e.start_time),
       dtend: new Date(e.end_time),

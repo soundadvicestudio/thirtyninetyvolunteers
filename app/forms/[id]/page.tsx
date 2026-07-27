@@ -1,23 +1,24 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getPublicForm } from '@/lib/data/forms'
+import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import PublicForm from './PublicForm'
 
-function PublicHeader() {
+function PublicHeader({ org }: { org: OrgIdentity }) {
   return (
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
         <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
       </div>
     </header>
   )
 }
 
-function Unavailable() {
+function Unavailable({ org }: { org: OrgIdentity }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-navy font-bold text-xl mb-3">This form is not available.</h1>
@@ -36,10 +37,10 @@ function Unavailable() {
   )
 }
 
-function Closed({ title, description }: { title: string; description: string | null }) {
+function Closed({ title, description, org }: { title: string; description: string | null; org: OrgIdentity }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{title}</h1>
@@ -61,20 +62,21 @@ function Closed({ title, description }: { title: string; description: string | n
 export default async function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const form = await getPublicForm(id)
+  const org = await resolveOrgIdentity()
 
   // Never reveal that a draft form exists — same "not available" state as
   // a missing form entirely.
   if (!form || form.status === 'draft') {
-    return <Unavailable />
+    return <Unavailable org={org} />
   }
 
   if (form.status === 'closed') {
-    return <Closed title={form.title} description={form.description} />
+    return <Closed title={form.title} description={form.description} org={org} />
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{form.title}</h1>

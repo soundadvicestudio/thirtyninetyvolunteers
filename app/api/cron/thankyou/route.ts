@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const { data: settingsData } = await client
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url'])
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name'])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -79,6 +79,7 @@ export async function GET(request: Request) {
       settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
     }>`
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
+    const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
 
     let totalSent = 0
     let skipped = 0
@@ -118,6 +119,7 @@ export async function GET(request: Request) {
           showDate: formattedDate,
           siteUrl,
           logoUrl,
+          orgName,
         }),
         from: emailFrom,
       }))
@@ -127,7 +129,7 @@ export async function GET(request: Request) {
         await sendBatchEmails(payloads)
 
         // F. Log.
-        const bodyPreview = `Thank you so much for volunteering for ${show.name} on ${formattedDate}. Your time and dedication make 30 By Ninety Theatre possible.`.slice(
+        const bodyPreview = `Thank you so much for volunteering for ${show.name} on ${formattedDate}. Your time and dedication make ${orgName} possible.`.slice(
           0,
           200
         )

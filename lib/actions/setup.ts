@@ -351,6 +351,60 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   return { success: true }
 }
 
+export async function saveNotFoundPage(formData: FormData): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const heading = (formData.get('not_found_heading') as string | null)?.trim() || ''
+  const body = (formData.get('not_found_body') as string | null)?.trim() || ''
+
+  if (!heading) {
+    return { error: 'Heading is required.' }
+  }
+  if (heading.length > 100) {
+    return { error: 'Heading must be 100 characters or fewer.' }
+  }
+  if (!body) {
+    return { error: 'Body text is required.' }
+  }
+  if (body.length > 300) {
+    return { error: 'Body text must be 300 characters or fewer.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const keys = ['not_found_heading', 'not_found_body']
+  const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
+  const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
+
+  const values: Record<string, string> = {
+    not_found_heading: heading,
+    not_found_body: body,
+  }
+
+  const results = await Promise.all(keys.map((key) => upsertSetting(supabase, key, values[key], admin.id)))
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    return { error: failed.error.message }
+  }
+
+  revalidatePath('/')
+  revalidatePath('/crew/settings/setup')
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'not_found_page',
+    { ...Object.fromEntries(keys.map((k) => [k, previousMap.get(k) ?? ''])) },
+    values
+  )
+
+  return { success: true }
+}
+
 export async function saveInstanceLabel(formData: FormData): Promise<ActionResult> {
   const admin = await getAdminUser()
   if (!admin || admin.role !== 'super_admin') {

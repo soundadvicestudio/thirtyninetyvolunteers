@@ -69,8 +69,8 @@ export default async function HomePage() {
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-2xl mx-auto py-6 px-6 text-center">
           <Image
-            src="/logo.png"
-            alt="30 By Ninety Theatre"
+            src={org.org_logo_url || '/logo.png'}
+            alt={org.org_name}
             width={112}
             height={64}
             className="mx-auto"
@@ -85,7 +85,7 @@ export default async function HomePage() {
       <section className="w-full bg-light-navy py-12 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-navy font-bold text-2xl md:text-3xl">
-            Welcome to the 30 By Ninety Volunteer Family
+            Welcome to the {org.org_name} Volunteer Family
           </h2>
           <p className="text-dark text-base leading-relaxed max-w-xl mx-auto mt-4">
             Our volunteers are the heart of every production — from backstage

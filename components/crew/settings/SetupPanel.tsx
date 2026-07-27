@@ -8,6 +8,7 @@ import {
   saveEmailConfig,
   saveFeatureFlags,
   saveInstanceLabel,
+  saveNotFoundPage,
 } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
 
@@ -30,6 +31,8 @@ export type SetupPanelInitialValues = {
   feature_checkin: string
   feature_blast: string
   instance_label: string
+  not_found_heading: string
+  not_found_body: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -433,6 +436,68 @@ function InstanceLabelSection({ initialValues }: { initialValues: SetupPanelInit
   )
 }
 
+function NotFoundPageSection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
+  const [heading, setHeading] = useState(initialValues.not_found_heading)
+  const [body, setBody] = useState(initialValues.not_found_body)
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    const formData = new FormData()
+    formData.append('not_found_heading', heading)
+    formData.append('not_found_body', body)
+
+    const result = await saveNotFoundPage(formData)
+    if ('error' in result) {
+      setStatus('error')
+      setErrorMessage(result.error)
+      return
+    }
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>404 Page</h2>
+        <p className={descriptionClasses}>
+          Customize the message shown when a visitor reaches a page that doesn&apos;t exist.
+        </p>
+      </div>
+      <div>
+        <label className={labelClasses}>Heading</label>
+        <input
+          type="text"
+          maxLength={100}
+          value={heading}
+          onChange={(e) => setHeading(e.target.value)}
+          placeholder="Page Not Found"
+          className={inputClasses}
+        />
+      </div>
+      <div>
+        <label className={labelClasses}>Body Text</label>
+        <textarea
+          maxLength={300}
+          rows={3}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="We couldn't find what you were looking for."
+          className={inputClasses}
+        />
+      </div>
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
+          {status === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
+}
+
 export default function SetupPanel({ initialValues }: { initialValues: SetupPanelInitialValues }) {
   const [logoUrl, setLogoUrl] = useState(initialValues.org_logo_url)
   const [faviconUrl, setFaviconUrl] = useState(initialValues.favicon_url)
@@ -482,6 +547,7 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
       <EmailConfigSection initialValues={initialValues} />
       <FeatureFlagsSection initialValues={initialValues} />
       <InstanceLabelSection initialValues={initialValues} />
+      <NotFoundPageSection initialValues={initialValues} />
     </div>
   )
 }

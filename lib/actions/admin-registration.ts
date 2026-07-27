@@ -135,7 +135,7 @@ export async function registerAdminRequest(
   return { success: true }
 }
 
-const ROLE_VALUES = ['super_admin', 'owner_admin', 'editor', 'viewer'] as const
+const ROLE_VALUES = ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] as const
 type AdminRole = (typeof ROLE_VALUES)[number]
 
 export async function approveRegistration(pendingId: string, role: AdminRole): Promise<ActionResult> {

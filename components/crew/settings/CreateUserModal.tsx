@@ -18,7 +18,7 @@ import type { AdminRole } from '@/types/admin'
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  role: z.enum(['editor', 'viewer', 'owner_admin']),
+  role: z.enum(['editor', 'viewer', 'owner_admin', 'production']),
   sendWelcome: z.boolean(),
 })
 
@@ -31,9 +31,11 @@ function reloadWithNotice(notice?: string) {
 }
 
 export default function CreateUserModal({ callerRole }: { callerRole: AdminRole }) {
-  // Owner Admin can create Editor and Viewer accounts only — never Super
-  // Admin (never offered here regardless of caller) or another Owner Admin.
-  const canAssignOwnerAdmin = callerRole === 'super_admin'
+  // Super Admin is never offered here regardless of caller. Both Super Admin
+  // and Owner Admin callers can assign Owner Admin; only Super Admin can
+  // assign Production.
+  const canAssignOwnerAdmin = callerRole === 'super_admin' || callerRole === 'owner_admin'
+  const canAssignProduction = callerRole === 'super_admin'
   const [open, setOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -124,6 +126,7 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
               {canAssignOwnerAdmin && <option value="owner_admin">Owner Admin</option>}
+              {canAssignProduction && <option value="production">Production</option>}
             </select>
           </div>
 

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
+import type { OrgIdentity } from '@/lib/utils/org-identity'
 import { ThemeToggle } from './ThemeToggle'
 import { useMobileSidebar } from './MobileSidebarContext'
 
@@ -48,10 +49,12 @@ export default function Sidebar({
   admin,
   pendingRegistrationCount = 0,
   flags,
+  org,
 }: {
   admin: AdminUser
   pendingRegistrationCount?: number
   flags: FeatureFlags
+  org: OrgIdentity
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
@@ -102,7 +105,7 @@ export default function Sidebar({
         </button>
 
         <Link href="/crew/dashboard" className="flex items-center justify-center py-6">
-          <Image src="/logo.png" alt="30 By Ninety Theatre" width={120} height={80} priority />
+          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
         </Link>
 
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">

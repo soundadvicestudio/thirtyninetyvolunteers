@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import AuthTabs from './AuthTabs'
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -14,12 +15,13 @@ export default async function LoginPage({
 }) {
   const { error } = await searchParams
   const errorMessage = error ? ERROR_MESSAGES[error] ?? 'Something went wrong. Please try again.' : null
+  const org = await resolveOrgIdentity()
 
   return (
     <main className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-lg shadow p-8">
         <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="30 By Ninety Theatre" width={120} height={80} priority />
+          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
         </div>
         <h1 className="text-2xl font-bold text-navy text-center">
           Production Crew

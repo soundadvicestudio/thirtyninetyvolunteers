@@ -30,30 +30,34 @@ export async function GET(request: Request) {
   }
 
   const supabase = getAdminClient()
-  const { data: claim } = await supabase
-    .from('slot_claims')
-    .select(
-      `
-      id,
-      status,
-      volunteer_name,
-      volunteer_role:volunteer_roles (
-        role_name,
-        show_date:show_dates (
-          show_date,
-          show_time,
-          end_time,
-          show:shows (
-            name,
-            location:locations ( name )
+  const [{ data: claim }, { data: orgNameRow }] = await Promise.all([
+    supabase
+      .from('slot_claims')
+      .select(
+        `
+        id,
+        status,
+        volunteer_name,
+        volunteer_role:volunteer_roles (
+          role_name,
+          show_date:show_dates (
+            show_date,
+            show_time,
+            end_time,
+            show:shows (
+              name,
+              location:locations ( name )
+            )
           )
         )
+        `
       )
-      `
-    )
-    .eq('claim_token', token)
-    .eq('status', 'claimed')
-    .maybeSingle()
+      .eq('claim_token', token)
+      .eq('status', 'claimed')
+      .maybeSingle(),
+    supabase.from('app_settings').select('value').eq('key', 'org_name').maybeSingle(),
+  ])
+  const orgName = orgNameRow?.value || '30 By Ninety Theatre'
 
   const typedClaim = claim as unknown as ClaimRow | null
 
@@ -77,7 +81,7 @@ export async function GET(request: Request) {
     startTime,
     endTime,
   })
-  const icsContent = wrapInCalendar([vevent], '30 By Ninety Theatre')
+  const icsContent = wrapInCalendar([vevent], orgName)
 
   return new Response(icsContent, {
     headers: {

@@ -74,7 +74,8 @@ export default function CalendarDayPanel({
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-dark dark:text-dark-text">{event.title}</p>
-                        {event.status === 'pending' && adminRole === 'super_admin' && (
+                        {event.status === 'pending' &&
+                          (adminRole === 'super_admin' || adminRole === 'owner_admin') && (
                           <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 rounded px-1.5 py-0.5">
                             Pending
                           </span>
@@ -92,7 +93,7 @@ export default function CalendarDayPanel({
                         </span>
                       )}
                     </div>
-                    {adminRole === 'super_admin' && (
+                    {(adminRole === 'super_admin' || adminRole === 'owner_admin') && (
                       <div className="ml-auto flex items-center gap-1 shrink-0">
                         <button
                           type="button"

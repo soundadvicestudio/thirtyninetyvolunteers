@@ -672,7 +672,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                 <>
                   <h3 id="reply-to" className={h3Classes}>{`Reply-To Email Address`}</h3>
                   <p className={pClasses}>{`When a volunteer hits Reply on a platform email, their message goes to the Reply-To address.`}</p>
-                  <p className={pClasses}>{`The default is info@30byninety.com.`}</p>
+                  <p className={pClasses}>{`The default is your organization's contact email.`}</p>
                   <p className={pClasses}>{`To change it: go to Settings, then General Defaults.`}</p>
                 </>
               )}
@@ -1096,7 +1096,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
             <section id="callboard">
               <h2 className={h2Classes}>{`The Volunteer Call Board`}</h2>
               <p className={pClasses}>
-                {`The Volunteer Call Board is the page volunteers use after they've signed up. They can find it at your platform address followed by /callboard (for example: 30byninetyvolunteers.com/callboard).`}
+                {`The Volunteer Call Board is the page volunteers use after they've signed up. They can find it at your platform URL followed by /callboard.`}
               </p>
               <p className={pClasses}>{`On the Call Board, volunteers can:`}</p>
               <ul className={ulClasses}>

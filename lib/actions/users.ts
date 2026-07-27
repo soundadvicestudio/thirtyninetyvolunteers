@@ -15,7 +15,7 @@ export type CreateUserResult = { success: true; emailFailed: boolean } | { error
 const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  role: z.enum(['editor', 'viewer', 'owner_admin']),
+  role: z.enum(['editor', 'viewer', 'owner_admin', 'production']),
 })
 
 const TEMP_PASSWORD_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
@@ -36,7 +36,7 @@ function isDuplicateEmailError(message: string | undefined): boolean {
 export async function createUser(
   name: string,
   email: string,
-  role: 'editor' | 'viewer' | 'owner_admin',
+  role: 'editor' | 'viewer' | 'owner_admin' | 'production',
   sendWelcome: boolean
 ): Promise<CreateUserResult> {
   const admin = await getAdminUser()
@@ -50,10 +50,11 @@ export async function createUser(
   }
   const value = parsed.data
 
-  // Owner Admin can create Editor, Viewer, and Owner Admin accounts, but never
-  // Super Admin (not offered by this schema) or another Owner Admin.
-  if (admin.role === 'owner_admin' && value.role === 'owner_admin') {
-    return { error: 'Owner Admin accounts cannot create other Owner Admin accounts.' }
+  // Owner Admin can create Editor, Viewer, and Owner Admin accounts, but
+  // never Super Admin (not offered by this schema) or Production — Production
+  // accounts are Super Admin only.
+  if (value.role === 'production' && admin.role !== 'super_admin') {
+    return { error: 'Only Super Admins can create Production accounts.' }
   }
 
   const supabase = await getServerClient()
@@ -178,10 +179,6 @@ export async function deactivateUser(targetId: string): Promise<ActionResult> {
     return { error: 'Cannot deactivate a Super Admin account via this panel.' }
   }
 
-  if (target.role === 'owner_admin' && admin.role === 'owner_admin') {
-    return { error: 'Owner Admin accounts cannot deactivate other Owner Admin accounts.' }
-  }
-
   const { error } = await supabase
     .from('admin_users')
     .update({ is_active: false })
@@ -226,7 +223,7 @@ export async function reactivateUser(targetId: string): Promise<ActionResult> {
 
 export async function changeRole(
   targetId: string,
-  newRole: 'editor' | 'viewer'
+  newRole: 'editor' | 'viewer' | 'production' | 'owner_admin'
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
   if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
@@ -237,15 +234,14 @@ export async function changeRole(
     return { error: 'Cannot change your own role.' }
   }
 
-  // Defense-in-depth: newRole is typed 'editor' | 'viewer' so no compile-time
-  // caller can pass 'production', 'super_admin', or 'owner_admin', but a
-  // raw/untyped call to the Server Action endpoint bypasses that. Compare via
-  // a widened cast since the literal union has no structural overlap with them.
-  if ((newRole as string) === 'production') {
-    return { error: 'The Production role cannot be assigned via role change. Create a new Production account instead.' }
+  // Defense-in-depth: newRole is typed to exclude 'super_admin' so no
+  // compile-time caller can pass it, but a raw/untyped call to the Server
+  // Action endpoint bypasses that. Compare via a widened cast.
+  if ((newRole as string) === 'super_admin') {
+    return { error: 'Super Admin role cannot be assigned via role change.' }
   }
-  if ((newRole as string) === 'super_admin' || (newRole as string) === 'owner_admin') {
-    return { error: 'Super Admin and Owner Admin roles cannot be assigned via role change.' }
+  if (newRole === 'owner_admin' && !['super_admin', 'owner_admin'].includes(admin.role)) {
+    return { error: 'Unauthorized' }
   }
 
   const supabase = await getServerClient()
@@ -262,10 +258,6 @@ export async function changeRole(
 
   if (target.role === 'super_admin') {
     return { error: 'Super Admin roles cannot be changed via this panel.' }
-  }
-
-  if (target.role === 'owner_admin' && admin.role === 'owner_admin') {
-    return { error: 'Owner Admin accounts cannot change the role of other Owner Admin accounts.' }
   }
 
   const { error } = await supabase

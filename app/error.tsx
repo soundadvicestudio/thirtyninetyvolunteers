@@ -15,7 +15,7 @@ export default function Error({
       <div className="max-w-md w-full text-center">
         <Image
           src="/logo.png"
-          alt="30 By Ninety Theatre"
+          alt="Organization logo"
           width={120}
           height={48}
           className="mx-auto mb-8"

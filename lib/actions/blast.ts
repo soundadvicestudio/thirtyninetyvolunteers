@@ -73,8 +73,6 @@ async function resolveBlastRecipients(payload: BlastPayload): Promise<Recipient[
   })
 }
 
-const FROM_ADDRESS = '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>'
-
 // Local duplicate of lib/email.ts's escapeHtml() — that function is not
 // exported, and lib/email.ts is out of scope for this prompt (30BN-13.3a).
 function escapeHtml(value: string): string {
@@ -101,14 +99,17 @@ function buildBlastEmailHtml({
   recipientName,
   subject,
   body,
+  orgName,
 }: {
   recipientName: string
   subject: string
   body: string
+  orgName?: string
 }): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
   const logoHtml = siteUrl
-    ? `<img src="${siteUrl}/logo.png" height="50" width="auto" alt="30 By Ninety Theatre" style="display:block;margin:0 auto;">`
+    ? `<img src="${siteUrl}/logo.png" height="50" width="auto" alt="${safeOrgName}" style="display:block;margin:0 auto;">`
     : ''
   const safeName = escapeHtml(recipientName)
   const safeSubject = escapeHtml(subject)
@@ -129,8 +130,8 @@ function buildBlastEmailHtml({
               <tr>
                 <td bgcolor="#293994" style="background-color:#293994;padding:24px 32px;text-align:center;">
                   ${logoHtml}
-                  <p style="margin:8px 0 0 0;color:#FFFFFF;font-size:13px;font-family:'Open Sans',Arial,sans-serif;letter-spacing:0.5px;">
-                    30 BY NINETY THEATRE
+                  <p style="margin:8px 0 0 0;color:#FFFFFF;font-size:13px;font-family:'Open Sans',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">
+                    ${safeOrgName}
                   </p>
                 </td>
               </tr>
@@ -151,9 +152,9 @@ function buildBlastEmailHtml({
               <tr>
                 <td bgcolor="#F5F5F5" style="background-color:#F5F5F5;padding:24px 32px;text-align:center;border-top:1px solid #D0D5E8;">
                   <p style="margin:0;color:#555555;font-size:12px;line-height:1.5;font-family:'Open Sans',Arial,sans-serif;">
-                    30 By Ninety Theatre &bull; Old Mandeville, LA
+                    ${safeOrgName}
                     <br>
-                    This message was sent to you by the 30 By Ninety Theatre Production Crew.
+                    This message was sent to you by the ${safeOrgName} Production Crew.
                   </p>
                 </td>
               </tr>
@@ -254,6 +255,22 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       return { success: false, recipientCount: 0, error: 'No recipients found' }
     }
 
+    // Dynamic email settings — resolveEmailSettings() is internal to
+    // lib/email.ts, so this action queries app_settings directly using
+    // the same fallback defaults (pattern established in shows.ts and
+    // both cron routes — ADMIN.31/ADMIN.33).
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['email_from_address', 'email_from_name', 'org_name'])
+    const settingsMap = Object.fromEntries(
+      (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
+    )
+    const emailFrom = `${settingsMap['email_from_name'] || '30 By Ninety Theatre Volunteers'} <${
+      settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
+    }>`
+    const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+
     // Sanitize the TipTap HTML output before sending (30BN-13.4a).
     // Allows only the tags and attributes StarterKit produces. Strips
     // <script>, event handlers, and javascript: hrefs. Does NOT escape
@@ -278,7 +295,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
     // above is what makes this safe to trust — it strips anything not on
     // the allowlist before this point.
     const payloads = recipients.map((r) => ({
-      from: FROM_ADDRESS,
+      from: emailFrom,
       replyTo: parsed.data.replyTo,
       to: r.email,
       subject: parsed.data.subject,
@@ -286,6 +303,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
         recipientName: r.full_name,
         subject: parsed.data.subject,
         body: sanitizedBody,
+        orgName,
       }),
     }))
 

@@ -63,6 +63,7 @@ function OverviewTab({
   qr,
   bulkEmailRecipientCount,
   defaultReplyTo,
+  defaultSubject,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -70,6 +71,7 @@ function OverviewTab({
   qr: { svg: string; pngBase64: string }
   bulkEmailRecipientCount: number
   defaultReplyTo: string
+  defaultSubject: string
 }) {
   const [copied, setCopied] = useState(false)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -175,6 +177,7 @@ function OverviewTab({
           showName={show.name}
           recipientCount={bulkEmailRecipientCount}
           defaultReplyTo={defaultReplyTo}
+          defaultSubject={defaultSubject}
         />
       )}
     </div>
@@ -908,6 +911,7 @@ export default function ShowDetail({
   reportData,
   bulkEmailRecipientCount,
   defaultReplyTo,
+  defaultSubject,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -925,9 +929,10 @@ export default function ShowDetail({
   reportData: PostShowReportData | null
   bulkEmailRecipientCount: number
   defaultReplyTo: string
+  defaultSubject: string
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
-  const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
+  const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
   const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
   const allRoles: ShowRole[] = showDates.flatMap((d) => d.roles)
   const visibleTabs = TABS.filter((tab) => tab.key !== 'report' || show.status === 'past')
@@ -959,6 +964,7 @@ export default function ShowDetail({
           qr={qr}
           bulkEmailRecipientCount={bulkEmailRecipientCount}
           defaultReplyTo={defaultReplyTo}
+          defaultSubject={defaultSubject}
         />
       )}
       {activeTab === 'volunteers' && (

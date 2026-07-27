@@ -2,23 +2,24 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import CancelForm from './CancelForm'
 
-function PublicHeader() {
+function PublicHeader({ org }: { org: OrgIdentity }) {
   return (
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
         <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
       </div>
     </header>
   )
 }
 
-function InfoPage({ title }: { title: string }) {
+function InfoPage({ title, org }: { title: string; org: OrgIdentity }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-navy font-bold text-xl mb-6">{title}</h1>
@@ -46,9 +47,10 @@ export default async function CancelPage({
   searchParams: Promise<{ token?: string }>
 }) {
   const { token } = await searchParams
+  const org = await resolveOrgIdentity()
 
   if (!token) {
-    return <InfoPage title="No cancel link found" />
+    return <InfoPage title="No cancel link found" org={org} />
   }
 
   const client = getAdminClient()
@@ -60,11 +62,11 @@ export default async function CancelPage({
     .maybeSingle()
 
   if (!claim) {
-    return <InfoPage title="This cancel link is not valid or has already been used." />
+    return <InfoPage title="This cancel link is not valid or has already been used." org={org} />
   }
 
   if (claim.status === 'cancelled') {
-    return <InfoPage title="This spot has already been cancelled. We hope to see you at a future show!" />
+    return <InfoPage title="This spot has already been cancelled. We hope to see you at a future show!" org={org} />
   }
 
   const { data: showDate } = await client
@@ -81,7 +83,7 @@ export default async function CancelPage({
   ])
 
   if (!showDate || !show || !role) {
-    return <InfoPage title="This cancel link is not valid or has already been used." />
+    return <InfoPage title="This cancel link is not valid or has already been used." org={org} />
   }
 
   const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy')
@@ -93,7 +95,7 @@ export default async function CancelPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-md mx-auto">
@@ -114,7 +116,7 @@ export default async function CancelPage({
 
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+          <p className="text-mid-gray text-xs">© {org.org_name}</p>
           <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
             Production Crew
           </Link>

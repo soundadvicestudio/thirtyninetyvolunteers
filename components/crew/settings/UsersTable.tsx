@@ -28,17 +28,15 @@ const ROLE_BADGE: Record<AdminUserRow['role'], { label: string; className: strin
 function UserRow({
   user,
   isSelf,
-  currentAdminRole,
 }: {
   user: AdminUserRow
   isSelf: boolean
-  currentAdminRole: AdminRole
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isTogglingCalendarEditor, setIsTogglingCalendarEditor] = useState(false)
 
-  async function handleRoleChange(newRole: 'editor' | 'viewer') {
+  async function handleRoleChange(newRole: 'editor' | 'viewer' | 'production' | 'owner_admin') {
     setIsSubmitting(true)
     const result = await changeRole(user.id, newRole)
     setIsSubmitting(false)
@@ -97,19 +95,21 @@ function UserRow({
       <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {user.role === 'super_admin' ||
-          user.role === 'production' ||
-          (user.role === 'owner_admin' && currentAdminRole === 'owner_admin') ? (
+          {user.role === 'super_admin' ? (
             <span className="text-sm text-mid-gray dark:text-dark-muted">—</span>
           ) : (
             <select
               value={user.role}
               disabled={isSubmitting}
-              onChange={(e) => handleRoleChange(e.target.value as 'editor' | 'viewer')}
+              onChange={(e) =>
+                handleRoleChange(e.target.value as 'editor' | 'viewer' | 'production' | 'owner_admin')
+              }
               className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
             >
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
+              <option value="production">Production</option>
+              <option value="owner_admin">Owner Admin</option>
             </select>
           )}
 
@@ -127,18 +127,14 @@ function UserRow({
             </label>
           )}
 
-          {isSelf ||
-          user.role === 'super_admin' ||
-          (user.role === 'owner_admin' && currentAdminRole === 'owner_admin') ? (
+          {isSelf || user.role === 'super_admin' ? (
             <button
               type="button"
               disabled
               title={
                 isSelf
                   ? 'Cannot deactivate your own account'
-                  : user.role === 'super_admin'
-                    ? 'Super Admin accounts cannot be deactivated via this panel'
-                    : 'Owner Admin accounts cannot deactivate other Owner Admin accounts'
+                  : 'Super Admin accounts cannot be deactivated via this panel'
               }
               className="text-sm px-3 py-1 rounded-md opacity-40 cursor-not-allowed border border-orange text-orange"
             >
@@ -172,11 +168,9 @@ function UserRow({
 export default function UsersTable({
   users,
   currentAdminId,
-  currentAdminRole,
 }: {
   users: AdminUserRow[]
   currentAdminId: string
-  currentAdminRole: AdminRole
 }) {
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
@@ -196,12 +190,7 @@ export default function UsersTable({
         </thead>
         <tbody>
           {users.map((user) => (
-            <UserRow
-              key={user.id}
-              user={user}
-              isSelf={user.id === currentAdminId}
-              currentAdminRole={currentAdminRole}
-            />
+            <UserRow key={user.id} user={user} isSelf={user.id === currentAdminId} />
           ))}
         </tbody>
       </table>

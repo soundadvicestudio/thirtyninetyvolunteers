@@ -36,7 +36,7 @@ export default function OpportunityList({
   adminRole: AdminUser['role']
 }) {
   const router = useRouter()
-  const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
+  const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const [reactivatingId, setReactivatingId] = useState<string | null>(null)

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import ConsentUploadForm from '@/components/consent/ConsentUploadForm'
 
 export const metadata = {
@@ -10,11 +11,11 @@ export const metadata = {
 // Matches the established public-page header pattern (app/shows/[id],
 // app/opportunities/[id], app/checkin/[token]) — white header, centered
 // logo, orange accent underline.
-function PublicHeader() {
+function PublicHeader({ org }: { org: OrgIdentity }) {
   return (
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
         <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
       </div>
     </header>
@@ -30,6 +31,7 @@ type RawSubmissionRow = {
 export default async function ConsentUploadPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = getAdminClient()
+  const org = await resolveOrgIdentity()
 
   const { data: submissionRow } = await supabase
     .from('consent_form_submissions')
@@ -46,7 +48,7 @@ export default async function ConsentUploadPage({ params }: { params: Promise<{ 
   if (!submissionRow) {
     return (
       <div className="min-h-screen flex flex-col">
-        <PublicHeader />
+        <PublicHeader org={org} />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
             <h1 className="text-navy font-bold text-xl mb-3">This link is not valid.</h1>
@@ -64,7 +66,7 @@ export default async function ConsentUploadPage({ params }: { params: Promise<{ 
   if (submission.submitted_file_path !== null) {
     return (
       <div className="min-h-screen flex flex-col">
-        <PublicHeader />
+        <PublicHeader org={org} />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
             <h1 className="text-navy font-bold text-xl mb-3">Thank you — your form has been received.</h1>
@@ -79,7 +81,7 @@ export default async function ConsentUploadPage({ params }: { params: Promise<{ 
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader />
+      <PublicHeader org={org} />
       <main className="flex-1 bg-white py-10">
         <ConsentUploadForm uploadToken={token} volunteerName={volunteerName} documentTypeName={documentTypeName} />
       </main>

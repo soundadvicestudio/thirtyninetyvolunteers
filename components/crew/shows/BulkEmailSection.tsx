@@ -7,8 +7,6 @@ const inputClasses =
   'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
-const DEFAULT_SUBJECT = 'Message from 30 By Ninety Theatre'
-
 type SendResult = { success: boolean; sentCount?: number; error?: string }
 
 function resultMessage(result: SendResult): string {
@@ -33,14 +31,16 @@ export default function BulkEmailSection({
   showName,
   recipientCount,
   defaultReplyTo,
+  defaultSubject,
 }: {
   showId: string
   showName: string
   recipientCount: number
   defaultReplyTo: string
+  defaultSubject: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [subject, setSubject] = useState(DEFAULT_SUBJECT)
+  const [subject, setSubject] = useState(defaultSubject)
   const [body, setBody] = useState('')
   const [replyTo, setReplyTo] = useState(defaultReplyTo)
   const [confirmStep, setConfirmStep] = useState(false)
@@ -56,7 +56,7 @@ export default function BulkEmailSection({
   }
 
   function resetForm() {
-    setSubject(DEFAULT_SUBJECT)
+    setSubject(defaultSubject)
     setBody('')
     setReplyTo(defaultReplyTo)
     setConfirmStep(false)

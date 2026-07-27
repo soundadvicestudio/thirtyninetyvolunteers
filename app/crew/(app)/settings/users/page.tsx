@@ -71,7 +71,7 @@ export default async function UsersPage({
 
       <PendingRegistrations registrations={pendingRegistrations ?? []} callerRole={admin.role} />
 
-      <UsersTable users={users ?? []} currentAdminId={admin.id} currentAdminRole={admin.role} />
+      <UsersTable users={users ?? []} currentAdminId={admin.id} />
     </div>
   )
 }

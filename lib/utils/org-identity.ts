@@ -16,6 +16,7 @@ export type OrgIdentity = {
   org_contact_email: string
   org_website_url: string
   org_location: string
+  org_logo_url: string
 }
 
 export async function resolveOrgIdentity(): Promise<OrgIdentity> {
@@ -29,6 +30,7 @@ export async function resolveOrgIdentity(): Promise<OrgIdentity> {
       'org_contact_email',
       'org_website_url',
       'org_location',
+      'org_logo_url',
     ])
   const map = Object.fromEntries(
     (data ?? []).map(
@@ -47,5 +49,7 @@ export async function resolveOrgIdentity(): Promise<OrgIdentity> {
       map['org_website_url'] || '',
     org_location:
       map['org_location'] || '',
+    org_logo_url:
+      map['org_logo_url'] || '',
   }
 }

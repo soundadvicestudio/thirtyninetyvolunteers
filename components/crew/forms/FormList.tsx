@@ -13,7 +13,7 @@ export default function FormList({
   forms: FormListItem[]
   adminRole: AdminUser['role']
 }) {
-  const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
+  const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
 
   return (
     <div>

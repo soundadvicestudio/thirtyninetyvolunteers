@@ -60,7 +60,7 @@ export default async function SettingsPage() {
   }
 
   const canAccessAdminSettings = admin.role === 'super_admin' || admin.role === 'owner_admin'
-  const isEditorOrAbove = admin.role !== 'viewer'
+  const isEditorOrAbove = admin.role !== 'viewer' && admin.role !== 'production'
 
   return (
     <div>

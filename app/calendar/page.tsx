@@ -5,6 +5,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getMonthGridDays } from '@/lib/utils/calendar-availability'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import PublicCalendarGrid from '@/components/calendar/PublicCalendarGrid'
 
 const CT = 'America/Chicago'
@@ -42,6 +43,8 @@ export default async function PublicCalendarPage({
 
   const flags = await getFeatureFlags(supabase)
   if (!flags.calendar) redirect('/')
+
+  const org = await resolveOrgIdentity()
 
   const { data: eventRows } = await supabase
     .from('calendar_events')
@@ -113,7 +116,7 @@ export default async function PublicCalendarPage({
     <div className="min-h-screen flex flex-col">
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-3xl mx-auto py-6 px-6 text-center">
-          <Image src="/logo.png" alt="30 By Ninety Theatre" width={112} height={64} className="mx-auto" />
+          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
           <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
           <h1 className="text-navy font-bold text-2xl md:text-3xl mt-4">Events Calendar</h1>
         </div>
@@ -134,7 +137,7 @@ export default async function PublicCalendarPage({
 
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <p className="text-mid-gray text-xs">© 30 By Ninety Theatre</p>
+          <p className="text-mid-gray text-xs">© {org.org_name}</p>
           <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
             Production Crew
           </Link>

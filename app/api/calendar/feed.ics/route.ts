@@ -19,22 +19,26 @@ export async function GET(request: Request) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const { data: events } = await supabase
-    .from('calendar_events')
-    .select(
-      `
-      id, title, event_type, start_time, end_time,
-      description, requirements,
-      location:locations ( name )
-      `
-    )
-    .eq('status', 'approved')
-    .order('start_time', { ascending: true })
+  const [{ data: events }, { data: orgNameRow }] = await Promise.all([
+    supabase
+      .from('calendar_events')
+      .select(
+        `
+        id, title, event_type, start_time, end_time,
+        description, requirements,
+        location:locations ( name )
+        `
+      )
+      .eq('status', 'approved')
+      .order('start_time', { ascending: true }),
+    supabase.from('app_settings').select('value').eq('key', 'org_name').maybeSingle(),
+  ])
+  const orgName = orgNameRow?.value || '30 By Ninety Theatre'
 
   const vevents = buildAdminCalendarEvents(
     (events ?? []) as unknown as Parameters<typeof buildAdminCalendarEvents>[0]
   )
-  const icsContent = wrapInCalendar(vevents, '30 By Ninety Theatre — Production Crew')
+  const icsContent = wrapInCalendar(vevents, `${orgName} — Production Crew`)
 
   return new Response(icsContent, {
     headers: {

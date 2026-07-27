@@ -181,7 +181,7 @@ export async function addNote(volunteerId: string, body: string): Promise<Action
 
 export async function editNote(noteId: string, body: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -211,7 +211,7 @@ export async function editNote(noteId: string, body: string): Promise<ActionResu
 
 export async function deleteNote(noteId: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role !== 'super_admin') {
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 

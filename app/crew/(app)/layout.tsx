@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import Sidebar from '@/components/crew/Sidebar'
 import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
@@ -44,6 +45,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
   }
 
   const flags = await getFeatureFlags(supabase)
+  const org = await resolveOrgIdentity()
 
   return (
     <>
@@ -66,7 +68,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       <ThemeProvider>
         <MobileSidebarProvider>
           <div className="flex h-screen">
-            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} flags={flags} />
+            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} flags={flags} org={org} />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar admin={admin} />
               <main className="flex-1 overflow-y-auto bg-light-navy dark:bg-dark-bg p-6">{children}</main>

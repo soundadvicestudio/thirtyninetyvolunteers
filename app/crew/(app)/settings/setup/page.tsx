@@ -20,6 +20,8 @@ const SETUP_KEYS = [
   'feature_checkin',
   'feature_blast',
   'instance_label',
+  'not_found_heading',
+  'not_found_body',
 ] as const
 
 export default async function SetupPage() {
@@ -58,6 +60,8 @@ export default async function SetupPage() {
     feature_checkin: settingsMap.get('feature_checkin') ?? 'true',
     feature_blast: settingsMap.get('feature_blast') ?? 'true',
     instance_label: settingsMap.get('instance_label') ?? '',
+    not_found_heading: settingsMap.get('not_found_heading') ?? 'Page Not Found',
+    not_found_body: settingsMap.get('not_found_body') ?? "We couldn't find what you were looking for.",
   }
 
   const instanceLabel = settingsMap.get('instance_label') ?? ''

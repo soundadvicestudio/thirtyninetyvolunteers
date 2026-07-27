@@ -155,7 +155,7 @@ export default function ShowList({
   adminRole: AdminUser['role']
 }) {
   const router = useRouter()
-  const canEdit = adminRole === 'super_admin' || adminRole === 'editor'
+  const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
 
   const [locationFilter, setLocationFilter] = useState<'all' | string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | ShowStatus>('all')
