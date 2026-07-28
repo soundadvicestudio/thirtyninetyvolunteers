@@ -3,95 +3,104 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { formatCT } from '@/lib/utils/date'
 import type { VolunteerListRow } from '@/types/volunteer'
 
-const NAVY = '#293994'
-const LIGHT_NAVY = '#EEF1FA'
 const DARK = '#1A1A1A'
 const MID_GRAY = '#555555'
 const WHITE = '#FFFFFF'
 
-const styles = StyleSheet.create({
-  page: {
-    padding: 30,
-    fontSize: 8,
-  },
-  logoText: {
-    color: NAVY,
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 18,
-  },
-  title: {
-    color: DARK,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  generated: {
-    color: MID_GRAY,
-    fontSize: 9,
-    marginTop: 6,
-  },
-  filters: {
-    color: MID_GRAY,
-    fontSize: 9,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  table: {
-    marginTop: 14,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  headerRow: {
-    backgroundColor: NAVY,
-  },
-  headerCell: {
-    color: WHITE,
-    fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  cell: {
-    color: DARK,
-    fontSize: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 4,
-  },
-  rowWhite: {
-    backgroundColor: WHITE,
-  },
-  rowShaded: {
-    backgroundColor: LIGHT_NAVY,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 30,
-    fontSize: 9,
-    color: MID_GRAY,
-  },
-  colName: { width: '17%' },
-  colEmail: { width: '17%' },
-  colPhone: { width: '12%' },
-  colServiceHours: { width: '6%' },
-  colCategories: { width: '18%' },
-  colHours: { width: '6%' },
-  colCalls: { width: '6%' },
-  colStatus: { width: '8%' },
-  colJoined: { width: '10%' },
-})
+// StyleSheet.create() must be called with the resolved brand colors, not
+// module-level constants — this component's colors come from app_settings
+// (30BN-THEME.4) and are only known once the route handler resolves them
+// and passes them in as props, at render time.
+function createStyles(brandPrimary: string, brandPrimaryLight: string) {
+  return StyleSheet.create({
+    page: {
+      padding: 30,
+      fontSize: 8,
+    },
+    logoText: {
+      color: brandPrimary,
+      fontFamily: 'Helvetica-Bold',
+      fontSize: 18,
+    },
+    title: {
+      color: DARK,
+      fontSize: 13,
+      marginTop: 4,
+    },
+    generated: {
+      color: MID_GRAY,
+      fontSize: 9,
+      marginTop: 6,
+    },
+    filters: {
+      color: MID_GRAY,
+      fontSize: 9,
+      fontStyle: 'italic',
+      marginTop: 2,
+    },
+    table: {
+      marginTop: 14,
+    },
+    row: {
+      flexDirection: 'row',
+    },
+    headerRow: {
+      backgroundColor: brandPrimary,
+    },
+    headerCell: {
+      color: WHITE,
+      fontSize: 8,
+      fontFamily: 'Helvetica-Bold',
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+    },
+    cell: {
+      color: DARK,
+      fontSize: 8,
+      paddingVertical: 5,
+      paddingHorizontal: 4,
+    },
+    rowWhite: {
+      backgroundColor: WHITE,
+    },
+    rowShaded: {
+      backgroundColor: brandPrimaryLight,
+    },
+    footer: {
+      position: 'absolute',
+      bottom: 20,
+      right: 30,
+      fontSize: 9,
+      color: MID_GRAY,
+    },
+    colName: { width: '17%' },
+    colEmail: { width: '17%' },
+    colPhone: { width: '12%' },
+    colServiceHours: { width: '6%' },
+    colCategories: { width: '18%' },
+    colHours: { width: '6%' },
+    colCalls: { width: '6%' },
+    colStatus: { width: '8%' },
+    colJoined: { width: '10%' },
+  })
+}
 
 export type VolunteerListPDFProps = {
   volunteers: VolunteerListRow[]
   filters: string
   generatedAt: string
+  brandPrimary?: string
+  brandPrimaryLight?: string
 }
 
 export default function VolunteerListPDF({
   volunteers,
   filters,
   generatedAt,
+  brandPrimary = '#293994',
+  brandPrimaryLight = '#EEF1FA',
 }: VolunteerListPDFProps) {
+  const styles = createStyles(brandPrimary, brandPrimaryLight)
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>

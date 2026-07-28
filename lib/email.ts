@@ -1,6 +1,7 @@
 import 'server-only'
 import { Resend } from 'resend'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { lightenHex } from '@/lib/utils/color'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -24,6 +25,7 @@ type EmailSettings = {
   orgContactEmail: string
   brandPrimary: string
   brandAccent: string
+  brandPrimaryLight: string
 }
 
 async function resolveEmailSettings(): Promise<EmailSettings> {
@@ -48,6 +50,7 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
   const orgContactEmail = map['org_contact_email'] || 'info@30byninety.com'
   const brandPrimary = map['brand_primary'] || '#293994'
   const brandAccent = map['brand_accent'] || '#F26522'
+  const brandPrimaryLight = lightenHex(brandPrimary, 0.08)
   return {
     from: `${name} <${address}>`,
     logoUrl,
@@ -55,6 +58,7 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
     orgContactEmail,
     brandPrimary,
     brandAccent,
+    brandPrimaryLight,
   }
 }
 
@@ -465,7 +469,7 @@ export async function sendWelcomeEmail({
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
       <tr>
-        <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
+        <td bgcolor="${emailSettings.brandPrimaryLight}" style="background-color:${emailSettings.brandPrimaryLight};border-radius:8px;padding:20px 24px;">
           <p style="margin:0 0 8px;color:${emailSettings.brandPrimary};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
             Login Details
           </p>
@@ -656,10 +660,11 @@ function showDetailsBlockHtml(showName: string, showDate: string, showTime: stri
 function instructionsBlockHtml(volunteerInstructions: string | null, brandPrimary?: string): string {
   if (!volunteerInstructions) return ''
   const resolvedBrandPrimary = brandPrimary || '#293994'
+  const resolvedBrandPrimaryLight = lightenHex(resolvedBrandPrimary, 0.08)
   return `
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
       <tr>
-        <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
+        <td bgcolor="${resolvedBrandPrimaryLight}" style="background-color:${resolvedBrandPrimaryLight};border-radius:8px;padding:20px 24px;">
           <p style="margin:0 0 8px;color:${resolvedBrandPrimary};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
             Special Instructions
           </p>

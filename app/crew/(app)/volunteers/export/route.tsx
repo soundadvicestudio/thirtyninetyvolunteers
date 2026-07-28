@@ -6,6 +6,7 @@ import { parseVolunteersUrlState, type RawSearchParams } from '@/lib/volunteers/
 import { buildFilterSummary } from '@/lib/volunteers/filterSummary'
 import VolunteerListPDF from '@/lib/volunteers/VolunteerListPDF'
 import { formatCT } from '@/lib/utils/date'
+import { lightenHex } from '@/lib/utils/color'
 
 export const runtime = 'nodejs'
 
@@ -31,16 +32,23 @@ export async function GET(request: Request) {
   const state = parseVolunteersUrlState(rawParams)
 
   const supabase = await getServerClient()
-  const [{ volunteers }, filterSummary] = await Promise.all([
+  const [{ volunteers }, filterSummary, { data: brandRows }] = await Promise.all([
     getVolunteersList(supabase, state, { fetchAll: true }),
     buildFilterSummary(supabase, state),
+    supabase.from('app_settings').select('key, value').in('key', ['brand_primary']),
   ])
+
+  const brandMap = Object.fromEntries((brandRows ?? []).map((r) => [r.key, r.value]))
+  const brandPrimary = brandMap['brand_primary'] || '#293994'
+  const brandPrimaryLight = lightenHex(brandPrimary, 0.08)
 
   const buffer = await renderToBuffer(
     <VolunteerListPDF
       volunteers={volunteers}
       filters={filterSummary}
       generatedAt={formatCT(new Date(), 'MMM d, yyyy h:mm a')}
+      brandPrimary={brandPrimary}
+      brandPrimaryLight={brandPrimaryLight}
     />
   )
 
