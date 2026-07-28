@@ -69,7 +69,7 @@ export default async function SeasonAtAGlance({
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-bold text-dark dark:text-dark-text">
-          Season at a Glance — <span className="text-navy dark:text-steel">{headerLabel}</span>
+          Season at a Glance — <span className="text-brand-primary dark:text-brand-primary-mid">{headerLabel}</span>
           <HelpTooltip anchor="dashboard-season" label="Season at a Glance" />
         </h2>
         {selectorSlot}

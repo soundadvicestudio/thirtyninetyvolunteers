@@ -41,7 +41,7 @@ function MilestoneRow({ row }: { row: PendingMilestoneRow }) {
         {row.volunteerId ? (
           <Link
             href={`/crew/volunteers/${row.volunteerId}`}
-            className="text-dark dark:text-dark-text font-medium hover:text-navy dark:hover:text-steel transition-colors"
+            className="text-dark dark:text-dark-text font-medium hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors"
           >
             {row.volunteerName}
           </Link>
@@ -57,12 +57,12 @@ function MilestoneRow({ row }: { row: PendingMilestoneRow }) {
         type="button"
         onClick={handleAcknowledge}
         disabled={isPending}
-        className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? 'Saving…' : 'Mark Acknowledged'}
       </button>
 
-      {error && <p className="text-orange text-xs w-full">{error}</p>}
+      {error && <p className="text-brand-accent text-xs w-full">{error}</p>}
     </div>
   )
 }

@@ -36,9 +36,9 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
 }
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 export default function VolunteerProfileForm({
   volunteer,
@@ -129,7 +129,7 @@ export default function VolunteerProfileForm({
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
           >
             <Pencil size={14} />
             Edit Profile
@@ -140,7 +140,7 @@ export default function VolunteerProfileForm({
       {!isEditing ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Contact</h3>
+            <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">Contact</h3>
             <Field label="Full Name" value={volunteer.full_name} />
             <Field label="Email" value={volunteer.email} />
             <Field label="Phone" value={formatPhone(volunteer.phone)} />
@@ -148,7 +148,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Personal</h3>
+            <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">Personal</h3>
             <Field label="Age Range" value={ageRangeLabel(volunteer.age_range)} />
             <Field label="School / Organization" value={volunteer.school} />
             <div>
@@ -157,7 +157,7 @@ export default function VolunteerProfileForm({
                 <HelpTooltip anchor="volunteer-profile" label="Service Hours Badge" />
               </p>
               {volunteer.requires_service_hours ? (
-                <p className="text-orange font-medium">Yes</p>
+                <p className="text-brand-accent font-medium">Yes</p>
               ) : volunteer.school ? (
                 <p className="text-mid-gray dark:text-dark-muted">No</p>
               ) : (
@@ -174,7 +174,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">
+            <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">
               Volunteer Interests
             </h3>
             {categories.length > 0 ? (
@@ -182,7 +182,7 @@ export default function VolunteerProfileForm({
                 {categories.map((c) => (
                   <span
                     key={c.id}
-                    className="bg-light-navy dark:bg-dark-border text-navy dark:text-dark-text text-xs rounded-full px-2 py-0.5"
+                    className="bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text text-xs rounded-full px-2 py-0.5"
                   >
                     {c.name}
                   </span>
@@ -194,7 +194,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">
+            <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">
               How They Found Us
             </h3>
             <Field label="How did you hear about us?" value={volunteer.referral_source} />
@@ -202,7 +202,7 @@ export default function VolunteerProfileForm({
           </section>
 
           <section className="space-y-4 md:col-span-2">
-            <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide">Account</h3>
+            <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">Account</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Field label="Joined" value={formatCT(volunteer.created_at, 'MMM d, yyyy')} />
               <Field label="Last Updated" value={formatCT(volunteer.updated_at, 'MMM d, yyyy')} />
@@ -215,7 +215,7 @@ export default function VolunteerProfileForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className={labelClasses}>
-                Full Name<span className="text-orange ml-0.5">*</span>
+                Full Name<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="text" className={inputClasses} {...register('full_name')} />
               {errors.full_name && <p className={errorClasses}>{errors.full_name.message}</p>}
@@ -223,7 +223,7 @@ export default function VolunteerProfileForm({
 
             <div>
               <label className={labelClasses}>
-                Email<span className="text-orange ml-0.5">*</span>
+                Email<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="email" className={inputClasses} {...register('email')} />
               {errors.email && <p className={errorClasses}>{errors.email.message}</p>}
@@ -231,7 +231,7 @@ export default function VolunteerProfileForm({
 
             <div>
               <label className={labelClasses}>
-                Phone<span className="text-orange ml-0.5">*</span>
+                Phone<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="tel" className={inputClasses} {...register('phone')} />
               {errors.phone && <p className={errorClasses}>{errors.phone.message}</p>}
@@ -259,7 +259,7 @@ export default function VolunteerProfileForm({
                         onChange={() =>
                           setValue('requires_service_hours', true, { shouldValidate: true })
                         }
-                        className="text-navy focus:ring-navy"
+                        className="text-brand-primary focus:ring-brand-primary"
                       />
                       <span className="text-sm text-dark dark:text-dark-text">Yes</span>
                     </label>
@@ -270,7 +270,7 @@ export default function VolunteerProfileForm({
                         onChange={() =>
                           setValue('requires_service_hours', false, { shouldValidate: true })
                         }
-                        className="text-navy focus:ring-navy"
+                        className="text-brand-primary focus:ring-brand-primary"
                       />
                       <span className="text-sm text-dark dark:text-dark-text">No</span>
                     </label>
@@ -296,16 +296,16 @@ export default function VolunteerProfileForm({
                 <input
                   type="checkbox"
                   {...register('is_minor')}
-                  className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
+                  className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
                 />
                 <span className="text-sm font-semibold text-dark dark:text-dark-text">Is Minor</span>
               </label>
 
               {isMinor && (
-                <div className="bg-pale-orange border border-orange rounded-lg p-4 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-brand-accent-light border border-brand-accent rounded-lg p-4 mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClasses}>
-                      Guardian Name<span className="text-orange ml-0.5">*</span>
+                      Guardian Name<span className="text-brand-accent ml-0.5">*</span>
                     </label>
                     <input type="text" className={inputClasses} {...register('guardian_name')} />
                     {errors.guardian_name && (
@@ -314,7 +314,7 @@ export default function VolunteerProfileForm({
                   </div>
                   <div>
                     <label className={labelClasses}>
-                      Guardian Phone<span className="text-orange ml-0.5">*</span>
+                      Guardian Phone<span className="text-brand-accent ml-0.5">*</span>
                     </label>
                     <input type="tel" className={inputClasses} {...register('guardian_phone')} />
                     {errors.guardian_phone && (
@@ -331,7 +331,7 @@ export default function VolunteerProfileForm({
                 {allCategories.map((cat) => (
                   <label
                     key={cat.id}
-                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider dark:border-dark-border hover:border-steel hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy dark:has-[:checked]:bg-dark-surface/50"
+                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider dark:border-dark-border hover:border-brand-primary-mid hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50"
                   >
                     <input
                       type="checkbox"
@@ -370,7 +370,7 @@ export default function VolunteerProfileForm({
           </div>
 
           {formError && (
-            <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">
+            <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">
               {formError}
             </div>
           )}
@@ -379,14 +379,14 @@ export default function VolunteerProfileForm({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-orange text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+              className="bg-brand-accent text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
             >
               Save Changes
             </button>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+              className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
             >
               Cancel
             </button>

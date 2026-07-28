@@ -40,9 +40,9 @@ const ROLE_BLOCKED_MESSAGE =
   'This role has active claims and cannot be removed. Cancel existing claims first.'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 const BLANK_ROLE = { dbId: null, role_name: '', category_id: NO_CATEGORY, slots_available: '1' }
 
@@ -142,14 +142,14 @@ function DateRow({
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1">
           <label className={labelClasses}>
-            Date<span className="text-orange ml-0.5">*</span>
+            Date<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input type="date" className={inputClasses} {...register(`dates.${dateIndex}.show_date`)} />
           {dateErrors?.show_date && <p className={errorClasses}>{dateErrors.show_date.message}</p>}
         </div>
         <div className="flex-1">
           <label className={labelClasses}>
-            Time<span className="text-orange ml-0.5">*</span>
+            Time<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input type="time" className={inputClasses} {...register(`dates.${dateIndex}.show_time`)} />
           {dateErrors?.show_time && <p className={errorClasses}>{dateErrors.show_time.message}</p>}
@@ -168,12 +168,12 @@ function DateRow({
           onClick={onRemoveDate}
           disabled={!canRemoveDate}
           aria-label="Remove date"
-          className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Trash2 size={18} />
         </button>
       </div>
-      {dateWarning && <p className="text-sm text-orange">{dateWarning}</p>}
+      {dateWarning && <p className="text-sm text-brand-accent">{dateWarning}</p>}
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="flex-1">
@@ -211,7 +211,7 @@ function DateRow({
             <button
               type="button"
               onClick={handleCopyFromPrevious}
-              className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
             >
               Copy roles from previous date
             </button>
@@ -224,11 +224,11 @@ function DateRow({
               roleField.dbId && blockedRoleIds.includes(roleField.dbId) ? ROLE_BLOCKED_MESSAGE : null
             const roleErrors = dateErrors?.roles?.[roleIndex]
             return (
-              <div key={roleField.id} className="bg-light-navy/30 dark:bg-dark-bg/40 rounded-lg p-3">
+              <div key={roleField.id} className="bg-brand-primary-light/30 dark:bg-dark-bg/40 rounded-lg p-3">
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1fr_auto] gap-3 sm:items-end">
                   <div>
                     <label className={labelClasses}>
-                      Role Name<span className="text-orange ml-0.5">*</span>
+                      Role Name<span className="text-brand-accent ml-0.5">*</span>
                     </label>
                     <input
                       type="text"
@@ -255,7 +255,7 @@ function DateRow({
                   </div>
                   <div>
                     <label className={labelClasses}>
-                      Slots<span className="text-orange ml-0.5">*</span>
+                      Slots<span className="text-brand-accent ml-0.5">*</span>
                     </label>
                     <input
                       type="number"
@@ -273,12 +273,12 @@ function DateRow({
                     onClick={() => removeRole(roleIndex)}
                     disabled={roleFields.length === 1}
                     aria-label="Remove role"
-                    className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-2 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
-                {roleWarning && <p className="text-sm text-orange mt-2">{roleWarning}</p>}
+                {roleWarning && <p className="text-sm text-brand-accent mt-2">{roleWarning}</p>}
               </div>
             )
           })}
@@ -287,7 +287,7 @@ function DateRow({
         <button
           type="button"
           onClick={() => appendRole({ ...BLANK_ROLE })}
-          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+          className="mt-3 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
         >
           ＋ Add Role for This Date
         </button>
@@ -498,7 +498,7 @@ export default function ShowForm({
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-8 max-w-3xl">
       {(blockedDateIds.length > 0 || blockedRoleIds.length > 0) && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-4 text-sm text-dark dark:text-dark-text">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-4 text-sm text-dark dark:text-dark-text">
           Show saved. {blockedDateIds.length + blockedRoleIds.length} item(s) could not be
           removed because they have active claims — see highlighted rows below.
         </div>
@@ -507,7 +507,7 @@ export default function ShowForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="sm:col-span-2">
           <label className={labelClasses}>
-            Show Name<span className="text-orange ml-0.5">*</span>
+            Show Name<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input type="text" className={inputClasses} {...register('name')} />
           {errors.name && <p className={errorClasses}>{errors.name.message}</p>}
@@ -515,7 +515,7 @@ export default function ShowForm({
 
         <div>
           <label className={labelClasses}>
-            Location<span className="text-orange ml-0.5">*</span>
+            Location<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <select className={inputClasses} {...register('location_id')}>
             {locations.map((loc) => (
@@ -561,7 +561,7 @@ export default function ShowForm({
           <fieldset className="sm:col-span-2 border border-divider dark:border-dark-border rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-3">
               <label className={labelClasses}>
-                Season Name<span className="text-orange ml-0.5">*</span>
+                Season Name<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="text" className={inputClasses} {...register('newSeasonName')} />
               {errors.newSeasonName && (
@@ -646,7 +646,7 @@ export default function ShowForm({
               roles: [{ ...BLANK_ROLE }],
             })
           }
-          className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+          className="mt-3 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
         >
           ＋ Add Date
         </button>
@@ -664,8 +664,8 @@ export default function ShowForm({
                 onClick={() => toggleEditor(u.id)}
                 className={`text-sm px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
                   active
-                    ? 'bg-navy text-white border-navy'
-                    : 'bg-white dark:bg-dark-surface text-dark dark:text-dark-text border-divider dark:border-dark-border hover:border-steel'
+                    ? 'bg-brand-primary text-white border-brand-primary'
+                    : 'bg-white dark:bg-dark-surface text-dark dark:text-dark-text border-divider dark:border-dark-border hover:border-brand-primary-mid'
                 }`}
               >
                 {u.name}
@@ -681,7 +681,7 @@ export default function ShowForm({
       </section>
 
       {formError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
           {formError}
         </div>
       )}
@@ -700,12 +700,12 @@ export default function ShowForm({
           <HelpTooltip anchor="publish-show" label="Send Notifications" />
         </div>
         {notify && show?.notifications_sent_at && (
-          <p className="text-sm text-orange">
+          <p className="text-sm text-brand-accent">
             Notifications were previously sent for this show. Checking this will send again to all matching
             volunteers.
           </p>
         )}
-        {notifyResult && <p className="text-sm text-navy dark:text-steel">{notifyResult}</p>}
+        {notifyResult && <p className="text-sm text-brand-primary dark:text-brand-primary-mid">{notifyResult}</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -713,7 +713,7 @@ export default function ShowForm({
           type="button"
           onClick={onClickSavePublish}
           disabled={busy}
-          className="bg-orange text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+          className="bg-brand-accent text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
         >
           {submittingStatus === 'live' ? 'Publishing…' : 'Save & Publish'}
         </button>
@@ -721,7 +721,7 @@ export default function ShowForm({
           type="button"
           onClick={onClickSaveDraft}
           disabled={busy}
-          className="bg-white dark:bg-dark-surface border border-navy text-navy dark:text-steel font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+          className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
         >
           {submittingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}
         </button>
@@ -737,12 +737,12 @@ export default function ShowForm({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+            <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
               Cancel
             </AlertDialogPrimitive.Cancel>
             <AlertDialogPrimitive.Action
               onClick={confirmPublish}
-              className="bg-orange text-white hover:bg-orange/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+              className="bg-brand-accent text-white hover:bg-brand-accent/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
             >
               Publish Anyway
             </AlertDialogPrimitive.Action>

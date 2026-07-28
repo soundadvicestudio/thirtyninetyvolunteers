@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { sendShowBulkEmail } from '@/lib/actions/shows'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 type SendResult = { success: boolean; sentCount?: number; error?: string }
@@ -94,7 +94,7 @@ export default function BulkEmailSection({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
       >
         Message Volunteers ({recipientCount})
       </button>
@@ -112,7 +112,7 @@ export default function BulkEmailSection({
       <div className="space-y-4 max-w-xl">
         <div>
           <label className={labelClasses}>
-            Subject<span className="text-orange ml-0.5">*</span>
+            Subject<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input
             type="text"
@@ -125,7 +125,7 @@ export default function BulkEmailSection({
 
         <div>
           <label className={labelClasses}>
-            Reply-To<span className="text-orange ml-0.5">*</span>
+            Reply-To<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input
             type="email"
@@ -138,7 +138,7 @@ export default function BulkEmailSection({
 
         <div>
           <label className={labelClasses}>
-            Message<span className="text-orange ml-0.5">*</span>
+            Message<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <textarea
             value={body}
@@ -155,7 +155,7 @@ export default function BulkEmailSection({
               type="button"
               onClick={handleSendClick}
               disabled={subject.trim() === '' || body.trim() === '' || isSending}
-              className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
             >
               Send Message
             </button>
@@ -169,7 +169,7 @@ export default function BulkEmailSection({
             </button>
           </div>
         ) : (
-          <div className="rounded-lg border border-divider dark:border-dark-border bg-light-navy/30 dark:bg-dark-bg/40 p-4 space-y-3">
+          <div className="rounded-lg border border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/40 p-4 space-y-3">
             <p className="text-sm text-dark dark:text-dark-text">
               Send this message to {recipientCount} volunteer{recipientCount !== 1 ? 's' : ''}?
             </p>
@@ -178,7 +178,7 @@ export default function BulkEmailSection({
                 type="button"
                 onClick={handleConfirmSend}
                 disabled={isSending}
-                className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+                className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
               >
                 {isSending ? 'Sending…' : 'Yes, Send'}
               </button>
@@ -195,7 +195,7 @@ export default function BulkEmailSection({
         )}
 
         {result && (
-          <p className={`text-sm ${result.success ? 'text-green-700 dark:text-green-400' : 'text-orange'}`}>
+          <p className={`text-sm ${result.success ? 'text-green-700 dark:text-green-400' : 'text-brand-accent'}`}>
             {resultMessage(result)}
           </p>
         )}

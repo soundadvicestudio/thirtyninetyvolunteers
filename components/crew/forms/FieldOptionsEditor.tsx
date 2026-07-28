@@ -4,9 +4,9 @@ import { Controller, useFieldArray, type Control } from 'react-hook-form'
 import type { FormBuilderValues } from '@/lib/validations/form'
 
 const inputClasses =
-  'flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-1.5 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-1.5 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const iconButtonClasses =
-  'text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed'
+  'text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed'
 
 // R24 — this nested field array (options within a field) must live in its
 // own named sub-component; useFieldArray cannot be called inside a render
@@ -64,7 +64,7 @@ export default function FieldOptionsEditor({
               onClick={() => remove(optionIndex)}
               disabled={fields.length === 1}
               aria-label="Delete option"
-              className={`${iconButtonClasses} hover:text-orange`}
+              className={`${iconButtonClasses} hover:text-brand-accent`}
             >
               ✕
             </button>
@@ -74,7 +74,7 @@ export default function FieldOptionsEditor({
       <button
         type="button"
         onClick={() => append({ value: '' })}
-        className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+        className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
       >
         + Add option
       </button>

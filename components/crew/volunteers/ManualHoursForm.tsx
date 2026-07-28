@@ -66,7 +66,7 @@ export default function ManualHoursForm({ volunteerId }: { volunteerId: string }
             value={hours}
             onChange={(e) => setHours(e.target.value)}
             disabled={isSubmitting}
-            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -79,7 +79,7 @@ export default function ManualHoursForm({ volunteerId }: { volunteerId: string }
             value={loggedDate}
             onChange={(e) => setLoggedDate(e.target.value)}
             disabled={isSubmitting}
-            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
           />
         </div>
 
@@ -93,17 +93,17 @@ export default function ManualHoursForm({ volunteerId }: { volunteerId: string }
             onChange={(e) => setNote(e.target.value)}
             placeholder="e.g. Set build, June 15"
             disabled={isSubmitting}
-            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
           />
         </div>
       </div>
 
-      {error && <p className="text-sm text-orange">{error}</p>}
+      {error && <p className="text-sm text-brand-accent">{error}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-orange text-white font-bold px-5 py-2 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="bg-brand-accent text-white font-bold px-5 py-2 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Adding…' : 'Add Hours'}
       </button>

@@ -22,7 +22,7 @@ export default function FormList({
         {canEdit && (
           <Link
             href="/crew/forms/new"
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
           >
             ＋ New Form
           </Link>
@@ -35,7 +35,7 @@ export default function FormList({
           {canEdit && (
             <Link
               href="/crew/forms/new"
-              className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
             >
               ＋ New Form
             </Link>
@@ -46,7 +46,7 @@ export default function FormList({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Title</th>
                   <th className="px-4 py-2 font-semibold">Status</th>
                   <th className="px-4 py-2 font-semibold">Responses</th>
@@ -77,13 +77,13 @@ export default function FormList({
                         <div className="flex items-center gap-3">
                           <Link
                             href={`/crew/forms/${form.id}/edit`}
-                            className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                            className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                           >
                             Edit
                           </Link>
                           <Link
                             href={`/crew/forms/${form.id}/responses`}
-                            className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                            className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                           >
                             View Responses
                           </Link>

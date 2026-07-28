@@ -94,7 +94,7 @@ export default function FormPreview({
             <div key={field.id ?? i}>
               <label className="block text-sm font-semibold text-dark mb-1.5">
                 {field.label || 'Untitled field'}
-                {field.is_required && <span className="text-orange ml-0.5">*</span>}
+                {field.is_required && <span className="text-brand-accent ml-0.5">*</span>}
               </label>
               {renderField(field, i)}
             </div>

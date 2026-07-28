@@ -21,10 +21,10 @@ const OPTION_TYPES: FieldType[] = ['dropdown', 'radio', 'checkbox']
 const NO_PLACEHOLDER_TYPES: FieldType[] = ['checkbox', 'radio']
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 const iconButtonClasses =
-  'text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed'
+  'text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors p-1.5 disabled:opacity-30 disabled:cursor-not-allowed'
 
 export default function FieldRow({
   control,
@@ -52,7 +52,7 @@ export default function FieldRow({
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4 space-y-4">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold uppercase text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav rounded px-2 py-1 shrink-0">
+        <span className="text-xs font-semibold uppercase text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav rounded px-2 py-1 shrink-0">
           {FIELD_TYPE_OPTIONS.find((t) => t.value === fieldType)?.label ?? fieldType}
         </span>
         <span className="flex-1 text-sm font-medium text-dark dark:text-dark-text truncate">
@@ -80,7 +80,7 @@ export default function FieldRow({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline px-2 cursor-pointer"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline px-2 cursor-pointer"
           >
             ✎ Edit
           </button>
@@ -88,7 +88,7 @@ export default function FieldRow({
             type="button"
             onClick={onRemove}
             aria-label="Remove field"
-            className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-1.5 cursor-pointer"
+            className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-1.5 cursor-pointer"
           >
             ✕
           </button>
@@ -116,7 +116,7 @@ export default function FieldRow({
 
           <div>
             <label className={labelClasses}>
-              Label<span className="text-orange ml-0.5">*</span>
+              Label<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <Controller
               control={control}

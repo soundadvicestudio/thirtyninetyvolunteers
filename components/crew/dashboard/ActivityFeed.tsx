@@ -7,10 +7,10 @@ import { formatCT } from '@/lib/utils/date'
 import { clearActivityFeed, loadMoreActivity, type ActivityEvent } from '@/lib/actions/dashboard'
 
 const EVENT_BORDER_COLOR: Record<ActivityEvent['event_type'], string> = {
-  signup: 'border-navy',
+  signup: 'border-[#293994]',
   claim: 'border-green-600',
-  cancellation: 'border-orange',
-  opportunity_submission: 'border-steel',
+  cancellation: 'border-[#F26522]',
+  opportunity_submission: 'border-[#729ABF]',
 }
 
 function formatEventTime(occurredAt: string): string {
@@ -32,7 +32,7 @@ function VolunteerLink({ event }: { event: ActivityEvent }) {
     return (
       <Link
         href={`/crew/volunteers/${event.volunteer_id}`}
-        className="font-semibold text-navy dark:text-steel hover:underline"
+        className="font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
       >
         {event.volunteer_name}
       </Link>
@@ -44,7 +44,7 @@ function VolunteerLink({ event }: { event: ActivityEvent }) {
 function DetailLink({ event, href }: { event: ActivityEvent; href: string }) {
   if (event.detail_id) {
     return (
-      <Link href={href} className="font-semibold text-navy dark:text-steel hover:underline">
+      <Link href={href} className="font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline">
         {event.detail}
       </Link>
     )
@@ -140,7 +140,7 @@ export default function ActivityFeed({
             type="button"
             onClick={handleClear}
             disabled={clearing}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline disabled:opacity-50 cursor-pointer"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline disabled:opacity-50 cursor-pointer"
           >
             {clearing ? 'Marking…' : 'Mark all as read'}
           </button>
@@ -161,7 +161,7 @@ export default function ActivityFeed({
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <EventText event={event} />
                   {isNew && (
-                    <span className="bg-orange text-white text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 shrink-0">
+                    <span className="bg-brand-accent text-white text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 shrink-0">
                       New
                     </span>
                   )}
@@ -180,7 +180,7 @@ export default function ActivityFeed({
           type="button"
           onClick={handleLoadMore}
           disabled={loading}
-          className="mt-4 text-sm font-semibold text-navy dark:text-steel hover:underline disabled:opacity-50 cursor-pointer"
+          className="mt-4 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline disabled:opacity-50 cursor-pointer"
         >
           {loading ? 'Loading…' : 'Load more'}
         </button>

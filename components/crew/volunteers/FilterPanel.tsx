@@ -87,7 +87,7 @@ export default function FilterPanel({
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
-        className="md:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-navy"
+        className="md:hidden w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-brand-primary"
       >
         Filters
         <span>{collapsed ? '+' : '−'}</span>
@@ -103,7 +103,7 @@ export default function FilterPanel({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name, email, or phone"
-            className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           />
         </div>
 
@@ -112,7 +112,7 @@ export default function FilterPanel({
           <select
             value={state.status}
             onChange={(e) => navigate({ status: e.target.value as VolunteersUrlState['status'] })}
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             <option value="active">Active</option>
             <option value="archived">Archived</option>
@@ -125,7 +125,7 @@ export default function FilterPanel({
           <select
             value={state.ageRange}
             onChange={(e) => navigate({ ageRange: e.target.value })}
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             {AGE_RANGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -140,7 +140,7 @@ export default function FilterPanel({
           <select
             value={state.school}
             onChange={(e) => navigate({ school: e.target.value as VolunteersUrlState['school'] })}
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             <option value="all">All</option>
             <option value="yes">Has school</option>
@@ -155,7 +155,7 @@ export default function FilterPanel({
             onChange={(e) =>
               navigate({ isMinor: e.target.value as VolunteersUrlState['isMinor'] })
             }
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             <option value="all">All</option>
             <option value="yes">Yes</option>
@@ -170,7 +170,7 @@ export default function FilterPanel({
             onChange={(e) =>
               navigate({ serviceHours: e.target.value as VolunteersUrlState['serviceHours'] })
             }
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             <option value="all">All</option>
             <option value="yes">Required</option>
@@ -186,7 +186,7 @@ export default function FilterPanel({
           <select
             value={state.milestoneTier}
             onChange={(e) => navigate({ milestoneTier: e.target.value as VolunteersUrlState['milestoneTier'] })}
-            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-navy"
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
           >
             {MILESTONE_TIER_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -205,7 +205,7 @@ export default function FilterPanel({
                   type="checkbox"
                   checked={state.categoryIds.includes(cat.id)}
                   onChange={() => toggleCategory(cat.id)}
-                  className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
+                  className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
                 />
                 {cat.name}
               </label>
@@ -218,7 +218,7 @@ export default function FilterPanel({
             <button
               type="button"
               onClick={clearAll}
-              className="text-sm text-orange font-semibold hover:underline"
+              className="text-sm text-brand-accent font-semibold hover:underline"
             >
               Clear All Filters
             </button>

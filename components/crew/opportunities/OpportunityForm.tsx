@@ -12,9 +12,9 @@ import {
 import type { StandingOpportunity } from '@/types/opportunity'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 function buildPayload(data: OpportunityFormValues): OpportunitySubmitPayload {
   return {
@@ -72,7 +72,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
       <div>
         <label className={labelClasses}>
-          Opportunity Title<span className="text-orange ml-0.5">*</span>
+          Opportunity Title<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input
           type="text"
@@ -93,14 +93,14 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
 
       <fieldset>
         <legend className={labelClasses}>
-          Claim Type<span className="text-orange ml-0.5">*</span>
+          Claim Type<span className="text-brand-accent ml-0.5">*</span>
         </legend>
         <div className="space-y-3">
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-navy has-[:checked]:bg-light-navy dark:has-[:checked]:bg-dark-surface/50 transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50 transition-colors">
             <input
               type="radio"
               value="eoi"
-              className="mt-1 text-navy focus:ring-navy"
+              className="mt-1 text-brand-primary focus:ring-brand-primary"
               {...register('claim_type')}
             />
             <span>
@@ -112,11 +112,11 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-navy has-[:checked]:bg-light-navy dark:has-[:checked]:bg-dark-surface/50 transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50 transition-colors">
             <input
               type="radio"
               value="slot_claim"
-              className="mt-1 text-navy focus:ring-navy"
+              className="mt-1 text-brand-primary focus:ring-brand-primary"
               {...register('claim_type')}
             />
             <span>
@@ -133,7 +133,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
+            className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
             {...register('slot_cap_enabled')}
           />
           <span className="text-sm font-semibold text-dark dark:text-dark-text">Limit submissions?</span>
@@ -142,7 +142,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
         {slotCapEnabled && (
           <div className="mt-3">
             <label className={labelClasses}>
-              Slot Cap<span className="text-orange ml-0.5">*</span>
+              Slot Cap<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input
               type="number"
@@ -162,7 +162,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
       </div>
 
       {formError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
           {formError}
         </div>
       )}
@@ -170,7 +170,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
       <button
         type="submit"
         disabled={isSubmitting}
-        className="bg-navy text-white hover:bg-steel transition-colors px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 cursor-pointer"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 cursor-pointer"
       >
         {isSubmitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Opportunity'}
       </button>

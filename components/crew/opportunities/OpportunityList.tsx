@@ -19,8 +19,8 @@ import type { OpportunityWithSubmissionCount, ClaimType, OpportunityStatus } fro
 
 const CLAIM_TYPE_LABEL: Record<ClaimType, string> = { eoi: 'EOI', slot_claim: 'Slot Claim' }
 const CLAIM_TYPE_BADGE: Record<ClaimType, string> = {
-  eoi: 'bg-steel text-white',
-  slot_claim: 'bg-navy text-white',
+  eoi: 'bg-[#729ABF] text-white',
+  slot_claim: 'bg-[#293994] text-white',
 }
 const OPP_STATUS_LABEL: Record<OpportunityStatus, string> = { active: 'Active', archived: 'Archived' }
 const OPP_STATUS_BADGE: Record<OpportunityStatus, string> = {
@@ -70,7 +70,7 @@ export default function OpportunityList({
     <div>
       <Link
         href="/crew/shows"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Shows
       </Link>
@@ -80,7 +80,7 @@ export default function OpportunityList({
         {canEdit && (
           <Link
             href="/crew/shows/opportunities/new"
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
           >
             ＋ New Opportunity
           </Link>
@@ -88,13 +88,13 @@ export default function OpportunityList({
       </div>
 
       {archiveError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text mb-4">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text mb-4">
           {archiveError}
         </div>
       )}
 
       {reactivateError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text mb-4">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text mb-4">
           {reactivateError}
         </div>
       )}
@@ -106,7 +106,7 @@ export default function OpportunityList({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Title</th>
                   <th className="px-4 py-2 font-semibold">Claim Type</th>
                   <th className="px-4 py-2 font-semibold">Slot Cap</th>
@@ -128,7 +128,7 @@ export default function OpportunityList({
                       <td className="px-4 py-2 font-medium">
                         <Link
                           href={`/crew/shows/opportunities/${opp.id}`}
-                          className="text-dark dark:text-dark-text hover:text-navy dark:hover:text-steel transition-colors"
+                          className="text-dark dark:text-dark-text hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors"
                         >
                           {opp.title}
                         </Link>
@@ -156,7 +156,7 @@ export default function OpportunityList({
                           <div className="flex items-center gap-3">
                             <Link
                               href={`/crew/shows/opportunities/${opp.id}/edit`}
-                              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                             >
                               Edit
                             </Link>
@@ -164,7 +164,7 @@ export default function OpportunityList({
                               <AlertDialogTrigger asChild>
                                 <button
                                   type="button"
-                                  className="text-xs font-semibold text-orange hover:underline cursor-pointer"
+                                  className="text-xs font-semibold text-brand-accent hover:underline cursor-pointer"
                                 >
                                   Archive
                                 </button>
@@ -178,13 +178,13 @@ export default function OpportunityList({
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+                                  <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
                                     Cancel
                                   </AlertDialogPrimitive.Cancel>
                                   <AlertDialogPrimitive.Action
                                     onClick={() => handleArchive(opp.id)}
                                     disabled={archivingId === opp.id}
-                                    className="bg-orange text-white hover:bg-orange/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+                                    className="bg-brand-accent text-white hover:bg-brand-accent/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
                                   >
                                     Archive
                                   </AlertDialogPrimitive.Action>
@@ -198,7 +198,7 @@ export default function OpportunityList({
                             type="button"
                             onClick={() => handleReactivate(opp.id)}
                             disabled={reactivatingId === opp.id}
-                            className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50"
+                            className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50"
                           >
                             {reactivatingId === opp.id ? 'Reactivating…' : 'Reactivate'}
                           </button>

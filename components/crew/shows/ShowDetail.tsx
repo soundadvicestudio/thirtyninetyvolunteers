@@ -25,9 +25,9 @@ import type {
 } from '@/types/show'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const selectClasses =
-  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
 const ATTENDANCE_LABEL: Record<'showed' | 'no_show' | 'excused', string> = {
   showed: 'Showed',
@@ -110,27 +110,27 @@ function OverviewTab({
           <p className="text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide mb-1">
             Volunteer Instructions (included in confirmation emails)
           </p>
-          <blockquote className="border-l-4 border-steel bg-light-navy dark:bg-dark-surface rounded-r-lg p-4 text-dark dark:text-dark-text">
+          <blockquote className="border-l-4 border-brand-primary-mid bg-brand-primary-light dark:bg-dark-surface rounded-r-lg p-4 text-dark dark:text-dark-text">
             {show.volunteer_instructions}
           </blockquote>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-dark dark:text-dark-text font-mono bg-light-navy dark:bg-dark-surface px-3 py-1.5 rounded break-all">
+        <span className="text-sm text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-1.5 rounded break-all">
           {publicUrl}
         </span>
         <button
           type="button"
           onClick={handleCopy}
-          className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+          className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
         <button
           type="button"
           onClick={() => window.open(`/shows/${show.id}`, '_blank', 'noopener,noreferrer')}
-          className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+          className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
         >
           View
         </button>
@@ -139,7 +139,7 @@ function OverviewTab({
       {canEdit && (
         <Link
           href={`/crew/shows/${show.id}/edit`}
-          className="inline-block bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+          className="inline-block bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
         >
           Edit Show
         </Link>
@@ -155,14 +155,14 @@ function OverviewTab({
           <a
             href={`data:image/png;base64,${qr.pngBase64}`}
             download={`${slug}-qr.png`}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
           >
             Download PNG
           </a>
           <a
             href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr.svg)}`}
             download={`${slug}-qr.svg`}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
           >
             Download SVG
           </a>
@@ -223,14 +223,14 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
         </p>
       )}
 
-      {result && <p className="text-sm text-navy dark:text-steel mb-3">{result}</p>}
+      {result && <p className="text-sm text-brand-primary dark:text-brand-primary-mid mb-3">{result}</p>}
 
       {!alreadySent ? (
         <button
           type="button"
           onClick={handleSend}
           disabled={sending}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
         >
           {sending ? 'Sending…' : 'Send Notifications to Matching Volunteers'}
         </button>
@@ -244,7 +244,7 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
               type="button"
               onClick={handleSend}
               disabled={sending}
-              className="bg-orange text-white hover:bg-opacity-90 transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+              className="bg-brand-accent text-white hover:bg-opacity-90 transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
             >
               {sending ? 'Sending…' : 'Yes, send again'}
             </button>
@@ -262,7 +262,7 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+          className="bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
         >
           Send Again
         </button>
@@ -364,7 +364,7 @@ function VolunteersTab({
           )
           return (
             <div key={role.id} className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-light-navy dark:bg-dark-nav">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav">
                 <h3 className="font-bold text-dark dark:text-dark-text">
                   {role.role_name} — {role.slots_available} {role.slots_available === 1 ? 'slot' : 'slots'}
                 </h3>
@@ -373,7 +373,7 @@ function VolunteersTab({
                     type="button"
                     onClick={() => handleBulkMark(role.id, claimsForRole.map((c) => c.id))}
                     disabled={bulkMarkingRoleId === role.id}
-                    className="text-xs font-semibold border border-navy dark:border-steel text-navy dark:text-steel px-3 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+                    className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-3 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     {bulkMarkingRoleId === role.id ? 'Marking…' : 'Mark All Showed'}
                   </button>
@@ -406,7 +406,7 @@ function VolunteersTab({
                             <td className="px-4 py-2 text-dark dark:text-dark-text align-top">
                               {claim.volunteer_name}
                               {!claim.volunteer_id && (
-                                <span className="flex items-center gap-1 text-xs text-orange">
+                                <span className="flex items-center gap-1 text-xs text-brand-accent">
                                   ⚠ No linked volunteer — hours won&apos;t tally
                                   <HelpTooltip anchor="hours" label="Hours Tallying" />
                                 </span>
@@ -418,7 +418,7 @@ function VolunteersTab({
                             </td>
                             <td className="px-4 py-2 align-top">
                               {record?.source === 'checkin' && (
-                                <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-light-navy dark:bg-dark-nav text-navy dark:text-steel border border-navy/20 dark:border-steel/30 mb-1">
+                                <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-brand-primary-light dark:bg-dark-nav text-brand-primary dark:text-brand-primary-mid border border-brand-primary/20 dark:border-brand-primary-mid/30 mb-1">
                                   Self Check-In
                                 </span>
                               )}
@@ -447,7 +447,7 @@ function VolunteersTab({
                                 </span>
                               )}
                               {rowErrors[claim.id] && (
-                                <p className="text-xs text-orange mt-1">{rowErrors[claim.id]}</p>
+                                <p className="text-xs text-brand-accent mt-1">{rowErrors[claim.id]}</p>
                               )}
                             </td>
                           </tr>
@@ -488,7 +488,7 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
         <div className="space-y-6">
           {rolesWithWaitlist.map(({ role, claims }) => (
         <div key={role.id} className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-light-navy dark:bg-dark-nav">
+          <div className="px-4 py-3 bg-brand-primary-light dark:bg-dark-nav">
             <h3 className="font-bold text-dark dark:text-dark-text">{role.role_name}</h3>
           </div>
           <div className="overflow-x-auto bg-white dark:bg-dark-surface">
@@ -559,14 +559,14 @@ function DatesTab({
             <a
               href={`data:image/png;base64,${checkinQr.pngBase64}`}
               download="checkin-whole-show.png"
-              className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+              className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
             >
               Download PNG
             </a>
             <a
               href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(checkinQr.svg)}`}
               download="checkin-whole-show.svg"
-              className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+              className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
             >
               Download SVG
             </a>
@@ -577,7 +577,7 @@ function DatesTab({
       <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+            <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
               <th className="px-4 py-2 font-semibold">Date</th>
               <th className="px-4 py-2 font-semibold">Time</th>
               <th className="px-4 py-2 font-semibold">Day of Week</th>
@@ -617,14 +617,14 @@ function DatesTab({
                             <a
                               href={`data:image/png;base64,${dateQr.pngBase64}`}
                               download={`checkin-${d.show_date}.png`}
-                              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                             >
                               Download PNG
                             </a>
                             <a
                               href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dateQr.svg)}`}
                               download={`checkin-${d.show_date}.svg`}
-                              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+                              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                             >
                               Download SVG
                             </a>
@@ -778,7 +778,7 @@ function SettingsTab({
                       type="button"
                       onClick={() => handleRemove(editor.admin_id)}
                       disabled={removingId === editor.admin_id}
-                      className="text-xs font-semibold text-orange hover:underline disabled:opacity-50 cursor-pointer"
+                      className="text-xs font-semibold text-brand-accent hover:underline disabled:opacity-50 cursor-pointer"
                     >
                       {removingId === editor.admin_id ? 'Removing…' : 'Remove'}
                     </button>
@@ -806,7 +806,7 @@ function SettingsTab({
                       type="button"
                       onClick={() => handleAdd(u.id)}
                       disabled={addingId === u.id}
-                      className="w-full text-left px-4 py-2 hover:bg-light-navy dark:hover:bg-dark-bg transition-colors cursor-pointer disabled:opacity-50"
+                      className="w-full text-left px-4 py-2 hover:bg-brand-primary-light dark:hover:bg-dark-bg transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <span className="text-sm text-dark dark:text-dark-text font-medium">{u.name}</span>
                       <span className="text-xs text-mid-gray dark:text-dark-muted ml-2">{u.email}</span>
@@ -817,7 +817,7 @@ function SettingsTab({
             )}
           </div>
         )}
-        {editorError && <p className="text-sm text-orange mt-2">{editorError}</p>}
+        {editorError && <p className="text-sm text-brand-accent mt-2">{editorError}</p>}
       </section>
 
       {canEdit && (
@@ -843,17 +843,17 @@ function SettingsTab({
                 type="button"
                 onClick={handleSaveStatus}
                 disabled={statusSaving || statusValue === show.status}
-                className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+                className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
               >
                 {statusSaving ? 'Saving…' : 'Save Status'}
               </button>
             )}
             {statusSaved && <span className="text-sm text-green-700 dark:text-green-400">Saved</span>}
           </div>
-          {statusError && <p className="text-sm text-orange mt-2">{statusError}</p>}
+          {statusError && <p className="text-sm text-brand-accent mt-2">{statusError}</p>}
 
           {showLivePanel && (
-            <div className="mt-4 rounded-lg border border-divider dark:border-dark-border bg-light-navy/30 dark:bg-dark-bg/40 p-4 space-y-3 max-w-md">
+            <div className="mt-4 rounded-lg border border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/40 p-4 space-y-3 max-w-md">
               <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
                 <input
                   type="checkbox"
@@ -864,18 +864,18 @@ function SettingsTab({
                 Notify matching volunteers about this show
               </label>
               {notify && show.notifications_sent_at && (
-                <p className="text-sm text-orange">
+                <p className="text-sm text-brand-accent">
                   Notifications were previously sent for this show. Checking this will send again to all matching
                   volunteers.
                 </p>
               )}
-              {notifyResult && <p className="text-sm text-navy dark:text-steel">{notifyResult}</p>}
+              {notifyResult && <p className="text-sm text-brand-primary dark:text-brand-primary-mid">{notifyResult}</p>}
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={handleConfirmLive}
                   disabled={statusSaving}
-                  className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+                  className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {statusSaving ? 'Confirming…' : 'Confirm'}
                 </button>
@@ -947,7 +947,7 @@ export default function ShowDetail({
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
               activeTab === tab.key
-                ? 'border-navy text-navy dark:text-steel'
+                ? 'border-brand-primary text-brand-primary dark:text-brand-primary-mid'
                 : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text'
             }`}
           >

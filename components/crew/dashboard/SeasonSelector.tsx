@@ -41,7 +41,7 @@ export default function SeasonSelector({
         value={currentSeasonId ?? ''}
         onChange={handleChange}
         disabled={isSaving}
-        className="text-sm rounded border border-divider dark:border-dark-border px-2 py-1 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+        className="text-sm rounded border border-divider dark:border-dark-border px-2 py-1 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
       >
         <option value="">— All Live Shows —</option>
         {seasons.map((season) => (

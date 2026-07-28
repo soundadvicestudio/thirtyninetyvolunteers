@@ -50,7 +50,7 @@ function HoursReviewRow({ row }: { row: PendingHoursRow }) {
         {row.volunteerId ? (
           <Link
             href={`/crew/volunteers/${row.volunteerId}`}
-            className="text-dark dark:text-dark-text font-medium hover:text-navy dark:hover:text-steel transition-colors"
+            className="text-dark dark:text-dark-text font-medium hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors"
           >
             {row.volunteerName}
           </Link>
@@ -71,19 +71,19 @@ function HoursReviewRow({ row }: { row: PendingHoursRow }) {
         value={hoursInput}
         onChange={(e) => setHoursInput(e.target.value)}
         disabled={isPending}
-        className="w-20 rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+        className="w-20 rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
       />
 
       <button
         type="button"
         onClick={handleConfirm}
         disabled={isPending}
-        className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isPending ? 'Confirming…' : 'Confirm'}
       </button>
 
-      {error && <p className="text-orange text-xs w-full">{error}</p>}
+      {error && <p className="text-brand-accent text-xs w-full">{error}</p>}
     </div>
   )
 }
@@ -114,7 +114,7 @@ export default function PendingHoursCard({ rows }: { rows: PendingHoursRow[] }) 
       <div className="space-y-6">
         {groupList.map((group) => (
           <div key={`${group.showName}-${group.showDate}`}>
-            <h3 className="text-sm font-semibold text-navy dark:text-steel mb-2">
+            <h3 className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid mb-2">
               {group.showName} — {formatWallClockCT(group.showDate, null, 'MMM d, yyyy')}
             </h3>
             <div>

@@ -67,14 +67,14 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
             <button
               type="button"
               onClick={() => setMode('edit')}
-              className="text-mid-gray dark:text-dark-muted hover:text-navy text-xs cursor-pointer transition-colors"
+              className="text-mid-gray dark:text-dark-muted hover:text-brand-primary text-xs cursor-pointer transition-colors"
             >
               ✏ Edit
             </button>
             <button
               type="button"
               onClick={() => setMode('delete-confirm')}
-              className="text-mid-gray dark:text-dark-muted hover:text-orange text-xs cursor-pointer transition-colors"
+              className="text-mid-gray dark:text-dark-muted hover:text-brand-accent text-xs cursor-pointer transition-colors"
             >
               🗑 Delete
             </button>
@@ -88,7 +88,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={handleConfirmDelete}
               disabled={isSubmitting}
-              className="text-xs bg-orange text-white px-2 py-0.5 rounded hover:bg-orange/90 cursor-pointer disabled:opacity-50"
+              className="text-xs bg-brand-accent text-white px-2 py-0.5 rounded hover:bg-brand-accent/90 cursor-pointer disabled:opacity-50"
             >
               Confirm
             </button>
@@ -96,7 +96,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={() => setMode('view')}
               disabled={isSubmitting}
-              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -110,15 +110,15 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
             value={draftBody}
             onChange={(e) => setDraftBody(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text resize-y focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text resize-y focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors"
           />
-          {error && <p className="text-xs text-orange">{error}</p>}
+          {error && <p className="text-xs text-brand-accent">{error}</p>}
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleSave}
               disabled={isSubmitting || !draftBody.trim()}
-              className="text-xs bg-orange text-white px-2 py-0.5 rounded hover:bg-orange/90 cursor-pointer disabled:opacity-50"
+              className="text-xs bg-brand-accent text-white px-2 py-0.5 rounded hover:bg-brand-accent/90 cursor-pointer disabled:opacity-50"
             >
               Save
             </button>
@@ -126,7 +126,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={handleCancelEdit}
               disabled={isSubmitting}
-              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -136,7 +136,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
         <p className="text-dark dark:text-dark-text text-sm mt-1 whitespace-pre-wrap">{note.body}</p>
       )}
 
-      {mode === 'delete-confirm' && error && <p className="text-xs text-orange mt-1">{error}</p>}
+      {mode === 'delete-confirm' && error && <p className="text-xs text-brand-accent mt-1">{error}</p>}
     </div>
   )
 }
@@ -197,14 +197,14 @@ export default function EditorNotes({
           onChange={(e) => setBody(e.target.value)}
           placeholder="Add a note about this volunteer..."
           rows={3}
-          className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark resize-y focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors"
+          className="w-full rounded-lg border border-divider px-3 py-2 text-sm text-dark resize-y focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors"
         />
-        {error && <p className="text-sm text-orange">{error}</p>}
+        {error && <p className="text-sm text-brand-accent">{error}</p>}
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting || !body.trim()}
-          className="bg-orange text-white font-bold px-5 py-2 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+          className="bg-brand-accent text-white font-bold px-5 py-2 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
         >
           Add Note
         </button>

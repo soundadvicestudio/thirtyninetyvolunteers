@@ -81,7 +81,7 @@ export default function CommunicationHistory({ history }: { history: Communicati
                   {history.map((entry, i) => (
                     <tr
                       key={entry.id}
-                      className={`border-b border-divider dark:border-dark-border ${i % 2 === 0 ? 'bg-light-navy/30 dark:bg-dark-surface/30' : ''}`}
+                      className={`border-b border-divider dark:border-dark-border ${i % 2 === 0 ? 'bg-brand-primary-light/30 dark:bg-dark-surface/30' : ''}`}
                     >
                       <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
                         {formatCT(entry.sentAt, 'MMM d, yyyy h:mm a')}

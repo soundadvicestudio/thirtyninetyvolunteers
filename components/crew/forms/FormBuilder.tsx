@@ -12,9 +12,9 @@ import type { FieldType, FormData, FullForm } from '@/types/form'
 const OPTION_TYPES: FieldType[] = ['dropdown', 'radio', 'checkbox']
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 function defaultFieldValues(sortOrder: number) {
   return {
@@ -143,8 +143,8 @@ export default function FormBuilder({
           onClick={() => setTab('build')}
           className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             tab === 'build'
-              ? 'border-navy text-navy dark:border-steel dark:text-steel'
-              : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel'
+              ? 'border-brand-primary text-brand-primary dark:border-brand-primary-mid dark:text-brand-primary-mid'
+              : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid'
           }`}
         >
           Build
@@ -154,8 +154,8 @@ export default function FormBuilder({
           onClick={() => setTab('preview')}
           className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             tab === 'preview'
-              ? 'border-navy text-navy dark:border-steel dark:text-steel'
-              : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel'
+              ? 'border-brand-primary text-brand-primary dark:border-brand-primary-mid dark:text-brand-primary-mid'
+              : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid'
           }`}
         >
           Preview
@@ -169,7 +169,7 @@ export default function FormBuilder({
         <div className="grid grid-cols-1 gap-4">
           <div>
             <label className={labelClasses}>
-              Title<span className="text-orange ml-0.5">*</span>
+              Title<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input type="text" className={inputClasses} {...register('title')} />
             {errors.title && <p className={errorClasses}>{errors.title.message}</p>}
@@ -209,14 +209,14 @@ export default function FormBuilder({
           <button
             type="button"
             onClick={handleAddField}
-            className="mt-3 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+            className="mt-3 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
           >
             ＋ Add Field
           </button>
         </section>
 
         {formError && (
-          <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
+          <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
             {formError}
           </div>
         )}
@@ -226,7 +226,7 @@ export default function FormBuilder({
             type="button"
             onClick={onSaveDraft}
             disabled={busy}
-            className="bg-white dark:bg-dark-surface border border-navy text-navy dark:text-steel font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+            className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {submittingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}
           </button>
@@ -235,7 +235,7 @@ export default function FormBuilder({
               type="button"
               onClick={onPublish}
               disabled={busy}
-              className="bg-orange text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+              className="bg-brand-accent text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {submittingStatus === 'live' ? 'Saving…' : 'Publish'}
             </button>
@@ -245,7 +245,7 @@ export default function FormBuilder({
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="bg-white dark:bg-dark-surface border border-orange text-orange font-semibold px-5 py-2.5 rounded-lg hover:bg-pale-orange dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+              className="bg-white dark:bg-dark-surface border border-brand-accent text-brand-accent font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-accent-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {submittingStatus === 'closed' ? 'Saving…' : 'Close Form'}
             </button>

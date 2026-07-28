@@ -43,7 +43,7 @@ export default function StatusToggle({
         type="button"
         onClick={() => handleToggle('active')}
         disabled={isSubmitting}
-        className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Reactivate
       </button>
@@ -55,7 +55,7 @@ export default function StatusToggle({
       <AlertDialogTrigger asChild>
         <button
           type="button"
-          className="border border-orange text-orange bg-white hover:bg-orange hover:text-white transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+          className="border border-brand-accent text-brand-accent bg-white hover:bg-brand-accent hover:text-white transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
         >
           Archive
         </button>
@@ -69,13 +69,13 @@ export default function StatusToggle({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+          <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
             Cancel
           </AlertDialogPrimitive.Cancel>
           <AlertDialogPrimitive.Action
             onClick={() => handleToggle('archived')}
             disabled={isSubmitting}
-            className="bg-orange text-white hover:bg-orange/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-brand-accent text-white hover:bg-brand-accent/90 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Archive
           </AlertDialogPrimitive.Action>

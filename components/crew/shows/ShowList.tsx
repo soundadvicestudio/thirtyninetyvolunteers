@@ -16,9 +16,9 @@ import type { Season, ShowWithStaffing, Location, ShowStatus } from '@/types/sho
 const UNSEASONED_KEY = '__unseasoned__'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const selectClasses =
-  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 function formatDateRange(earliest: string | null, latest: string | null): string | null {
@@ -76,7 +76,7 @@ function ShowCard({
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <Link
             href={`/crew/shows/${show.id}`}
-            className="font-bold text-dark dark:text-dark-text hover:text-navy dark:hover:text-steel transition-colors"
+            className="font-bold text-dark dark:text-dark-text hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors"
           >
             {show.name}
           </Link>
@@ -107,18 +107,18 @@ function ShowCard({
               type="button"
               onClick={onToggleStatus}
               disabled={isToggling}
-              className="text-xs font-semibold border border-navy dark:border-steel text-navy dark:text-steel px-2.5 py-1 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+              className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-2.5 py-1 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isToggling ? 'Saving…' : show.status === 'draft' ? 'Set Live' : 'Set Draft'}
             </button>
           )}
         </div>
-        {toggleError && <p className="text-xs text-orange">{toggleError}</p>}
+        {toggleError && <p className="text-xs text-brand-accent">{toggleError}</p>}
         <div className="flex items-center gap-3">
           {canEdit && (
             <Link
               href={`/crew/shows/${show.id}/edit`}
-              className="text-xs font-semibold text-navy dark:text-steel hover:underline"
+              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
             >
               Edit
             </Link>
@@ -126,14 +126,14 @@ function ShowCard({
           <button
             type="button"
             onClick={() => window.open(`/shows/${show.id}`, '_blank', 'noopener,noreferrer')}
-            className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel transition-colors cursor-pointer"
+            className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors cursor-pointer"
           >
             View
           </button>
           <button
             type="button"
             onClick={onCopyUrl}
-            className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel transition-colors cursor-pointer"
+            className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors cursor-pointer"
           >
             {isCopied ? 'Copied!' : 'Copy URL'}
           </button>
@@ -301,7 +301,7 @@ export default function ShowList({
         {canEdit && (
           <Link
             href="/crew/shows/new"
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
           >
             ＋ New Show
           </Link>
@@ -310,7 +310,7 @@ export default function ShowList({
 
       <Link
         href="/crew/shows/opportunities"
-        className="inline-block text-sm font-semibold text-navy dark:text-steel hover:underline mb-6"
+        className="inline-block text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline mb-6"
       >
         Standing Opportunities →
       </Link>
@@ -349,7 +349,7 @@ export default function ShowList({
             <button
               type="button"
               onClick={() => setSeasonPanelOpen(true)}
-              className="border border-navy dark:border-steel text-navy dark:text-steel text-sm font-semibold px-4 py-2 rounded-md hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+              className="border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid text-sm font-semibold px-4 py-2 rounded-md hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
             >
               ＋ New Season
             </button>
@@ -358,7 +358,7 @@ export default function ShowList({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-3">
                   <label className={labelClasses}>
-                    Season Name<span className="text-orange ml-0.5">*</span>
+                    Season Name<span className="text-brand-accent ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
@@ -386,20 +386,20 @@ export default function ShowList({
                   />
                 </div>
               </div>
-              {seasonError && <p className="text-sm text-orange">{seasonError}</p>}
+              {seasonError && <p className="text-sm text-brand-accent">{seasonError}</p>}
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={handleCreateSeason}
                   disabled={seasonSubmitting}
-                  className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+                  className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {seasonSubmitting ? 'Creating…' : 'Create Season'}
                 </button>
                 <button
                   type="button"
                   onClick={resetSeasonPanel}
-                  className="border border-divider dark:border-dark-border text-dark dark:text-dark-text px-4 py-2 rounded-md text-sm font-medium hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                  className="border border-divider dark:border-dark-border text-dark dark:text-dark-text px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -417,7 +417,7 @@ export default function ShowList({
           {canEdit && (
             <Link
               href="/crew/shows/new"
-              className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
             >
               ＋ New Show
             </Link>
@@ -429,7 +429,7 @@ export default function ShowList({
           <button
             type="button"
             onClick={clearFilters}
-            className="text-navy dark:text-steel hover:underline text-sm font-semibold cursor-pointer"
+            className="text-brand-primary dark:text-brand-primary-mid hover:underline text-sm font-semibold cursor-pointer"
           >
             Clear filters
           </button>
@@ -451,7 +451,7 @@ export default function ShowList({
                 <button
                   type="button"
                   onClick={() => toggleExpand(group.key)}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-light-navy dark:bg-dark-nav text-left hover:bg-light-navy/70 dark:hover:bg-dark-nav/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav text-left hover:bg-brand-primary-light/70 dark:hover:bg-dark-nav/70 transition-colors cursor-pointer"
                 >
                   <div className="flex flex-wrap items-center gap-3 min-w-0">
                     <span className="font-bold text-dark dark:text-dark-text">{title}</span>

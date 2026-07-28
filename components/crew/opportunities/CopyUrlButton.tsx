@@ -16,7 +16,7 @@ export default function CopyUrlButton({ url }: { url: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+      className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
     >
       {copied ? 'Copied!' : 'Copy'}
     </button>

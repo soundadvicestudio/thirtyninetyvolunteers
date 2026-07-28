@@ -68,7 +68,7 @@ export default function PostShowReport({ data }: { data: PostShowReportData }) {
       </div>
 
       {attendanceNotMarked && (
-        <p className="text-sm text-mid-gray dark:text-dark-muted bg-light-navy/30 dark:bg-dark-bg/40 border border-divider dark:border-dark-border rounded-lg px-4 py-3">
+        <p className="text-sm text-mid-gray dark:text-dark-muted bg-brand-primary-light/30 dark:bg-dark-bg/40 border border-divider dark:border-dark-border rounded-lg px-4 py-3">
           Attendance has not been marked yet. Use the Volunteers tab to mark attendance for each date.
         </p>
       )}
@@ -78,7 +78,7 @@ export default function PostShowReport({ data }: { data: PostShowReportData }) {
         <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                 <th className="px-4 py-2 font-semibold">Date</th>
                 <th className="px-4 py-2 font-semibold text-right">Claimed</th>
                 <th className="px-4 py-2 font-semibold text-right">Showed</th>

@@ -13,7 +13,7 @@ export default function ExportAllButton({ volunteers }: { volunteers: VolunteerL
     <button
       type="button"
       onClick={handleExport}
-      className="flex items-center gap-1.5 text-sm bg-white border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy transition-colors"
+      className="flex items-center gap-1.5 text-sm bg-white border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-brand-primary-light transition-colors"
     >
       <Download size={14} />
       Export Matching (CSV)
