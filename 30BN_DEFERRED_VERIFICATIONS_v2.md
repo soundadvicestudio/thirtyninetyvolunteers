@@ -2003,7 +2003,7 @@ claimed volunteer (slot_claims.status = 'claimed').*
       pre-fills with a default value in the form
       "Message from [org name]" (dynamic — sourced
       from org_name in app_settings via
-      resolveOrgIdentity(); updated ADMIN.34 from
+      resolveOrgIdentity(); updated ADMIN.33 from
       hardcoded "Message from 30 By Ninety Theatre").
       Confirm Reply-To pre-fills with the
       default_reply_to value from app_settings.
@@ -6174,8 +6174,9 @@ above (7.1 V11–V17).*
 
 ---
 
-*Total items in this carry-forward list: 775*
-*(742 v14 items + 34 new v15 items − 1 superseded)*
+*Total items in this carry-forward list: 774*
+*(742 v14 items + 34 new v15 items − 1 superseded −
+1 pre-existing count drift corrected)*
 *Prior (v14): 742 items*
 *v15 additions: 34 new items (Phase 7 QR history:
 7 items — 7.1 V11–V17; ADMIN.33: 23 items — V1–V23;

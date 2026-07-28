@@ -1046,7 +1046,7 @@ navigate directly to any sub-page.
 **Platform Setup (`/crew/settings/setup`) — Built Phase SETUP (SETUP.0–4 complete):**
 Super Admin-only configuration panel for OpenCall OS deployments. Hard-blocked for all other roles including Owner Admin (`proxy.ts` hard-redirect to `/crew/dashboard`). Not visible in sidebar for non-Super-Admin accounts. Settings hub: "Platform Setup" LinkedCard for Super Admin; LockedCard ("Super Admin only") for all other roles. Page double-guarded: `proxy.ts` + server-side role check.
 
-Seven independently-saving sections (each has its own Save button — no "Save All"):
+Eight independently-saving sections (each has its own Save button — no "Save All"):
 
 Section 1 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
