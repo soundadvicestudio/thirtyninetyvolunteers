@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.8
-### Created: July 2026 | Last Updated: July 2026 — v3.8 (Phase SETUP complete + ADMIN.31/31b, new patterns, R34)
+## 30BN_PROCESS_v1.md — v3.9
+### Created: July 2026 | Last Updated: July 2026 — v3.9 (ADMIN.32–34 complete, OA permission model updated, resolveEmailSettings/OrgIdentity return types updated, || vs ?? pattern, new grep checks + checklist items)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -317,7 +317,7 @@ After Migration 023 / SETUP.0 ships and the `owner_admin` role exists, role guar
 
 Operational features (email blast, attendance marking, show management, Settings hub sub-pages, email activity, audit log, location management, category management, user management, calendar admin): guards should pass `owner_admin` through alongside `super_admin`. Pattern: `role === 'super_admin' || role === 'owner_admin'` — or equivalently, checking that `role !== 'viewer' && role !== 'production'`.
 
-EXCEPTIONS that remain Super Admin only: (1) `/crew/settings/setup` and all its server actions — middleware hard-blocks Owner Admin at route level. (2) Assigning or creating `owner_admin` or `super_admin` accounts — Owner Admin can manage Editor, Viewer, and Production accounts only. (3) The `calendar_editor` toggle on Super Admin accounts (DB CHECK constraint prevents this).
+EXCEPTIONS that remain Super Admin only: (1) `/crew/settings/setup` and all its server actions — middleware hard-blocks Owner Admin at route level. (2) Assigning or creating `super_admin` accounts — Owner Admin can create and manage Editor, Viewer, Production, and Owner Admin accounts, but cannot create or deactivate Super Admin accounts. (3) The `calendar_editor` toggle on Super Admin accounts (DB CHECK constraint prevents this). Updated ADMIN.33: OA can now create/assign OA accounts and deactivate other OA accounts. Super Admin is the only remaining account-creation privilege exclusive to Super Admin.
 
 When writing a SETUP.0 role guard sweep prompt, every `role === 'super_admin'` check must be evaluated individually — most should become `['super_admin', 'owner_admin'].includes(role)` but the exceptions above must stay as `role === 'super_admin'`.
 
@@ -834,12 +834,16 @@ grep -rn "role === 'super_admin'\|role !== 'super_admin'" \
   lib/actions/ app/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "setup"
-# Review every hit. After SETUP.0, legitimate remaining hits are:
-#   - createUser()/changeRole() account escalation guards
-#   - /crew/settings/setup action guards (SETUP.1)
-#   - proxy.ts /crew/settings/setup route block
-# Any other hit is an unswept guard that should use
-# ['super_admin','owner_admin'].includes(role) instead.
+# Review every hit. After ADMIN.33, legitimate remaining hits are:
+#   - createUser() super_admin-assignment guard (only SA can
+#     create SA accounts — OA can create OA, editor, viewer,
+#     production but NOT super_admin)
+#   - approveRegistration() super_admin-assignment guard (same)
+#   - deactivateUser() super_admin target guard (no one can
+#     deactivate a super_admin account)
+#   - /crew/settings/setup action guards and proxy.ts block
+# Any other hit outside the above is likely an unswept guard
+# that should use ['super_admin','owner_admin'].includes(role).
 ```
 
 ```bash
@@ -894,6 +898,21 @@ grep -n "matcher" proxy.ts
 #   /checkin/:path* (feature_checkin public guard)
 # And any other paths that have active flag or role guards.
 # Any guarded path absent from the matcher = silent no-op.
+```
+
+```bash
+# Confirm FROM_ADDRESS and REPLY_TO constants are gone
+# (ADMIN.34 — deleted; payload builders use inline defaults)
+grep -rn "FROM_ADDRESS\|REPLY_TO" \
+  lib/ app/ components/ \
+  --include="*.ts" --include="*.tsx"
+# Must return zero results. These constants were deleted
+# in ADMIN.34. Any hit = a regression or stale reference.
+# The 4 payload builders (buildReminderEmailPayload,
+# buildThankYouEmailPayload, buildShowBulkEmailPayload,
+# buildCategoryMatchNotificationPayload) now accept
+# from?: string and replyTo?: string params with inline
+# '30BN defaults' string literals as fallback.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -1023,11 +1042,13 @@ Run before every Vercel deployment:
 □ Any new server action or page guard that restricts
   access by role: evaluate whether it should pass
   owner_admin through alongside super_admin. After
-  SETUP.0 ships, only the Setup Panel and
-  super_admin/owner_admin account creation remain
-  super_admin-exclusive. All other operational guards
-  should use ['super_admin','owner_admin'].includes(role)
-  or equivalent. (Owner Admin role guard pattern — §7)
+  ADMIN.33, only the Setup Panel (/crew/settings/setup)
+  and super_admin account creation/deactivation remain
+  super_admin-exclusive. Owner Admin can now create and
+  manage Editor, Viewer, Production, and Owner Admin
+  accounts. All other operational guards should use
+  ['super_admin','owner_admin'].includes(role) or
+  equivalent. (Owner Admin role guard pattern — §7)
 □ Any route or component that reads feature flag values:
   confirm it uses getFeatureFlags() from lib/feature-
   flags.ts — never reads feature_* keys inline from
@@ -1103,19 +1124,27 @@ Run before every Vercel deployment:
   after the fact — build it right the first time. (R34)
 □ Any new email send function added to lib/email.ts:
   confirm resolveEmailSettings() is called to get the
-  dynamic from address and logo URL — NOT hardcoded
-  FROM_ADDRESS constant or static logo URL. Thread
-  emailSettings.from into the Resend send call and
-  emailSettings.logoUrl into the buildEmailHtml() call.
-  (SETUP.3/ADMIN.31 pattern)
+  dynamic from address, logo URL, org name, and contact
+  email — NOT hardcoded constants or static strings.
+  Destructure: { from, logoUrl, orgName, orgContactEmail }
+  from resolveEmailSettings(). Thread emailSettings.from
+  into the Resend send call, emailSettings.logoUrl into
+  buildEmailHtml(), and use orgName / orgContactEmail
+  in any body copy that references the org or a contact
+  address. No hardcoded "30 By Ninety" or
+  "info@30byninety.com" in email body copy.
+  (SETUP.3/ADMIN.31/ADMIN.33/ADMIN.34 pattern)
 □ Any new payload builder function (batch email, cron
-  route): confirm it accepts logoUrl?: string parameter
-  and passes it to buildEmailHtml(). Confirm the call
-  site calls resolveEmailSettings() (or equivalent inline
-  app_settings fetch) before building the payload.
-  FROM_ADDRESS must not appear in any Resend send call
-  outside lib/email.ts resolveEmailSettings() fallback.
-  (ADMIN.31 pattern)
+  route): confirm it accepts logoUrl?: string, from?:
+  string, and replyTo?: string parameters and passes
+  logoUrl to buildEmailHtml(). Confirm the call site
+  calls resolveEmailSettings() (or equivalent inline
+  app_settings fetch) before building the payload and
+  threads the dynamic from/replyTo values into the
+  builder call. FROM_ADDRESS and REPLY_TO constants
+  must not exist anywhere in the codebase — they were
+  deleted in ADMIN.34. Any hit of either constant name
+  is a regression. (ADMIN.31/ADMIN.34 pattern)
 □ Any saveFeatureFlags() call or equivalent: confirm
   revalidatePath('/crew', 'layout') is included alongside
   individual route revalidations. The layout second
@@ -1128,6 +1157,24 @@ Run before every Vercel deployment:
   included in the matcher. A guard on a path not in the
   matcher silently never fires. Extend the matcher before
   writing any guard logic. (SETUP.1 F1 / §14 rule)
+□ Any code that reads an app_settings value and applies
+  a fallback: use || not ??. app_settings values are
+  seeded as empty strings '' — ?? only catches null/
+  undefined and silently produces '' for unseeded-but-
+  present keys. Confirmed failure mode: ADMIN.34 F2
+  caught the org_tagline metadata description using ??
+  which would have produced a blank <meta> tag on any
+  deployment where org_tagline is empty (the default
+  seed value). Pattern: value || 'fallback'.
+  (§14 || vs ?? pattern)
+□ Any new email send function or email body copy added
+  to lib/email.ts: confirm no hardcoded org name or
+  contact email strings appear. Use orgName and
+  orgContactEmail from resolveEmailSettings() for all
+  references. No 'by Ninety', no 'info@30byninety.com'
+  or similar in body copy — only in the resolveEmail
+  Settings() fallback defaults which are the one
+  acceptable location. (ADMIN.33/ADMIN.34 pattern)
 ```
 
 ---
@@ -2056,7 +2103,17 @@ Phase 15 — Document & Media System ✓ Complete
   30BN-ADMIN.31b ✓ Dead documents query removed +
                dynamic copyright. Commit 6540df9.
   30BN-DOC.43a ✓ Brief Update v3.9.
-  30BN-DOC.43b ✓ Process Update v3.8 (this prompt).
+  30BN-DOC.43b ✓ Process Update v3.8.
+  30BN-DOC.43b-FIX ✓ One-line correction: Process
+               v3.8 version history said "six new
+               checklist items" — corrected to "five
+               new checklist items" (F3 from DOC.43b
+               build report).
+  30BN-DOC.44 ✓ Brief Update v4.0 (ADMIN.32–34:
+               OA permissions, OpenCall OS branding
+               sweep, QR history, Setup Panel Section
+               8, Migrations 028–029 documented).
+  30BN-DOC.45 ✓ Process Update v3.9 (this prompt).
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
 Phase 17 — Launch                   (pending)
@@ -2090,20 +2147,67 @@ Phase 21 — Rehearsal Management System
   feature_rehearsals flag (R34). Calendar integration
   preserved (submissions → same pending queue flow).
   Owner Admin approval authority in pending queue.
-  Pre-requisites: ADMIN.32 (Owner Admin permission
-  audit) + ADMIN.33 (Production role audit).
+  Pre-requisites: ADMIN.32 ✓ (Owner Admin permission
+  audit — complete) + ADMIN.33 ✓ (role audit and
+  sweep — complete). Phase 21 prerequisites met.
 Phase CAST — Cast Member Portal (named future phase,
   post-Phase 21) — cast member entity (separate from
   admin_users), cast frontend login, rehearsal schedule
   view, materials distribution, cast check-in.
-ADMIN.32 — Owner Admin comprehensive permission audit
-  (planned pre-Phase 21): read-only sweep confirming all
-  operational contexts pass owner_admin correctly. Added
-  late in SETUP.0 — edge cases may exist.
-ADMIN.33 — Production role permission audit (planned
-  pre-Phase 21): confirm all Production access
-  restrictions are current and intentional as
-  the platform grows.
+ADMIN.32 ✓ Read-only audit (Phase A only, no code):
+  Owner Admin permission gaps (4 component files —
+  OpportunityList, FormList, ShowList, ShowDetail —
+  silently excluded OA via adminRole variable name
+  miss in SETUP.0 grep sweep; CalendarDayPanel day-
+  panel buttons OA gap; volunteer_notes RLS OA gap);
+  Production role absent from all User Management
+  paths; hardcoded 30BN string inventory across
+  email body copy, public pages, iCal, HelpContent,
+  BulkEmailSection; 404 page state (unmodified);
+  role badge completeness confirmed (all 5 roles);
+  changeRole() scope decision surfaces. Findings
+  drove ADMIN.33.
+ADMIN.33 ✓ (+ ADMIN.33-CONT) Role permissions +
+  OpenCall OS branding sweep + Setup Panel Section 8.
+  Commit 43f1b7d.
+  Role permissions: OA canEdit in 5 component files;
+  CreateUserModal Production option (SA only); Pending
+  Registrations Production + OA options; changeRole()
+  expanded (4 options, Production + OA target rows
+  unlocked); deactivateUser() OA-on-OA lock removed;
+  volunteer_notes OA app-layer guard; Migration 028
+  (volunteer_notes RLS + not_found seeds).
+  Branding sweep: resolveEmailSettings() +orgName
+  +orgContactEmail; ~39 email body copy hits fixed;
+  blast.ts from address dynamic; FROM_ADDRESS/REPLY_TO
+  constants deleted; all 13 public pages + Sidebar
+  wired through resolveOrgIdentity() (incl. org_logo_url
+  extension + next.config.ts remotePatterns);
+  BulkEmailSection defaultSubject prop; HelpContent
+  2 generic language fixes; iCal PRODID + UID domains
+  genericized; settings/page.tsx defense-in-depth.
+  Setup Panel Section 8 (404 Page): saveNotFoundPage();
+  SetupPanel.tsx Section 8; not-found.tsx dynamic.
+  45 files. Commits 43f1b7d + 43f1b7d (CONT same).
+ADMIN.34 ✓ QR history + payload cleanup + metadata
+  OA approval fix. Commit 28e0c4e.
+  QR history: Migration 029 (qr_codes table, 3 RLS
+  policies); generateQRCode() extended (url, label,
+  DB insert best-effort, revalidatePath); lib/data/
+  qr.ts (getQRHistory, limit 50); QRGeneratorForm.tsx
+  (Client) + QRHistoryPanel.tsx (Server) — page
+  restructured from Client to Server+Client split.
+  Payload cleanup: FROM_ADDRESS + REPLY_TO constants
+  deleted; 4 builders gain from?/replyTo? params;
+  all 3 call sites (shows.ts + 2 cron routes) pass
+  dynamic values. Metadata: org_tagline added to
+  generateMetadata() with || fallback (not ??).
+  OA approval: PendingRegistrations.tsx OA-can-assign-
+  OA; approveRegistration() guard corrected (self-
+  caught F1 — SA-minting-SA path preserved).
+  resolveEmailSettings() + orgContactEmail; 3 email
+  functions fixed (sendInfoUpdatedEmail, sendWelcome
+  Email, sendRegistrationDeclinedEmail). 13 files.
 
 30BN-DOC.31    ✓ Brief Update v3.2 (Phase 13
                  complete: §1 phase updated; §3
@@ -2531,11 +2635,17 @@ Cross-reference §7 for the dual-client pattern detail.
 
 Two new `app_settings` helper functions were introduced in SETUP.3 and ADMIN.31. Both use `getAdminClient()` internally — not `getServerClient()`:
 
-`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url` from `app_settings`. Returns `{ from: string, logoUrl: string }` with 30BN defaults when keys are absent. Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. `getAdminClient()` ensures it works correctly in all contexts.
+`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, and `org_contact_email` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string }` with 30BN defaults when keys are absent. Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. `getAdminClient()` ensures it works correctly in all contexts. Extended ADMIN.33 (orgName) and ADMIN.34 (orgContactEmail). The `FROM_ADDRESS` and `REPLY_TO` module-level constants in `lib/email.ts` were deleted in ADMIN.34 — the 4 payload builders (`buildReminderEmailPayload`, `buildThankYouEmailPayload`, `buildShowBulkEmailPayload`, `buildCategoryMatchNotificationPayload`) now accept explicit `from?: string` and `replyTo?: string` params with inline 30BN string defaults as fallback. All call sites in `lib/actions/shows.ts` and both cron routes pass the dynamic values from their inline `app_settings` fetches.
 
-`resolveOrgIdentity()` (exported from `lib/utils/org-identity.ts`): Fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location` from `app_settings`. Returns `OrgIdentity` with 30BN defaults. Uses `getAdminClient()` because it is called from public Server Components (`app/page.tsx`) with no Supabase Auth session. Never import `resolveOrgIdentity()` from a Client Component.
+`resolveOrgIdentity()` (exported from `lib/utils/org-identity.ts`): Fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings`. Returns `OrgIdentity` with 30BN defaults. Uses `getAdminClient()` because it is called from public Server Components (`app/page.tsx`) and cron routes with no Supabase Auth session. Extended ADMIN.33 to include `org_logo_url` — required for all public pages that display the org logo dynamically. Never import `resolveOrgIdentity()` from a Client Component. When a Client Component needs org identity data (e.g., `Sidebar.tsx`), the parent Server Component layout (`app/crew/(app)/layout.tsx`) calls `resolveOrgIdentity()` and passes the result as a prop — same pattern as flags and admin. This is the correct pattern for any Client Component that needs `getAdminClient()` data.
 
 Pattern principle: `app_settings` helper functions should use `getAdminClient()` rather than `getServerClient()` when they need to work in both authenticated and unauthenticated contexts (public pages, cron routes, email functions). This avoids context-dependency errors.
+
+`||` vs `??` for `app_settings` fallbacks (established ADMIN.34 F2):
+When applying a fallback to an `app_settings` value in code, always use `||`, not `??`. The reason: `app_settings` values are seeded as empty strings `''` (e.g., `org_tagline` → `''`), not as `null` or `undefined`. The nullish coalescing operator (`??`) only triggers on `null`/`undefined` — an empty string `''` is falsy but not nullish, so `value ?? 'fallback'` silently produces `''` instead of `'fallback'` when the key is seeded but empty. The logical OR (`||`) triggers on any falsy value including `''`, which is the correct behavior for `app_settings` reads. Confirmed failure mode caught in ADMIN.34 Task D before commit — if `??` had been used for `org_tagline` metadata description, every deployment where `org_tagline` is empty would silently produce a blank `<meta name="description">` instead of the intended fallback. Pattern: `settingsMap['key'] || 'fallback'` — not `settingsMap['key'] ?? 'fallback'`.
+
+`next.config.ts` `images.remotePatterns` for Supabase Storage (established ADMIN.33):
+When `org_logo_url` (or any `app_settings` value) references a URL from Supabase Storage, `next/image` requires that the hostname be declared in `images.remotePatterns` in `next.config.ts`. The required entry is `{ hostname: '*.supabase.co' }`. Without this, any deployment with a custom uploaded logo will throw a runtime error ("hostname not configured under images"). This entry was added in ADMIN.33 F1 when the public page org identity sweep wired `org_logo_url` into `next/image` across 13 pages. Confirmed required for all OpenCall OS deployments. Do not remove this entry from `next.config.ts`.
 
 ### R33 — CSS Custom Properties After Phase THEME (cross-reference)
 
@@ -2582,3 +2692,4 @@ See §11 checklist for the required verification item.
 *v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §2 header updated (Phase 15 complete, SETUP.1–4 + THEME pending); §7 P-DC upload path note updated (library/ forward reference removed); §7 detectLinkType() independence pattern added (three intentional implementations — route handler, Client Component, Server Component — recognized DRY exception, do not extract to shared utility); §8 XHR-over-fetch note extended (MediaLibrary.tsx added as second sanctioned XHR use alongside ConsentUploadForm.tsx — both for upload progress); §10 XHR grep check updated (two sanctioned files: ConsentUploadForm.tsx + MediaLibrary.tsx); §11 one new checklist item (detectLinkType() / isViewableMimeType() evaluation for new document entry types); §13 Phase 15 marked complete (15.3 ✓ with commit 26a4585, 15.4 ✓ with commit 63570b8); §13 prompt log updated (15.3 ✓, 15.4 ✓, ADMIN.30 ✓, DOC.37c ✓, DOC.39 ✓); §14 HelpTooltip Client Component note updated (26 → 32 total placements); §14 Storage Bucket Naming library/ note updated (forward reference removed); §14 two new rules: detectLinkType() independence DRY exception (15.3/15.4); sidebar nav exact-vs-prefix matching pattern (ADMIN.30 — special-case parent link, never modify isActivePath() globally); document header v3.6; DOC.39 logged)*
 *v3.7 (July 2026 — HELP.2e + DOC.41/42: §2 header updated (HELP.2e owner_admin sweep + DOC.41/42 logged); §13 prompt log updated (HELP.2e ✓ — 47 HelpContent.tsx ALL_SECTIONS entries updated, commit f4394bd; DOC.41 ✓ — Brief v3.7; DOC.42 ✓ — this prompt); document header v3.7; DOC.42 logged)*
 *v3.8 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §2 header updated (SETUP complete + ADMIN.31/31b); §7 feature flag pattern updated (built SETUP.1 — "not yet built" removed, three active flags noted, proxy.ts conditional fetch noted, missing key behavior noted); §7 setup.ts note updated (dual-client pattern documented — getServerClient() for mutations, getAdminClient() for getSignedBrandUploadUrl()); §7 P-DC storage bucket note updated (two sanctioned buckets: media + brand, path namespacing for each); §7 XHR sanctioned files updated (ConsentUploadForm + MediaLibrary + BrandImageUploader — count 2 → 3); §10 feature flags grep updated (flag list trimmed to 3 active flags, SetupPanel.tsx exclusion added); §10 XHR grep updated (3 sanctioned files); §10 storage grep updated (brand bucket note + second grep for all buckets); §10 new proxy.ts matcher grep check added (SETUP.1 F1); §11 five new checklist items: R34 flag-ready for new features, resolveEmailSettings() in new email functions, payload builder logoUrl param, revalidatePath layout cascade on flag saves, proxy.ts matcher audit before public guards; §13 Phase SETUP marked complete (SETUP.1–4 all ✓ with commit hashes); §13 ADMIN.31 + ADMIN.31b + DOC.43a logged; §13 Phase 19 description updated (expanded scope); §13 Phase 21 + Phase CAST + ADMIN.32/33 added; §14 four new rules: proxy.ts matcher must include all guarded paths (SETUP.1 F1), setup.ts dual-client pattern (SETUP.2), resolveEmailSettings/resolveOrgIdentity use getAdminClient() (SETUP.3/ADMIN.31), R34 cross-reference added; DOC.43b logged)*
+*v3.9 (July 2026 — ADMIN.32–34 complete: §2 header updated (ADMIN.32–34 + DOC.44 logged); §7 Owner Admin role guard EXCEPTIONS updated (OA can now create/assign OA — only SA creation/deactivation remains SA-only); §14 resolveEmailSettings() return type updated (orgName + orgContactEmail added; FROM_ADDRESS/REPLY_TO deletion documented; payload builder from/replyTo params documented); §14 resolveOrgIdentity() return type updated (org_logo_url added; admin layout prop pattern documented); §14 new pattern: || vs ?? for app_settings fallbacks (confirmed failure mode ADMIN.34 F2); §14 new pattern: next.config.ts images.remotePatterns for Supabase Storage; §10 new grep check: FROM_ADDRESS/REPLY_TO must be zero; §10 Owner Admin grep comment updated (only SA-creation escalation guards remain legitimate SA-only hits); §11 payload builder checklist item updated (from/replyTo params, FROM_ADDRESS/REPLY_TO deleted); §11 resolveEmailSettings() checklist item updated (orgName + orgContactEmail); §11 Owner Admin role guard checklist item updated (OA can create OA); §11 two new checklist items (|| vs ?? pattern, no hardcoded org strings in email body copy); §13 ADMIN.32 + ADMIN.33 + ADMIN.34 all marked complete with summaries; Phase 21 prerequisites marked complete; DOC.43b-FIX + DOC.44 + DOC.45 added to prompt log; DOC.45 logged)*
