@@ -69,7 +69,14 @@ export async function GET(request: Request) {
     const { data: settingsData } = await client
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
+      .in('key', [
+        'email_from_address',
+        'email_from_name',
+        'org_logo_url',
+        'org_name',
+        'org_contact_email',
+        'brand_primary',
+      ])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -79,6 +86,7 @@ export async function GET(request: Request) {
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
     const emailReplyTo = settingsMap['org_contact_email'] || 'info@30byninety.com'
+    const brandPrimary = settingsMap['brand_primary'] || '#293994'
 
     // D. Format and batch send.
     const payloads = claims
@@ -104,6 +112,7 @@ export async function GET(request: Request) {
           orgName,
           from: emailFrom,
           replyTo: emailReplyTo,
+          brandPrimary,
         })
       })
       .filter((p): p is NonNullable<typeof p> => p !== null)

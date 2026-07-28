@@ -100,14 +100,17 @@ function buildBlastEmailHtml({
   subject,
   body,
   orgName,
+  brandPrimary,
 }: {
   recipientName: string
   subject: string
   body: string
   orgName?: string
+  brandPrimary?: string
 }): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const logoHtml = siteUrl
     ? `<img src="${siteUrl}/logo.png" height="50" width="auto" alt="${safeOrgName}" style="display:block;margin:0 auto;">`
     : ''
@@ -128,7 +131,7 @@ function buildBlastEmailHtml({
           <td align="center" style="padding:24px 16px;">
             <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border-radius:8px;overflow:hidden;">
               <tr>
-                <td bgcolor="#293994" style="background-color:#293994;padding:24px 32px;text-align:center;">
+                <td bgcolor="${resolvedBrandPrimary}" style="background-color:${resolvedBrandPrimary};padding:24px 32px;text-align:center;">
                   ${logoHtml}
                   <p style="margin:8px 0 0 0;color:#FFFFFF;font-size:13px;font-family:'Open Sans',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">
                     ${safeOrgName}
@@ -262,7 +265,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
     const { data: settingsData } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_name'])
+      .in('key', ['email_from_address', 'email_from_name', 'org_name', 'brand_primary'])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -270,6 +273,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
       settingsMap['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
     }>`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+    const brandPrimary = settingsMap['brand_primary'] || '#293994'
 
     // Sanitize the TipTap HTML output before sending (30BN-13.4a).
     // Allows only the tags and attributes StarterKit produces. Strips
@@ -304,6 +308,7 @@ export async function sendBlastEmail(payload: BlastPayload): Promise<BlastResult
         subject: parsed.data.subject,
         body: sanitizedBody,
         orgName,
+        brandPrimary,
       }),
     }))
 

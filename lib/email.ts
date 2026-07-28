@@ -22,6 +22,8 @@ type EmailSettings = {
   logoUrl: string
   orgName: string
   orgContactEmail: string
+  brandPrimary: string
+  brandAccent: string
 }
 
 async function resolveEmailSettings(): Promise<EmailSettings> {
@@ -29,18 +31,30 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
   const { data } = await supabase
     .from('app_settings')
     .select('key, value')
-    .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
+    .in('key', [
+      'email_from_address',
+      'email_from_name',
+      'org_logo_url',
+      'org_name',
+      'org_contact_email',
+      'brand_primary',
+      'brand_accent',
+    ])
   const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
   const address = map['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
   const name = map['email_from_name'] || '30 By Ninety Theatre Volunteers'
   const logoUrl = map['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
   const orgName = map['org_name'] || '30 By Ninety Theatre'
   const orgContactEmail = map['org_contact_email'] || 'info@30byninety.com'
+  const brandPrimary = map['brand_primary'] || '#293994'
+  const brandAccent = map['brand_accent'] || '#F26522'
   return {
     from: `${name} <${address}>`,
     logoUrl,
     orgName,
     orgContactEmail,
+    brandPrimary,
+    brandAccent,
   }
 }
 
@@ -58,6 +72,7 @@ function buildEmailHtml({
   footerNote,
   logoUrl,
   orgName,
+  brandPrimary,
 }: {
   subject: string
   preheader: string
@@ -65,7 +80,9 @@ function buildEmailHtml({
   footerNote?: string
   logoUrl?: string
   orgName?: string
+  brandPrimary?: string
 }): string {
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const resolvedLogoUrl = logoUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
   const logoHtml = resolvedLogoUrl
@@ -98,7 +115,7 @@ function buildEmailHtml({
             <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border-radius:8px;overflow:hidden;">
 
               <tr>
-                <td bgcolor="#293994" style="background-color:#293994;padding:24px 32px;text-align:center;">
+                <td bgcolor="${resolvedBrandPrimary}" style="background-color:${resolvedBrandPrimary};padding:24px 32px;text-align:center;">
                   ${logoHtml}
                   <p style="margin:8px 0 0 0;color:#FFFFFF;font-size:13px;font-family:'Open Sans',Arial,sans-serif;letter-spacing:0.5px;text-transform:uppercase;">
                     ${safeOrgName}
@@ -179,7 +196,7 @@ export async function sendVolunteerConfirmationEmail({
       : ''
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for signing up to volunteer with ${escapeHtml(emailSettings.orgName)}. We're excited to have you join our community!
     </p>
@@ -188,9 +205,9 @@ export async function sendVolunteerConfirmationEmail({
       You can update your information at any time using the link below.
     </p>
     <p style="margin:0 0 24px;font-size:14px;">
-      <a href="${updateUrl}" style="color:#293994;">${updateUrl}</a>
+      <a href="${updateUrl}" style="color:${emailSettings.brandPrimary};">${updateUrl}</a>
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
   `
 
   const subject = `Welcome to ${emailSettings.orgName}, ${name}!`
@@ -200,6 +217,7 @@ export async function sendVolunteerConfirmationEmail({
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -248,7 +266,7 @@ export async function sendConsentFormRequestEmail({
         Please download the ${documentTypeName}, have a parent or guardian sign it, then use the button below to
         upload the signed copy.
       </p>
-      ${buildCtaButton('Download Consent Form', activeFormUrl, '#293994')}
+      ${buildCtaButton('Download Consent Form', activeFormUrl, emailSettings.brandPrimary)}
     `
     : `
       <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
@@ -258,7 +276,7 @@ export async function sendConsentFormRequestEmail({
     `
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for signing up to volunteer with ${escapeHtml(emailSettings.orgName)}! Because you're under 18, we need a
       signed ${documentTypeName} from a parent or guardian before you can start volunteering.
@@ -267,7 +285,7 @@ export async function sendConsentFormRequestEmail({
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Please use the button below to upload your completed form.
     </p>
-    ${buildCtaButton('Upload Consent Form', uploadUrl)}
+    ${buildCtaButton('Upload Consent Form', uploadUrl, emailSettings.brandPrimary)}
   `
 
   const subject = 'Action needed: submit your volunteer consent form'
@@ -277,6 +295,7 @@ export async function sendConsentFormRequestEmail({
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -314,26 +333,27 @@ export async function sendUpdateLinkEmail({
   const updateUrl =
     `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
   const safeName = escapeHtml(name)
+  const emailSettings = await resolveEmailSettings()
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       You requested a link to update your volunteer information. Click the button below to get started.
     </p>
-    ${buildCtaButton('Update My Info', updateUrl)}
+    ${buildCtaButton('Update My Info', updateUrl, emailSettings.brandPrimary)}
     <p style="margin:24px 0 0;color:#555555;font-size:13px;line-height:1.6;">
       This link is unique to your account. If you didn't request this, you can safely ignore this email.
     </p>
   `
 
   const subject = 'Your link to update your volunteer information'
-  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: "Here's your link to update your volunteer info.",
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -371,15 +391,15 @@ export async function sendInfoUpdatedEmail({
   const emailSettings = await resolveEmailSettings()
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Your volunteer profile with ${escapeHtml(emailSettings.orgName)} has been updated successfully.
     </p>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       If you didn't make this change, please contact us at
-      <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:#293994;">${escapeHtml(emailSettings.orgContactEmail)}</a>.
+      <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:${emailSettings.brandPrimary};">${escapeHtml(emailSettings.orgContactEmail)}</a>.
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
   `
 
   const subject = 'Your volunteer information has been updated'
@@ -389,6 +409,7 @@ export async function sendInfoUpdatedEmail({
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -438,18 +459,18 @@ export async function sendWelcomeEmail({
   const emailSettings = await resolveEmailSettings()
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       You've been added to the ${escapeHtml(emailSettings.orgName)} Production Crew as ${roleLabel}.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
       <tr>
         <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
-          <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          <p style="margin:0 0 8px;color:${emailSettings.brandPrimary};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
             Login Details
           </p>
           <p style="margin:0 0 4px;color:#555555;font-size:14px;">
-            Login URL: <a href="${loginUrl}" style="color:#293994;font-weight:600;">${loginUrl}</a>
+            Login URL: <a href="${loginUrl}" style="color:${emailSettings.brandPrimary};font-weight:600;">${loginUrl}</a>
           </p>
           <p style="margin:0 0 4px;color:#555555;font-size:14px;">
             Email: <strong style="color:#1A1A1A;">${safeEmail}</strong>
@@ -463,7 +484,7 @@ export async function sendWelcomeEmail({
     <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Please log in and change your password after your first sign-in.
     </p>
-    ${buildCtaButton('Log In to Production Crew', loginUrl)}
+    ${buildCtaButton('Log In to Production Crew', loginUrl, emailSettings.brandPrimary)}
   `
 
   const subject = `Welcome to ${emailSettings.orgName} Production Crew`
@@ -474,6 +495,7 @@ export async function sendWelcomeEmail({
     footerNote: `This email was sent because a Production Crew account was created for you at ${escapeHtml(emailSettings.orgName)}.`,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -505,12 +527,12 @@ export async function sendOpportunityEOIEmail({
   const preview = "Your expression of interest has been received. We'll be in touch soon."
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for your interest in <strong>${safeTitle}</strong>. A member of our team will be in touch
       with you soon.
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
   `
 
   const html = buildEmailHtml({
@@ -519,6 +541,7 @@ export async function sendOpportunityEOIEmail({
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -543,12 +566,12 @@ export async function sendOpportunitySlotClaimEmail({
   const preview = `Your position for ${opportunityTitle} is confirmed.`
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       You're confirmed for <strong>${safeTitle}</strong> with ${escapeHtml(emailSettings.orgName)}. We're looking forward to
       working with you!
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
   `
 
   const html = buildEmailHtml({
@@ -557,6 +580,7 @@ export async function sendOpportunitySlotClaimEmail({
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -572,8 +596,9 @@ export async function sendOpportunitySlotClaimEmail({
 
 // ─── Slot claiming emails (30BN-5.2) ─────────────────────────────
 
-function emailShell(bodyHtml: string, orgName?: string): string {
+function emailShell(bodyHtml: string, orgName?: string, brandPrimary?: string): string {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   return `
     <!DOCTYPE html>
     <html>
@@ -582,7 +607,7 @@ function emailShell(bodyHtml: string, orgName?: string): string {
       <div style="max-width:560px;margin:32px auto;
                   background:#ffffff;border-radius:8px;
                   overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:#293994;padding:28px 32px;">
+        <div style="background:${resolvedBrandPrimary};padding:28px 32px;">
           <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
             ${safeOrgName}
           </p>
@@ -628,13 +653,14 @@ function showDetailsBlockHtml(showName: string, showDate: string, showTime: stri
   `
 }
 
-function instructionsBlockHtml(volunteerInstructions: string | null): string {
+function instructionsBlockHtml(volunteerInstructions: string | null, brandPrimary?: string): string {
   if (!volunteerInstructions) return ''
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   return `
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
       <tr>
         <td bgcolor="#EEF1FA" style="background-color:#EEF1FA;border-radius:8px;padding:20px 24px;">
-          <p style="margin:0 0 8px;color:#293994;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          <p style="margin:0 0 8px;color:${resolvedBrandPrimary};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
             Special Instructions
           </p>
           <p style="margin:0;color:#555555;font-size:14px;line-height:1.6;white-space:pre-line;">
@@ -646,19 +672,21 @@ function instructionsBlockHtml(volunteerInstructions: string | null): string {
   `
 }
 
-function cancelLinkHtml(cancelUrl: string): string {
+function cancelLinkHtml(cancelUrl: string, brandPrimary?: string): string {
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   return `
     <p style="color:#888888;font-size:12px;margin:24px 0 0;font-family:'Open Sans',Arial,sans-serif;">
-      Need to cancel? <a href="${cancelUrl}" style="color:#293994;">Click here</a>.
+      Need to cancel? <a href="${cancelUrl}" style="color:${resolvedBrandPrimary};">Click here</a>.
     </p>
   `
 }
 
-function addToCalendarLinkHtml(claimToken: string): string {
+function addToCalendarLinkHtml(claimToken: string, brandPrimary?: string): string {
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const icsUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/calendar/claim.ics?token=${claimToken}`
   return `
     <p style="margin:16px 0;">
-      <a href="${icsUrl}" style="color:#293994;text-decoration:underline;">
+      <a href="${icsUrl}" style="color:${resolvedBrandPrimary};text-decoration:underline;">
         📅 Add to your calendar
       </a>
     </p>
@@ -690,26 +718,27 @@ export async function sendSlotClaimEmail({
   claimToken,
   calendarEnabled = true,
 }: SendSlotClaimEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Great news — your volunteer spot has been confirmed for <strong>${escapeHtml(showName)}</strong>.
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${instructionsBlockHtml(volunteerInstructions)}
-    ${calendarEnabled ? addToCalendarLinkHtml(claimToken) : ''}
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
-    ${cancelLinkHtml(cancelUrl)}
+    ${instructionsBlockHtml(volunteerInstructions, emailSettings.brandPrimary)}
+    ${calendarEnabled ? addToCalendarLinkHtml(claimToken, emailSettings.brandPrimary) : ''}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
+    ${cancelLinkHtml(cancelUrl, emailSettings.brandPrimary)}
   `
 
   const subject = `You're signed up! — ${showName}`
-  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Your volunteer spot is confirmed!',
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -740,8 +769,9 @@ export async function sendWaitlistConfirmationEmail({
   waitlistPosition,
   cancelUrl,
 }: WaitlistConfirmationEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thanks for your interest in volunteering for <strong>${escapeHtml(showName)}</strong>. All volunteer spots
       for the <strong>${escapeHtml(roleName)}</strong> role are currently filled, but you're on the waitlist!
@@ -752,20 +782,20 @@ export async function sendWaitlistConfirmationEmail({
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       We'll notify you right away if a spot opens up.
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
     <p style="margin:24px 0 0;color:#888888;font-size:12px;font-family:'Open Sans',Arial,sans-serif;">
-      Plans changed? <a href="${cancelUrl}" style="color:#293994;">Remove yourself from the waitlist</a>.
+      Plans changed? <a href="${cancelUrl}" style="color:${emailSettings.brandPrimary};">Remove yourself from the waitlist</a>.
     </p>
   `
 
   const subject = `You're on the waitlist — ${showName}`
-  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: `You're on the waitlist for ${showName}.`,
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -790,26 +820,27 @@ export async function sendWaitlistPromotionEmail({
   claimToken,
   calendarEnabled = true,
 }: SendWaitlistPromotionEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Great news! A volunteer spot has opened up for <strong>${escapeHtml(showName)}</strong>, and you've moved
       from the waitlist to a confirmed spot.
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${calendarEnabled ? addToCalendarLinkHtml(claimToken) : ''}
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
-    ${cancelLinkHtml(cancelUrl)}
+    ${calendarEnabled ? addToCalendarLinkHtml(claimToken, emailSettings.brandPrimary) : ''}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
+    ${cancelLinkHtml(cancelUrl, emailSettings.brandPrimary)}
   `
 
   const subject = `Good news — a spot opened up! — ${showName}`
-  const emailSettings = await resolveEmailSettings()
   const html = buildEmailHtml({
     subject,
     preheader: 'Good news — a volunteer spot just opened up!',
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -846,7 +877,7 @@ export async function sendCancellationEditorNotificationEmail({
   const subject = `Volunteer cancellation — ${showName}`
   const html = emailShell(
     `
-    <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+    <h1 style="color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
       Volunteer cancellation
     </h1>
     <p style="color:#555;line-height:1.6;margin:0 0 16px;">
@@ -855,14 +886,15 @@ export async function sendCancellationEditorNotificationEmail({
       (${escapeHtml(showName)}).
     </p>
     <a href="${adminShowUrl}"
-       style="display:inline-block;background:#F26522;
+       style="display:inline-block;background:${emailSettings.brandAccent};
               color:#ffffff;text-decoration:none;
               padding:14px 28px;border-radius:8px;
               font-weight:700;font-size:15px;">
       View Show in Production Crew
     </a>
   `,
-    emailSettings.orgName
+    emailSettings.orgName,
+    emailSettings.brandPrimary
   )
 
   // R8 — multi-recipient send uses resend.batch.send(), one entry per editor.
@@ -889,6 +921,7 @@ type ReminderEmailParams = {
   orgName?: string
   from?: string
   replyTo?: string
+  brandPrimary?: string
 }
 
 // Exported so the 24hr reminder cron (app/api/cron/reminders) can build
@@ -906,16 +939,18 @@ export function buildReminderEmailPayload({
   orgName,
   from,
   replyTo,
+  brandPrimary,
 }: ReminderEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <h1 style="margin:0 0 16px;color:${resolvedBrandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Just a friendly reminder that you're volunteering tomorrow:
     </p>
     ${showDetailsBlockHtml(showName, showDate, showTime, roleName)}
-    ${instructionsBlockHtml(volunteerInstructions)}
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${instructionsBlockHtml(volunteerInstructions, resolvedBrandPrimary)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, resolvedBrandPrimary)}
     <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for volunteering with ${safeOrgName}!
     </p>
@@ -928,6 +963,7 @@ export function buildReminderEmailPayload({
     body,
     logoUrl,
     orgName,
+    brandPrimary: resolvedBrandPrimary,
   })
 
   return {
@@ -949,6 +985,7 @@ type ThankYouEmailParams = {
   orgName?: string
   from?: string
   replyTo?: string
+  brandPrimary?: string
 }
 
 // Exported so the post-show thank-you cron (app/api/cron/thankyou) can build
@@ -964,10 +1001,12 @@ export function buildThankYouEmailPayload({
   orgName,
   from,
   replyTo,
+  brandPrimary,
 }: ThankYouEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Thank you, ${escapeHtml(recipientName)}!</h1>
+    <h1 style="margin:0 0 16px;color:${resolvedBrandPrimary};font-size:22px;font-weight:700;">Thank you, ${escapeHtml(recipientName)}!</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you so much for volunteering for <strong>${escapeHtml(showName)}</strong> on ${showDate}. Your
       time and dedication make ${safeOrgName} possible.
@@ -975,7 +1014,7 @@ export function buildThankYouEmailPayload({
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       You can view your updated volunteer hours and milestones on the Volunteer Call Board.
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${siteUrl}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${siteUrl}/callboard`, resolvedBrandPrimary)}
     <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
       With gratitude,<br>${safeOrgName}
     </p>
@@ -988,6 +1027,7 @@ export function buildThankYouEmailPayload({
     body,
     logoUrl,
     orgName,
+    brandPrimary: resolvedBrandPrimary,
   })
 
   return {
@@ -1024,6 +1064,7 @@ type CategoryMatchNotificationEmailParams = {
   orgName?: string
   from?: string
   replyTo?: string
+  brandPrimary?: string
 }
 
 // Exported so sendShowNotifications() (lib/actions/shows.ts) can build
@@ -1040,6 +1081,7 @@ export function buildCategoryMatchNotificationPayload({
   orgName,
   from,
   replyTo,
+  brandPrimary,
 }: CategoryMatchNotificationEmailParams): {
   from: string
   replyTo: string
@@ -1048,16 +1090,17 @@ export function buildCategoryMatchNotificationPayload({
   html: string
 } {
   const rolesList = matchingRoles.map((r) => escapeHtml(r)).join(', ')
+  const resolvedBrandPrimary = brandPrimary || '#293994'
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)}, we could use your help!</h1>
+    <h1 style="margin:0 0 16px;color:${resolvedBrandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)}, we could use your help!</h1>
     <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       A show you might be interested in is coming up: <strong>${escapeHtml(showName)}</strong>.
     </p>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       We're looking for volunteers in these areas: <strong>${rolesList}</strong>.
     </p>
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, resolvedBrandPrimary)}
     <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
       We'd love to have you on board — sign up today!
     </p>
@@ -1070,6 +1113,7 @@ export function buildCategoryMatchNotificationPayload({
     body,
     logoUrl,
     orgName,
+    brandPrimary: resolvedBrandPrimary,
   })
 
   return {
@@ -1090,6 +1134,7 @@ export async function sendCategoryMatchNotificationEmail(
       ...params,
       from: emailSettings.from,
       replyTo: emailSettings.orgContactEmail,
+      brandPrimary: emailSettings.brandPrimary,
     })
   )
 }
@@ -1107,6 +1152,7 @@ type ShowBulkEmailParams = {
   logoUrl?: string
   orgName?: string
   from?: string
+  brandPrimary?: string
 }
 
 // Exported so sendShowBulkEmail() (lib/actions/shows.ts) can build payload
@@ -1126,6 +1172,7 @@ export function buildShowBulkEmailPayload({
   logoUrl,
   orgName,
   from,
+  brandPrimary,
 }: ShowBulkEmailParams): {
   from: string
   replyTo: string
@@ -1135,6 +1182,7 @@ export function buildShowBulkEmailPayload({
 } {
   const safeBody = escapeHtml(body)
   const preheader = body.slice(0, 100)
+  const resolvedBrandPrimary = brandPrimary || '#293994'
 
   const bodyHtml = `
     <p style="margin:0 0 4px;color:#1A1A1A;font-size:15px;line-height:1.6;">
@@ -1146,7 +1194,7 @@ export function buildShowBulkEmailPayload({
     <p style="margin:24px 0 0;color:#555555;font-size:12px;border-top:1px solid #D0D5E8;padding-top:16px;">
       This message was sent to volunteers rostered for ${escapeHtml(showName)}.<br>
       To update your volunteer information, visit
-      <a href="${siteUrl}/update" style="color:#293994;">${siteUrl}/update</a>.
+      <a href="${siteUrl}/update" style="color:${resolvedBrandPrimary};">${siteUrl}/update</a>.
     </p>
   `
 
@@ -1157,6 +1205,7 @@ export function buildShowBulkEmailPayload({
     footerNote: `This message was sent to you by the production team at ${escapeHtml(orgName || '30 By Ninety Theatre')}.`,
     logoUrl,
     orgName,
+    brandPrimary: resolvedBrandPrimary,
   })
 
   return {
@@ -1190,12 +1239,12 @@ export async function sendPendingRegistrationEmail({
   const reviewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/settings/users`
   const subject = `New access request — ${name} (${email})`
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">New access request</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">New access request</h1>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       <strong>${escapeHtml(name)}</strong> (${escapeHtml(email)}) has requested access to the
       ${escapeHtml(emailSettings.orgName)} Production Crew. Log in to review and approve or decline this request.
     </p>
-    ${buildCtaButton('Review Request', reviewUrl)}
+    ${buildCtaButton('Review Request', reviewUrl, emailSettings.brandPrimary)}
   `
 
   const html = buildEmailHtml({
@@ -1205,6 +1254,7 @@ export async function sendPendingRegistrationEmail({
     footerNote: `This email was sent to Production Crew administrators of ${escapeHtml(emailSettings.orgName)}.`,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   if (to.length === 1) {
@@ -1241,12 +1291,12 @@ export async function sendRegistrationApprovedEmail({
   const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/login`
 
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(name)}, you're approved!</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(name)}, you're approved!</h1>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Your request to join the ${escapeHtml(emailSettings.orgName)} Production Crew has been approved. You can now log in
       at the link below with the email and password you registered with.
     </p>
-    ${buildCtaButton('Log In to Production Crew', loginUrl)}
+    ${buildCtaButton('Log In to Production Crew', loginUrl, emailSettings.brandPrimary)}
   `
 
   const subject = 'Your access request has been approved'
@@ -1257,6 +1307,7 @@ export async function sendRegistrationApprovedEmail({
     footerNote: 'This email was sent because your Production Crew access request was approved.',
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -1279,13 +1330,13 @@ export async function sendRegistrationDeclinedEmail({
 }: RegistrationDeclinedEmailParams): Promise<void> {
   const emailSettings = await resolveEmailSettings()
   const body = `
-    <h1 style="margin:0 0 16px;color:#293994;font-size:22px;font-weight:700;">Hi ${escapeHtml(name)},</h1>
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(name)},</h1>
     <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       Thank you for your interest in the ${escapeHtml(emailSettings.orgName)} Production Crew. Unfortunately your access
       request was not approved at this time.
     </p>
     <p style="margin:0;color:#1A1A1A;font-size:15px;line-height:1.6;">
-      Please reach out to us at <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:#293994;">${escapeHtml(emailSettings.orgContactEmail)}</a>
+      Please reach out to us at <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:${emailSettings.brandPrimary};">${escapeHtml(emailSettings.orgContactEmail)}</a>
       if you have questions.
     </p>
   `
@@ -1298,6 +1349,7 @@ export async function sendRegistrationDeclinedEmail({
     footerNote: `This email was sent in response to your Production Crew access request at ${escapeHtml(emailSettings.orgName)}.`,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
@@ -1318,10 +1370,12 @@ function milestoneEmailContent(
   milestoneLabel: string,
   milestoneHours: number,
   totalHours: number | null,
-  orgName: string
+  orgName: string,
+  brandPrimary?: string
 ): MilestoneEmailContent {
   const safeName = escapeHtml(name)
   const safeOrgName = escapeHtml(orgName)
+  const resolvedBrandPrimary = brandPrimary || '#293994'
   const totalHoursLine =
     totalHours != null
       ? `<p style="color:#555555;line-height:1.6;margin:16px 0 0;">Your total hours: <strong>${totalHours}</strong>.</p>`
@@ -1332,7 +1386,7 @@ function milestoneEmailContent(
       return {
         subject: `Welcome to the ${orgName} volunteer family!`,
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             Welcome to the family, ${safeName}!
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1349,7 +1403,7 @@ function milestoneEmailContent(
       return {
         subject: "You've reached 10 volunteer hours — thank you!",
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             10 hours, ${safeName}!
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1364,7 +1418,7 @@ function milestoneEmailContent(
       return {
         subject: "20 hours of giving — you're making a difference",
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             20 hours, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1378,7 +1432,7 @@ function milestoneEmailContent(
       return {
         subject: "35 hours — you're becoming a cornerstone of our community",
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             35 hours, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1392,7 +1446,7 @@ function milestoneEmailContent(
       return {
         subject: `50 volunteer hours — that's remarkable, ${name}`,
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             50 hours, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1407,7 +1461,7 @@ function milestoneEmailContent(
       return {
         subject: "75 hours of dedication — we're so grateful",
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             75 hours, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1422,7 +1476,7 @@ function milestoneEmailContent(
       return {
         subject: "100 hours — you've achieved something truly special",
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             100 hours, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1437,7 +1491,7 @@ function milestoneEmailContent(
       return {
         subject: `${milestoneHours} hours of service — thank you for everything`,
         bodyHtml: `
-          <h1 style="color:#293994;font-size:22px;font-weight:700;margin:0 0 12px;">
+          <h1 style="color:${resolvedBrandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
             ${escapeHtml(milestoneLabel)}, ${safeName}
           </h1>
           <p style="color:#555555;line-height:1.6;margin:0 0 16px;">
@@ -1465,12 +1519,13 @@ export async function sendMilestoneEmail(
     milestoneLabel,
     milestoneHours,
     totalHours,
-    emailSettings.orgName
+    emailSettings.orgName,
+    emailSettings.brandPrimary
   )
 
   const body = `
     ${bodyHtml}
-    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
     <p style="margin:24px 0 0;color:#555555;font-size:15px;line-height:1.6;">
       — The ${escapeHtml(emailSettings.orgName)} Team
     </p>
@@ -1482,6 +1537,7 @@ export async function sendMilestoneEmail(
     body,
     logoUrl: emailSettings.logoUrl,
     orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
   })
 
   await resend.emails.send({
