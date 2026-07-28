@@ -23,13 +23,13 @@ export default async function LoginPage({
         <div className="flex justify-center mb-6">
           <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
         </div>
-        <h1 className="text-2xl font-bold text-navy text-center">
+        <h1 className="text-2xl font-bold text-brand-primary text-center">
           Production Crew
         </h1>
         <p className="text-mid-gray text-center mt-1 mb-6">Sign in to continue</p>
 
         {errorMessage && (
-          <div className="bg-pale-orange border border-orange text-dark text-sm rounded px-3 py-2 mb-4">
+          <div className="bg-brand-accent-light border border-brand-accent text-dark text-sm rounded px-3 py-2 mb-4">
             {errorMessage}
           </div>
         )}

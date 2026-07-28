@@ -117,7 +117,7 @@ export default async function AuditLogPage({
     <div>
       <Link
         href="/crew/settings"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid flex items-center gap-1 mb-6"
       >
         ← Back to Settings
       </Link>
@@ -139,7 +139,7 @@ export default async function AuditLogPage({
           {hasActiveFilters && (
             <Link
               href="/crew/settings/audit-log"
-              className="text-navy dark:text-steel hover:underline text-sm font-semibold"
+              className="text-brand-primary dark:text-brand-primary-mid hover:underline text-sm font-semibold"
             >
               Clear filters
             </Link>
@@ -153,7 +153,7 @@ export default async function AuditLogPage({
             <div className="flex items-center justify-between mt-4 text-sm">
               <Link
                 href={buildAuditLogHref(filters, Math.max(1, currentPage - 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage <= 1 ? 'pointer-events-none opacity-40' : ''
                 }`}
               >
@@ -164,7 +164,7 @@ export default async function AuditLogPage({
               </span>
               <Link
                 href={buildAuditLogHref(filters, Math.min(totalPages, currentPage + 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''
                 }`}
               >

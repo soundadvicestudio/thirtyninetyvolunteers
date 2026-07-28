@@ -247,7 +247,7 @@ export default async function VolunteerProfilePage({
     <div>
       <Link
         href="/crew/volunteers"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid flex items-center gap-1 mb-6"
       >
         ← Back to Volunteers
       </Link>
@@ -291,7 +291,7 @@ export default async function VolunteerProfilePage({
           Hours
           <HelpTooltip anchor="hours" label="Total Hours" />
         </h2>
-        <p className="text-2xl font-bold text-navy dark:text-steel mb-4">
+        <p className="text-2xl font-bold text-brand-primary dark:text-brand-primary-mid mb-4">
           {volunteer.total_hours}
           <span className="text-base font-normal text-mid-gray dark:text-dark-muted ml-1">hours total</span>
         </p>
@@ -318,7 +318,7 @@ export default async function VolunteerProfilePage({
                   <span>{manualTotal.toFixed(1)} hrs</span>
                 </div>
               )}
-              <div className="flex justify-between px-4 py-2 font-semibold bg-light-navy dark:bg-dark-border/40">
+              <div className="flex justify-between px-4 py-2 font-semibold bg-brand-primary-light dark:bg-dark-border/40">
                 <span>Total</span>
                 <span>{breakdownTotal.toFixed(1)} hrs</span>
               </div>

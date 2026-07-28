@@ -33,7 +33,7 @@ export default async function EditOpportunityPage({ params }: { params: Promise<
     <div>
       <Link
         href="/crew/shows/opportunities"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Back to Standing Opportunities
       </Link>

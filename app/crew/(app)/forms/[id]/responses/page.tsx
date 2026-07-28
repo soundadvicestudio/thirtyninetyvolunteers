@@ -21,7 +21,7 @@ export default async function FormResponsesPage({ params }: { params: Promise<{ 
     <div>
       <Link
         href={`/crew/forms/${id}`}
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Back to Form
       </Link>

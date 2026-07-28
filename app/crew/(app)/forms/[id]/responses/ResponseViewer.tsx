@@ -10,7 +10,7 @@ import type { FormFieldData } from '@/types/form'
 type MatchFilter = 'all' | 'matched' | 'unmatched'
 
 const inputClasses =
-  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide mb-1'
 
 function displayValue(field: FormFieldData, raw: string | undefined): string {
@@ -117,7 +117,7 @@ export default function ResponseViewer({
           type="button"
           onClick={handleExportCsv}
           disabled={filtered.length === 0}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
         >
           Export CSV
         </button>
@@ -132,7 +132,7 @@ export default function ResponseViewer({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold whitespace-nowrap">Submitted At</th>
                   <th className="px-4 py-2 font-semibold whitespace-nowrap">Volunteer</th>
                   {fields.map((field) => (
@@ -155,7 +155,7 @@ export default function ResponseViewer({
                       {r.volunteer_id ? (
                         <Link
                           href={`/crew/volunteers/${r.volunteer_id}`}
-                          className="text-navy dark:text-steel font-semibold hover:underline"
+                          className="text-brand-primary dark:text-brand-primary-mid font-semibold hover:underline"
                         >
                           {r.volunteer_name}
                         </Link>

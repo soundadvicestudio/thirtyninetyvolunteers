@@ -8,8 +8,8 @@ import type { StandingOpportunity, ClaimType, OpportunityStatus } from '@/types/
 
 const CLAIM_TYPE_LABEL: Record<ClaimType, string> = { eoi: 'EOI', slot_claim: 'Slot Claim' }
 const CLAIM_TYPE_BADGE: Record<ClaimType, string> = {
-  eoi: 'bg-steel text-white',
-  slot_claim: 'bg-navy text-white',
+  eoi: 'bg-[#729ABF] text-white',
+  slot_claim: 'bg-[#293994] text-white',
 }
 const OPP_STATUS_LABEL: Record<OpportunityStatus, string> = { active: 'Active', archived: 'Archived' }
 const OPP_STATUS_BADGE: Record<OpportunityStatus, string> = {
@@ -71,7 +71,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
     <div>
       <Link
         href="/crew/shows/opportunities"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Standing Opportunities
       </Link>
@@ -95,14 +95,14 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
       {canEdit && opp.status === 'active' && (
         <Link
           href={`/crew/shows/opportunities/${opp.id}/edit`}
-          className="inline-block bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium mb-6"
+          className="inline-block bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium mb-6"
         >
           Edit
         </Link>
       )}
 
       <div className="flex flex-wrap items-center gap-3 mb-10">
-        <span className="text-sm text-dark dark:text-dark-text font-mono bg-light-navy dark:bg-dark-surface px-3 py-1.5 rounded break-all">
+        <span className="text-sm text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-1.5 rounded break-all">
           {publicUrl}
         </span>
         <CopyUrlButton url={publicUrl} />
@@ -110,7 +110,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
           href={`/opportunities/${opp.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+          className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
         >
           View
         </a>
@@ -126,7 +126,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
           <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Name</th>
                   <th className="px-4 py-2 font-semibold">Email</th>
                   <th className="px-4 py-2 font-semibold">Phone</th>
@@ -148,7 +148,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                       {s.volunteer_id ? (
                         <Link
                           href={`/crew/volunteers/${s.volunteer_id}`}
-                          className="text-navy dark:text-steel hover:underline"
+                          className="text-brand-primary dark:text-brand-primary-mid hover:underline"
                         >
                           {s.volunteer_name}
                         </Link>

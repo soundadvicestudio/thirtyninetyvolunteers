@@ -16,12 +16,12 @@ function LinkedCard({
   return (
     <Link
       href={href}
-      className="block bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 hover:border-navy transition-colors"
+      className="block bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 hover:border-brand-primary transition-colors"
     >
       <div className="flex items-center justify-between gap-2 mb-1">
         <h3 className="text-dark dark:text-dark-text font-bold">{title}</h3>
         {badgeLabel && (
-          <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-steel text-white whitespace-nowrap">
+          <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-brand-primary-mid text-white whitespace-nowrap">
             {badgeLabel}
           </span>
         )}

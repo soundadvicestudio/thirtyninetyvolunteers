@@ -16,7 +16,7 @@ export default async function NewFormPage() {
     <div>
       <Link
         href="/crew/forms"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Back to Forms
       </Link>

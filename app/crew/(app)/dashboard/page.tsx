@@ -124,7 +124,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-navy mb-6">Welcome to Production Crew</h1>
+      <h1 className="text-2xl font-bold text-brand-primary mb-6">Welcome to Production Crew</h1>
 
       <QuickStats />
 

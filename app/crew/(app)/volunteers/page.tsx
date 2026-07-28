@@ -82,8 +82,8 @@ export default async function VolunteersPage({
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-navy">Volunteers</h1>
-          <span className="bg-light-navy text-navy text-sm font-semibold rounded-full px-3 py-1">
+          <h1 className="text-2xl font-bold text-brand-primary">Volunteers</h1>
+          <span className="bg-brand-primary-light text-brand-primary text-sm font-semibold rounded-full px-3 py-1">
             {activeCount} active
           </span>
         </div>
@@ -93,7 +93,7 @@ export default async function VolunteersPage({
             <a
               href={`/crew/volunteers/export?${buildVolunteersQueryString(state)}`}
               download
-              className="flex items-center gap-1.5 text-sm bg-white border border-navy text-navy font-semibold px-3 py-1.5 rounded hover:bg-light-navy transition-colors"
+              className="flex items-center gap-1.5 text-sm bg-white border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-brand-primary-light transition-colors"
             >
               <FileDown size={14} />
               Export PDF

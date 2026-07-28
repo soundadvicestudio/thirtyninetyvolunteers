@@ -31,7 +31,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
     <div>
       <Link
         href="/crew/forms"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Forms
       </Link>
@@ -46,7 +46,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
         {canEdit && (
           <Link
             href={`/crew/forms/${id}/edit`}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium"
           >
             Edit Form
           </Link>
@@ -71,7 +71,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
               <dd>
                 <Link
                   href={`/crew/forms/${id}/responses`}
-                  className="text-navy dark:text-steel font-semibold hover:underline"
+                  className="text-brand-primary dark:text-brand-primary-mid font-semibold hover:underline"
                 >
                   {form.response_count}
                 </Link>
@@ -84,7 +84,7 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
           <div>
             <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Sharing</h2>
             {form.status !== 'live' && (
-              <p className="text-sm text-orange mb-3">Form must be live to accept responses.</p>
+              <p className="text-sm text-brand-accent mb-3">Form must be live to accept responses.</p>
             )}
             <FormDetailActions publicUrl={publicUrl} embedCode={embedCode} />
           </div>
@@ -99,14 +99,14 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
               <a
                 href={`data:image/png;base64,${qr.pngBase64}`}
                 download="form-qr.png"
-                className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+                className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
               >
                 Download PNG
               </a>
               <a
                 href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr.svg)}`}
                 download="form-qr.svg"
-                className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+                className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
               >
                 Download SVG
               </a>

@@ -18,7 +18,7 @@ export default function AuthTabs() {
             <button
               type="button"
               onClick={() => setMode('register')}
-              className="text-navy font-semibold hover:underline cursor-pointer"
+              className="text-brand-primary font-semibold hover:underline cursor-pointer"
             >
               Request Access
             </button>
@@ -29,7 +29,7 @@ export default function AuthTabs() {
             <button
               type="button"
               onClick={() => setMode('login')}
-              className="text-navy font-semibold hover:underline cursor-pointer"
+              className="text-brand-primary font-semibold hover:underline cursor-pointer"
             >
               Sign In
             </button>

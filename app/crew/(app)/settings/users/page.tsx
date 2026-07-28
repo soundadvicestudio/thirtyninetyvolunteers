@@ -40,26 +40,26 @@ export default async function UsersPage({
     <div>
       <Link
         href="/crew/settings"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-navy flex items-center gap-1 mb-6"
+        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1 mb-6"
       >
         ← Back to Settings
       </Link>
 
       {emailFailed && (
-        <div className="bg-pale-orange border border-orange rounded-lg p-4 text-sm text-dark mb-6">
+        <div className="bg-brand-accent-light border border-brand-accent rounded-lg p-4 text-sm text-dark mb-6">
           Account created successfully, but the welcome email failed to send. Check your Resend
           dashboard.
         </div>
       )}
 
       {registrationApproved && (
-        <div className="bg-light-navy border border-divider rounded-lg p-4 text-sm text-dark mb-6">
+        <div className="bg-brand-primary-light border border-divider rounded-lg p-4 text-sm text-dark mb-6">
           Registration approved. The new account is now active.
         </div>
       )}
 
       {registrationDeclined && (
-        <div className="bg-light-navy border border-divider rounded-lg p-4 text-sm text-dark mb-6">
+        <div className="bg-brand-primary-light border border-divider rounded-lg p-4 text-sm text-dark mb-6">
           Registration declined.
         </div>
       )}

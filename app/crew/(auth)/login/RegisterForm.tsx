@@ -54,7 +54,7 @@ export default function RegisterForm() {
 
   if (submitted) {
     return (
-      <div className="bg-light-navy border border-divider text-dark text-sm rounded px-3 py-3">
+      <div className="bg-brand-primary-light border border-divider text-dark text-sm rounded px-3 py-3">
         Your request has been submitted. A Super Admin will review it shortly. You&apos;ll receive
         an email once a decision is made.
       </div>
@@ -64,7 +64,7 @@ export default function RegisterForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {formError && (
-        <div className="bg-pale-orange border border-orange text-dark text-sm rounded px-3 py-2">
+        <div className="bg-brand-accent-light border border-brand-accent text-dark text-sm rounded px-3 py-2">
           {formError}
         </div>
       )}
@@ -75,10 +75,10 @@ export default function RegisterForm() {
         <input
           id="reg-name"
           type="text"
-          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('name')}
         />
-        {errors.name && <p className="text-orange text-xs mt-1">{errors.name.message}</p>}
+        {errors.name && <p className="text-brand-accent text-xs mt-1">{errors.name.message}</p>}
       </div>
       <div>
         <label htmlFor="reg-email" className="block text-sm font-semibold text-dark mb-1">
@@ -87,10 +87,10 @@ export default function RegisterForm() {
         <input
           id="reg-email"
           type="email"
-          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('email')}
         />
-        {errors.email && <p className="text-orange text-xs mt-1">{errors.email.message}</p>}
+        {errors.email && <p className="text-brand-accent text-xs mt-1">{errors.email.message}</p>}
       </div>
       <div>
         <label htmlFor="reg-password" className="block text-sm font-semibold text-dark mb-1">
@@ -99,10 +99,10 @@ export default function RegisterForm() {
         <input
           id="reg-password"
           type="password"
-          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('password')}
         />
-        {errors.password && <p className="text-orange text-xs mt-1">{errors.password.message}</p>}
+        {errors.password && <p className="text-brand-accent text-xs mt-1">{errors.password.message}</p>}
       </div>
       <div>
         <label htmlFor="reg-confirm-password" className="block text-sm font-semibold text-dark mb-1">
@@ -111,17 +111,17 @@ export default function RegisterForm() {
         <input
           id="reg-confirm-password"
           type="password"
-          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('confirmPassword')}
         />
         {errors.confirmPassword && (
-          <p className="text-orange text-xs mt-1">{errors.confirmPassword.message}</p>
+          <p className="text-brand-accent text-xs mt-1">{errors.confirmPassword.message}</p>
         )}
       </div>
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-navy text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-brand-primary text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? 'Submitting...' : 'Request Access'}
       </button>

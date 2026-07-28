@@ -29,7 +29,7 @@ export default function LoginForm() {
             name="email"
             type="email"
             required
-            className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           />
         </div>
         <div>
@@ -44,12 +44,12 @@ export default function LoginForm() {
             name="password"
             type="password"
             required
-            className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-navy"
+            className="w-full rounded border border-divider px-3 py-2 text-dark focus:outline-none focus:ring-2 focus:ring-brand-primary"
           />
         </div>
         <button
           type="submit"
-          className="w-full bg-navy text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity"
+          className="w-full bg-brand-primary text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity"
         >
           Sign In
         </button>
@@ -64,7 +64,7 @@ export default function LoginForm() {
       <button
         type="button"
         onClick={handleGoogleSignIn}
-        className="w-full flex items-center justify-center gap-2 bg-white border border-divider text-dark font-semibold py-2 rounded hover:bg-light-navy transition-colors"
+        className="w-full flex items-center justify-center gap-2 bg-white border border-divider text-dark font-semibold py-2 rounded hover:bg-brand-primary-light transition-colors"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
           <path
