@@ -61,7 +61,7 @@ export default function AddToHomeScreenCard() {
 
   return (
     <div className="md:hidden mb-6">
-      <div className="relative bg-light-navy dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4">
+      <div className="relative bg-brand-primary-light dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4">
         <button
           type="button"
           onClick={handleDismiss}
@@ -81,7 +81,7 @@ export default function AddToHomeScreenCard() {
             <button
               type="button"
               onClick={handleInstall}
-              className="bg-navy text-white hover:bg-steel transition-colors text-sm px-4 py-2 rounded-md font-medium cursor-pointer"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-4 py-2 rounded-md font-medium cursor-pointer"
             >
               Install App
             </button>

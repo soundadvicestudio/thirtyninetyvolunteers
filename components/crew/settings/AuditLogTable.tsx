@@ -138,7 +138,7 @@ function DiffPanel({ entry }: { entry: AuditLogEntry }) {
           {diff.map((row) => (
             <tr key={row.key} className="border-b border-divider dark:border-dark-border last:border-0">
               <td className="px-4 py-2 text-dark dark:text-dark-text font-medium">{row.key}</td>
-              <td className={`px-4 py-2 ${row.type === 'removed' ? 'text-orange' : 'text-mid-gray dark:text-dark-muted'}`}>
+              <td className={`px-4 py-2 ${row.type === 'removed' ? 'text-brand-accent' : 'text-mid-gray dark:text-dark-muted'}`}>
                 {formatDiffValue(row.before)}
               </td>
               <td
@@ -199,7 +199,7 @@ export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] })
                   <td className="px-4 py-3 text-dark dark:text-dark-text">{actionLabel(entry.action)}</td>
                   <td className="px-4 py-3 text-dark dark:text-dark-text">
                     {link ? (
-                      <Link href={link} className="text-navy dark:text-steel hover:underline">
+                      <Link href={link} className="text-brand-primary dark:text-brand-primary-mid hover:underline">
                         {entry.target_type} — {truncateId(entry.target_id)}
                       </Link>
                     ) : (
@@ -213,7 +213,7 @@ export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] })
                       <button
                         type="button"
                         onClick={() => toggleExpand(entry.id)}
-                        className="text-navy dark:text-steel text-sm font-semibold hover:underline cursor-pointer"
+                        className="text-brand-primary dark:text-brand-primary-mid text-sm font-semibold hover:underline cursor-pointer"
                       >
                         {isExpanded ? 'Hide diff' : 'View diff'}
                       </button>
@@ -223,7 +223,7 @@ export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] })
                   </td>
                 </tr>
                 {isExpanded && (
-                  <tr className="border-b border-divider dark:border-dark-border bg-light-navy/30 dark:bg-dark-bg/50">
+                  <tr className="border-b border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/50">
                     <td colSpan={5} className="p-0">
                       <DiffPanel entry={entry} />
                     </td>

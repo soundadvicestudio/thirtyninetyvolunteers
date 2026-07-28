@@ -37,7 +37,7 @@ export default function SignupFormSettings({
             type="checkbox"
             checked={showSchool}
             onChange={(e) => setShowSchool(e.target.checked)}
-            className="w-4 h-4 mt-0.5 accent-navy cursor-pointer"
+            className="w-4 h-4 mt-0.5 accent-brand-primary cursor-pointer"
           />
           <span>
             <span className="block text-sm font-semibold text-dark dark:text-dark-text">
@@ -54,7 +54,7 @@ export default function SignupFormSettings({
             type="checkbox"
             checked={showAgeRange}
             onChange={(e) => setShowAgeRange(e.target.checked)}
-            className="w-4 h-4 mt-0.5 accent-navy cursor-pointer"
+            className="w-4 h-4 mt-0.5 accent-brand-primary cursor-pointer"
           />
           <span>
             <span className="block text-sm font-semibold text-dark dark:text-dark-text">
@@ -72,14 +72,14 @@ export default function SignupFormSettings({
           type="button"
           onClick={handleSave}
           disabled={isSubmitting}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
         >
           {isSubmitting ? 'Saving…' : 'Save'}
         </button>
         {feedback && (
           <p
             className={`text-sm ${
-              feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-orange'
+              feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-brand-accent'
             }`}
           >
             {feedback.message}

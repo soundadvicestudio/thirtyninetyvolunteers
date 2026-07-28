@@ -40,9 +40,9 @@ const headingClasses = 'text-lg font-semibold text-dark dark:text-dark-text'
 const descriptionClasses = 'text-sm text-mid-gray dark:text-dark-muted mb-4'
 const labelClasses = 'block text-sm font-medium text-dark dark:text-dark-text mb-1'
 const inputClasses =
-  'w-full border border-divider dark:border-dark-border rounded-md px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy'
+  'w-full border border-divider dark:border-dark-border rounded-md px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary'
 const saveButtonClasses =
-  'bg-navy text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-steel transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
+  'bg-brand-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-mid transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
 
 function SaveFeedback({ status, errorMessage }: { status: SaveStatus; errorMessage: string }) {
   if (status === 'saved') return <span className="text-sm text-green-600">✓ Saved</span>
@@ -268,7 +268,7 @@ function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitia
         <p className="text-sm text-dark dark:text-dark-text">{initialValues.default_reply_to}</p>
         <Link
           href="/crew/settings/general"
-          className="text-sm text-navy dark:text-steel hover:underline"
+          className="text-sm text-brand-primary dark:text-brand-primary-mid hover:underline"
         >
           Edit in General Defaults →
         </Link>
@@ -307,7 +307,7 @@ function ToggleRow({
         aria-label={label}
         onClick={onToggle}
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-          enabled ? 'bg-navy' : 'bg-gray-300'
+          enabled ? 'bg-brand-primary' : 'bg-gray-300'
         }`}
       >
         <span

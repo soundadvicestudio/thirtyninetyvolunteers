@@ -83,7 +83,7 @@ function CategoryRow({
             onClick={() => handleReorder('up')}
             disabled={isFirst}
             aria-label={`Move ${category.name} up`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronUp size={16} />
           </button>
@@ -92,7 +92,7 @@ function CategoryRow({
             onClick={() => handleReorder('down')}
             disabled={isLast}
             aria-label={`Move ${category.name} down`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronDown size={16} />
           </button>
@@ -105,7 +105,7 @@ function CategoryRow({
               type="text"
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
-              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               autoFocus
             />
             <button
@@ -122,7 +122,7 @@ function CategoryRow({
               onClick={handleCancel}
               disabled={isSubmitting}
               aria-label="Cancel edit"
-              className="p-1 rounded text-orange hover:bg-pale-orange cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X size={16} />
             </button>
@@ -130,7 +130,7 @@ function CategoryRow({
         ) : (
           <span className="text-dark dark:text-dark-text font-medium">{category.name}</span>
         )}
-        {error && <p className="text-xs text-orange mt-1">{error}</p>}
+        {error && <p className="text-xs text-brand-accent mt-1">{error}</p>}
       </td>
       <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm align-top">
         {editMode ? (
@@ -140,7 +140,7 @@ function CategoryRow({
             placeholder="Description (optional)"
             maxLength={500}
             rows={2}
-            className="w-full rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy resize-y"
+            className="w-full rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary resize-y"
           />
         ) : (
           category.description || '—'
@@ -163,7 +163,7 @@ function CategoryRow({
             type="button"
             onClick={() => setEditMode(true)}
             aria-label={`Edit ${category.name}`}
-            className="p-1 rounded text-navy hover:bg-light-navy cursor-pointer dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
           >
             <Pencil size={16} />
           </button>
@@ -200,14 +200,14 @@ function AddCategoryForm() {
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-6">
-      <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">Add Category</h2>
+      <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide mb-3">Add Category</h2>
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
         />
         <textarea
           placeholder="Description (optional)"
@@ -215,18 +215,18 @@ function AddCategoryForm() {
           onChange={(e) => setDescription(e.target.value)}
           maxLength={500}
           rows={2}
-          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy resize-y"
+          className="flex-1 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary resize-y"
         />
         <button
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
         >
           Add Category
         </button>
       </div>
-      {error && <p className="text-sm text-orange mt-2">{error}</p>}
+      {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
     </div>
   )
 }

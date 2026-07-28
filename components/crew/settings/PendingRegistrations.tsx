@@ -81,7 +81,7 @@ function PendingRow({
           value={role}
           disabled={isSubmitting || confirming !== null}
           onChange={(e) => setRole(e.target.value as RegistrationRole)}
-          className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
+          className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary disabled:opacity-50"
         >
           <option value="viewer">Viewer</option>
           <option value="editor">Editor</option>
@@ -91,20 +91,20 @@ function PendingRow({
         </select>
       </td>
       <td className="px-4 py-3">
-        {rowError && <p className="text-orange text-xs mb-2">{rowError}</p>}
+        {rowError && <p className="text-brand-accent text-xs mb-2">{rowError}</p>}
         {confirming === null && (
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setConfirming('approve')}
-              className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer"
             >
               Approve
             </button>
             <button
               type="button"
               onClick={() => setConfirming('decline')}
-              className="border border-orange text-orange hover:bg-orange hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer"
+              className="border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer"
             >
               Decline
             </button>
@@ -119,7 +119,7 @@ function PendingRow({
               type="button"
               onClick={handleApprove}
               disabled={isSubmitting}
-              className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Approving...' : 'Confirm'}
             </button>
@@ -127,7 +127,7 @@ function PendingRow({
               type="button"
               onClick={() => setConfirming(null)}
               disabled={isSubmitting}
-              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -140,7 +140,7 @@ function PendingRow({
               type="button"
               onClick={handleDecline}
               disabled={isSubmitting}
-              className="bg-orange text-white hover:bg-orange/90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-brand-accent text-white hover:bg-brand-accent/90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Declining...' : 'Confirm Decline'}
             </button>
@@ -148,7 +148,7 @@ function PendingRow({
               type="button"
               onClick={() => setConfirming(null)}
               disabled={isSubmitting}
-              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>

@@ -99,7 +99,7 @@ export default function Sidebar({
           type="button"
           onClick={close}
           aria-label="Close menu"
-          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-light-navy cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
+          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
         >
           <X size={20} />
         </button>
@@ -120,8 +120,8 @@ export default function Sidebar({
               href={href}
               className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
                 active
-                  ? 'bg-navy text-white'
-                  : 'text-dark hover:bg-light-navy dark:text-dark-text dark:hover:bg-dark-surface/50'
+                  ? 'bg-brand-primary text-white'
+                  : 'text-dark hover:bg-brand-primary-light dark:text-dark-text dark:hover:bg-dark-surface/50'
               }`}
             >
               <Icon size={18} />
@@ -135,14 +135,14 @@ export default function Sidebar({
             href="/crew/settings/users"
             className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
               isActivePath(pathname, '/crew/settings/users')
-                ? 'bg-navy text-white'
-                : 'text-dark hover:bg-light-navy dark:text-dark-text dark:hover:bg-dark-surface/50'
+                ? 'bg-brand-primary text-white'
+                : 'text-dark hover:bg-brand-primary-light dark:text-dark-text dark:hover:bg-dark-surface/50'
             }`}
           >
             <UserCog size={18} />
             Users
             {pendingRegistrationCount > 0 && (
-              <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-navy text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+              <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
                 {pendingRegistrationCount}
               </span>
             )}

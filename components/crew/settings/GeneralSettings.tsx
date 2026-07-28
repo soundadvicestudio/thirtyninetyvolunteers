@@ -6,7 +6,7 @@ import { saveDefaultHours, saveDefaultReplyTo } from '@/lib/actions/settings'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 function Feedback({ feedback }: { feedback: { type: 'success' | 'error'; message: string } | null }) {
@@ -14,7 +14,7 @@ function Feedback({ feedback }: { feedback: { type: 'success' | 'error'; message
   return (
     <p
       className={`text-sm ${
-        feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-orange'
+        feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-brand-accent'
       }`}
     >
       {feedback.message}
@@ -85,7 +85,7 @@ export default function GeneralSettings({
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
           These values are used as fallbacks when a location has no specific default hours set.
           Per-location defaults can be configured in{' '}
-          <Link href="/crew/settings/locations" className="text-navy dark:text-steel hover:underline font-medium">
+          <Link href="/crew/settings/locations" className="text-brand-primary dark:text-brand-primary-mid hover:underline font-medium">
             Location Management
           </Link>{' '}
           and take precedence over these values.
@@ -133,7 +133,7 @@ export default function GeneralSettings({
             type="button"
             onClick={handleSaveHours}
             disabled={isSavingHours}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
           >
             {isSavingHours ? 'Saving…' : 'Save Hours'}
           </button>
@@ -164,7 +164,7 @@ export default function GeneralSettings({
             type="button"
             onClick={handleSaveReplyTo}
             disabled={isSavingReplyTo}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
           >
             {isSavingReplyTo ? 'Saving…' : 'Save Email'}
           </button>

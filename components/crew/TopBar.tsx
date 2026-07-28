@@ -15,11 +15,11 @@ const ROLE_LABELS: Record<AdminUser['role'], string> = {
 }
 
 const ROLE_BADGE_CLASSES: Record<AdminUser['role'], string> = {
-  super_admin: 'bg-navy text-white',
+  super_admin: 'bg-[#293994] text-white',
   owner_admin: 'bg-indigo-600 text-white',
-  editor: 'bg-steel text-white',
+  editor: 'bg-[#729ABF] text-white',
   viewer: 'bg-mid-gray text-white',
-  production: 'bg-orange text-white',
+  production: 'bg-[#F26522] text-white',
 }
 
 export default function TopBar({
@@ -38,7 +38,7 @@ export default function TopBar({
           type="button"
           onClick={toggle}
           aria-label="Open menu"
-          className="md:hidden p-1 rounded text-dark hover:bg-light-navy cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
+          className="md:hidden p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
         >
           <Menu size={22} />
         </button>
@@ -54,7 +54,7 @@ export default function TopBar({
         </span>
         <Link
           href="/crew/settings/password"
-          className="hidden sm:inline text-sm text-mid-gray hover:text-navy dark:text-dark-muted transition-colors"
+          className="hidden sm:inline text-sm text-mid-gray hover:text-brand-primary dark:text-dark-muted transition-colors"
         >
           Change Password
         </Link>
@@ -65,8 +65,8 @@ export default function TopBar({
             className="
               flex items-center gap-2
               px-3 py-1.5 rounded-md text-sm font-medium
-              border border-steel text-dark bg-white
-              hover:bg-steel hover:text-white
+              border border-brand-primary-mid text-dark bg-white
+              hover:bg-brand-primary-mid hover:text-white
               dark:text-dark-text dark:bg-dark-surface
               transition-colors duration-150
               cursor-pointer

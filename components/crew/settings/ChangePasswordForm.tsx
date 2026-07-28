@@ -49,12 +49,12 @@ export default function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {success && (
-        <div className="bg-light-navy border border-divider text-dark text-sm rounded px-3 py-2">
+        <div className="bg-brand-primary-light border border-divider text-dark text-sm rounded px-3 py-2">
           Your password has been updated.
         </div>
       )}
       {formError && (
-        <div className="bg-pale-orange border border-orange text-dark text-sm rounded px-3 py-2">
+        <div className="bg-brand-accent-light border border-brand-accent text-dark text-sm rounded px-3 py-2">
           {formError}
         </div>
       )}
@@ -68,10 +68,10 @@ export default function ChangePasswordForm() {
         <input
           id="new-password"
           type="password"
-          className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('newPassword')}
         />
-        {errors.newPassword && <p className="text-orange text-xs mt-1">{errors.newPassword.message}</p>}
+        {errors.newPassword && <p className="text-brand-accent text-xs mt-1">{errors.newPassword.message}</p>}
       </div>
       <div>
         <label
@@ -83,17 +83,17 @@ export default function ChangePasswordForm() {
         <input
           id="confirm-new-password"
           type="password"
-          className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full rounded border border-divider dark:border-dark-border px-3 py-2 text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary"
           {...register('confirmPassword')}
         />
         {errors.confirmPassword && (
-          <p className="text-orange text-xs mt-1">{errors.confirmPassword.message}</p>
+          <p className="text-brand-accent text-xs mt-1">{errors.confirmPassword.message}</p>
         )}
       </div>
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-navy text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-brand-primary text-white font-semibold py-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? 'Updating...' : 'Update Password'}
       </button>

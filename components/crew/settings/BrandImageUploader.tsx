@@ -9,7 +9,7 @@ type Mode = 'idle' | 'cropping' | 'uploading' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const inputClasses =
-  'w-full rounded-md border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy'
+  'w-full rounded-md border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary'
 
 export default function BrandImageUploader({
   label,
@@ -152,7 +152,7 @@ export default function BrandImageUploader({
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="bg-navy text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-steel transition-colors cursor-pointer"
+          className="bg-brand-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-mid transition-colors cursor-pointer"
         >
           Try Again
         </button>
@@ -163,9 +163,9 @@ export default function BrandImageUploader({
   if (mode === 'uploading') {
     return (
       <div className="space-y-2">
-        <div className="w-full h-2 rounded-full bg-light-navy overflow-hidden">
+        <div className="w-full h-2 rounded-full bg-brand-primary-light overflow-hidden">
           <div
-            className="h-full bg-navy transition-all"
+            className="h-full bg-brand-primary transition-all"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
@@ -202,7 +202,7 @@ export default function BrandImageUploader({
             type="button"
             onClick={handleCropAndUpload}
             disabled={!croppedAreaPixels}
-            className="bg-navy text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-steel transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="bg-brand-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-mid transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Crop & Upload
           </button>
@@ -240,7 +240,7 @@ export default function BrandImageUploader({
           type="button"
           onClick={handleSaveUrl}
           disabled={saveStatus === 'saving'}
-          className="shrink-0 bg-navy text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-steel transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="shrink-0 bg-brand-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-mid transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {saveStatus === 'saving' ? 'Saving...' : 'Save URL'}
         </button>
@@ -249,7 +249,7 @@ export default function BrandImageUploader({
         <button
           type="button"
           onClick={handleFileButtonClick}
-          className="border border-navy text-navy px-4 py-2 rounded-md text-sm font-medium hover:bg-light-navy transition-colors cursor-pointer"
+          className="border border-brand-primary text-brand-primary px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-light transition-colors cursor-pointer"
         >
           Upload File
         </button>

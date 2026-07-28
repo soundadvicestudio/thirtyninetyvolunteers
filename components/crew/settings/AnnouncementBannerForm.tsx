@@ -41,7 +41,7 @@ export default function AnnouncementBannerForm({
             type="checkbox"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
-            className="w-4 h-4 accent-navy cursor-pointer"
+            className="w-4 h-4 accent-brand-primary cursor-pointer"
           />
           <span className="text-sm font-semibold text-dark dark:text-dark-text">Banner active</span>
         </label>
@@ -61,7 +61,7 @@ export default function AnnouncementBannerForm({
             maxLength={MAX_LENGTH}
             rows={3}
             placeholder="e.g. Tickets for our Spring show are on sale now!"
-            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy resize-y"
+            className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary resize-y"
           />
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function AnnouncementBannerForm({
       <div className="mt-6">
         <h2 className="text-sm font-bold text-dark dark:text-dark-text mb-2">Preview</h2>
         {showPreview ? (
-          <div className="w-full bg-orange py-3 px-4 rounded-lg">
+          <div className="w-full bg-brand-accent py-3 px-4 rounded-lg">
             <p className="text-white font-semibold text-center">{text}</p>
           </div>
         ) : (
@@ -86,14 +86,14 @@ export default function AnnouncementBannerForm({
           type="button"
           onClick={handleSave}
           disabled={isSubmitting}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
         >
           {isSubmitting ? 'Saving…' : 'Save'}
         </button>
         {feedback && (
           <p
             className={`text-sm ${
-              feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-orange'
+              feedback.type === 'success' ? 'text-green-700 dark:text-green-400' : 'text-brand-accent'
             }`}
           >
             {feedback.message}

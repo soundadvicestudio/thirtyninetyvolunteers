@@ -79,7 +79,7 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
       <DialogTrigger asChild>
         <button
           type="button"
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
         >
           ＋ Add User
         </button>
@@ -95,32 +95,32 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
-              Full Name<span className="text-orange ml-0.5">*</span>
+              Full Name<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               {...register('name')}
             />
-            {errors.name && <p className="mt-1 text-sm text-orange">{errors.name.message}</p>}
+            {errors.name && <p className="mt-1 text-sm text-brand-accent">{errors.name.message}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
-              Email Address<span className="text-orange ml-0.5">*</span>
+              Email Address<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input
               type="email"
-              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               {...register('email')}
             />
-            {errors.email && <p className="mt-1 text-sm text-orange">{errors.email.message}</p>}
+            {errors.email && <p className="mt-1 text-sm text-brand-accent">{errors.email.message}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Role</label>
             <select
-              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               {...register('role')}
             >
               <option value="editor">Editor</option>
@@ -133,14 +133,14 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="rounded border-divider dark:border-dark-border text-navy focus:ring-navy"
+              className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
               {...register('sendWelcome')}
             />
             <span className="text-sm text-dark dark:text-dark-text">Send welcome email</span>
           </label>
 
           {formError && (
-            <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">
+            <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">
               {formError}
             </div>
           )}
@@ -149,14 +149,14 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating...' : 'Create Account'}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="w-full border border-divider text-dark hover:bg-light-navy transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="w-full border border-divider text-dark hover:bg-brand-primary-light transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               Cancel
             </button>

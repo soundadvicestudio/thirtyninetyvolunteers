@@ -70,7 +70,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
             <button
               type="button"
               onClick={() => setPicking((p) => !p)}
-              className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer shrink-0"
+              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer shrink-0"
             >
               Change Active Document
             </button>
@@ -83,7 +83,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
             <button
               type="button"
               onClick={() => setPicking((p) => !p)}
-              className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer shrink-0"
+              className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer shrink-0"
             >
               Set Active Document
             </button>
@@ -92,7 +92,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
       )}
 
       {picking && canManage && (
-        <div className="mt-2 rounded-lg border border-divider dark:border-dark-border p-3 bg-light-navy/30 dark:bg-dark-bg/40">
+        <div className="mt-2 rounded-lg border border-divider dark:border-dark-border p-3 bg-brand-primary-light/30 dark:bg-dark-bg/40">
           {otherDocuments.length === 0 ? (
             <p className="text-xs text-mid-gray dark:text-dark-muted">No documents of this type yet.</p>
           ) : (
@@ -104,7 +104,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
                     type="button"
                     onClick={() => handleSetActive(doc.id)}
                     disabled={isSubmitting}
-                    className="text-xs font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50"
+                    className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50"
                   >
                     Make Active
                   </button>
@@ -117,7 +117,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
               type="button"
               onClick={() => handleSetActive(null)}
               disabled={isSubmitting}
-              className="mt-2 text-xs font-semibold text-orange hover:underline cursor-pointer disabled:opacity-50"
+              className="mt-2 text-xs font-semibold text-brand-accent hover:underline cursor-pointer disabled:opacity-50"
             >
               Clear Active Document
             </button>
@@ -132,7 +132,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-orange mt-1">{error}</p>}
+      {error && <p className="text-xs text-brand-accent mt-1">{error}</p>}
     </div>
   )
 }
@@ -246,7 +246,7 @@ function TypeRow({
               onClick={() => handleReorder('up')}
               disabled={isFirst}
               aria-label={`Move ${type.name} up`}
-              className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               <ChevronUp size={16} />
             </button>
@@ -255,7 +255,7 @@ function TypeRow({
               onClick={() => handleReorder('down')}
               disabled={isLast}
               aria-label={`Move ${type.name} down`}
-              className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               <ChevronDown size={16} />
             </button>
@@ -268,7 +268,7 @@ function TypeRow({
               type="text"
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
-              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               autoFocus
             />
             <input
@@ -276,7 +276,7 @@ function TypeRow({
               value={draftDescription}
               onChange={(e) => setDraftDescription(e.target.value)}
               placeholder="Description"
-              className="flex-1 min-w-[180px] rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="flex-1 min-w-[180px] rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
             />
             <button
               type="button"
@@ -292,7 +292,7 @@ function TypeRow({
               onClick={handleCancel}
               disabled={isSubmitting}
               aria-label="Cancel edit"
-              className="p-1 rounded text-orange hover:bg-pale-orange cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X size={16} />
             </button>
@@ -304,7 +304,7 @@ function TypeRow({
               <span className="text-sm text-mid-gray dark:text-dark-muted">{type.description}</span>
             )}
             {type.is_system && (
-              <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-steel text-white">System</span>
+              <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-[#729ABF] text-white">System</span>
             )}
             {!type.is_active && (
               <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-mid-gray/20 text-mid-gray">
@@ -320,7 +320,7 @@ function TypeRow({
               type="button"
               onClick={() => setEditMode(true)}
               aria-label={`Edit ${type.name}`}
-              className="p-1 rounded text-navy hover:bg-light-navy cursor-pointer dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
             >
               <Pencil size={16} />
             </button>
@@ -329,8 +329,8 @@ function TypeRow({
               onClick={handleToggleActive}
               className={`text-sm font-semibold px-3 py-1 rounded-md cursor-pointer transition-colors ${
                 type.is_active
-                  ? 'border border-orange text-orange hover:bg-orange hover:text-white'
-                  : 'bg-navy text-white hover:bg-steel'
+                  ? 'border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white'
+                  : 'bg-brand-primary text-white hover:bg-brand-primary-mid'
               }`}
             >
               {type.is_active ? 'Deactivate' : 'Reactivate'}
@@ -340,7 +340,7 @@ function TypeRow({
               onClick={() => setConfirming('delete')}
               disabled={type.is_system}
               title={type.is_system ? 'System document types cannot be deleted' : undefined}
-              className="text-sm font-semibold px-3 py-1 rounded-md cursor-pointer border border-orange text-orange hover:bg-orange hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-orange"
+              className="text-sm font-semibold px-3 py-1 rounded-md cursor-pointer border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-brand-accent"
             >
               Delete
             </button>
@@ -354,7 +354,7 @@ function TypeRow({
               type="button"
               onClick={handleConfirmDeactivate}
               disabled={isSubmitting}
-              className="bg-orange text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="bg-brand-accent text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? 'Deactivating…' : 'Confirm'}
             </button>
@@ -376,7 +376,7 @@ function TypeRow({
               type="button"
               onClick={handleConfirmDelete}
               disabled={isSubmitting}
-              className="bg-orange text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="bg-brand-accent text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? 'Deleting…' : 'Confirm Delete'}
             </button>
@@ -392,12 +392,12 @@ function TypeRow({
         )}
       </div>
 
-      {error && <p className="text-xs text-orange mt-1">{error}</p>}
+      {error && <p className="text-xs text-brand-accent mt-1">{error}</p>}
       {!editMode && confirming === null && (
         <ActiveDocumentSection type={type} canManage={canManage} />
       )}
       {hasActiveDocuments && type.is_active === false && (
-        <p className="text-xs text-orange mt-1">
+        <p className="text-xs text-brand-accent mt-1">
           This type has an active document but is deactivated — it will not be offered for new uploads.
         </p>
       )}
@@ -457,7 +457,7 @@ function AddTypeForm() {
       <button
         type="button"
         onClick={() => setIsCreating(true)}
-        className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer mb-4"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer mb-4"
       >
         Add Type
       </button>
@@ -466,14 +466,14 @@ function AddTypeForm() {
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-4">
-      <h3 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">Add Document Type</h3>
+      <h3 className="text-sm font-bold text-brand-primary uppercase tracking-wide mb-3">Add Document Type</h3>
       <div className="flex items-center gap-3 flex-wrap mb-3">
         <input
           type="text"
           placeholder="Name"
           value={newName}
           onChange={(e) => handleNameChange(e.target.value)}
-          className="flex-1 min-w-[160px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 min-w-[160px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
         />
         <input
           type="text"
@@ -483,14 +483,14 @@ function AddTypeForm() {
             setSlugEdited(true)
             setNewSlug(e.target.value)
           }}
-          className="w-48 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm font-mono text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="w-48 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm font-mono text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
         />
         <input
           type="text"
           placeholder="Description (optional)"
           value={newDescription}
           onChange={(e) => setNewDescription(e.target.value)}
-          className="flex-1 min-w-[200px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 min-w-[200px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
         />
       </div>
       <div className="flex items-center gap-3">
@@ -498,7 +498,7 @@ function AddTypeForm() {
           type="button"
           onClick={handleSubmit}
           disabled={isPending}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? 'Adding…' : 'Add Type'}
         </button>
@@ -514,7 +514,7 @@ function AddTypeForm() {
           Cancel
         </button>
       </div>
-      {error && <p className="text-sm text-orange mt-2">{error}</p>}
+      {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
     </div>
   )
 }

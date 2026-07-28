@@ -70,7 +70,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
         {submission.volunteer ? (
           <Link
             href={`/crew/volunteers/${submission.volunteer.id}`}
-            className="text-navy dark:text-steel hover:underline font-medium"
+            className="text-brand-primary dark:text-brand-primary-mid hover:underline font-medium"
           >
             {submission.volunteer.full_name}
           </Link>
@@ -88,7 +88,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
             href={submission.submittedFilePath}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-navy dark:text-steel hover:underline font-semibold"
+            className="text-brand-primary dark:text-brand-primary-mid hover:underline font-semibold"
           >
             View
           </a>
@@ -105,7 +105,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
                   type="button"
                   onClick={handleApprove}
                   disabled={isSubmitting}
-                  className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+                  className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? 'Approving…' : 'Approve'}
                 </button>
@@ -113,7 +113,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
                   type="button"
                   onClick={() => setRejecting(true)}
                   disabled={isSubmitting}
-                  className="border border-orange text-orange hover:bg-orange hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+                  className="border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
                 >
                   Reject
                 </button>
@@ -125,14 +125,14 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Reason (optional)"
-                  className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+                  className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
                 />
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={handleReject}
                     disabled={isSubmitting}
-                    className="bg-orange text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+                    className="bg-brand-accent text-white hover:bg-opacity-90 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? 'Rejecting…' : 'Confirm Reject'}
                   </button>
@@ -158,7 +158,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
             {submission.notes && ` — ${submission.notes}`}
           </span>
         )}
-        {error && <p className="text-xs text-orange mt-1">{error}</p>}
+        {error && <p className="text-xs text-brand-accent mt-1">{error}</p>}
       </td>
     </tr>
   )
@@ -205,13 +205,13 @@ export function ConsentSubmissionsQueue({ submissions }: { submissions: ConsentS
             onClick={() => setActiveTab(tab)}
             className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === tab
-                ? 'border-navy dark:border-steel text-navy dark:text-steel'
-                : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel'
+                ? 'border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid'
+                : 'border-transparent text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid'
             }`}
           >
             {TAB_LABELS[tab]}
             {tab === 'pending' && counts.pending > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand-accent text-white text-xs font-semibold px-1">
                 {counts.pending}
               </span>
             )}
@@ -225,7 +225,7 @@ export function ConsentSubmissionsQueue({ submissions }: { submissions: ConsentS
         <div className="overflow-x-auto bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                 <th className="px-4 py-2 font-semibold">Volunteer</th>
                 <th className="px-4 py-2 font-semibold">Form Type</th>
                 <th className="px-4 py-2 font-semibold">Submitted</th>

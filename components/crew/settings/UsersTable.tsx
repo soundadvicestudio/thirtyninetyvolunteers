@@ -18,11 +18,11 @@ type AdminUserRow = {
 }
 
 const ROLE_BADGE: Record<AdminUserRow['role'], { label: string; className: string }> = {
-  super_admin: { label: 'Super Admin', className: 'bg-navy text-white' },
+  super_admin: { label: 'Super Admin', className: 'bg-[#293994] text-white' },
   owner_admin: { label: 'Owner Admin', className: 'bg-indigo-600 text-white' },
-  editor: { label: 'Editor', className: 'bg-steel text-white' },
+  editor: { label: 'Editor', className: 'bg-[#729ABF] text-white' },
   viewer: { label: 'Viewer', className: 'bg-mid-gray text-white' },
-  production: { label: 'Production', className: 'bg-orange text-white' },
+  production: { label: 'Production', className: 'bg-[#F26522] text-white' },
 }
 
 function UserRow({
@@ -104,7 +104,7 @@ function UserRow({
               onChange={(e) =>
                 handleRoleChange(e.target.value as 'editor' | 'viewer' | 'production' | 'owner_admin')
               }
-              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy disabled:opacity-50"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary disabled:opacity-50"
             >
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
@@ -136,7 +136,7 @@ function UserRow({
                   ? 'Cannot deactivate your own account'
                   : 'Super Admin accounts cannot be deactivated via this panel'
               }
-              className="text-sm px-3 py-1 rounded-md opacity-40 cursor-not-allowed border border-orange text-orange"
+              className="text-sm px-3 py-1 rounded-md opacity-40 cursor-not-allowed border border-brand-accent text-brand-accent"
             >
               Deactivate
             </button>
@@ -145,7 +145,7 @@ function UserRow({
               type="button"
               onClick={handleToggleActive}
               disabled={isSubmitting}
-              className="border border-orange text-orange hover:bg-orange hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Deactivate
             </button>
@@ -154,7 +154,7 @@ function UserRow({
               type="button"
               onClick={handleToggleActive}
               disabled={isSubmitting}
-              className="bg-navy text-white hover:bg-steel transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Reactivate
             </button>

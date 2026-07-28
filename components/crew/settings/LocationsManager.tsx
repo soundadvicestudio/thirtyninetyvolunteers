@@ -94,7 +94,7 @@ function LocationRow({
             onClick={() => handleReorder('up')}
             disabled={!canReorder || isFirst}
             aria-label={`Move ${location.name} up`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronUp size={16} />
           </button>
@@ -103,7 +103,7 @@ function LocationRow({
             onClick={() => handleReorder('down')}
             disabled={!canReorder || isLast}
             aria-label={`Move ${location.name} down`}
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronDown size={16} />
           </button>
@@ -115,7 +115,7 @@ function LocationRow({
               type="text"
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
-              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className="rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               autoFocus
             />
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ function LocationRow({
                 value={draftDefaultHours}
                 onChange={(e) => setDraftDefaultHours(e.target.value)}
                 placeholder="—"
-                className="w-20 rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+                className="w-20 rounded border border-divider dark:border-dark-border px-2 py-1 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
               />
               <span className="text-sm text-mid-gray dark:text-dark-muted">hrs (leave blank for global fallback)</span>
             </div>
@@ -154,7 +154,7 @@ function LocationRow({
               onClick={handleCancel}
               disabled={isSubmitting}
               aria-label="Cancel edit"
-              className="p-1 rounded text-orange hover:bg-pale-orange cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X size={16} />
             </button>
@@ -184,7 +184,7 @@ function LocationRow({
               type="button"
               onClick={() => setEditMode(true)}
               aria-label={`Edit ${location.name}`}
-              className="p-1 rounded text-navy hover:bg-light-navy cursor-pointer dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
             >
               <Pencil size={16} />
             </button>
@@ -193,8 +193,8 @@ function LocationRow({
               onClick={handleToggleActive}
               className={`text-sm font-semibold px-3 py-1 rounded-md cursor-pointer transition-colors ${
                 location.is_active
-                  ? 'border border-orange text-orange hover:bg-orange hover:text-white'
-                  : 'bg-navy text-white hover:bg-steel'
+                  ? 'border border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white'
+                  : 'bg-brand-primary text-white hover:bg-brand-primary-mid'
               }`}
             >
               {location.is_active ? 'Deactivate' : 'Reactivate'}
@@ -202,7 +202,7 @@ function LocationRow({
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-orange">{error}</p>}
+      {error && <p className="text-xs text-brand-accent">{error}</p>}
     </div>
   )
 }
@@ -242,7 +242,7 @@ function AddLocationForm() {
       <button
         type="button"
         onClick={() => setIsCreating(true)}
-        className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer mb-6"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer mb-6"
       >
         Add Location
       </button>
@@ -251,14 +251,14 @@ function AddLocationForm() {
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-6">
-      <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">Add Location</h2>
+      <h2 className="text-sm font-bold text-brand-primary uppercase tracking-wide mb-3">Add Location</h2>
       <div className="flex items-center gap-3 flex-wrap mb-3">
         <input
           type="text"
           placeholder="Name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          className="flex-1 min-w-[160px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          className="flex-1 min-w-[160px] rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
         />
         <div className="flex items-center gap-2">
           <input
@@ -278,7 +278,7 @@ function AddLocationForm() {
             value={newDefaultHours}
             onChange={(e) => setNewDefaultHours(e.target.value)}
             placeholder="—"
-            className="w-20 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            className="w-20 rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
           />
           <span className="text-sm text-mid-gray dark:text-dark-muted">hrs (leave blank for global fallback)</span>
         </div>
@@ -288,7 +288,7 @@ function AddLocationForm() {
           type="button"
           onClick={handleSubmit}
           disabled={isPending}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? 'Adding…' : 'Add Location'}
         </button>
@@ -304,7 +304,7 @@ function AddLocationForm() {
           Cancel
         </button>
       </div>
-      {error && <p className="text-sm text-orange mt-2">{error}</p>}
+      {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
     </div>
   )
 }

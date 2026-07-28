@@ -11,7 +11,7 @@ type CurrentFilters = {
 }
 
 const selectClasses =
-  'rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-navy'
+  'rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary'
 const labelClasses = 'block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1'
 
 export default function AuditLogFilters({
@@ -141,13 +141,13 @@ export default function AuditLogFilters({
         <div className="flex items-end gap-4">
           <button
             type="submit"
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
           >
             Apply
           </button>
 
           {hasActiveFilters && (
-            <a href="/crew/settings/audit-log" className="text-sm text-orange font-semibold hover:underline">
+            <a href="/crew/settings/audit-log" className="text-sm text-brand-accent font-semibold hover:underline">
               Clear Filters
             </a>
           )}
