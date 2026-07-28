@@ -31,7 +31,7 @@ const FREQ_LABELS: Record<string, string> = {
 }
 
 const selectClasses =
-  'rounded-lg border border-divider dark:border-dark-border px-2 py-1.5 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'rounded-lg border border-divider dark:border-dark-border px-2 py-1.5 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
 function eventDateLabel(startTime: string): string {
   return formatInTimeZone(new Date(startTime), CT, 'EEE, MMM d, yyyy')
@@ -65,7 +65,7 @@ function LocationSelect({
 function ConflictIndicator({ conflict, locationSelected }: { conflict: boolean | undefined; locationSelected: boolean }) {
   if (conflict === true) {
     return (
-      <span className="text-xs font-medium text-orange dark:text-orange flex items-center gap-1">
+      <span className="text-xs font-medium text-brand-accent dark:text-brand-accent flex items-center gap-1">
         <AlertTriangle size={12} />
         Conflict
       </span>
@@ -313,7 +313,7 @@ export default function PendingQueueClient({
                 <button
                   type="button"
                   onClick={() => toggleBatch(batch.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-light-navy/40 dark:bg-dark-bg hover:bg-light-navy dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-brand-primary-light/40 dark:bg-dark-bg hover:bg-brand-primary-light dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 text-left">
                     {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -339,7 +339,7 @@ export default function PendingQueueClient({
                         type="button"
                         onClick={() => handleApplyDefaultLocation(batch)}
                         disabled={batchConflictChecking}
-                        className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Apply to all dates
                       </button>
@@ -353,13 +353,13 @@ export default function PendingQueueClient({
                         type="button"
                         onClick={() => handleApproveAllAvailable(batch)}
                         disabled={isBusy || batchConflictChecking}
-                        className="ml-auto flex items-center gap-2 bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                        className="ml-auto flex items-center gap-2 bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         {isBusy && <Loader2 size={14} className="animate-spin" />}
                         Approve All Available
                       </button>
                     </div>
-                    {errors[batch.id] && <p className="text-sm text-orange">{errors[batch.id]}</p>}
+                    {errors[batch.id] && <p className="text-sm text-brand-accent">{errors[batch.id]}</p>}
 
                     <div className="space-y-2">
                       {batch.events.map((event) => (
@@ -388,7 +388,7 @@ export default function PendingQueueClient({
                               conflictStatus[event.id] === true ||
                               busyIds.has(event.id)
                             }
-                            className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                            className="bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             Approve
                           </button>
@@ -396,11 +396,11 @@ export default function PendingQueueClient({
                             type="button"
                             onClick={() => handleReject(event.id)}
                             disabled={busyIds.has(event.id)}
-                            className="text-sm font-semibold text-orange hover:underline cursor-pointer disabled:opacity-50"
+                            className="text-sm font-semibold text-brand-accent hover:underline cursor-pointer disabled:opacity-50"
                           >
                             Skip
                           </button>
-                          {errors[event.id] && <p className="text-sm text-orange w-full">{errors[event.id]}</p>}
+                          {errors[event.id] && <p className="text-sm text-brand-accent w-full">{errors[event.id]}</p>}
                         </div>
                       ))}
                     </div>
@@ -427,14 +427,14 @@ export default function PendingQueueClient({
                 <button
                   type="button"
                   onClick={() => toggleBatch(group.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-light-navy/40 dark:bg-dark-bg hover:bg-light-navy dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-brand-primary-light/40 dark:bg-dark-bg hover:bg-brand-primary-light dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 text-left">
                     {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-dark dark:text-dark-text">{group.title}</p>
-                        <span className="text-xs font-semibold text-navy dark:text-steel bg-light-navy dark:bg-dark-nav rounded px-1.5 py-0.5">
+                        <span className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid bg-brand-primary-light dark:bg-dark-nav rounded px-1.5 py-0.5">
                           {FREQ_LABELS[group.frequency] ?? group.frequency}
                         </span>
                       </div>
@@ -453,13 +453,13 @@ export default function PendingQueueClient({
                         type="button"
                         onClick={() => handleApproveAllRecurring(group.id, groupEvents)}
                         disabled={isBusy}
-                        className="ml-auto flex items-center gap-2 bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                        className="ml-auto flex items-center gap-2 bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         {isBusy && <Loader2 size={14} className="animate-spin" />}
                         Approve All Available
                       </button>
                     </div>
-                    {errors[group.id] && <p className="text-sm text-orange">{errors[group.id]}</p>}
+                    {errors[group.id] && <p className="text-sm text-brand-accent">{errors[group.id]}</p>}
 
                     <div className="space-y-2">
                       {groupEvents.map((event) => (
@@ -488,7 +488,7 @@ export default function PendingQueueClient({
                               conflictStatus[event.id] === true ||
                               busyIds.has(event.id)
                             }
-                            className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                            className="bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             Approve
                           </button>
@@ -496,11 +496,11 @@ export default function PendingQueueClient({
                             type="button"
                             onClick={() => handleReject(event.id)}
                             disabled={busyIds.has(event.id)}
-                            className="text-sm font-semibold text-orange hover:underline cursor-pointer disabled:opacity-50"
+                            className="text-sm font-semibold text-brand-accent hover:underline cursor-pointer disabled:opacity-50"
                           >
                             Skip
                           </button>
-                          {errors[event.id] && <p className="text-sm text-orange w-full">{errors[event.id]}</p>}
+                          {errors[event.id] && <p className="text-sm text-brand-accent w-full">{errors[event.id]}</p>}
                         </div>
                       ))}
                     </div>
@@ -550,7 +550,7 @@ export default function PendingQueueClient({
                     conflictStatus[event.id] === true ||
                     busyIds.has(event.id)
                   }
-                  className="bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                  className="bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   Approve
                 </button>
@@ -558,11 +558,11 @@ export default function PendingQueueClient({
                   type="button"
                   onClick={() => handleReject(event.id)}
                   disabled={busyIds.has(event.id)}
-                  className="text-sm font-semibold text-orange hover:underline cursor-pointer disabled:opacity-50"
+                  className="text-sm font-semibold text-brand-accent hover:underline cursor-pointer disabled:opacity-50"
                 >
                   Reject
                 </button>
-                {errors[event.id] && <p className="text-sm text-orange w-full">{errors[event.id]}</p>}
+                {errors[event.id] && <p className="text-sm text-brand-accent w-full">{errors[event.id]}</p>}
               </div>
             </div>
           ))}

@@ -16,7 +16,7 @@ type Props = {
 const REFRESH_INTERVAL_MS = 10000
 
 const selectClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
 function StatusBadge({
   status,
@@ -80,7 +80,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
         <div className="overflow-x-auto border border-divider dark:border-dark-border rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-nav">
+              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
                 <th className="px-4 py-2 font-semibold">Volunteer Name</th>
                 <th className="px-4 py-2 font-semibold">Role</th>
                 <th className="px-4 py-2 font-semibold">Status</th>
@@ -89,7 +89,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
             <tbody className="bg-white dark:bg-dark-surface">
               {Array.from(grouped.entries()).map(([roleName, entries]) => (
                 <Fragment key={roleName}>
-                  <tr className="bg-light-navy/50 dark:bg-dark-nav/50">
+                  <tr className="bg-brand-primary-light/50 dark:bg-dark-nav/50">
                     <td
                       colSpan={3}
                       className="px-4 py-1.5 text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide"
@@ -225,12 +225,12 @@ export function CheckInDashboard({ initialData }: Props) {
   if (initialData.noUpcomingShows) {
     return (
       <div className="flex flex-col items-center text-center py-16">
-        <ScanLine size={48} className="text-slate dark:text-dark-muted mb-6" />
+        <ScanLine size={48} className="text-brand-primary-tint dark:text-dark-muted mb-6" />
         <h2 className="text-xl font-bold text-dark dark:text-dark-text mb-2">No Upcoming Shows</h2>
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
           Check back when the next show is scheduled.
         </p>
-        <Link href="/crew/shows" className="text-sm font-semibold text-navy dark:text-steel hover:underline">
+        <Link href="/crew/shows" className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline">
           Go to Shows →
         </Link>
       </div>
@@ -253,7 +253,7 @@ export function CheckInDashboard({ initialData }: Props) {
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
@@ -295,7 +295,7 @@ export function CheckInDashboard({ initialData }: Props) {
                   <button
                     type="button"
                     onClick={() => handleExpand(show.showId, show.nearestDateId)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-light-navy dark:bg-dark-nav text-left cursor-pointer"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav text-left cursor-pointer"
                   >
                     <div>
                       <p className="font-semibold text-dark dark:text-dark-text">{show.showName}</p>

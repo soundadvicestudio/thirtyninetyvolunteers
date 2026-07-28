@@ -154,7 +154,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
   const modeButtonClass = (mode: RecipientMode) =>
     recipientMode === mode
-      ? 'w-full sm:w-auto px-4 py-2 rounded bg-navy text-white text-sm'
+      ? 'w-full sm:w-auto px-4 py-2 rounded bg-brand-primary text-white text-sm'
       : 'w-full sm:w-auto px-4 py-2 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text bg-white dark:bg-dark-surface text-sm'
 
   function handleSetLink() {
@@ -181,7 +181,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
         </p>
         <button
           onClick={handleReset}
-          className="px-6 py-2 bg-navy text-white rounded text-sm font-semibold hover:bg-steel"
+          className="px-6 py-2 bg-brand-primary text-white rounded text-sm font-semibold hover:bg-brand-primary-mid"
         >
           Send Another Email
         </button>
@@ -194,7 +194,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-dark dark:text-dark-text">Confirm &amp; Send</h2>
 
-        <div className="bg-light-navy dark:bg-dark-surface rounded-lg p-5 space-y-3">
+        <div className="bg-brand-primary-light dark:bg-dark-surface rounded-lg p-5 space-y-3">
           <div>
             <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
               Subject
@@ -237,7 +237,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           </div>
         </div>
 
-        <div className="border border-orange bg-pale-orange rounded-lg p-4">
+        <div className="border border-brand-accent bg-brand-accent-light rounded-lg p-4">
           <p className="text-sm text-dark font-semibold">
             ⚠ This will send <strong>{preview?.recipientCount ?? 0}</strong> emails. This action{' '}
             {"can't"} be undone.
@@ -252,14 +252,14 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
               setStep('compose')
               setActionError(null)
             }}
-            className="px-5 py-2 border border-divider dark:border-dark-border rounded text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-border"
+            className="px-5 py-2 border border-divider dark:border-dark-border rounded text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-border"
           >
             ← Back
           </button>
           <button
             onClick={handleSend}
             disabled={sendLoading}
-            className="px-6 py-2 bg-orange text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-steel"
+            className="px-6 py-2 bg-brand-accent text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-brand-primary-mid"
           >
             {sendLoading ? 'Sending...' : 'Send Email Blast'}
           </button>
@@ -345,7 +345,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
                       setSearchQuery('')
                       setSearchResults([])
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-border"
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-border"
                   >
                     {v.full_name}
                     <span className="text-mid-gray dark:text-dark-muted ml-1">{v.email}</span>
@@ -359,12 +359,12 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
               {selectedIndividuals.map((v) => (
                 <span
                   key={v.id}
-                  className="flex items-center gap-1 bg-light-navy text-navy text-xs px-2 py-1 rounded-full"
+                  className="flex items-center gap-1 bg-brand-primary-light text-brand-primary text-xs px-2 py-1 rounded-full"
                 >
                   {v.full_name}
                   <button
                     onClick={() => setSelectedIndividuals((prev) => prev.filter((s) => s.id !== v.id))}
-                    className="hover:text-orange ml-1 font-bold"
+                    className="hover:text-brand-accent ml-1 font-bold"
                   >
                     ×
                   </button>
@@ -407,13 +407,13 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Message</label>
         {/* Toolbar */}
-        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-light-navy dark:bg-dark-surface rounded-t-md">
+        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-brand-primary-light dark:bg-dark-surface rounded-t-md">
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleBold().run()}
             className={`px-2 py-1 text-xs rounded font-bold ${
               editor?.isActive('bold')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -424,7 +424,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleItalic().run()}
             className={`px-2 py-1 text-xs rounded italic ${
               editor?.isActive('italic')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -435,7 +435,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleUnderline().run()}
             className={`px-2 py-1 text-xs rounded underline ${
               editor?.isActive('underline')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -446,7 +446,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`px-2 py-1 text-xs rounded font-bold ${
               editor?.isActive('heading', { level: 1 })
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -457,7 +457,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
             className={`px-2 py-1 text-xs rounded font-semibold ${
               editor?.isActive('heading', { level: 2 })
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -476,7 +476,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleBulletList().run()}
             className={`px-2 py-1 text-xs rounded ${
               editor?.isActive('bulletList')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -487,7 +487,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={() => editor?.chain().focus().toggleOrderedList().run()}
             className={`px-2 py-1 text-xs rounded ${
               editor?.isActive('orderedList')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
           >
@@ -498,7 +498,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
             onClick={handleSetLink}
             className={`px-2 py-1 text-xs rounded ${
               editor?.isActive('link')
-                ? 'bg-navy text-white'
+                ? 'bg-brand-primary text-white'
                 : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
             }`}
             title="Insert or edit link"
@@ -541,7 +541,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <button
         onClick={handlePreview}
         disabled={previewLoading}
-        className="px-6 py-2 bg-navy text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-steel"
+        className="px-6 py-2 bg-brand-primary text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-brand-primary-mid"
       >
         {previewLoading ? 'Loading...' : 'Preview & Send →'}
       </button>

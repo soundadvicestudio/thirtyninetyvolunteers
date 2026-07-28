@@ -37,7 +37,7 @@ export default function CalendarMonthView({
 
   return (
     <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-      <div className="grid grid-cols-7 bg-light-navy dark:bg-dark-nav">
+      <div className="grid grid-cols-7 bg-brand-primary-light dark:bg-dark-nav">
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
@@ -68,14 +68,14 @@ export default function CalendarMonthView({
                   onDayClick(dayStr)
                 }
               }}
-              className={`flex flex-col items-stretch text-left p-1.5 border-t border-l border-divider dark:border-dark-border min-h-[120px] cursor-pointer hover:bg-light-navy/30 dark:hover:bg-dark-bg/40 transition-colors ${
+              className={`flex flex-col items-stretch text-left p-1.5 border-t border-l border-divider dark:border-dark-border min-h-[120px] cursor-pointer hover:bg-brand-primary-light/30 dark:hover:bg-dark-bg/40 transition-colors ${
                 isCurrentMonth ? '' : 'bg-gray-50 dark:bg-dark-bg/20'
               }`}
             >
               <span
                 className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold mb-1 ${
                   isToday
-                    ? 'bg-navy text-white'
+                    ? 'bg-brand-primary text-white'
                     : isCurrentMonth
                       ? 'text-dark dark:text-dark-text'
                       : 'text-gray-400 dark:text-gray-600'
@@ -88,7 +88,7 @@ export default function CalendarMonthView({
                   <CalendarEventChip key={event.id} event={event} compact />
                 ))}
                 {overflowCount > 0 && (
-                  <span className="block text-xs font-semibold text-navy dark:text-steel px-1">
+                  <span className="block text-xs font-semibold text-brand-primary dark:text-brand-primary-mid px-1">
                     +{overflowCount} more
                   </span>
                 )}

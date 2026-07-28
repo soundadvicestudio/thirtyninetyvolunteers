@@ -167,7 +167,7 @@ function isSectionVisible(id: string, role: AdminRole, calendarEditor: boolean):
 
 function Tip({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-light-navy dark:bg-dark-surface border-l-4 border-navy dark:border-steel p-4 rounded-r my-4">
+    <div className="bg-brand-primary-light dark:bg-dark-surface border-l-4 border-brand-primary dark:border-brand-primary-mid p-4 rounded-r my-4">
       <p className="text-sm text-dark dark:text-dark-text leading-relaxed">
         <span className="font-semibold">{'\u{1F4A1} Tip:'}</span> {children}
       </p>
@@ -177,7 +177,7 @@ function Tip({ children }: { children: ReactNode }) {
 
 function Warning({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-pale-orange dark:bg-dark-surface border-l-4 border-orange p-4 rounded-r my-4">
+    <div className="bg-brand-accent-light dark:bg-dark-surface border-l-4 border-brand-accent p-4 rounded-r my-4">
       <p className="text-sm text-dark dark:text-dark-text leading-relaxed">
         <span className="font-semibold">{'⚠️ Important:'}</span> {children}
       </p>
@@ -189,7 +189,7 @@ function Divider() {
   return <hr className="border-t border-divider dark:border-dark-border my-12" />
 }
 
-const h2Classes = 'text-2xl font-bold text-navy dark:text-dark-text mb-4 mt-12'
+const h2Classes = 'text-2xl font-bold text-brand-primary dark:text-dark-text mb-4 mt-12'
 const h3Classes = 'text-lg font-semibold text-dark dark:text-dark-text mb-2 mt-8'
 const pClasses = 'text-dark dark:text-dark-text leading-relaxed mb-4'
 const ulClasses = 'list-disc pl-5 space-y-1 text-dark dark:text-dark-text leading-relaxed mb-4'
@@ -199,7 +199,7 @@ const olClasses = 'list-decimal pl-5 space-y-1 text-dark dark:text-dark-text lea
 // page.tsx (HELP.1 Task A2) — only the data source changed, from a
 // hardcoded TOC array to the role-filtered `sections` prop.
 const tocLinkClasses =
-  'block text-sm text-mid-gray dark:text-dark-muted hover:text-navy dark:hover:text-steel transition-colors py-0.5'
+  'block text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary dark:hover:text-brand-primary-mid transition-colors py-0.5'
 
 function TocList({ sections }: { sections: TocSection[] }) {
   return (
@@ -230,7 +230,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
 
   return (
     <div className="max-w-6xl mx-auto" style={{ scrollBehavior: 'smooth' }}>
-      <h1 className="text-2xl font-bold text-navy dark:text-dark-text mb-2">{`Help & How-To Guide`}</h1>
+      <h1 className="text-2xl font-bold text-brand-primary dark:text-dark-text mb-2">{`Help & How-To Guide`}</h1>
       <p className="text-dark dark:text-dark-text leading-relaxed mb-8">
         {`Everything you need to know to manage volunteers in Production Crew.`}
       </p>
@@ -293,11 +293,11 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                   </p>
                   <Tip>
                     {`The Pending Hours and Pending Milestone Acknowledgments cards appear on the dashboard when action is needed. See `}
-                    <a href="#hours" className="text-navy underline dark:text-steel">
+                    <a href="#hours" className="text-brand-primary underline dark:text-brand-primary-mid">
                       {`How Hours Work`}
                     </a>
                     {` and `}
-                    <a href="#milestones" className="text-navy underline dark:text-steel">
+                    <a href="#milestones" className="text-brand-primary underline dark:text-brand-primary-mid">
                       {`Milestones`}
                     </a>
                     {` for more detail.`}

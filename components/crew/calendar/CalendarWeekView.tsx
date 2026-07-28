@@ -32,7 +32,7 @@ export default function CalendarWeekView({
           each day inline (a duplicate compact header above the agenda
           list would just repeat the same information). */}
       <div className="hidden md:block border border-divider dark:border-dark-border rounded-lg overflow-hidden mb-2">
-        <div className="flex bg-light-navy dark:bg-dark-nav">
+        <div className="flex bg-brand-primary-light dark:bg-dark-nav">
           <div className="shrink-0" style={{ width: 50 }} />
           <div className="flex-1 grid grid-cols-7">
             {days.map((dayStr) => {
@@ -43,7 +43,7 @@ export default function CalendarWeekView({
                 <div
                   key={dayStr}
                   className={`px-2 py-2 text-xs font-semibold text-center ${
-                    isToday ? 'bg-navy text-white' : 'text-dark dark:text-dark-text'
+                    isToday ? 'bg-brand-primary text-white' : 'text-dark dark:text-dark-text'
                   }`}
                 >
                   {weekday} {d}

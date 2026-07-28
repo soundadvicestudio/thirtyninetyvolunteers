@@ -61,7 +61,7 @@ const TIER_LABELS: Record<AccessTier, string> = {
 
 const TIER_BADGE_CLASSES: Record<AccessTier, string> = {
   public: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  link_only: 'bg-steel/20 text-steel dark:bg-steel/20 dark:text-steel',
+  link_only: 'bg-[#729ABF]/20 text-[#729ABF] dark:bg-[#729ABF]/20 dark:text-[#729ABF]',
   backend: 'bg-mid-gray/20 text-mid-gray dark:bg-dark-bg dark:text-dark-muted',
 }
 
@@ -146,7 +146,7 @@ function uploadWithProgress(signedUrl: string, file: File, onProgress: (percent:
 }
 
 const inputClasses =
-  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy'
+  'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
 
 function FolderSelect({
   folders,
@@ -292,7 +292,7 @@ function UploadForm({
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-4">
-      <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide mb-3">Upload File</h3>
+      <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide mb-3">Upload File</h3>
       <div className="space-y-3">
         <input
           type="text"
@@ -336,20 +336,20 @@ function UploadForm({
         {state === 'uploading' && (
           <div>
             <div className="w-full bg-divider dark:bg-dark-bg rounded-full h-2 overflow-hidden">
-              <div className="bg-orange h-2 transition-all" style={{ width: `${progress}%` }} />
+              <div className="bg-brand-accent h-2 transition-all" style={{ width: `${progress}%` }} />
             </div>
             <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">Uploading… {progress}%</p>
           </div>
         )}
 
-        {error && <p className="text-sm text-orange">{error}</p>}
+        {error && <p className="text-sm text-brand-accent">{error}</p>}
 
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleUpload}
             disabled={state === 'uploading'}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             {state === 'uploading' ? 'Uploading…' : 'Upload'}
           </button>
@@ -401,7 +401,7 @@ function LinkForm({
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-4">
-      <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide mb-3">Add Link</h3>
+      <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide mb-3">Add Link</h3>
       <div className="space-y-3">
         <input
           type="text"
@@ -433,14 +433,14 @@ function LinkForm({
           <DocumentTypeSelect documentTypes={documentTypes} value={documentTypeId} onChange={setDocumentTypeId} />
         </div>
 
-        {error && <p className="text-sm text-orange">{error}</p>}
+        {error && <p className="text-sm text-brand-accent">{error}</p>}
 
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? 'Adding…' : 'Add Link'}
           </button>
@@ -482,7 +482,7 @@ function NewFolderForm({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 mb-4">
-      <h3 className="text-sm font-bold text-navy dark:text-steel uppercase tracking-wide mb-3">New Folder</h3>
+      <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide mb-3">New Folder</h3>
       <div className="space-y-3">
         <input
           type="text"
@@ -513,7 +513,7 @@ function NewFolderForm({ onClose }: { onClose: () => void }) {
         </select>
 
         {visibility === 'restricted' && (
-          <div className="rounded-lg border border-divider dark:border-dark-border p-3 bg-light-navy/30 dark:bg-dark-bg/40">
+          <div className="rounded-lg border border-divider dark:border-dark-border p-3 bg-brand-primary-light/30 dark:bg-dark-bg/40">
             <p className="text-xs text-mid-gray dark:text-dark-muted mb-2">
               Full role/user access controls for restricted folders are coming in a future update. For now, use this
               note to record who should have access and coordinate manually with your team — it is not saved
@@ -530,14 +530,14 @@ function NewFolderForm({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {error && <p className="text-sm text-orange">{error}</p>}
+        {error && <p className="text-sm text-brand-accent">{error}</p>}
 
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? 'Creating…' : 'Create Folder'}
           </button>
@@ -615,12 +615,12 @@ function FolderEditForm({
         <option value="backend">Backend</option>
         <option value="restricted">Restricted</option>
       </select>
-      {error && <p className="text-sm text-orange w-full">{error}</p>}
+      {error && <p className="text-sm text-brand-accent w-full">{error}</p>}
       <button
         type="button"
         onClick={handleSave}
         disabled={isSubmitting}
-        className="bg-navy text-white hover:bg-steel transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+        className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
       >
         Save
       </button>
@@ -639,7 +639,7 @@ function FolderEditForm({
             <button
               type="button"
               onClick={onDelete}
-              className="text-xs font-semibold text-white bg-orange hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
+              className="text-xs font-semibold text-white bg-brand-accent hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
             >
               Confirm
             </button>
@@ -655,7 +655,7 @@ function FolderEditForm({
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
-            className="ml-auto p-1.5 rounded text-orange hover:bg-pale-orange cursor-pointer dark:hover:bg-dark-surface/50"
+            className="ml-auto p-1.5 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer dark:hover:bg-dark-surface/50"
             aria-label={`Delete ${folder.name}`}
           >
             <Trash2 size={16} />
@@ -702,7 +702,7 @@ function DocumentEditForm({
 
   return (
     <tr>
-      <td colSpan={6} className="px-4 py-3 bg-light-navy/30 dark:bg-dark-bg/40">
+      <td colSpan={6} className="px-4 py-3 bg-brand-primary-light/30 dark:bg-dark-bg/40">
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="text"
@@ -725,7 +725,7 @@ function DocumentEditForm({
             type="button"
             onClick={handleSave}
             disabled={isSubmitting}
-            className="bg-navy text-white hover:bg-steel transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             Save
           </button>
@@ -738,7 +738,7 @@ function DocumentEditForm({
             Cancel
           </button>
         </div>
-        {error && <p className="text-sm text-orange mt-2">{error}</p>}
+        {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
       </td>
     </tr>
   )
@@ -772,7 +772,7 @@ function QrModal({ doc, onClose }: { doc: MediaDocument; onClose: () => void }) 
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded text-dark hover:bg-light-navy cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50 shrink-0"
+            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50 shrink-0"
           >
             <X size={18} />
           </button>
@@ -785,14 +785,14 @@ function QrModal({ doc, onClose }: { doc: MediaDocument; onClose: () => void }) 
           <a
             href={`data:image/png;base64,${doc.qrPngBase64}`}
             download={`${slug}-qr.png`}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
           >
             Download PNG
           </a>
           <a
             href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(doc.qrSvg)}`}
             download={`${slug}-qr.svg`}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
           >
             Download SVG
           </a>
@@ -808,7 +808,7 @@ function QrModal({ doc, onClose }: { doc: MediaDocument; onClose: () => void }) 
             type="button"
             onClick={handleCopy}
             aria-label="Copy link"
-            className="p-2 rounded text-navy hover:bg-light-navy cursor-pointer dark:text-steel dark:hover:bg-dark-surface/50 shrink-0"
+            className="p-2 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50 shrink-0"
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
           </button>
@@ -925,7 +925,7 @@ export function MediaLibrary({
               setShowLinkForm(false)
               setShowNewFolderForm(false)
             }}
-            className="flex items-center gap-2 bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+            className="flex items-center gap-2 bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
           >
             <Upload size={16} />
             Upload File
@@ -937,7 +937,7 @@ export function MediaLibrary({
               setShowUploadForm(false)
               setShowNewFolderForm(false)
             }}
-            className="flex items-center gap-2 bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+            className="flex items-center gap-2 bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
           >
             <Link2 size={16} />
             Add Link
@@ -950,7 +950,7 @@ export function MediaLibrary({
                 setShowUploadForm(false)
                 setShowLinkForm(false)
               }}
-              className="flex items-center gap-2 border border-navy text-navy dark:border-steel dark:text-steel hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+              className="flex items-center gap-2 border border-brand-primary text-brand-primary dark:border-brand-primary-mid dark:text-brand-primary-mid hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
             >
               <FolderPlus size={16} />
               New Folder
@@ -973,8 +973,8 @@ export function MediaLibrary({
           onClick={() => setSelectedFolderId(null)}
           className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors ${
             selectedFolderId === null
-              ? 'bg-navy text-white'
-              : 'bg-light-navy/50 text-dark hover:bg-light-navy dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
+              ? 'bg-brand-primary text-white'
+              : 'bg-brand-primary-light/50 text-dark hover:bg-brand-primary-light dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
           }`}
         >
           All Files ({visibleDocuments.length})
@@ -986,8 +986,8 @@ export function MediaLibrary({
               onClick={() => setSelectedFolderId(folder.id)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors ${
                 selectedFolderId === folder.id
-                  ? 'bg-navy text-white'
-                  : 'bg-light-navy/50 text-dark hover:bg-light-navy dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-brand-primary-light/50 text-dark hover:bg-brand-primary-light dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
               }`}
             >
               {folder.name} ({folderDocCounts[folder.id] ?? 0})
@@ -997,7 +997,7 @@ export function MediaLibrary({
                 type="button"
                 onClick={() => setEditingFolderId(folder.id)}
                 aria-label={`Edit ${folder.name}`}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mid-gray hover:bg-light-navy cursor-pointer dark:text-dark-muted dark:hover:bg-dark-surface/50 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mid-gray hover:bg-brand-primary-light cursor-pointer dark:text-dark-muted dark:hover:bg-dark-surface/50 transition-opacity"
               >
                 <Pencil size={14} />
               </button>
@@ -1028,7 +1028,7 @@ export function MediaLibrary({
           )
         })()}
 
-      {rowError && <p className="text-sm text-orange">{rowError}</p>}
+      {rowError && <p className="text-sm text-brand-accent">{rowError}</p>}
 
       <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
         {filteredDocuments.length === 0 ? (
@@ -1068,7 +1068,7 @@ export function MediaLibrary({
                     </td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text">{doc.document_types?.name ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-steel/20 text-steel">
+                      <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-[#729ABF]/20 text-[#729ABF]">
                         {doc.entry_type === 'file' ? 'File' : 'Link'}
                       </span>
                     </td>
@@ -1090,7 +1090,7 @@ export function MediaLibrary({
                             href={`/documents/${doc.access_token}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs font-semibold px-2 py-1 rounded bg-navy text-white hover:opacity-80 transition-opacity whitespace-nowrap"
+                            className="text-xs font-semibold px-2 py-1 rounded bg-brand-primary text-white hover:opacity-80 transition-opacity whitespace-nowrap"
                           >
                             {getPlayLabel(doc)}
                           </a>
@@ -1099,7 +1099,7 @@ export function MediaLibrary({
                           type="button"
                           onClick={() => handleCopyLink(doc)}
                           aria-label="Copy link"
-                          className="p-1.5 rounded text-navy hover:bg-light-navy cursor-pointer dark:text-steel dark:hover:bg-dark-surface/50"
+                          className="p-1.5 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
                         >
                           {copiedDocumentId === doc.id ? <Check size={16} /> : <Copy size={16} />}
                         </button>
@@ -1107,7 +1107,7 @@ export function MediaLibrary({
                           type="button"
                           onClick={() => setQrDocumentId(doc.id)}
                           aria-label="Show QR code"
-                          className="p-1.5 rounded text-navy hover:bg-light-navy cursor-pointer dark:text-steel dark:hover:bg-dark-surface/50"
+                          className="p-1.5 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
                         >
                           <QrCode size={16} />
                         </button>
@@ -1116,7 +1116,7 @@ export function MediaLibrary({
                             type="button"
                             onClick={() => setEditingDocumentId(doc.id)}
                             aria-label={`Edit ${doc.title}`}
-                            className="p-1.5 rounded text-navy hover:bg-light-navy cursor-pointer dark:text-steel dark:hover:bg-dark-surface/50"
+                            className="p-1.5 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
                           >
                             <Pencil size={16} />
                           </button>
@@ -1127,7 +1127,7 @@ export function MediaLibrary({
                               <button
                                 type="button"
                                 onClick={() => handleDelete(doc.id)}
-                                className="text-xs font-semibold text-white bg-orange hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
+                                className="text-xs font-semibold text-white bg-brand-accent hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
                               >
                                 Confirm
                               </button>
@@ -1144,7 +1144,7 @@ export function MediaLibrary({
                               type="button"
                               onClick={() => setConfirmingDeleteId(doc.id)}
                               aria-label={`Delete ${doc.title}`}
-                              className="p-1.5 rounded text-orange hover:bg-pale-orange cursor-pointer dark:hover:bg-dark-surface/50"
+                              className="p-1.5 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer dark:hover:bg-dark-surface/50"
                             >
                               <Trash2 size={16} />
                             </button>

@@ -41,14 +41,14 @@ export default function QRHistoryPanel({ history }: { history: QRHistoryEntry[] 
                   <a
                     href={`data:image/png;base64,${row.png_base64}`}
                     download={`${filenameBase}.png`}
-                    className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+                    className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
                   >
                     PNG
                   </a>
                   <a
                     href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(row.svg)}`}
                     download={`${filenameBase}.svg`}
-                    className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+                    className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
                   >
                     SVG
                   </a>

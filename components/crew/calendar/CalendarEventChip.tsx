@@ -48,7 +48,7 @@ export default function CalendarEventChip({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-lg border-l-4 bg-white dark:bg-dark-surface px-3 py-2 hover:bg-light-navy/30 dark:hover:bg-dark-bg/40 transition-colors cursor-pointer ${
+      className={`w-full text-left rounded-lg border-l-4 bg-white dark:bg-dark-surface px-3 py-2 hover:bg-brand-primary-light/30 dark:hover:bg-dark-bg/40 transition-colors cursor-pointer ${
         isPending ? 'border-t border-r border-b border-dashed border-t-amber-400 border-r-amber-400 border-b-amber-400' : ''
       }`}
       style={{ borderLeftColor: color }}

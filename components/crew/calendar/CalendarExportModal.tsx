@@ -49,7 +49,7 @@ export default function CalendarExportModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="p-1 rounded text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+              className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -72,7 +72,7 @@ export default function CalendarExportModal({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer whitespace-nowrap"
+                  className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer whitespace-nowrap"
                 >
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
@@ -98,11 +98,11 @@ export default function CalendarExportModal({
                   type="button"
                   onClick={handleRotate}
                   disabled={isRotating}
-                  className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-orange dark:hover:text-orange transition-colors cursor-pointer disabled:opacity-50"
+                  className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:text-brand-accent dark:hover:text-brand-accent transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isRotating ? 'Rotating…' : 'Rotate subscription URL'}
                 </button>
-                {rotateError && <p className="text-xs text-orange mt-1">{rotateError}</p>}
+                {rotateError && <p className="text-xs text-brand-accent mt-1">{rotateError}</p>}
                 <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
                   Rotating invalidates your current subscription URL. All existing calendar app subscriptions will
                   stop updating.
@@ -118,7 +118,7 @@ export default function CalendarExportModal({
               <a
                 href={downloadUrl}
                 download="30bn-calendar.ics"
-                className="inline-block bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors"
+                className="inline-block bg-brand-primary text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-mid transition-colors"
               >
                 Download calendar (.ics)
               </a>

@@ -52,7 +52,7 @@ export default function WeekAgendaView({
                     {weekday}, {monthName} {d}
                   </h2>
                   {isToday && (
-                    <span className="text-xs font-semibold bg-navy text-white rounded-full px-2 py-0.5">Today</span>
+                    <span className="text-xs font-semibold bg-brand-primary text-white rounded-full px-2 py-0.5">Today</span>
                   )}
                 </div>
                 <div className="space-y-2">

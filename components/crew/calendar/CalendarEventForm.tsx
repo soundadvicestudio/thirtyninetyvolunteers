@@ -22,9 +22,9 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 export type CalendarBookingPrefill = {
   date: string
@@ -196,7 +196,7 @@ export default function CalendarEventForm({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="p-1 rounded text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+              className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -211,7 +211,7 @@ export default function CalendarEventForm({
           <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <div>
               <label className={labelClasses}>
-                Title<span className="text-orange ml-0.5">*</span>
+                Title<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="text" className={inputClasses} {...register('title')} />
               {errors.title && <p className={errorClasses}>{errors.title.message}</p>}
@@ -219,7 +219,7 @@ export default function CalendarEventForm({
 
             <div>
               <label className={labelClasses}>
-                Event Type<span className="text-orange ml-0.5">*</span>
+                Event Type<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <select className={inputClasses} {...register('event_type')}>
                 {AVAILABLE_TYPES.map((t) => (
@@ -243,7 +243,7 @@ export default function CalendarEventForm({
               <label className={labelClasses}>
                 {canDirectCreate ? (
                   <>
-                    Location<span className="text-orange ml-0.5">*</span>
+                    Location<span className="text-brand-accent ml-0.5">*</span>
                   </>
                 ) : (
                   'Preferred Location (optional)'
@@ -262,7 +262,7 @@ export default function CalendarEventForm({
 
             <div>
               <label className={labelClasses}>
-                Date<span className="text-orange ml-0.5">*</span>
+                Date<span className="text-brand-accent ml-0.5">*</span>
               </label>
               <input type="date" className={inputClasses} {...register('date')} />
               {errors.date && <p className={errorClasses}>{errors.date.message}</p>}
@@ -271,14 +271,14 @@ export default function CalendarEventForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClasses}>
-                  Start Time<span className="text-orange ml-0.5">*</span>
+                  Start Time<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input type="time" className={inputClasses} {...register('start_time')} />
                 {errors.start_time && <p className={errorClasses}>{errors.start_time.message}</p>}
               </div>
               <div>
                 <label className={labelClasses}>
-                  End Time<span className="text-orange ml-0.5">*</span>
+                  End Time<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input type="time" className={inputClasses} {...register('end_time')} />
                 {errors.end_time && <p className={errorClasses}>{errors.end_time.message}</p>}
@@ -291,7 +291,7 @@ export default function CalendarEventForm({
                   type="button"
                   onClick={handleCheckAvailability}
                   disabled={conflictChecking}
-                  className="flex items-center gap-2 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50"
                 >
                   {conflictChecking && <Loader2 size={14} className="animate-spin" />}
                   {conflictChecking ? 'Checking…' : 'Check Availability'}
@@ -328,7 +328,7 @@ export default function CalendarEventForm({
                   <div key={field.id} className="flex gap-2 items-end">
                     <div className="flex-1">
                       <label className={labelClasses}>
-                        Name<span className="text-orange ml-0.5">*</span>
+                        Name<span className="text-brand-accent ml-0.5">*</span>
                       </label>
                       <input type="text" className={inputClasses} {...register(`contacts.${index}.name`)} />
                       {errors.contacts?.[index]?.name && (
@@ -337,7 +337,7 @@ export default function CalendarEventForm({
                     </div>
                     <div className="flex-1">
                       <label className={labelClasses}>
-                        Phone<span className="text-orange ml-0.5">*</span>
+                        Phone<span className="text-brand-accent ml-0.5">*</span>
                       </label>
                       <input type="text" className={inputClasses} {...register(`contacts.${index}.phone`)} />
                       {errors.contacts?.[index]?.phone && (
@@ -348,7 +348,7 @@ export default function CalendarEventForm({
                       type="button"
                       onClick={() => removeContact(index)}
                       aria-label="Remove contact"
-                      className="text-mid-gray dark:text-dark-muted hover:text-orange transition-colors p-2 cursor-pointer"
+                      className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-2 cursor-pointer"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -359,7 +359,7 @@ export default function CalendarEventForm({
                 <button
                   type="button"
                   onClick={() => appendContact({ name: '', phone: '' })}
-                  className="mt-3 flex items-center gap-1 text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+                  className="mt-3 flex items-center gap-1 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
                 >
                   <Plus size={14} />
                   Add Contact
@@ -370,7 +370,7 @@ export default function CalendarEventForm({
 
           <div className="sticky bottom-0 bg-white dark:bg-dark-surface px-5 pt-3 pb-4 border-t border-divider dark:border-dark-border shrink-0 space-y-3">
             {serverError && (
-              <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
+              <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
                 {serverError}
               </div>
             )}
@@ -379,7 +379,7 @@ export default function CalendarEventForm({
                 type="button"
                 onClick={handleSubmit(onSubmit)}
                 disabled={isSubmitting}
-                className="bg-navy text-white font-bold px-5 py-2.5 rounded-lg hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-brand-primary text-white font-bold px-5 py-2.5 rounded-lg hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting
                   ? 'Saving…'
@@ -393,7 +393,7 @@ export default function CalendarEventForm({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="bg-white dark:bg-dark-surface border border-navy text-navy dark:text-steel font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>

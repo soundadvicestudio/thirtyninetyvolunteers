@@ -61,8 +61,8 @@ export default function RecurrenceScopePicker({
               key={scope}
               type="button"
               onClick={() => onSelect(scope)}
-              className={`w-full text-left px-4 py-3 rounded-md border border-divider dark:border-dark-border hover:bg-light-navy dark:hover:bg-dark-surface ${
-                scope === 'all' && mode === 'cancel' ? 'hover:border-orange' : 'hover:border-navy dark:hover:border-steel'
+              className={`w-full text-left px-4 py-3 rounded-md border border-divider dark:border-dark-border hover:bg-brand-primary-light dark:hover:bg-dark-surface ${
+                scope === 'all' && mode === 'cancel' ? 'hover:border-brand-accent' : 'hover:border-brand-primary dark:hover:border-brand-primary-mid'
               } text-dark dark:text-dark-text transition-colors mb-2 last:mb-0 cursor-pointer`}
             >
               <span className="block text-sm font-medium">{label}</span>

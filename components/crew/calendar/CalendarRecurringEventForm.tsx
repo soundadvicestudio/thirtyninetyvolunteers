@@ -25,9 +25,9 @@ const FREQUENCY_LABELS: Record<'weekly' | 'biweekly' | 'monthly', string> = {
 }
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 export default function CalendarRecurringEventForm({
   adminRole,
@@ -128,14 +128,14 @@ export default function CalendarRecurringEventForm({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="p-1 rounded text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
             {!canDirectCreate && (
-              <div className="px-4 pt-3 pb-3 text-sm text-mid-gray dark:text-dark-muted bg-light-navy dark:bg-dark-bg border-b border-divider dark:border-dark-border">
+              <div className="px-4 pt-3 pb-3 text-sm text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-bg border-b border-divider dark:border-dark-border">
                 Your recurring event series will be reviewed. An admin will assign a location and approve occurrences
                 to the calendar.
               </div>
@@ -150,7 +150,7 @@ export default function CalendarRecurringEventForm({
 
               <div>
                 <label className={labelClasses}>
-                  Title<span className="text-orange ml-0.5">*</span>
+                  Title<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input type="text" className={inputClasses} {...register('title')} />
                 {errors.title && <p className={errorClasses}>{errors.title.message}</p>}
@@ -158,7 +158,7 @@ export default function CalendarRecurringEventForm({
 
               <div>
                 <label className={labelClasses}>
-                  Event Type<span className="text-orange ml-0.5">*</span>
+                  Event Type<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <select className={inputClasses} {...register('event_type')}>
                   {AVAILABLE_TYPES.map((t) => (
@@ -182,7 +182,7 @@ export default function CalendarRecurringEventForm({
                 <label className={labelClasses}>
                   {canDirectCreate ? (
                     <>
-                      Location<span className="text-orange ml-0.5">*</span>
+                      Location<span className="text-brand-accent ml-0.5">*</span>
                     </>
                   ) : (
                     'Preferred Location (optional)'
@@ -202,14 +202,14 @@ export default function CalendarRecurringEventForm({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClasses}>
-                    Start Time<span className="text-orange ml-0.5">*</span>
+                    Start Time<span className="text-brand-accent ml-0.5">*</span>
                   </label>
                   <input type="time" className={inputClasses} {...register('start_time')} />
                   {errors.start_time && <p className={errorClasses}>{errors.start_time.message}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>
-                    End Time<span className="text-orange ml-0.5">*</span>
+                    End Time<span className="text-brand-accent ml-0.5">*</span>
                   </label>
                   <input type="time" className={inputClasses} {...register('end_time')} />
                   {errors.end_time && <p className={errorClasses}>{errors.end_time.message}</p>}
@@ -224,7 +224,7 @@ export default function CalendarRecurringEventForm({
                       key={freq}
                       className="flex items-center gap-2 cursor-pointer text-sm text-dark dark:text-dark-text"
                     >
-                      <input type="radio" value={freq} {...register('frequency')} className="accent-navy" />
+                      <input type="radio" value={freq} {...register('frequency')} className="accent-brand-primary" />
                       {FREQUENCY_LABELS[freq]}
                     </label>
                   ))}
@@ -234,7 +234,7 @@ export default function CalendarRecurringEventForm({
 
               <div>
                 <label className={labelClasses}>
-                  First Occurrence<span className="text-orange ml-0.5">*</span>
+                  First Occurrence<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input type="date" className={inputClasses} {...register('series_start_date')} />
                 {errors.series_start_date && <p className={errorClasses}>{errors.series_start_date.message}</p>}
@@ -250,7 +250,7 @@ export default function CalendarRecurringEventForm({
               </div>
 
               {previewText && (
-                <div className="rounded-md bg-light-navy dark:bg-dark-surface border border-divider dark:border-dark-border px-4 py-3 text-sm text-navy dark:text-dark-text flex items-start gap-2">
+                <div className="rounded-md bg-brand-primary-light dark:bg-dark-surface border border-divider dark:border-dark-border px-4 py-3 text-sm text-brand-primary dark:text-dark-text flex items-start gap-2">
                   <span aria-hidden="true">📅</span>
                   <span>{previewText}</span>
                 </div>
@@ -275,7 +275,7 @@ export default function CalendarRecurringEventForm({
                     <button
                       type="button"
                       onClick={() => appendContact({ name: '', phone: '' })}
-                      className="flex items-center gap-1 text-sm text-navy dark:text-steel hover:underline cursor-pointer"
+                      className="flex items-center gap-1 text-sm text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
                     >
                       <Plus size={14} />
                       Add Contact
@@ -308,7 +308,7 @@ export default function CalendarRecurringEventForm({
                       type="button"
                       onClick={() => removeContact(index)}
                       aria-label="Remove contact"
-                      className="text-orange hover:text-orange/80 text-sm shrink-0 p-2 cursor-pointer"
+                      className="text-brand-accent hover:text-brand-accent/80 text-sm shrink-0 p-2 cursor-pointer"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -319,20 +319,20 @@ export default function CalendarRecurringEventForm({
 
             <div className="sticky bottom-0 bg-white dark:bg-dark-surface border-t border-divider dark:border-dark-border p-4 flex justify-end gap-3 shrink-0">
               {serverError && (
-                <p className="mr-auto self-center text-sm text-orange dark:text-orange">{serverError}</p>
+                <p className="mr-auto self-center text-sm text-brand-accent dark:text-brand-accent">{serverError}</p>
               )}
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="bg-white dark:bg-dark-surface border border-navy text-navy dark:text-steel font-semibold px-5 py-2.5 rounded-lg hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-navy text-white font-bold px-5 py-2.5 rounded-lg hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-brand-primary text-white font-bold px-5 py-2.5 rounded-lg hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? 'Submitting...' : canDirectCreate ? 'Add to Calendar' : 'Submit for Approval'}
               </button>

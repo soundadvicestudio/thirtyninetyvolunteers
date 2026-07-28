@@ -7,7 +7,7 @@ import { formatCT } from '@/lib/utils/date'
 import type { CalendarBookingPrefill } from './CalendarEventForm'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 export default function CalendarBookSpacePanel({
@@ -64,7 +64,7 @@ export default function CalendarBookSpacePanel({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+            className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -111,13 +111,13 @@ export default function CalendarBookSpacePanel({
             type="button"
             onClick={handleSearch}
             disabled={!canSearch || searching}
-            className="w-full flex items-center justify-center gap-2 bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-brand-primary text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-mid transition-colors disabled:opacity-50 cursor-pointer"
           >
             {searching && <Loader2 size={14} className="animate-spin" />}
             {searching ? 'Searching…' : 'Search Availability'}
           </button>
 
-          {searchError && <p className="text-sm text-orange">{searchError}</p>}
+          {searchError && <p className="text-sm text-brand-accent">{searchError}</p>}
 
           {slots && (
             <div className="space-y-2 pt-2">
@@ -153,7 +153,7 @@ export default function CalendarBookSpacePanel({
                     <button
                       type="button"
                       onClick={() => handleBook(r)}
-                      className="shrink-0 bg-navy text-white font-semibold px-3 py-1.5 rounded-md text-xs hover:bg-steel transition-colors cursor-pointer"
+                      className="shrink-0 bg-brand-primary text-white font-semibold px-3 py-1.5 rounded-md text-xs hover:bg-brand-primary-mid transition-colors cursor-pointer"
                     >
                       Book This Slot
                     </button>

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { generateQRCode } from '@/lib/actions/qr'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 function sanitizeLabel(label: string): string {
@@ -45,7 +45,7 @@ export default function QRGeneratorForm() {
       <div className="space-y-4">
         <div>
           <label className={labelClasses}>
-            URL<span className="text-orange ml-0.5">*</span>
+            URL<span className="text-brand-accent ml-0.5">*</span>
           </label>
           <input
             type="text"
@@ -74,13 +74,13 @@ export default function QRGeneratorForm() {
           type="button"
           onClick={handleGenerate}
           disabled={generating}
-          className="bg-navy text-white hover:bg-steel transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
         >
           {generating ? 'Generating…' : 'Generate QR Code'}
         </button>
 
         {error && (
-          <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark dark:text-dark-text">
+          <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
             {error}
           </div>
         )}
@@ -97,14 +97,14 @@ export default function QRGeneratorForm() {
             <a
               href={`data:image/png;base64,${qrResult.pngBase64}`}
               download={`${sanitizedLabel}.png`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-4 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
             >
               Download PNG
             </a>
             <a
               href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrResult.svg)}`}
               download={`${sanitizedLabel}.svg`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-4 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors"
+              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
             >
               Download SVG
             </a>

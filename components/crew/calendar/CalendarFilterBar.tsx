@@ -62,14 +62,14 @@ function MultiSelectDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-divider dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-dark dark:text-dark-text hover:border-steel transition-colors cursor-pointer"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-divider dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-dark dark:text-dark-text hover:border-brand-primary-mid transition-colors cursor-pointer"
       >
         {triggerLabel}
         <ChevronDown size={14} />
       </button>
       {open && (
         <div className="absolute z-20 mt-1 w-56 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg p-2 max-h-72 overflow-y-auto">
-          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer text-sm font-semibold text-dark dark:text-dark-text">
+          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer text-sm font-semibold text-dark dark:text-dark-text">
             <input type="checkbox" checked={isAllSelected} onChange={toggleAll} />
             All {label}
           </label>
@@ -77,7 +77,7 @@ function MultiSelectDropdown({
           {options.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer text-sm text-dark dark:text-dark-text"
+              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer text-sm text-dark dark:text-dark-text"
             >
               <input
                 type="checkbox"
@@ -136,7 +136,7 @@ export default function CalendarFilterBar({
           <Filter size={16} />
           Filters
           {hasActiveFilters && (
-            <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+            <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand-accent text-white text-xs font-semibold px-1">
               {activeFilterCount}
             </span>
           )}
@@ -161,7 +161,7 @@ export default function CalendarFilterBar({
           aria-label="Filter by season"
           value={currentSeasonFilter ?? ''}
           onChange={(e) => onSeasonFilterChange(e.target.value || null)}
-          className="px-3 py-2 rounded-lg border border-divider dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-dark dark:text-dark-text hover:border-steel transition-colors cursor-pointer"
+          className="px-3 py-2 rounded-lg border border-divider dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-dark dark:text-dark-text hover:border-brand-primary-mid transition-colors cursor-pointer"
         >
           <option value="">All Seasons</option>
           {seasons.map((s) => (
@@ -175,7 +175,7 @@ export default function CalendarFilterBar({
           <button
             type="button"
             onClick={onClearFilters}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
           >
             Clear filters
           </button>

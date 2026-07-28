@@ -259,7 +259,7 @@ export default function CalendarShell({
       <div className="flex flex-col gap-4 mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Master Calendar</h1>
-          <div className="flex items-center gap-1 bg-light-navy dark:bg-dark-nav rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-brand-primary-light dark:bg-dark-nav rounded-lg p-1">
             {(['month', 'week', 'agenda'] as CalendarView[]).map((v) => (
               <button
                 key={v}
@@ -267,7 +267,7 @@ export default function CalendarShell({
                 onClick={() => handleViewChange(v)}
                 className={`px-3 py-1.5 rounded-md text-sm font-semibold capitalize transition-colors cursor-pointer ${
                   view === v
-                    ? 'bg-navy text-white'
+                    ? 'bg-brand-primary text-white'
                     : 'text-dark dark:text-dark-text hover:bg-white/50 dark:hover:bg-dark-surface/50'
                 }`}
               >
@@ -284,7 +284,7 @@ export default function CalendarShell({
                 type="button"
                 onClick={handlePrev}
                 aria-label="Previous"
-                className="p-2 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 text-dark dark:text-dark-text cursor-pointer"
+                className="p-2 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 text-dark dark:text-dark-text cursor-pointer"
               >
                 <ChevronLeft size={18} />
               </button>
@@ -292,7 +292,7 @@ export default function CalendarShell({
                 type="button"
                 onClick={handleNext}
                 aria-label="Next"
-                className="p-2 rounded hover:bg-light-navy dark:hover:bg-dark-surface/50 text-dark dark:text-dark-text cursor-pointer"
+                className="p-2 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 text-dark dark:text-dark-text cursor-pointer"
               >
                 <ChevronRight size={18} />
               </button>
@@ -301,7 +301,7 @@ export default function CalendarShell({
           <button
             type="button"
             onClick={handleToday}
-            className="text-sm font-semibold text-navy dark:text-steel hover:underline cursor-pointer"
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
           >
             Today
           </button>
@@ -315,7 +315,7 @@ export default function CalendarShell({
                 type="button"
                 onClick={() => setMoreMenuOpen((o) => !o)}
                 aria-label="More calendar actions"
-                className="p-2 rounded-md border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                className="p-2 rounded-md border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
               >
                 <MoreHorizontal size={18} />
               </button>
@@ -325,11 +325,11 @@ export default function CalendarShell({
                     <Link
                       href="/crew/calendar/pending"
                       onClick={() => setMoreMenuOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg"
+                      className="flex items-center justify-between px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg"
                     >
                       Pending Requests
                       {pendingCount > 0 && (
-                        <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+                        <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand-accent text-white text-xs font-semibold px-1">
                           {pendingCount}
                         </span>
                       )}
@@ -341,7 +341,7 @@ export default function CalendarShell({
                       setMoreMenuOpen(false)
                       setExportModalOpen(true)
                     }}
-                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
                   >
                     <Download size={14} />
                     Export
@@ -353,7 +353,7 @@ export default function CalendarShell({
                         setMoreMenuOpen(false)
                         setBookSpaceOpen(true)
                       }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
                     >
                       <CalendarSearch size={14} />
                       Book Space
@@ -368,11 +368,11 @@ export default function CalendarShell({
               {(adminRole === 'super_admin' || adminRole === 'owner_admin') && (
                 <Link
                   href="/crew/calendar/pending"
-                  className="flex items-center gap-1.5 text-sm font-semibold text-navy dark:text-steel hover:underline"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline"
                 >
                   Pending Requests
                   {pendingCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-orange text-white text-xs font-semibold px-1">
+                    <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-brand-accent text-white text-xs font-semibold px-1">
                       {pendingCount}
                     </span>
                   )}
@@ -382,7 +382,7 @@ export default function CalendarShell({
               <button
                 type="button"
                 onClick={() => setExportModalOpen(true)}
-                className="flex items-center gap-1.5 border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-3 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
               >
                 <Download size={16} />
                 Export
@@ -394,7 +394,7 @@ export default function CalendarShell({
                   <button
                     type="button"
                     onClick={() => setBookSpaceOpen(true)}
-                    className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-navy dark:border-steel text-navy dark:text-steel font-semibold px-3 py-2 rounded-md text-sm hover:bg-light-navy dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-3 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
                   >
                     <CalendarSearch size={16} />
                     Book Space
@@ -408,7 +408,7 @@ export default function CalendarShell({
               <button
                 type="button"
                 onClick={() => setActionMenuOpen((o) => !o)}
-                className="flex items-center gap-1.5 bg-navy text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-steel transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 bg-brand-primary text-white font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-mid transition-colors cursor-pointer"
               >
                 {adminRole === 'super_admin' ? 'Add Event' : 'Submit Request'}
                 <ChevronDown size={14} />
@@ -422,7 +422,7 @@ export default function CalendarShell({
                       setActionMenuOpen(false)
                       setFormOpen(true)
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
                   >
                     Single Event
                   </button>
@@ -432,7 +432,7 @@ export default function CalendarShell({
                       setActionMenuOpen(false)
                       setBulkFormOpen(true)
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
                   >
                     Rehearsal Schedule
                   </button>
@@ -442,7 +442,7 @@ export default function CalendarShell({
                       setActionMenuOpen(false)
                       setRecurringFormOpen(true)
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
                   >
                     Recurring Event
                   </button>

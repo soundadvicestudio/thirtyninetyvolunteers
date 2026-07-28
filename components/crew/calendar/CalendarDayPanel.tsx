@@ -47,7 +47,7 @@ export default function CalendarDayPanel({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded text-dark dark:text-dark-text hover:bg-light-navy dark:hover:bg-dark-bg cursor-pointer"
+            className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -100,7 +100,7 @@ export default function CalendarDayPanel({
                           onClick={() =>
                             event.recurrence_group_id ? onEditRecurringEvent?.(event) : onEditEvent(event)
                           }
-                          className="text-xs text-navy hover:underline dark:text-steel shrink-0 cursor-pointer"
+                          className="text-xs text-brand-primary hover:underline dark:text-brand-primary-mid shrink-0 cursor-pointer"
                         >
                           Edit
                         </button>
@@ -109,7 +109,7 @@ export default function CalendarDayPanel({
                           onClick={() =>
                             event.recurrence_group_id ? onCancelRecurringEvent?.(event) : onCancelEvent?.(event)
                           }
-                          className="text-xs text-orange dark:text-orange hover:underline ml-1 shrink-0 cursor-pointer"
+                          className="text-xs text-brand-accent dark:text-brand-accent hover:underline ml-1 shrink-0 cursor-pointer"
                         >
                           Cancel event
                         </button>
