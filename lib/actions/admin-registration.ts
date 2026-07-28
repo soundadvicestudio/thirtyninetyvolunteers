@@ -148,11 +148,12 @@ export async function approveRegistration(pendingId: string, role: AdminRole): P
     return { error: 'Invalid role.' }
   }
 
-  // Owner Admin can approve registrations as Editor or Viewer only — never
-  // Super Admin or Owner Admin. Only a Super Admin caller may assign either
-  // of those two roles.
-  if (admin.role === 'owner_admin' && (role === 'super_admin' || role === 'owner_admin')) {
-    return { error: 'Owner Admin accounts cannot approve requests as Super Admin or Owner Admin.' }
+  // Owner Admin can approve registrations as Editor, Viewer, Production, or
+  // Owner Admin — never Super Admin. Only a Super Admin caller may assign
+  // Super Admin (this remains the only path that can mint an additional
+  // Super Admin account).
+  if (role === 'super_admin' && admin.role !== 'super_admin') {
+    return { error: 'Only Super Admins can approve requests as Super Admin.' }
   }
 
   const client = getAdminClient()

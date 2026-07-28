@@ -21,6 +21,7 @@ type EmailSettings = {
   from: string
   logoUrl: string
   orgName: string
+  orgContactEmail: string
 }
 
 async function resolveEmailSettings(): Promise<EmailSettings> {
@@ -28,16 +29,18 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
   const { data } = await supabase
     .from('app_settings')
     .select('key, value')
-    .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name'])
+    .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
   const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
   const address = map['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
   const name = map['email_from_name'] || '30 By Ninety Theatre Volunteers'
   const logoUrl = map['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
   const orgName = map['org_name'] || '30 By Ninety Theatre'
+  const orgContactEmail = map['org_contact_email'] || 'info@30byninety.com'
   return {
     from: `${name} <${address}>`,
     logoUrl,
     orgName,
+    orgContactEmail,
   }
 }
 
@@ -374,7 +377,7 @@ export async function sendInfoUpdatedEmail({
     </p>
     <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
       If you didn't make this change, please contact us at
-      <a href="mailto:info@30byninety.com" style="color:#293994;">info@30byninety.com</a>.
+      <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:#293994;">${escapeHtml(emailSettings.orgContactEmail)}</a>.
     </p>
     ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`)}
   `
@@ -475,7 +478,7 @@ export async function sendWelcomeEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: 'info@30byninety.com',
+    replyTo: emailSettings.orgContactEmail,
     to: toEmail,
     subject,
     html,
@@ -568,9 +571,6 @@ export async function sendOpportunitySlotClaimEmail({
 
 
 // ─── Slot claiming emails (30BN-5.2) ─────────────────────────────
-
-const FROM_ADDRESS = '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>'
-const REPLY_TO = 'info@30byninety.com'
 
 function emailShell(bodyHtml: string, orgName?: string): string {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
@@ -714,7 +714,7 @@ export async function sendSlotClaimEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to,
     subject,
     html,
@@ -770,7 +770,7 @@ export async function sendWaitlistConfirmationEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to,
     subject,
     html,
@@ -814,7 +814,7 @@ export async function sendWaitlistPromotionEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to,
     subject,
     html,
@@ -869,7 +869,7 @@ export async function sendCancellationEditorNotificationEmail({
   await resend.batch.send(
     to.map((address) => ({
       from: emailSettings.from,
-      replyTo: REPLY_TO,
+      replyTo: emailSettings.orgContactEmail,
       to: address,
       subject,
       html,
@@ -887,6 +887,8 @@ type ReminderEmailParams = {
   volunteerInstructions: string | null
   logoUrl?: string
   orgName?: string
+  from?: string
+  replyTo?: string
 }
 
 // Exported so the 24hr reminder cron (app/api/cron/reminders) can build
@@ -902,6 +904,8 @@ export function buildReminderEmailPayload({
   volunteerInstructions,
   logoUrl,
   orgName,
+  from,
+  replyTo,
 }: ReminderEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
   const body = `
@@ -927,8 +931,8 @@ export function buildReminderEmailPayload({
   })
 
   return {
-    from: FROM_ADDRESS,
-    replyTo: REPLY_TO,
+    from: from ?? '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    replyTo: replyTo ?? 'info@30byninety.com',
     to,
     subject,
     html,
@@ -943,6 +947,8 @@ type ThankYouEmailParams = {
   siteUrl: string
   logoUrl?: string
   orgName?: string
+  from?: string
+  replyTo?: string
 }
 
 // Exported so the post-show thank-you cron (app/api/cron/thankyou) can build
@@ -956,6 +962,8 @@ export function buildThankYouEmailPayload({
   siteUrl,
   logoUrl,
   orgName,
+  from,
+  replyTo,
 }: ThankYouEmailParams): { from: string; replyTo: string; to: string; subject: string; html: string } {
   const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
   const body = `
@@ -983,8 +991,8 @@ export function buildThankYouEmailPayload({
   })
 
   return {
-    from: FROM_ADDRESS,
-    replyTo: REPLY_TO,
+    from: from ?? '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    replyTo: replyTo ?? 'info@30byninety.com',
     to: recipientEmail,
     subject,
     html,
@@ -1014,6 +1022,8 @@ type CategoryMatchNotificationEmailParams = {
   matchingRoles: string[]
   logoUrl?: string
   orgName?: string
+  from?: string
+  replyTo?: string
 }
 
 // Exported so sendShowNotifications() (lib/actions/shows.ts) can build
@@ -1028,6 +1038,8 @@ export function buildCategoryMatchNotificationPayload({
   matchingRoles,
   logoUrl,
   orgName,
+  from,
+  replyTo,
 }: CategoryMatchNotificationEmailParams): {
   from: string
   replyTo: string
@@ -1061,8 +1073,8 @@ export function buildCategoryMatchNotificationPayload({
   })
 
   return {
-    from: FROM_ADDRESS,
-    replyTo: REPLY_TO,
+    from: from ?? '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
+    replyTo: replyTo ?? 'info@30byninety.com',
     to,
     subject,
     html,
@@ -1073,7 +1085,13 @@ export async function sendCategoryMatchNotificationEmail(
   params: CategoryMatchNotificationEmailParams
 ): Promise<void> {
   const emailSettings = await resolveEmailSettings()
-  await resend.emails.send({ ...buildCategoryMatchNotificationPayload(params), from: emailSettings.from })
+  await resend.emails.send(
+    buildCategoryMatchNotificationPayload({
+      ...params,
+      from: emailSettings.from,
+      replyTo: emailSettings.orgContactEmail,
+    })
+  )
 }
 
 // ─── Show bulk email — "Message Volunteers" quick action (30BN-ADMIN.23) ─
@@ -1088,6 +1106,7 @@ type ShowBulkEmailParams = {
   siteUrl: string
   logoUrl?: string
   orgName?: string
+  from?: string
 }
 
 // Exported so sendShowBulkEmail() (lib/actions/shows.ts) can build payload
@@ -1095,7 +1114,7 @@ type ShowBulkEmailParams = {
 // buildReminderEmailPayload/buildCategoryMatchNotificationPayload. Kept
 // visually minimal (no branded button/highlight block) since this is an
 // admin-composed operational message, not a campaign template. replyTo is
-// per-send here (not the module REPLY_TO default) — the admin can edit it.
+// per-send here (the admin can edit it) rather than a shared default.
 export function buildShowBulkEmailPayload({
   recipientEmail,
   recipientName,
@@ -1106,6 +1125,7 @@ export function buildShowBulkEmailPayload({
   siteUrl,
   logoUrl,
   orgName,
+  from,
 }: ShowBulkEmailParams): {
   from: string
   replyTo: string
@@ -1140,7 +1160,7 @@ export function buildShowBulkEmailPayload({
   })
 
   return {
-    from: FROM_ADDRESS,
+    from: from ?? '30 By Ninety Theatre <volunteers@30byninetyvolunteers.com>',
     replyTo,
     to: recipientEmail,
     subject,
@@ -1241,7 +1261,7 @@ export async function sendRegistrationApprovedEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to,
     subject,
     html,
@@ -1265,7 +1285,7 @@ export async function sendRegistrationDeclinedEmail({
       request was not approved at this time.
     </p>
     <p style="margin:0;color:#1A1A1A;font-size:15px;line-height:1.6;">
-      Please reach out to us at <a href="mailto:info@30byninety.com" style="color:#293994;">info@30byninety.com</a>
+      Please reach out to us at <a href="mailto:${escapeHtml(emailSettings.orgContactEmail)}" style="color:#293994;">${escapeHtml(emailSettings.orgContactEmail)}</a>
       if you have questions.
     </p>
   `
@@ -1282,7 +1302,7 @@ export async function sendRegistrationDeclinedEmail({
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to,
     subject,
     html,
@@ -1466,7 +1486,7 @@ export async function sendMilestoneEmail(
 
   await resend.emails.send({
     from: emailSettings.from,
-    replyTo: REPLY_TO,
+    replyTo: emailSettings.orgContactEmail,
     to: email,
     subject,
     html,

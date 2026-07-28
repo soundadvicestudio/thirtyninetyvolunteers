@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const { data: settingsData } = await client
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name'])
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -80,6 +80,7 @@ export async function GET(request: Request) {
     }>`
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+    const emailReplyTo = settingsMap['org_contact_email'] || 'info@30byninety.com'
 
     let totalSent = 0
     let skipped = 0
@@ -111,8 +112,8 @@ export async function GET(request: Request) {
 
       // D. Build payloads.
       const formattedDate = formatWallClockCT(date.show_date, null, 'MMMM d, yyyy')
-      const payloads = recipients.map((r) => ({
-        ...buildThankYouEmailPayload({
+      const payloads = recipients.map((r) =>
+        buildThankYouEmailPayload({
           recipientEmail: r.email,
           recipientName: r.name,
           showName: show.name,
@@ -120,9 +121,10 @@ export async function GET(request: Request) {
           siteUrl,
           logoUrl,
           orgName,
-        }),
-        from: emailFrom,
-      }))
+          from: emailFrom,
+          replyTo: emailReplyTo,
+        })
+      )
 
       try {
         // E. Send.

@@ -644,7 +644,7 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
     const { data: settingsData } = await supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name'])
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -653,18 +653,20 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
     }>`
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+    const emailReplyTo = settingsMap['org_contact_email'] || 'info@30byninety.com'
 
-    const payloads = targets.map((t) => ({
-      ...buildCategoryMatchNotificationPayload({
+    const payloads = targets.map((t) =>
+      buildCategoryMatchNotificationPayload({
         to: t.email,
         volunteerName: t.full_name,
         showName: show.name,
         matchingRoles: t.matching_roles,
         logoUrl,
         orgName,
-      }),
-      from: emailFrom,
-    }))
+        from: emailFrom,
+        replyTo: emailReplyTo,
+      })
+    )
 
     // D. Batch send (R8) — log failures, do not abort. Partial sends are
     // better than no send.
@@ -812,8 +814,8 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
 
-    const payloads = recipients.map((r) => ({
-      ...buildShowBulkEmailPayload({
+    const payloads = recipients.map((r) =>
+      buildShowBulkEmailPayload({
         recipientEmail: r.email,
         recipientName: r.name,
         subject,
@@ -823,9 +825,9 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
         siteUrl,
         logoUrl,
         orgName,
-      }),
-      from: emailFrom,
-    }))
+        from: emailFrom,
+      })
+    )
 
     try {
       await sendBatchEmails(payloads)

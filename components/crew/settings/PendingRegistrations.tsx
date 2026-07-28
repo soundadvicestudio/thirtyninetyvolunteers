@@ -34,9 +34,11 @@ function PendingRow({
   callerRole: CallerAdminRole
 }) {
   const [role, setRole] = useState<RegistrationRole>('viewer')
-  // Owner Admin can approve requests as Editor or Viewer only — never Super
-  // Admin or another Owner Admin.
-  const canAssignPrivilegedRoles = callerRole === 'super_admin'
+  // Both Super Admin and Owner Admin callers can approve requests as Owner
+  // Admin. Only Super Admin can approve into Super Admin — that role can
+  // never be assigned by an Owner Admin caller.
+  const canAssignOwnerAdmin = callerRole === 'super_admin' || callerRole === 'owner_admin'
+  const canAssignSuperAdmin = callerRole === 'super_admin'
   const [confirming, setConfirming] = useState<'approve' | 'decline' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [rowError, setRowError] = useState<string | null>(null)
@@ -84,12 +86,8 @@ function PendingRow({
           <option value="viewer">Viewer</option>
           <option value="editor">Editor</option>
           <option value="production">Production</option>
-          {canAssignPrivilegedRoles && (
-            <>
-              <option value="owner_admin">Owner Admin</option>
-              <option value="super_admin">Super Admin</option>
-            </>
-          )}
+          {canAssignOwnerAdmin && <option value="owner_admin">Owner Admin</option>}
+          {canAssignSuperAdmin && <option value="super_admin">Super Admin</option>}
         </select>
       </td>
       <td className="px-4 py-3">

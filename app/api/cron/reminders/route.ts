@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     const { data: settingsData } = await client
       .from('app_settings')
       .select('key, value')
-      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name'])
+      .in('key', ['email_from_address', 'email_from_name', 'org_logo_url', 'org_name', 'org_contact_email'])
     const settingsMap = Object.fromEntries(
       (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
     )
@@ -78,6 +78,7 @@ export async function GET(request: Request) {
     }>`
     const logoUrl = settingsMap['org_logo_url'] || `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+    const emailReplyTo = settingsMap['org_contact_email'] || 'info@30byninety.com'
 
     // D. Format and batch send.
     const payloads = claims
@@ -91,20 +92,19 @@ export async function GET(request: Request) {
           ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a')}`
           : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
 
-        return {
-          ...buildReminderEmailPayload({
-            to: claim.volunteer_email,
-            volunteerName: claim.volunteer_name,
-            showName: show.name,
-            showDate: formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy'),
-            showTime,
-            roleName: role.role_name,
-            volunteerInstructions: show.volunteer_instructions,
-            logoUrl,
-            orgName,
-          }),
+        return buildReminderEmailPayload({
+          to: claim.volunteer_email,
+          volunteerName: claim.volunteer_name,
+          showName: show.name,
+          showDate: formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy'),
+          showTime,
+          roleName: role.role_name,
+          volunteerInstructions: show.volunteer_instructions,
+          logoUrl,
+          orgName,
           from: emailFrom,
-        }
+          replyTo: emailReplyTo,
+        })
       })
       .filter((p): p is NonNullable<typeof p> => p !== null)
 
