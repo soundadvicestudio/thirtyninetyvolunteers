@@ -27,14 +27,44 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({
+async function resolveBrandColors(): Promise<{
+  primary: string
+  accent: string
+}> {
+  const supabase = getAdminClient()
+  const { data } = await supabase
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['brand_primary', 'brand_accent'])
+  const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
+  return {
+    primary: map['brand_primary'] || '#293994',
+    accent: map['brand_accent'] || '#F26522',
+  }
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const brand = await resolveBrandColors()
+
   return (
     <html lang="en">
-      <body className={openSans.className}>{children}</body>
+      <body className={openSans.className}>
+        <style>{`
+          :root {
+            --brand-primary: ${brand.primary};
+            --brand-accent: ${brand.accent};
+            --brand-primary-mid: color-mix(in srgb, var(--brand-primary) 59%, white);
+            --brand-primary-tint: color-mix(in srgb, var(--brand-primary) 47%, white);
+            --brand-primary-light: color-mix(in srgb, var(--brand-primary) 8%, white);
+            --brand-accent-light: color-mix(in srgb, var(--brand-accent) 5%, white);
+          }
+        `}</style>
+        {children}
+      </body>
     </html>
   )
 }

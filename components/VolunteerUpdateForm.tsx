@@ -130,19 +130,19 @@ export default function VolunteerUpdateForm({
   }
 
   const inputClasses =
-    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
   const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-  const errorClasses = 'mt-1 text-sm text-orange'
+  const errorClasses = 'mt-1 text-sm text-brand-accent'
 
   if (formState === 'success') {
     return (
-      <div className="rounded-xl bg-light-navy border border-divider
+      <div className="rounded-xl bg-brand-primary-light border border-divider
                       p-8 text-center">
-        <div className="w-12 h-12 rounded-full bg-orange mx-auto mb-4
+        <div className="w-12 h-12 rounded-full bg-brand-accent mx-auto mb-4
                         flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
         </div>
-        <h2 className="text-navy font-bold text-xl mb-2">
+        <h2 className="text-brand-primary font-bold text-xl mb-2">
           Your information has been updated
         </h2>
         <p className="text-mid-gray text-sm leading-relaxed">
@@ -164,7 +164,7 @@ export default function VolunteerUpdateForm({
           Email Address
         </p>
         <p className="w-full rounded-lg border border-divider
-                      bg-light-navy px-4 py-3 text-base
+                      bg-brand-primary-light px-4 py-3 text-base
                       text-mid-gray">
           {email}
         </p>
@@ -176,7 +176,7 @@ export default function VolunteerUpdateForm({
       {/* Full Name */}
       <div>
         <label className={labelClasses}>
-          Full Name<span className="text-orange ml-0.5">*</span>
+          Full Name<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="text" className={inputClasses} {...register('full_name')} />
         {errors.full_name && (
@@ -187,7 +187,7 @@ export default function VolunteerUpdateForm({
       {/* Phone */}
       <div>
         <label className={labelClasses}>
-          Phone Number<span className="text-orange ml-0.5">*</span>
+          Phone Number<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="tel" className={inputClasses} {...register('phone')} />
         {errors.phone && <p className={errorClasses}>{errors.phone.message}</p>}
@@ -238,7 +238,7 @@ export default function VolunteerUpdateForm({
                   onChange={() =>
                     setValue('requires_service_hours', true, { shouldValidate: true })
                   }
-                  className="text-navy focus:ring-navy"
+                  className="text-brand-primary focus:ring-brand-primary"
                 />
                 <span className="text-sm text-dark">Yes</span>
               </label>
@@ -249,7 +249,7 @@ export default function VolunteerUpdateForm({
                   onChange={() =>
                     setValue('requires_service_hours', false, { shouldValidate: true })
                   }
-                  className="text-navy focus:ring-navy"
+                  className="text-brand-primary focus:ring-brand-primary"
                 />
                 <span className="text-sm text-dark">No</span>
               </label>
@@ -273,7 +273,7 @@ export default function VolunteerUpdateForm({
 
         {/* Guardian fields */}
         {watchedAge === 'under_18' && (
-          <div className="bg-pale-orange border border-orange rounded-lg p-4 mt-2">
+          <div className="bg-brand-accent-light border border-brand-accent rounded-lg p-4 mt-2">
             <p className="text-sm text-dark mb-3">
               Because you&apos;re under 18, we need a parent or guardian&apos;s
               contact information.
@@ -281,7 +281,7 @@ export default function VolunteerUpdateForm({
             <div className="space-y-5">
               <div>
                 <label className={labelClasses}>
-                  Guardian Name<span className="text-orange ml-0.5">*</span>
+                  Guardian Name<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
@@ -294,7 +294,7 @@ export default function VolunteerUpdateForm({
               </div>
               <div>
                 <label className={labelClasses}>
-                  Guardian Phone<span className="text-orange ml-0.5">*</span>
+                  Guardian Phone<span className="text-brand-accent ml-0.5">*</span>
                 </label>
                 <input
                   type="tel"
@@ -321,7 +321,7 @@ export default function VolunteerUpdateForm({
           {categories.map((cat) => (
             <label
               key={cat.id}
-              className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-steel hover:bg-light-navy transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy"
+              className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-brand-primary-mid hover:bg-brand-primary-light transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light"
             >
               <input
                 type="checkbox"
@@ -390,7 +390,7 @@ export default function VolunteerUpdateForm({
 
       {/* Error banner */}
       {errorMessage && (
-        <div className="rounded-lg bg-pale-orange border border-orange
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent
                         p-4 text-sm text-dark">
           {errorMessage}
         </div>
@@ -400,7 +400,7 @@ export default function VolunteerUpdateForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         Save Changes
       </button>

@@ -16,9 +16,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 const inputClasses =
-  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 type ResultState =
   | { kind: 'idle' }
@@ -123,7 +123,7 @@ export default function ClaimForm({
 
   if (result.kind === 'claimed') {
     return (
-      <div className="rounded-lg bg-light-navy p-4 text-navy text-sm leading-relaxed">
+      <div className="rounded-lg bg-brand-primary-light p-4 text-brand-primary text-sm leading-relaxed">
         You&apos;re all set! A confirmation email is on its way to {result.email}. See you at the show!
       </div>
     )
@@ -131,7 +131,7 @@ export default function ClaimForm({
 
   if (result.kind === 'waitlisted') {
     return (
-      <div className="rounded-lg bg-pale-orange p-4 text-dark text-sm leading-relaxed">
+      <div className="rounded-lg bg-brand-accent-light p-4 text-dark text-sm leading-relaxed">
         You&apos;re on the waitlist at position {result.position}. We&apos;ll email you immediately if a spot opens up.
       </div>
     )
@@ -139,7 +139,7 @@ export default function ClaimForm({
 
   if (result.kind === 'duplicate_same') {
     return (
-      <div className="rounded-lg bg-light-navy p-4 text-navy text-sm leading-relaxed">
+      <div className="rounded-lg bg-brand-primary-light p-4 text-brand-primary text-sm leading-relaxed">
         Good news — you&apos;re already signed up for this role! Check your email for your original confirmation.
       </div>
     )
@@ -166,7 +166,7 @@ export default function ClaimForm({
       </p>
 
       {duplicateShowDates && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-4 text-sm text-dark space-y-3">
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-4 text-sm text-dark space-y-3">
           <p>
             Heads up — you&apos;re already signed up to volunteer for this show on {duplicateShowDates.join(', ')}.
             Did you mean to sign up for another date too?
@@ -176,7 +176,7 @@ export default function ClaimForm({
               type="button"
               disabled={isConfirming}
               onClick={handleConfirmDuplicate}
-              className="bg-orange text-white font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-opacity-90 transition-colors disabled:opacity-50"
+              className="bg-brand-accent text-white font-semibold text-sm rounded-lg px-4 py-2.5 hover:bg-opacity-90 transition-colors disabled:opacity-50"
             >
               {isConfirming ? 'Submitting…' : 'Yes, sign me up'}
             </button>
@@ -194,7 +194,7 @@ export default function ClaimForm({
 
       <div>
         <label className={labelClasses}>
-          Full Name<span className="text-orange ml-0.5">*</span>
+          Full Name<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="text" className={inputClasses} {...register('name')} />
         {errors.name && <p className={errorClasses}>{errors.name.message}</p>}
@@ -202,7 +202,7 @@ export default function ClaimForm({
 
       <div>
         <label className={labelClasses}>
-          Email<span className="text-orange ml-0.5">*</span>
+          Email<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input
           type="email"
@@ -214,7 +214,7 @@ export default function ClaimForm({
 
       <div>
         <label className={labelClasses}>
-          Phone<span className="text-orange ml-0.5">*</span>
+          Phone<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input
           type="tel"
@@ -225,13 +225,13 @@ export default function ClaimForm({
       </div>
 
       {submitError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">{submitError}</div>
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">{submitError}</div>
       )}
 
       <button
         type="submit"
         disabled={isSubmitting || isConfirming}
-        className="w-full sm:w-auto bg-orange text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="w-full sm:w-auto bg-brand-accent text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Submitting…' : isWaitlist ? 'Join the Waitlist' : 'Claim My Spot'}
       </button>

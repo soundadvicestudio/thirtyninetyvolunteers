@@ -152,19 +152,19 @@ export default function VolunteerForm({
   }
 
   const inputClasses =
-    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
   const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-  const errorClasses = 'mt-1 text-sm text-orange'
+  const errorClasses = 'mt-1 text-sm text-brand-accent'
 
   if (formState === 'success') {
     return (
-      <div className="rounded-xl bg-light-navy border border-divider
+      <div className="rounded-xl bg-brand-primary-light border border-divider
                       p-8 text-center max-w-xl mx-auto">
-        <div className="w-12 h-12 rounded-full bg-orange mx-auto
+        <div className="w-12 h-12 rounded-full bg-brand-accent mx-auto
                         mb-4 flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
         </div>
-        <h2 className="text-navy font-bold text-xl mb-2">
+        <h2 className="text-brand-primary font-bold text-xl mb-2">
           You&apos;re in! Thank you for signing up.
         </h2>
         <p className="text-mid-gray text-sm leading-relaxed">
@@ -180,8 +180,8 @@ export default function VolunteerForm({
   if (formState === 'duplicate' && duplicateInfo) {
     return (
       <div className="rounded-xl border border-divider
-                      bg-pale-orange p-8 max-w-xl mx-auto">
-        <h2 className="text-navy font-bold text-lg mb-2">
+                      bg-brand-accent-light p-8 max-w-xl mx-auto">
+        <h2 className="text-brand-primary font-bold text-lg mb-2">
           We found an existing record
         </h2>
         <p className="text-dark text-sm leading-relaxed mb-6">
@@ -194,15 +194,15 @@ export default function VolunteerForm({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleMerge}
-            className="flex-1 py-3 bg-navy text-white font-bold
+            className="flex-1 py-3 bg-brand-primary text-white font-bold
                        rounded-lg hover:bg-opacity-90 transition-colors">
             Update My Record
           </button>
           <button
             onClick={handleUseDifferentInfo}
-            className="flex-1 py-3 bg-white text-navy font-semibold
+            className="flex-1 py-3 bg-white text-brand-primary font-semibold
                        rounded-lg border border-divider
-                       hover:border-navy transition-colors">
+                       hover:border-brand-primary transition-colors">
             Use Different Contact Info
           </button>
         </div>
@@ -216,8 +216,8 @@ export default function VolunteerForm({
       className="max-w-xl mx-auto px-4 space-y-5"
     >
       {(formState === 'error' && errorMessage) && (
-        <div className="mb-4 rounded-lg bg-pale-orange border
-                        border-orange p-4 text-sm text-dark">
+        <div className="mb-4 rounded-lg bg-brand-accent-light border
+                        border-brand-accent p-4 text-sm text-dark">
           {errorMessage}
         </div>
       )}
@@ -236,7 +236,7 @@ export default function VolunteerForm({
       {/* Full Name */}
       <div>
         <label className={labelClasses}>
-          Full Name<span className="text-orange ml-0.5">*</span>
+          Full Name<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="text" className={inputClasses} {...register('full_name')} />
         {errors.full_name && (
@@ -247,7 +247,7 @@ export default function VolunteerForm({
       {/* Email */}
       <div>
         <label className={labelClasses}>
-          Email Address<span className="text-orange ml-0.5">*</span>
+          Email Address<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="email" className={inputClasses} {...register('email')} />
         {errors.email && <p className={errorClasses}>{errors.email.message}</p>}
@@ -256,7 +256,7 @@ export default function VolunteerForm({
       {/* Phone */}
       <div>
         <label className={labelClasses}>
-          Phone Number<span className="text-orange ml-0.5">*</span>
+          Phone Number<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="tel" className={inputClasses} {...register('phone')} />
         {errors.phone && <p className={errorClasses}>{errors.phone.message}</p>}
@@ -302,7 +302,7 @@ export default function VolunteerForm({
                     onChange={() =>
                       setValue('requires_service_hours', true, { shouldValidate: true })
                     }
-                    className="text-navy focus:ring-navy"
+                    className="text-brand-primary focus:ring-brand-primary"
                   />
                   <span className="text-sm text-dark">Yes</span>
                 </label>
@@ -313,7 +313,7 @@ export default function VolunteerForm({
                     onChange={() =>
                       setValue('requires_service_hours', false, { shouldValidate: true })
                     }
-                    className="text-navy focus:ring-navy"
+                    className="text-brand-primary focus:ring-brand-primary"
                   />
                   <span className="text-sm text-dark">No</span>
                 </label>
@@ -327,7 +327,7 @@ export default function VolunteerForm({
       {showAgeRange && (
         <div>
           <label className={labelClasses}>
-            Age Range <span className="text-orange ml-0.5">*</span>
+            Age Range <span className="text-brand-accent ml-0.5">*</span>
           </label>
           <select className={inputClasses} {...register('age_range')}>
             <option value="">Select age range</option>
@@ -339,14 +339,14 @@ export default function VolunteerForm({
             <option value="prefer_not">Prefer not to say</option>
           </select>
           {errors.age_range && (
-            <p className="mt-1 text-sm text-orange">
+            <p className="mt-1 text-sm text-brand-accent">
               {errors.age_range.message}
             </p>
           )}
 
           {/* Guardian fields */}
           {watchedAge === 'under_18' && (
-            <div className="bg-pale-orange border border-orange rounded-lg p-4 mt-2">
+            <div className="bg-brand-accent-light border border-brand-accent rounded-lg p-4 mt-2">
               <p className="text-sm text-dark mb-3">
                 Because you&apos;re under 18, we need a parent or guardian&apos;s
                 contact information.
@@ -354,7 +354,7 @@ export default function VolunteerForm({
               <div className="space-y-5">
                 <div>
                   <label className={labelClasses}>
-                    Guardian Name<span className="text-orange ml-0.5">*</span>
+                    Guardian Name<span className="text-brand-accent ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
@@ -367,7 +367,7 @@ export default function VolunteerForm({
                 </div>
                 <div>
                   <label className={labelClasses}>
-                    Guardian Phone<span className="text-orange ml-0.5">*</span>
+                    Guardian Phone<span className="text-brand-accent ml-0.5">*</span>
                   </label>
                   <input
                     type="tel"
@@ -387,7 +387,7 @@ export default function VolunteerForm({
       {/* Volunteer interest areas */}
       <div>
         <label className={labelClasses}>
-          Areas of Interest<span className="text-orange ml-0.5">*</span>
+          Areas of Interest<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <p className="text-sm text-mid-gray">
           Select everything that interests you — no pressure to commit to any
@@ -397,7 +397,7 @@ export default function VolunteerForm({
           {categories.map((cat) => (
             <label
               key={cat.id}
-              className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-steel hover:bg-light-navy transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy"
+              className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-brand-primary-mid hover:bg-brand-primary-light transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light"
             >
               <input
                 type="checkbox"
@@ -467,7 +467,7 @@ export default function VolunteerForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         Sign Me Up!
       </button>

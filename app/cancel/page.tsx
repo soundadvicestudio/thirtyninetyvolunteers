@@ -10,7 +10,7 @@ function PublicHeader({ org }: { org: OrgIdentity }) {
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
         <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
       </div>
     </header>
   )
@@ -22,10 +22,10 @@ function InfoPage({ title, org }: { title: string; org: OrgIdentity }) {
       <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
-          <h1 className="text-navy font-bold text-xl mb-6">{title}</h1>
+          <h1 className="text-brand-primary font-bold text-xl mb-6">{title}</h1>
           <Link
             href="/shows"
-            className="inline-block bg-navy text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
+            className="inline-block bg-brand-primary text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
           >
             View Opportunities
           </Link>
@@ -99,7 +99,7 @@ export default async function CancelPage({
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-md mx-auto">
-          <h1 className="text-navy font-bold text-2xl mb-6">Cancel Your Spot</h1>
+          <h1 className="text-brand-primary font-bold text-2xl mb-6">Cancel Your Spot</h1>
 
           <div className="rounded-xl border border-divider p-4 mb-8">
             <p className="text-dark font-semibold">{show.name}</p>
@@ -117,7 +117,7 @@ export default async function CancelPage({
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-2xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-mid-gray text-xs">© {org.org_name}</p>
-          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
+          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-brand-primary transition-colors">
             Production Crew
           </Link>
         </div>

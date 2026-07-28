@@ -9,7 +9,7 @@ function PublicHeader({ org }: { org: OrgIdentity }) {
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
         <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
       </div>
     </header>
   )
@@ -21,13 +21,13 @@ function Unavailable({ org }: { org: OrgIdentity }) {
       <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
-          <h1 className="text-navy font-bold text-xl mb-3">This form is not available.</h1>
+          <h1 className="text-brand-primary font-bold text-xl mb-3">This form is not available.</h1>
           <p className="text-mid-gray text-sm leading-relaxed mb-6">
             It may have been removed, or the link may be incorrect.
           </p>
           <Link
             href="/"
-            className="inline-block bg-navy text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
+            className="inline-block bg-brand-primary text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
           >
             ← Back to Home
           </Link>
@@ -43,14 +43,14 @@ function Closed({ title, description, org }: { title: string; description: strin
       <PublicHeader org={org} />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{title}</h1>
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-4">{title}</h1>
           {description && (
             <p className="text-dark text-base leading-relaxed mb-8 whitespace-pre-wrap">{description}</p>
           )}
-          <div className="rounded-xl bg-pale-orange border border-divider p-6 text-center max-w-xl">
+          <div className="rounded-xl bg-brand-accent-light border border-divider p-6 text-center max-w-xl">
             <p className="text-dark font-semibold">This form is no longer accepting responses.</p>
           </div>
-          <Link href="/" className="inline-block mt-6 text-navy font-semibold underline">
+          <Link href="/" className="inline-block mt-6 text-brand-primary font-semibold underline">
             ← Back to Home
           </Link>
         </div>
@@ -79,7 +79,7 @@ export default async function PublicFormPage({ params }: { params: Promise<{ id:
       <PublicHeader org={org} />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{form.title}</h1>
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-4">{form.title}</h1>
           {form.description && (
             <p className="text-dark text-base leading-relaxed mb-8 whitespace-pre-wrap">{form.description}</p>
           )}

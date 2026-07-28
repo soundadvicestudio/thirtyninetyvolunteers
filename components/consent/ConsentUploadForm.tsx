@@ -104,15 +104,15 @@ export default function ConsentUploadForm({
   }
 
   const inputClasses =
-    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
   if (state === 'success') {
     return (
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
-        <div className="w-16 h-16 rounded-full bg-orange mx-auto flex items-center justify-center">
+        <div className="w-16 h-16 rounded-full bg-brand-accent mx-auto flex items-center justify-center">
           <span className="text-white text-2xl font-bold">✓</span>
         </div>
-        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">Thank you, {volunteerName}!</h1>
+        <h1 className="text-brand-primary font-bold text-2xl mt-4 mb-2">Thank you, {volunteerName}!</h1>
         <p className="text-mid-gray text-base">
           Your {documentTypeName.toLowerCase()} has been received. A coordinator will review it and be in touch if
           anything is needed.
@@ -124,7 +124,7 @@ export default function ConsentUploadForm({
   return (
     <div className="max-w-[480px] mx-auto px-4 space-y-5">
       <div className="text-center mb-2">
-        <h1 className="text-navy font-bold text-xl mb-2">Hi {volunteerName},</h1>
+        <h1 className="text-brand-primary font-bold text-xl mb-2">Hi {volunteerName},</h1>
         <p className="text-dark text-sm leading-relaxed">
           Please upload your completed {documentTypeName.toLowerCase()} below. We accept PDF or image files (JPG,
           PNG, GIF, WEBP).
@@ -155,7 +155,7 @@ export default function ConsentUploadForm({
       {state === 'uploading' && (
         <div>
           <div className="w-full bg-divider rounded-full h-2 overflow-hidden">
-            <div className="bg-orange h-2 transition-all" style={{ width: `${progress}%` }} />
+            <div className="bg-brand-accent h-2 transition-all" style={{ width: `${progress}%` }} />
           </div>
           <p className="text-xs text-mid-gray mt-1 text-center">Uploading… {progress}%</p>
         </div>
@@ -163,7 +163,7 @@ export default function ConsentUploadForm({
 
       {errorMessage && (
         <div>
-          <p className="text-sm text-orange">{errorMessage}</p>
+          <p className="text-sm text-brand-accent">{errorMessage}</p>
           <button
             type="button"
             onClick={() => {
@@ -171,7 +171,7 @@ export default function ConsentUploadForm({
               setErrorMessage(null)
               setSelectedFile(null)
             }}
-            className="mt-2 text-sm font-semibold text-navy hover:underline cursor-pointer"
+            className="mt-2 text-sm font-semibold text-brand-primary hover:underline cursor-pointer"
           >
             Try Again
           </button>
@@ -182,7 +182,7 @@ export default function ConsentUploadForm({
         type="button"
         onClick={handleUpload}
         disabled={state === 'uploading' || !selectedFile}
-        className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+        className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
       >
         {state === 'uploading' ? 'Uploading…' : 'Upload Form'}
       </button>

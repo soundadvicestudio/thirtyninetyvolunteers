@@ -16,7 +16,7 @@ function PublicHeader({ org }: { org: OrgIdentity }) {
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
         <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
       </div>
     </header>
   )
@@ -51,7 +51,7 @@ export default async function ConsentUploadPage({ params }: { params: Promise<{ 
         <PublicHeader org={org} />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
-            <h1 className="text-navy font-bold text-xl mb-3">This link is not valid.</h1>
+            <h1 className="text-brand-primary font-bold text-xl mb-3">This link is not valid.</h1>
             <p className="text-mid-gray text-sm leading-relaxed">Please contact your coordinator for assistance.</p>
           </div>
         </main>
@@ -69,7 +69,7 @@ export default async function ConsentUploadPage({ params }: { params: Promise<{ 
         <PublicHeader org={org} />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
-            <h1 className="text-navy font-bold text-xl mb-3">Thank you — your form has been received.</h1>
+            <h1 className="text-brand-primary font-bold text-xl mb-3">Thank you — your form has been received.</h1>
             <p className="text-mid-gray text-sm leading-relaxed">
               We&apos;ve received your {documentTypeName.toLowerCase()}. No further action is needed.
             </p>

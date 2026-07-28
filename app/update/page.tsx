@@ -34,7 +34,7 @@ export default async function UpdatePage({
   if (!volunteer) {
     return (
       <div className="max-w-md mx-auto text-center px-4 py-16">
-        <h1 className="text-navy font-bold text-2xl mb-3">
+        <h1 className="text-brand-primary font-bold text-2xl mb-3">
           This link is no longer valid
         </h1>
         <p className="text-mid-gray text-sm leading-relaxed mb-6">
@@ -42,7 +42,7 @@ export default async function UpdatePage({
         </p>
         <Link
           href="/update"
-          className="inline-block bg-navy text-white font-bold
+          className="inline-block bg-brand-primary text-white font-bold
                      px-6 py-3 rounded-lg hover:bg-opacity-90
                      transition-colors">
           Request a New Link
@@ -113,7 +113,7 @@ export default async function UpdatePage({
   return (
     <div className="min-h-screen bg-white py-10">
       <div className="max-w-xl mx-auto px-4">
-        <h1 className="text-navy font-bold text-2xl mb-1 text-center">
+        <h1 className="text-brand-primary font-bold text-2xl mb-1 text-center">
           Update Your Information
         </h1>
         <p className="text-mid-gray text-sm text-center mb-8">

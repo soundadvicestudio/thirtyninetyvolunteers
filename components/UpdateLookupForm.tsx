@@ -33,11 +33,11 @@ export default function UpdateLookupForm() {
   if (state === 'success') {
     return (
       <div className="max-w-md mx-auto text-center px-4 py-12">
-        <div className="w-12 h-12 rounded-full bg-navy mx-auto
+        <div className="w-12 h-12 rounded-full bg-brand-primary mx-auto
                         mb-4 flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
         </div>
-        <h2 className="text-navy font-bold text-xl mb-2">
+        <h2 className="text-brand-primary font-bold text-xl mb-2">
           Check your email
         </h2>
         <p className="text-mid-gray text-sm leading-relaxed">
@@ -51,7 +51,7 @@ export default function UpdateLookupForm() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
-      <h1 className="text-navy font-bold text-2xl mb-2 text-center">
+      <h1 className="text-brand-primary font-bold text-2xl mb-2 text-center">
         Update Your Information
       </h1>
       <p className="text-mid-gray text-sm text-center mb-8
@@ -61,11 +61,11 @@ export default function UpdateLookupForm() {
       </p>
 
       {state === 'not_found' && (
-        <div className="mb-4 rounded-lg bg-pale-orange border
-                        border-orange p-4 text-sm text-dark">
+        <div className="mb-4 rounded-lg bg-brand-accent-light border
+                        border-brand-accent p-4 text-sm text-dark">
           We couldn&apos;t find a record with that email or phone.{' '}
           <Link href="/"
-                className="font-semibold text-navy underline">
+                className="font-semibold text-brand-primary underline">
             Sign up here
           </Link>
           {' '}to join our volunteer list.
@@ -73,8 +73,8 @@ export default function UpdateLookupForm() {
       )}
 
       {state === 'error' && errorMsg && (
-        <div className="mb-4 rounded-lg bg-pale-orange border
-                        border-orange p-4 text-sm text-dark">
+        <div className="mb-4 rounded-lg bg-brand-accent-light border
+                        border-brand-accent p-4 text-sm text-dark">
           {errorMsg}
         </div>
       )}
@@ -92,8 +92,8 @@ export default function UpdateLookupForm() {
             placeholder="you@example.com or 555-555-5555"
             className="w-full rounded-lg border border-divider
                        px-4 py-3 text-base text-dark
-                       focus:outline-none focus:border-navy
-                       focus:ring-1 focus:ring-navy
+                       focus:outline-none focus:border-brand-primary
+                       focus:ring-1 focus:ring-brand-primary
                        transition-colors"
             required
           />
@@ -101,7 +101,7 @@ export default function UpdateLookupForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 bg-orange text-white font-bold
+          className="w-full py-3 bg-brand-accent text-white font-bold
                      rounded-lg hover:bg-opacity-90
                      transition-colors disabled:opacity-50">
           {isLoading ? 'Sending…' : 'Send My Update Link'}

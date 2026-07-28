@@ -164,7 +164,7 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
   return (
     <div className="rounded-xl border border-divider bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-        <h3 className="text-navy font-bold text-lg">{show.name}</h3>
+        <h3 className="text-brand-primary font-bold text-lg">{show.name}</h3>
         <span
           className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 text-white"
           style={{ backgroundColor: show.location?.color ?? '#555555' }}
@@ -178,7 +178,7 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
       {signedUp.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1">
           {signedUp.map((s, i) => (
-            <span key={i} className="inline-block text-xs font-semibold text-navy bg-light-navy rounded-full px-3 py-1">
+            <span key={i} className="inline-block text-xs font-semibold text-brand-primary bg-brand-primary-light rounded-full px-3 py-1">
               You&apos;re signed up for {s.role_name} on {formatWallClockCT(s.show_date, null, 'MMM d')}
             </span>
           ))}
@@ -211,7 +211,7 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
 
       <Link
         href={`/shows/${show.id}`}
-        className="inline-block w-full sm:w-auto text-center bg-orange text-white font-bold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-colors"
+        className="inline-block w-full sm:w-auto text-center bg-brand-accent text-white font-bold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-colors"
       >
         Volunteer
       </Link>
@@ -228,8 +228,8 @@ function OpportunityCard({ opportunity }: { opportunity: StandingOpportunityRow 
   return (
     <div className="rounded-xl border border-divider bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-        <h3 className="text-navy font-bold text-lg">{opportunity.title}</h3>
-        <span className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 bg-light-navy text-navy">
+        <h3 className="text-brand-primary font-bold text-lg">{opportunity.title}</h3>
+        <span className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 bg-brand-primary-light text-brand-primary">
           {CLAIM_TYPE_LABEL[opportunity.claim_type]}
         </span>
       </div>
@@ -238,7 +238,7 @@ function OpportunityCard({ opportunity }: { opportunity: StandingOpportunityRow 
 
       <Link
         href={`/opportunities/${opportunity.id}`}
-        className="inline-block w-full sm:w-auto text-center bg-navy text-white font-semibold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-colors"
+        className="inline-block w-full sm:w-auto text-center bg-brand-primary text-white font-semibold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-colors"
       >
         Learn More
       </Link>
@@ -302,12 +302,12 @@ export default async function CallboardPage() {
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-5xl mx-auto py-6 px-6 text-center">
           <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-          <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
-          <h1 className="text-navy font-bold text-2xl md:text-3xl mt-4">Volunteer Call Board</h1>
+          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mt-4">Volunteer Call Board</h1>
         </div>
       </header>
 
-      <main className="flex-1 bg-light-navy py-10 px-6">
+      <main className="flex-1 bg-brand-primary-light py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col-reverse gap-8 md:flex-row md:items-start">
           <section className="flex-1 space-y-8 min-w-0">
             {!hasOpportunities && (
@@ -318,7 +318,7 @@ export default async function CallboardPage() {
 
             {shows.length > 0 && (
               <div>
-                <h2 className="text-navy font-bold text-xl mb-4">Upcoming Shows</h2>
+                <h2 className="text-brand-primary font-bold text-xl mb-4">Upcoming Shows</h2>
                 <div className="space-y-4">
                   {shows.map((show) => (
                     <ShowCard key={show.id} show={show} signedUpMap={signedUpMap} />
@@ -329,7 +329,7 @@ export default async function CallboardPage() {
 
             {opportunities.length > 0 && (
               <div>
-                <h2 className="text-navy font-bold text-xl mb-4">Volunteer Opportunities</h2>
+                <h2 className="text-brand-primary font-bold text-xl mb-4">Volunteer Opportunities</h2>
                 <div className="space-y-4">
                   {opportunities.map((opp) => (
                     <OpportunityCard key={opp.id} opportunity={opp} />
@@ -359,7 +359,7 @@ export default async function CallboardPage() {
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-mid-gray text-xs">© {org.org_name}</p>
-          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
+          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-brand-primary transition-colors">
             Production Crew
           </Link>
         </div>

@@ -10,7 +10,7 @@ import type { FullForm, FormFieldData } from '@/types/form'
 type PublicFormValues = Record<string, string | string[]>
 
 const inputClasses =
-  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark mb-1'
 const errorClasses = 'mt-1 text-sm text-red-600'
 
@@ -153,7 +153,7 @@ function FieldInput({
                     type="button"
                     onClick={() => controllerField.onChange(String(n))}
                     className={`w-11 h-11 rounded-full border font-semibold transition-colors ${
-                      selected ? 'bg-navy text-white border-navy' : 'border-divider text-dark hover:border-steel'
+                      selected ? 'bg-brand-primary text-white border-brand-primary' : 'border-divider text-dark hover:border-brand-primary-mid'
                     }`}
                   >
                     {n}
@@ -201,11 +201,11 @@ export default function PublicForm({ form }: { form: FullForm }) {
 
   if (status === 'success') {
     return (
-      <div className="rounded-xl bg-light-navy border border-divider p-8 text-center max-w-xl">
-        <div className="w-12 h-12 rounded-full bg-orange mx-auto mb-4 flex items-center justify-center">
+      <div className="rounded-xl bg-brand-primary-light border border-divider p-8 text-center max-w-xl">
+        <div className="w-12 h-12 rounded-full bg-brand-accent mx-auto mb-4 flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
         </div>
-        <h2 className="text-navy font-bold text-xl mb-2">Thank you! Your response has been recorded.</h2>
+        <h2 className="text-brand-primary font-bold text-xl mb-2">Thank you! Your response has been recorded.</h2>
         <p className="text-mid-gray text-sm leading-relaxed">{form.title}</p>
       </div>
     )
@@ -234,7 +234,7 @@ export default function PublicForm({ form }: { form: FullForm }) {
           <div key={fieldId}>
             <label className={labelClasses}>
               {field.label}
-              {field.is_required && <span className="text-orange ml-0.5">*</span>}
+              {field.is_required && <span className="text-brand-accent ml-0.5">*</span>}
             </label>
             <FieldInput field={field} control={control} register={register} />
             {error && <p className={errorClasses}>{error.message as string}</p>}
@@ -243,13 +243,13 @@ export default function PublicForm({ form }: { form: FullForm }) {
       })}
 
       {formError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">{formError}</div>
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">{formError}</div>
       )}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full sm:w-auto bg-orange hover:bg-orange/90 text-white font-bold py-3 px-8 rounded-lg transition-colors disabled:opacity-50"
+        className="w-full sm:w-auto bg-brand-accent hover:bg-brand-accent/90 text-white font-bold py-3 px-8 rounded-lg transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Submitting...' : 'Submit'}
       </button>

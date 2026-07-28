@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { cancelClaim } from '@/lib/actions/claims'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark mb-1'
 
 const SUBMIT_LABEL: Record<'claimed' | 'waitlisted', string> = {
@@ -51,7 +51,7 @@ export default function CancelForm({
 
   if (cancelled) {
     return (
-      <div className="rounded-lg bg-light-navy p-4 text-navy text-sm leading-relaxed">
+      <div className="rounded-lg bg-brand-primary-light p-4 text-brand-primary text-sm leading-relaxed">
         {claimStatus === 'claimed'
           ? "Your spot has been cancelled. If someone was waiting for this role, they've been notified. We hope to see you at a future show!"
           : "You've been removed from the waitlist. Thanks for letting us know — we hope to see you another time!"}
@@ -63,7 +63,7 @@ export default function CancelForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className={labelClasses}>
-          Confirm your email address to cancel<span className="text-orange ml-0.5">*</span>
+          Confirm your email address to cancel<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input
           type="email"
@@ -75,12 +75,12 @@ export default function CancelForm({
         />
       </div>
 
-      {error && <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">{error}</div>}
+      {error && <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">{error}</div>}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full sm:w-auto bg-orange text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="w-full sm:w-auto bg-brand-accent text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Submitting…' : SUBMIT_LABEL[claimStatus]}
       </button>

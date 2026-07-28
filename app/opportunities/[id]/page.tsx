@@ -15,7 +15,7 @@ function PublicHeader({ org }: { org: OrgIdentity }) {
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
         <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
       </div>
     </header>
   )
@@ -27,13 +27,13 @@ function Unavailable({ org }: { org: OrgIdentity }) {
       <PublicHeader org={org} />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
-          <h1 className="text-navy font-bold text-xl mb-3">This opportunity is no longer available</h1>
+          <h1 className="text-brand-primary font-bold text-xl mb-3">This opportunity is no longer available</h1>
           <p className="text-mid-gray text-sm leading-relaxed mb-6">
             It may have been filled or is no longer active. Check out our other volunteer opportunities.
           </p>
           <Link
             href="/shows"
-            className="inline-block bg-navy text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
+            className="inline-block bg-brand-primary text-white font-semibold py-3 px-6 rounded hover:bg-opacity-90 transition-colors"
           >
             View Opportunities
           </Link>
@@ -78,19 +78,19 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
-          <span className="inline-block bg-light-navy text-navy text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 mb-3">
+          <span className="inline-block bg-brand-primary-light text-brand-primary text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 mb-3">
             {CLAIM_TYPE_LABEL[opp.claim_type]}
           </span>
-          <h1 className="text-navy font-bold text-2xl md:text-3xl mb-4">{opp.title}</h1>
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-4">{opp.title}</h1>
           {opp.description && (
             <p className="text-dark text-base leading-relaxed mb-8 whitespace-pre-wrap">{opp.description}</p>
           )}
 
           {isFull ? (
-            <div className="rounded-xl bg-pale-orange border border-divider p-6 text-center max-w-xl">
+            <div className="rounded-xl bg-brand-accent-light border border-divider p-6 text-center max-w-xl">
               <p className="text-dark font-semibold">This position is currently full.</p>
               <p className="text-mid-gray text-sm mt-2">Check back later or browse other opportunities.</p>
-              <Link href="/shows" className="inline-block mt-4 text-navy font-semibold underline">
+              <Link href="/shows" className="inline-block mt-4 text-brand-primary font-semibold underline">
                 Browse Other Opportunities →
               </Link>
             </div>

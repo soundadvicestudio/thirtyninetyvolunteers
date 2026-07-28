@@ -34,12 +34,12 @@ export default function CallboardLookupForm() {
         </p>
         <Link
           href="/"
-          className="inline-block bg-navy text-white font-semibold py-3 px-5 rounded hover:bg-opacity-90 transition-colors mb-3"
+          className="inline-block bg-brand-primary text-white font-semibold py-3 px-5 rounded hover:bg-opacity-90 transition-colors mb-3"
         >
           Sign Up
         </Link>
         <div>
-          <button type="button" onClick={() => setNotFound(false)} className="text-navy text-sm underline">
+          <button type="button" onClick={() => setNotFound(false)} className="text-brand-primary text-sm underline">
             Try again
           </button>
         </div>
@@ -49,7 +49,7 @@ export default function CallboardLookupForm() {
 
   return (
     <div className="rounded-xl border border-divider bg-white p-6">
-      <h2 className="text-navy font-bold text-lg mb-1">Find your volunteer record</h2>
+      <h2 className="text-brand-primary font-bold text-lg mb-1">Find your volunteer record</h2>
       <p className="text-mid-gray text-sm mb-4">
         Enter your email or phone to see your hours, milestones, and call history.
       </p>
@@ -60,12 +60,12 @@ export default function CallboardLookupForm() {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Email or phone number"
           disabled={isPending}
-          className="w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors disabled:opacity-50"
+          className="w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+          className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
         >
           {isPending ? 'Finding…' : 'Find Me'}
         </button>

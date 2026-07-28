@@ -16,9 +16,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 const inputClasses =
-  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+  'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-const errorClasses = 'mt-1 text-sm text-orange'
+const errorClasses = 'mt-1 text-sm text-brand-accent'
 
 const SUBMIT_LABEL: Record<'eoi' | 'slot_claim', string> = {
   eoi: 'Express Interest',
@@ -65,11 +65,11 @@ export default function OpportunitySubmitForm({
 
   if (status === 'success') {
     return (
-      <div className="rounded-xl bg-light-navy border border-divider p-8 text-center max-w-xl">
-        <div className="w-12 h-12 rounded-full bg-orange mx-auto mb-4 flex items-center justify-center">
+      <div className="rounded-xl bg-brand-primary-light border border-divider p-8 text-center max-w-xl">
+        <div className="w-12 h-12 rounded-full bg-brand-accent mx-auto mb-4 flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
         </div>
-        <h2 className="text-navy font-bold text-xl mb-2">
+        <h2 className="text-brand-primary font-bold text-xl mb-2">
           {claimType === 'eoi' ? 'Thanks for your interest!' : "You're signed up!"}
         </h2>
         <p className="text-mid-gray text-sm leading-relaxed mb-4">
@@ -77,7 +77,7 @@ export default function OpportunitySubmitForm({
             ? 'A member of our team will be in touch soon.'
             : 'Check your email for confirmation.'}
         </p>
-        <Link href="/shows" className="text-navy font-semibold underline">
+        <Link href="/shows" className="text-brand-primary font-semibold underline">
           Browse upcoming shows →
         </Link>
       </div>
@@ -102,7 +102,7 @@ export default function OpportunitySubmitForm({
 
       <div>
         <label className={labelClasses}>
-          Full Name<span className="text-orange ml-0.5">*</span>
+          Full Name<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="text" className={inputClasses} {...register('name')} />
         {errors.name && <p className={errorClasses}>{errors.name.message}</p>}
@@ -110,7 +110,7 @@ export default function OpportunitySubmitForm({
 
       <div>
         <label className={labelClasses}>
-          Email<span className="text-orange ml-0.5">*</span>
+          Email<span className="text-brand-accent ml-0.5">*</span>
         </label>
         <input type="email" className={inputClasses} {...register('email')} />
         {errors.email && <p className={errorClasses}>{errors.email.message}</p>}
@@ -122,13 +122,13 @@ export default function OpportunitySubmitForm({
       </div>
 
       {formError && (
-        <div className="rounded-lg bg-pale-orange border border-orange p-3 text-sm text-dark">{formError}</div>
+        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">{formError}</div>
       )}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full sm:w-auto bg-orange text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
+        className="w-full sm:w-auto bg-brand-accent text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Submitting…' : SUBMIT_LABEL[claimType]}
       </button>

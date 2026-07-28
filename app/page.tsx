@@ -75,16 +75,16 @@ export default async function HomePage() {
             height={64}
             className="mx-auto"
           />
-          <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
         </div>
       </header>
 
       {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
 
       {/* Hero */}
-      <section className="w-full bg-light-navy py-12 px-6">
+      <section className="w-full bg-brand-primary-light py-12 px-6">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-navy font-bold text-2xl md:text-3xl">
+          <h2 className="text-brand-primary font-bold text-2xl md:text-3xl">
             Welcome to the {org.org_name} Volunteer Family
           </h2>
           <p className="text-dark text-base leading-relaxed max-w-xl mx-auto mt-4">
@@ -98,7 +98,7 @@ export default async function HomePage() {
       {/* Sign-up section */}
       <section className="w-full bg-white py-10 px-6 flex-1">
         <div className="max-w-2xl mx-auto">
-          <h3 className={`text-navy font-bold text-xl text-center ${org.org_tagline ? 'mb-2' : 'mb-6'}`}>
+          <h3 className={`text-brand-primary font-bold text-xl text-center ${org.org_tagline ? 'mb-2' : 'mb-6'}`}>
             Join the <span className="font-extrabold">{org.org_name}</span> Volunteer
             Community
           </h3>
@@ -109,27 +109,27 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Link
               href="/update"
-              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+              className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
             >
               Update My Info
             </Link>
             <Link
               href="/callboard"
-              className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+              className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
             >
               View Opportunities
             </Link>
             {flags.calendar && (
               <Link
                 href="/calendar"
-                className="flex-1 text-center bg-white border border-navy text-navy font-semibold py-3 px-6 rounded hover:bg-light-navy transition-colors"
+                className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
               >
                 View Calendar
               </Link>
             )}
           </div>
 
-          <h4 className="font-semibold text-navy text-lg text-center mb-4">
+          <h4 className="font-semibold text-brand-primary text-lg text-center mb-4">
             Sign up to add your name to our volunteer list
           </h4>
 
@@ -148,7 +148,7 @@ export default async function HomePage() {
           {(org.org_contact_email || org.org_website_url || org.org_location) && (
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-mid-gray text-xs mb-2">
               {org.org_contact_email && (
-                <a href={`mailto:${org.org_contact_email}`} className="hover:text-navy transition-colors">
+                <a href={`mailto:${org.org_contact_email}`} className="hover:text-brand-primary transition-colors">
                   {org.org_contact_email}
                 </a>
               )}
@@ -157,7 +157,7 @@ export default async function HomePage() {
                   href={org.org_website_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-navy transition-colors"
+                  className="hover:text-brand-primary transition-colors"
                 >
                   {org.org_website_url}
                 </a>
@@ -169,7 +169,7 @@ export default async function HomePage() {
             <p className="text-mid-gray text-xs">© {org.org_name}</p>
             <Link
               href="/crew/login"
-              className="text-mid-gray text-xs hover:text-navy transition-colors"
+              className="text-mid-gray text-xs hover:text-brand-primary transition-colors"
             >
               Production Crew
             </Link>

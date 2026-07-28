@@ -24,18 +24,18 @@ export default async function NotFound() {
           className="mx-auto mb-8"
           priority
         />
-        <h1 className="text-3xl font-bold text-navy mb-3">{heading}</h1>
+        <h1 className="text-3xl font-bold text-brand-primary mb-3">{heading}</h1>
         <p className="text-mid-gray mb-8">{body}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center border-2 border-navy text-navy font-semibold px-6 py-3 rounded-md hover:bg-light-navy transition-colors"
+            className="inline-flex items-center justify-center border-2 border-brand-primary text-brand-primary font-semibold px-6 py-3 rounded-md hover:bg-brand-primary-light transition-colors"
           >
             Go to volunteer signup
           </Link>
           <Link
             href="/crew/dashboard"
-            className="inline-flex items-center justify-center border-2 border-navy text-navy font-semibold px-6 py-3 rounded-md hover:bg-light-navy transition-colors"
+            className="inline-flex items-center justify-center border-2 border-brand-primary text-brand-primary font-semibold px-6 py-3 rounded-md hover:bg-brand-primary-light transition-colors"
           >
             Go to Production Crew
           </Link>

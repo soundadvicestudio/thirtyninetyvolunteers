@@ -21,7 +21,7 @@ function PublicHeader({ org }: { org: OrgIdentity }) {
     <header className="w-full bg-white border-b border-divider">
       <div className="max-w-2xl mx-auto py-6 px-6 text-center">
         <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
+        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
       </div>
     </header>
   )
@@ -43,7 +43,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
         <PublicHeader org={org} />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
-            <h1 className="text-navy font-bold text-xl mb-3">This check-in link is not valid.</h1>
+            <h1 className="text-brand-primary font-bold text-xl mb-3">This check-in link is not valid.</h1>
             <p className="text-mid-gray text-sm leading-relaxed">Please ask a crew member for assistance.</p>
           </div>
         </main>

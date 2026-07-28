@@ -106,7 +106,7 @@ const AGE_RANGE_OPTIONS: Array<{ value: string; label: string }> = [
 
 function CheckIcon() {
   return (
-    <div className="w-16 h-16 rounded-full bg-orange mx-auto flex items-center justify-center">
+    <div className="w-16 h-16 rounded-full bg-brand-accent mx-auto flex items-center justify-center">
       <Check className="text-white" size={32} strokeWidth={3} />
     </div>
   )
@@ -251,15 +251,15 @@ export default function CheckInClient({
   }
 
   const inputClasses =
-    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy transition-colors'
+    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
   const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-  const errorClasses = 'mt-1 text-sm text-orange'
+  const errorClasses = 'mt-1 text-sm text-brand-accent'
 
   if (state === 'success') {
     return (
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
         <CheckIcon />
-        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">You&apos;re checked in!</h1>
+        <h1 className="text-brand-primary font-bold text-2xl mt-4 mb-2">You&apos;re checked in!</h1>
         <p className="text-mid-gray text-base">Welcome, {volunteerName}! See you at the show.</p>
       </div>
     )
@@ -269,7 +269,7 @@ export default function CheckInClient({
     return (
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
         <CheckIcon />
-        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">You&apos;re already checked in!</h1>
+        <h1 className="text-brand-primary font-bold text-2xl mt-4 mb-2">You&apos;re already checked in!</h1>
         <p className="text-mid-gray text-base">See you tonight, {volunteerName}.</p>
       </div>
     )
@@ -279,7 +279,7 @@ export default function CheckInClient({
     return (
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
         <CheckIcon />
-        <h1 className="text-navy font-bold text-2xl mt-4 mb-2">You&apos;re all checked in!</h1>
+        <h1 className="text-brand-primary font-bold text-2xl mt-4 mb-2">You&apos;re all checked in!</h1>
         <p className="text-mid-gray text-base">
           Welcome, {volunteerName}! We&apos;ve added you to our volunteer list — check your email for a
           confirmation.
@@ -327,7 +327,7 @@ export default function CheckInClient({
             type="button"
             onClick={handleLookup}
             disabled={state === 'submitting'}
-            className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {state === 'submitting' ? 'Checking...' : 'Check In'}
           </button>
@@ -343,7 +343,7 @@ export default function CheckInClient({
 
           <div>
             <label className={labelClasses}>
-              Full Name<span className="text-orange ml-0.5">*</span>
+              Full Name<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input type="text" className={inputClasses} {...register('full_name')} />
             {errors.full_name && <p className={errorClasses}>{errors.full_name.message}</p>}
@@ -351,7 +351,7 @@ export default function CheckInClient({
 
           <div>
             <label className={labelClasses}>
-              Email Address<span className="text-orange ml-0.5">*</span>
+              Email Address<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input type="email" className={inputClasses} {...register('email')} />
             {errors.email && <p className={errorClasses}>{errors.email.message}</p>}
@@ -359,7 +359,7 @@ export default function CheckInClient({
 
           <div>
             <label className={labelClasses}>
-              Phone Number<span className="text-orange ml-0.5">*</span>
+              Phone Number<span className="text-brand-accent ml-0.5">*</span>
             </label>
             <input type="tel" className={inputClasses} {...register('phone')} />
             {errors.phone && <p className={errorClasses}>{errors.phone.message}</p>}
@@ -401,7 +401,7 @@ export default function CheckInClient({
                         type="radio"
                         checked={watchedRequiresServiceHours === true}
                         onChange={() => setValue('requires_service_hours', true, { shouldValidate: true })}
-                        className="text-navy focus:ring-navy"
+                        className="text-brand-primary focus:ring-brand-primary"
                       />
                       <span className="text-sm text-dark">Yes</span>
                     </label>
@@ -410,7 +410,7 @@ export default function CheckInClient({
                         type="radio"
                         checked={watchedRequiresServiceHours === false}
                         onChange={() => setValue('requires_service_hours', false, { shouldValidate: true })}
-                        className="text-navy focus:ring-navy"
+                        className="text-brand-primary focus:ring-brand-primary"
                       />
                       <span className="text-sm text-dark">No</span>
                     </label>
@@ -423,7 +423,7 @@ export default function CheckInClient({
           {showAgeRange && (
             <div>
               <label className={labelClasses}>
-                Age Range <span className="text-orange ml-0.5">*</span>
+                Age Range <span className="text-brand-accent ml-0.5">*</span>
               </label>
               <select className={inputClasses} {...register('age_range')}>
                 <option value="">Select age range</option>
@@ -436,21 +436,21 @@ export default function CheckInClient({
               {errors.age_range && <p className={errorClasses}>{errors.age_range.message}</p>}
 
               {watchedAge === 'under_18' && (
-                <div className="bg-pale-orange border border-orange rounded-lg p-4 mt-2">
+                <div className="bg-brand-accent-light border border-brand-accent rounded-lg p-4 mt-2">
                   <p className="text-sm text-dark mb-3">
                     Because you&apos;re under 18, we need a parent or guardian&apos;s contact information.
                   </p>
                   <div className="space-y-5">
                     <div>
                       <label className={labelClasses}>
-                        Guardian Name<span className="text-orange ml-0.5">*</span>
+                        Guardian Name<span className="text-brand-accent ml-0.5">*</span>
                       </label>
                       <input type="text" className={inputClasses} {...register('guardian_name')} />
                       {errors.guardian_name && <p className={errorClasses}>{errors.guardian_name.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>
-                        Guardian Phone<span className="text-orange ml-0.5">*</span>
+                        Guardian Phone<span className="text-brand-accent ml-0.5">*</span>
                       </label>
                       <input type="tel" className={inputClasses} {...register('guardian_phone')} />
                       {errors.guardian_phone && <p className={errorClasses}>{errors.guardian_phone.message}</p>}
@@ -467,7 +467,7 @@ export default function CheckInClient({
               {categories.map((cat) => (
                 <label
                   key={cat.id}
-                  className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-steel transition-colors has-[:checked]:border-navy has-[:checked]:bg-light-navy"
+                  className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider hover:border-brand-primary-mid transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light"
                 >
                   <input
                     type="checkbox"
@@ -522,7 +522,7 @@ export default function CheckInClient({
             type="button"
             onClick={handleSubmit(onSignupSubmit)}
             disabled={state === 'signup_submitting' || rhfSubmitting}
-            className="w-full py-3 bg-orange text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 bg-brand-accent text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {state === 'signup_submitting' ? 'Signing up...' : 'Sign Up & Check In'}
           </button>

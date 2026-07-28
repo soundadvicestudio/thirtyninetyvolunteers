@@ -26,3 +26,120 @@ body {
   color: #1A1A1A;
   background: #ffffff;
 }
+
+/* ─── Brand-derived utility classes ─────────
+   These reference CSS custom properties
+   injected at runtime via app/layout.tsx.
+   The @theme block above is NOT modified —
+   brand color tokens remain static hex for
+   Tailwind v4 compatibility (R7).
+   Opacity variants use color-mix(...,
+   transparent) since @layer utilities classes
+   do not support Tailwind's automatic /NN
+   opacity modifier.
+──────────────────────────────────────────── */
+@layer utilities {
+
+  /* ── Primary (navy → brand_primary) ─────── */
+  .bg-brand-primary        { background-color: var(--brand-primary); }
+  .text-brand-primary      { color: var(--brand-primary); }
+  .border-brand-primary    { border-color: var(--brand-primary); }
+  .ring-brand-primary      { --tw-ring-color: var(--brand-primary); }
+  .accent-brand-primary    { accent-color: var(--brand-primary); }
+
+  .hover\:bg-brand-primary:hover     { background-color: var(--brand-primary); }
+  .hover\:text-brand-primary:hover   { color: var(--brand-primary); }
+  .hover\:border-brand-primary:hover { border-color: var(--brand-primary); }
+
+  .focus\:border-brand-primary:focus             { border-color: var(--brand-primary); }
+  .focus\:ring-brand-primary:focus               { --tw-ring-color: var(--brand-primary); }
+  .focus-visible\:border-brand-primary:focus-visible { border-color: var(--brand-primary); }
+  .focus-visible\:ring-brand-primary:focus-visible   { --tw-ring-color: var(--brand-primary); }
+
+  /* Opacity variants — color-mix with transparent */
+  .bg-brand-primary\/80   { background-color: color-mix(in srgb, var(--brand-primary) 80%, transparent); }
+  .border-brand-primary\/20 { border-color: color-mix(in srgb, var(--brand-primary) 20%, transparent); }
+  .ring-brand-primary\/50   { --tw-ring-color: color-mix(in srgb, var(--brand-primary) 50%, transparent); }
+
+  /* ── Primary Mid (steel → brand_primary_mid) */
+  .bg-brand-primary-mid        { background-color: var(--brand-primary-mid); }
+  .text-brand-primary-mid      { color: var(--brand-primary-mid); }
+  .border-brand-primary-mid    { border-color: var(--brand-primary-mid); }
+
+  .hover\:bg-brand-primary-mid:hover     { background-color: var(--brand-primary-mid); }
+  .hover\:border-brand-primary-mid:hover { border-color: var(--brand-primary-mid); }
+
+  /* Dark-mode brand-primary-mid variants */
+  .dark\:bg-brand-primary-mid:where([data-theme="dark"], [data-theme="dark"] *)     { background-color: var(--brand-primary-mid); }
+  .dark\:text-brand-primary-mid:where([data-theme="dark"], [data-theme="dark"] *)   { color: var(--brand-primary-mid); }
+  .dark\:border-brand-primary-mid:where([data-theme="dark"], [data-theme="dark"] *) { border-color: var(--brand-primary-mid); }
+  .dark\:hover\:bg-brand-primary-mid:where([data-theme="dark"], [data-theme="dark"] *):hover     { background-color: var(--brand-primary-mid); }
+  .dark\:hover\:border-brand-primary-mid:where([data-theme="dark"], [data-theme="dark"] *):hover { border-color: var(--brand-primary-mid); }
+  .aria-expanded\:bg-brand-primary-mid[aria-expanded="true"] { background-color: var(--brand-primary-mid); }
+
+  /* Opacity variants */
+  .bg-brand-primary-mid\/20 { background-color: color-mix(in srgb, var(--brand-primary-mid) 20%, transparent); }
+  .bg-brand-primary-mid\/80 { background-color: color-mix(in srgb, var(--brand-primary-mid) 80%, transparent); }
+  .border-brand-primary-mid\/30 { border-color: color-mix(in srgb, var(--brand-primary-mid) 30%, transparent); }
+
+  /* ── Primary Tint (slate → brand_primary_tint) */
+  .text-brand-primary-tint { color: var(--brand-primary-tint); }
+
+  /* ── Primary Light (light-navy → brand_primary_light) */
+  .bg-brand-primary-light        { background-color: var(--brand-primary-light); }
+  .text-brand-primary-light      { color: var(--brand-primary-light); }
+
+  .hover\:bg-brand-primary-light:hover { background-color: var(--brand-primary-light); }
+
+  .dark\:bg-brand-primary-light:where([data-theme="dark"], [data-theme="dark"] *)   { background-color: var(--brand-primary-light); }
+  .dark\:hover\:bg-brand-primary-light:where([data-theme="dark"], [data-theme="dark"] *):hover { background-color: var(--brand-primary-light); }
+  .aria-expanded\:bg-brand-primary-light[aria-expanded="true"] { background-color: var(--brand-primary-light); }
+  .has-\[\:checked\]\:bg-brand-primary-light:has(:checked)     { background-color: var(--brand-primary-light); }
+
+  /* Opacity variants */
+  .bg-brand-primary-light\/30 { background-color: color-mix(in srgb, var(--brand-primary-light) 30%, transparent); }
+  .bg-brand-primary-light\/40 { background-color: color-mix(in srgb, var(--brand-primary-light) 40%, transparent); }
+  .bg-brand-primary-light\/50 { background-color: color-mix(in srgb, var(--brand-primary-light) 50%, transparent); }
+  .bg-brand-primary-light\/70 { background-color: color-mix(in srgb, var(--brand-primary-light) 70%, transparent); }
+
+  /* ── Accent (orange → brand_accent) ──────── */
+  .bg-brand-accent        { background-color: var(--brand-accent); }
+  .text-brand-accent      { color: var(--brand-accent); }
+  .border-brand-accent    { border-color: var(--brand-accent); }
+  .ring-brand-accent      { --tw-ring-color: var(--brand-accent); }
+
+  .hover\:bg-brand-accent:hover     { background-color: var(--brand-accent); }
+  .hover\:text-brand-accent:hover   { color: var(--brand-accent); }
+  .hover\:border-brand-accent:hover { border-color: var(--brand-accent); }
+
+  .focus-visible\:border-brand-accent:focus-visible { border-color: var(--brand-accent); }
+  .focus-visible\:ring-brand-accent:focus-visible   { --tw-ring-color: var(--brand-accent); }
+  .aria-invalid\:border-brand-accent[aria-invalid="true"] { border-color: var(--brand-accent); }
+  .aria-invalid\:ring-brand-accent[aria-invalid="true"]   { --tw-ring-color: var(--brand-accent); }
+
+  .dark\:bg-brand-accent:where([data-theme="dark"], [data-theme="dark"] *)   { background-color: var(--brand-accent); }
+  .dark\:text-brand-accent:where([data-theme="dark"], [data-theme="dark"] *) { color: var(--brand-accent); }
+  .dark\:hover\:bg-brand-accent:where([data-theme="dark"], [data-theme="dark"] *):hover   { background-color: var(--brand-accent); }
+  .dark\:hover\:text-brand-accent:where([data-theme="dark"], [data-theme="dark"] *):hover { color: var(--brand-accent); }
+  .dark\:aria-invalid\:border-brand-accent:where([data-theme="dark"], [data-theme="dark"] *)[aria-invalid="true"] { border-color: var(--brand-accent); }
+  .dark\:aria-invalid\:ring-brand-accent:where([data-theme="dark"], [data-theme="dark"] *)[aria-invalid="true"]   { --tw-ring-color: var(--brand-accent); }
+  .dark\:focus-visible\:ring-brand-accent:where([data-theme="dark"], [data-theme="dark"] *):focus-visible { --tw-ring-color: var(--brand-accent); }
+  .disabled\:hover\:text-brand-accent:disabled:hover { color: var(--brand-accent); }
+
+  /* Opacity variants */
+  .bg-brand-accent\/10 { background-color: color-mix(in srgb, var(--brand-accent) 10%, transparent); }
+  .bg-brand-accent\/20 { background-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .bg-brand-accent\/30 { background-color: color-mix(in srgb, var(--brand-accent) 30%, transparent); }
+  .bg-brand-accent\/90 { background-color: color-mix(in srgb, var(--brand-accent) 90%, transparent); }
+  .text-brand-accent\/80  { color: color-mix(in srgb, var(--brand-accent) 80%, transparent); }
+  .border-brand-accent\/40 { border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
+  .border-brand-accent\/50 { border-color: color-mix(in srgb, var(--brand-accent) 50%, transparent); }
+  .ring-brand-accent\/20  { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .ring-brand-accent\/40  { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
+
+  /* ── Accent Light (pale-orange → brand_accent_light) */
+  .bg-brand-accent-light      { background-color: var(--brand-accent-light); }
+  .text-brand-accent-light    { color: var(--brand-accent-light); }
+  .hover\:bg-brand-accent-light:hover { background-color: var(--brand-accent-light); }
+
+}

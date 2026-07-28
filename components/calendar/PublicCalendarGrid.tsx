@@ -54,17 +54,17 @@ export default function PublicCalendarGrid({
         <Link
           href={prevMonthUrl}
           aria-label="Previous month"
-          className="p-2 rounded hover:bg-light-navy text-navy"
+          className="p-2 rounded hover:bg-brand-primary-light text-brand-primary"
         >
           ←
         </Link>
-        <h2 className="text-navy font-bold text-lg sm:text-xl">
+        <h2 className="text-brand-primary font-bold text-lg sm:text-xl">
           {MONTH_NAMES[focusedMonth.month - 1]} {focusedMonth.year}
         </h2>
         <Link
           href={nextMonthUrl}
           aria-label="Next month"
-          className="p-2 rounded hover:bg-light-navy text-navy"
+          className="p-2 rounded hover:bg-brand-primary-light text-brand-primary"
         >
           →
         </Link>
@@ -72,7 +72,7 @@ export default function PublicCalendarGrid({
 
       <div className="grid grid-cols-7 gap-px bg-divider border border-divider rounded-t-lg overflow-hidden">
         {DAY_LABELS.map((label, i) => (
-          <div key={label} className="bg-light-navy text-navy text-xs font-semibold uppercase text-center py-2">
+          <div key={label} className="bg-brand-primary-light text-brand-primary text-xs font-semibold uppercase text-center py-2">
             <span className="hidden sm:inline">{label}</span>
             <span className="sm:hidden">{DAY_LABELS_SHORT[i]}</span>
           </div>
@@ -91,7 +91,7 @@ export default function PublicCalendarGrid({
               key={dayStr}
               className={`bg-white p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] ${!isCurrentMonth ? 'opacity-40' : ''}`}
             >
-              <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-navy text-white rounded-full w-5 h-5 text-center leading-5' : 'text-dark'}`}>
+              <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : 'text-dark'}`}>
                 {d}
               </p>
               <div className="space-y-1">

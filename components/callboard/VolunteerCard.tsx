@@ -82,7 +82,7 @@ function CallHistoryBreakdown({
                         href={`/api/calendar/claim.ics?token=${call.claim_token}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-navy text-xs hover:underline"
+                        className="text-brand-primary text-xs hover:underline"
                         title="Add to calendar"
                       >
                         📅 Add to calendar
@@ -186,14 +186,14 @@ export default function VolunteerCard({
 
   return (
     <div className="rounded-xl border border-divider bg-white p-6 shadow-sm">
-      <h2 className="text-navy font-bold text-xl mb-1">{volunteer.full_name}</h2>
+      <h2 className="text-brand-primary font-bold text-xl mb-1">{volunteer.full_name}</h2>
       <p className="text-mid-gray text-sm mb-4">
         {categories.length > 0 ? categories.join(', ') : 'No categories yet'}
       </p>
 
       <div className="mb-4">
         <p className="text-dark text-sm">
-          <span className="font-bold text-2xl text-navy">{formatHoursValue(volunteer.total_hours)}</span> total hours
+          <span className="font-bold text-2xl text-brand-primary">{formatHoursValue(volunteer.total_hours)}</span> total hours
         </p>
         <p className="text-mid-gray text-sm mt-1">
           {distinctShowCount > 0
@@ -212,7 +212,7 @@ export default function VolunteerCard({
       {milestones.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {milestones.map((m) => (
-            <span key={m.id} className="inline-block text-xs font-semibold rounded-full px-3 py-1 bg-light-navy text-navy">
+            <span key={m.id} className="inline-block text-xs font-semibold rounded-full px-3 py-1 bg-brand-primary-light text-brand-primary">
               {m.milestone_label}
             </span>
           ))}
@@ -222,7 +222,7 @@ export default function VolunteerCard({
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="text-navy text-sm font-semibold underline mb-2"
+        className="text-brand-primary text-sm font-semibold underline mb-2"
       >
         Call History ({callHistory.length} calls) {expanded ? '▲' : '▼'}
       </button>
@@ -236,14 +236,14 @@ export default function VolunteerCard({
       )}
 
       <div className="border-t border-divider mt-6 pt-4 flex items-center justify-between">
-        <a href={`/update?token=${volunteer.update_token}`} className="text-navy text-sm font-semibold underline">
+        <a href={`/update?token=${volunteer.update_token}`} className="text-brand-primary text-sm font-semibold underline">
           Edit my info
         </a>
         <button
           type="button"
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className="text-mid-gray text-sm font-semibold hover:text-navy transition-colors disabled:opacity-50"
+          className="text-mid-gray text-sm font-semibold hover:text-brand-primary transition-colors disabled:opacity-50"
         >
           {isSigningOut ? 'Signing out…' : 'Sign out'}
         </button>

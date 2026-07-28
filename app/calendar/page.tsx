@@ -117,8 +117,8 @@ export default async function PublicCalendarPage({
       <header className="w-full bg-white border-b border-divider">
         <div className="max-w-3xl mx-auto py-6 px-6 text-center">
           <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-          <span className="block w-16 h-0.5 bg-orange mx-auto mt-2" />
-          <h1 className="text-navy font-bold text-2xl md:text-3xl mt-4">Events Calendar</h1>
+          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mt-4">Events Calendar</h1>
         </div>
       </header>
 
@@ -138,7 +138,7 @@ export default async function PublicCalendarPage({
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">
         <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-mid-gray text-xs">© {org.org_name}</p>
-          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-navy transition-colors">
+          <Link href="/crew/login" className="text-mid-gray text-xs hover:text-brand-primary transition-colors">
             Production Crew
           </Link>
         </div>

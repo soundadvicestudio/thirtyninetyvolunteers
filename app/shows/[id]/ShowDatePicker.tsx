@@ -36,14 +36,14 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
   return (
     <div className="space-y-8">
       {singleDate ? (
-        <p className="text-navy font-bold text-lg">
+        <p className="text-brand-primary font-bold text-lg">
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'EEEE, MMMM d, yyyy')} at{' '}
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'h:mm a')}
           {dates[0].end_time && ` – ${formatWallClockCT(dates[0].show_date, dates[0].end_time, 'h:mm a')}`}
         </p>
       ) : (
         <div>
-          <h2 className="text-navy font-bold text-lg mb-3">Choose a Date</h2>
+          <h2 className="text-brand-primary font-bold text-lg mb-3">Choose a Date</h2>
           <div className="flex flex-wrap gap-2">
             {dates.map((date) => {
               const full = isDateFull(date)
@@ -59,8 +59,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                     full
                       ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-3 cursor-not-allowed'
                       : isSelected
-                        ? 'rounded-full bg-navy text-white text-sm font-semibold px-4 py-3 transition-colors'
-                        : 'rounded-full border border-navy text-navy text-sm font-semibold px-4 py-3 hover:bg-light-navy transition-colors'
+                        ? 'rounded-full bg-brand-primary text-white text-sm font-semibold px-4 py-3 transition-colors'
+                        : 'rounded-full border border-brand-primary text-brand-primary text-sm font-semibold px-4 py-3 hover:bg-brand-primary-light transition-colors'
                   }
                 >
                   {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy')}
@@ -74,7 +74,7 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
 
       {selectedDate && (
         <div className="space-y-4">
-          <h2 className="text-navy font-bold text-lg">
+          <h2 className="text-brand-primary font-bold text-lg">
             Roles for {formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy')}
           </h2>
 
@@ -95,8 +95,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                     onClick={() => handleToggleRole(role.id)}
                     className={
                       role.is_full
-                        ? 'bg-steel text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
-                        : 'bg-orange text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
+                        ? 'bg-brand-primary-mid text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
+                        : 'bg-brand-accent text-white font-semibold text-sm rounded-lg px-5 py-3 hover:bg-opacity-90 transition-colors'
                     }
                   >
                     {role.is_full ? 'Join Waitlist' : 'Claim This Spot'}

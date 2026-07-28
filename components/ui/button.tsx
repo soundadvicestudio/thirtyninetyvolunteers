@@ -5,20 +5,20 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-navy focus-visible:ring-3 focus-visible:ring-navy/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-orange aria-invalid:ring-3 aria-invalid:ring-orange/20 dark:aria-invalid:border-orange/50 dark:aria-invalid:ring-orange/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-brand-primary focus-visible:ring-3 focus-visible:ring-brand-primary/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-brand-accent aria-invalid:ring-3 aria-invalid:ring-brand-accent/20 dark:aria-invalid:border-brand-accent/50 dark:aria-invalid:ring-brand-accent/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-navy text-white hover:bg-navy/80",
+        default: "bg-brand-primary text-white hover:bg-brand-primary/80",
         outline:
-          "border-divider bg-white hover:bg-light-navy hover:text-dark aria-expanded:bg-light-navy aria-expanded:text-dark dark:border-divider dark:bg-light-navy/30 dark:hover:bg-light-navy/50",
+          "border-divider bg-white hover:bg-brand-primary-light hover:text-dark aria-expanded:bg-brand-primary-light aria-expanded:text-dark dark:border-divider dark:bg-brand-primary-light/30 dark:hover:bg-brand-primary-light/50",
         secondary:
-          "bg-steel text-white hover:bg-steel/80 aria-expanded:bg-steel aria-expanded:text-white",
+          "bg-brand-primary-mid text-white hover:bg-brand-primary-mid/80 aria-expanded:bg-brand-primary-mid aria-expanded:text-white",
         ghost:
-          "hover:bg-light-navy hover:text-dark aria-expanded:bg-light-navy aria-expanded:text-dark dark:hover:bg-light-navy/50",
+          "hover:bg-brand-primary-light hover:text-dark aria-expanded:bg-brand-primary-light aria-expanded:text-dark dark:hover:bg-brand-primary-light/50",
         destructive:
-          "bg-orange/10 text-orange hover:bg-orange/20 focus-visible:border-orange/40 focus-visible:ring-orange/20 dark:bg-orange/20 dark:hover:bg-orange/30 dark:focus-visible:ring-orange/40",
-        link: "text-navy underline-offset-4 hover:underline",
+          "bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/20 focus-visible:border-brand-accent/40 focus-visible:ring-brand-accent/20 dark:bg-brand-accent/20 dark:hover:bg-brand-accent/30 dark:focus-visible:ring-brand-accent/40",
+        link: "text-brand-primary underline-offset-4 hover:underline",
       },
       size: {
         default:

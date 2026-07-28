@@ -21,8 +21,8 @@ export default function Error({
           className="mx-auto mb-8"
           priority
         />
-        <AlertTriangle size={48} className="text-orange mx-auto mb-6" />
-        <h1 className="text-3xl font-bold text-navy mb-3">Something went wrong</h1>
+        <AlertTriangle size={48} className="text-brand-accent mx-auto mb-6" />
+        <h1 className="text-3xl font-bold text-brand-primary mb-3">Something went wrong</h1>
         <p className="text-mid-gray mb-8">
           An unexpected error occurred. You can try again or return to the home page.
         </p>
@@ -30,13 +30,13 @@ export default function Error({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center justify-center bg-navy text-white font-semibold px-6 py-3 rounded-md hover:bg-steel transition-colors"
+            className="inline-flex items-center justify-center bg-brand-primary text-white font-semibold px-6 py-3 rounded-md hover:bg-brand-primary-mid transition-colors"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="inline-flex items-center justify-center border-2 border-navy text-navy font-semibold px-6 py-3 rounded-md hover:bg-light-navy transition-colors"
+            className="inline-flex items-center justify-center border-2 border-brand-primary text-brand-primary font-semibold px-6 py-3 rounded-md hover:bg-brand-primary-light transition-colors"
           >
             Go home
           </Link>
