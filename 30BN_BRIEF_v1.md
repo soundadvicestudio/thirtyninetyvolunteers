@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v3.9
-### Created: July 2026 | Last Updated: July 2026 — v3.9 (Phase SETUP complete, ADMIN.31/31b, Migrations 026–027, Phase 21 + CAST added, R34)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.0
+### Created: July 2026 | Last Updated: July 2026 — v4.0 (ADMIN.32–34 complete, Migrations 028–029, Owner Admin permissions expanded, OpenCall OS branding sweep, QR history, Setup Panel Section 8)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase SETUP complete (SETUP.0–4 + ADMIN.31/31b). Phase THEME pending next. Phase 17 (Launch) after THEME. Phase 21 (Rehearsal Management) and Phase CAST planned post-launch.
+**Current phase:** ADMIN.32–34 complete. Phase THEME is next (THEME.A audit → THEME.1–3). Phase 17 (Launch) after THEME. Phase 21 (Rehearsal Management) and Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -41,7 +41,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
 | **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), and `/crew/help`. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
-| **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can manage Editor, Viewer, and Production accounts but cannot create Super Admin or other Owner Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
+| **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can create and manage Editor, Viewer, Production, and Owner Admin accounts. Owner Admin can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
 | **Setup Panel** | Super Admin-only configuration panel at `/crew/settings/setup`. Allows Jonathan to brand and configure each OpenCall OS client deployment without code changes: org identity, brand colors, logo, email configuration, feature flags, and instance label. Owner Admins are hard-blocked from this route. |
 
@@ -63,6 +63,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Dates** | date-fns + date-fns-tz | Two utility functions in `lib/utils/date.ts`. `formatCT()` — for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info. `formatWallClockCT()` — for bare `date` column values (`'YYYY-MM-DD'`) and manually constructed date+time strings; these parse as UTC on Vercel without this function, shifting displayed dates by hours. Never use raw date-fns `format()`. See R23. |
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
+| **Image Config** | next.config.ts images.remotePatterns | Must include *.supabase.co hostname pattern (added ADMIN.33). Required for dynamic logo rendering when org_logo_url points to Supabase Storage. Without this entry, next/image will throw a runtime error on any deployment with a custom uploaded logo. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
 | **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. Installed 13.3b; extensions added ADMIN.27. |
 | **Image Cropping** | react-easy-crop v6.2.3 | Client-side image crop editor for brand asset uploads in the Setup Panel (BrandImageUploader.tsx). Used for logo (free aspect ratio) and favicon (1:1 square lock). Installed SETUP.2. |
@@ -175,10 +176,10 @@ Mid Gray:             #555555  --color-mid-gray
 - **Background:** Transparent — works on white and navy backgrounds
 
 ### Email Design
-- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). Dynamic from-address implemented (SETUP.3/ADMIN.31): `resolveEmailSettings()` internal helper in `lib/email.ts` fetches `email_from_address`, `email_from_name`, and `org_logo_url` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string }`. Falls back to 30BN defaults (`volunteers@30byninetyvolunteers.com` / `30 By Ninety Theatre Volunteers` / `${NEXT_PUBLIC_SITE_URL}/logo.png`) if keys are absent or empty. Called in all 16 direct-call send functions (SETUP.3) and in `lib/actions/shows.ts` + both cron routes via inline `app_settings` queries (ADMIN.31). Never exported — internal to `lib/email.ts`.
+- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). Dynamic from-address implemented (SETUP.3/ADMIN.31): `resolveEmailSettings()` internal helper in `lib/email.ts` fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, and `org_contact_email` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string }`. Falls back to 30BN defaults when keys are absent or empty. Called in all direct-call send functions. Never exported — internal to `lib/email.ts`. The FROM_ADDRESS and REPLY_TO module-level constants were deleted in ADMIN.34; the 4 payload builders (buildReminderEmailPayload, buildThankYouEmailPayload, buildShowBulkEmailPayload, buildCategoryMatchNotificationPayload) now accept explicit from?: string and replyTo?: string params with inline 30BN defaults as fallback, and all call sites in lib/actions/shows.ts and both cron routes pass the dynamic values directly.
 - Default Reply-To: `info@30byninety.com` (editable per send by Editor)
 - All emails use branded HTML templates (built Phase 13.2): table-based layout, inline styles only (email client compatibility), max 600px content width, navy (`#293994`) header, white content area, footer-gray (`#F5F5F5`) footer.
-- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote?, logoUrl? })` in `lib/email.ts` (internal, not exported). Now accepts optional `logoUrl` param (added SETUP.3). When provided, uses it for the email header logo; falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when absent. `logoUrl` value comes from `resolveEmailSettings()` at the call site — never hardcoded per-function. Public page org identity: `resolveOrgIdentity()` in `lib/utils/org-identity.ts` fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location` from `app_settings` for use in public Server Components (landing page heading, footer, copyright). Uses `getAdminClient()` — safe for public pages with no admin session. Falls back to 30BN defaults.
+- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote?, logoUrl? })` in `lib/email.ts` (internal, not exported). Now accepts optional `logoUrl` param (added SETUP.3). When provided, uses it for the email header logo; falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when absent. `logoUrl` value comes from `resolveEmailSettings()` at the call site — never hardcoded per-function. Public page org identity: `resolveOrgIdentity()` in `lib/utils/org-identity.ts` fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings` for use in public Server Components (landing page heading, footer, copyright, logo). Uses `getAdminClient()` — safe for public pages and cron routes with no admin session. Falls back to 30BN defaults. Extended in ADMIN.33 to include `org_logo_url` (required for the public page org identity sweep). The admin crew layout (`app/crew/(app)/layout.tsx`) fetches org via `resolveOrgIdentity()` and passes it as a prop to `Sidebar.tsx` (Client Component — cannot call `resolveOrgIdentity()` directly per R10). Never import from a Client Component.
 - CTA buttons built via `buildCtaButton(label, url, color)` helper (internal). Volunteer-facing CTAs link to `/callboard`. Admin-facing CTAs link to `/crew/login` or `/crew/`.
 - All user-supplied values interpolated into HTML email strings must be wrapped in `escapeHtml()` (internal to `lib/email.ts`). Exception: the blast body passed from TipTap is sanitized via `sanitize-html` instead of escaped — escaping would corrupt the HTML structure. See `sendBlastEmail()` in `lib/actions/blast.ts`.
 - All outbound emails (system-triggered and admin-triggered) logged to `email_log` + `email_log_recipients` as of Phase 13.1.
@@ -190,7 +191,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Role | Route Access | Can Edit | Can Email | Notes |
 |---|---|---|---|---|
 | Super Admin | All `/crew/*` including `/crew/settings/setup` | Yes | Yes | Creates/manages all admin accounts including Owner Admin. Only role with access to the Setup Panel. |
-| Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can manage Editor, Viewer, and Production accounts. Cannot create Super Admin or other Owner Admin accounts. Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. |
+| Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can create and manage Editor, Viewer, Production, and Owner Admin accounts. Can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. Can edit and delete volunteer notes (ADMIN.33 — RLS updated Migration 028). Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. Permissions expanded ADMIN.33. |
 | Editor | All `/crew/*` except Settings hub and user management | Yes | Yes | Full operational access. Cannot access Settings sub-pages (owner decision — Settings is Super Admin and Owner Admin only). Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
 | Production | `/crew/calendar`, `/crew/media`, and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar, Media Library, and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library (`/crew/media`) access confirmed ADMIN.30. |
@@ -200,7 +201,7 @@ Mid Gray:             #555555  --color-mid-gray
 **`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor, Viewer, or Owner Admin account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this; `owner_admin` CAN have `calendar_editor = true` — CHECK constraint updated in Migration 023). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they identify themselves via email or phone lookup on the Call Board; a match sets a 7-day cookie session with no magic link or email step required.
-**Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts use the same Request Access flow — assigned `role = 'production'` by the Super Admin on approval. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
+**Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts can be created two ways: (1) directly by Super Admin via CreateUserModal (Super Admin callers only — added ADMIN.33), or (2) via the Request Access flow, assigned `role = 'production'` by Super Admin or Owner Admin on approval (added ADMIN.33/34). Owner Admin accounts can be created directly by both Super Admin and Owner Admin callers, and assigned via the registration approval flow by both callers. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
 
 **Proxy/Middleware (CAL.2, renamed ADMIN.28):** Route protection is handled by `proxy.ts` at the repo root (renamed from `middleware.ts` to `proxy.ts` in ADMIN.28 — Next.js 16 convention). Production-role users are restricted — any `/crew/*` route other than `/crew/calendar`, `/crew/calendar/*`, and `/crew/help` redirects to `/crew/calendar` (`/crew/help` exception added HELP.2a). Owner Admin is permitted on all `/crew/*` routes EXCEPT `/crew/settings/setup` (hard-redirect to `/crew/dashboard`). Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request. Feature flag route guards (SETUP.1): `proxy.ts` matcher extended to include public routes `/calendar` and `/checkin/:path*`. When a flagged feature is off, proxy blocks: `/crew/calendar` and `/crew/calendar/*` (`feature_calendar`); `/crew/tools/checkin` (`feature_checkin`); `/crew/communication` (`feature_blast`); `/calendar` (`feature_calendar`); `/checkin/*` (`feature_checkin`). Flag fetch is conditional — only fires when the request path matches one of the five guarded paths. Uses `getAdminClient()` and `getFeatureFlags()`.
 
@@ -211,8 +212,8 @@ Mid Gray:             #555555  --color-mid-gray
 ### Public — Volunteer Signup Landing Page (`/`)
 - Branded, mobile-first landing page in 30 By Ninety visual identity
 - Accessible via QR code (in programs and print)
-- Heading reads "Join the {org_name} Volunteer Community" — dynamic from `app_settings.org_name` via `resolveOrgIdentity()` (ADMIN.31). Falls back to "30 By Ninety Theatre" if unset. Footer displays `org_contact_email` (mailto link), `org_website_url` (link), and `org_location` (text) when set. Copyright line uses `{org_name}` dynamically (ADMIN.31b). `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session (corrected ADMIN.31).
-- Redundant "30 By Ninety Theatre" text under the logo has been removed
+- Heading reads "Welcome to the {org_name} Volunteer Family" above the fold and "Join the {org_name} Volunteer Community" above the form — both dynamic from `app_settings.org_name` via `resolveOrgIdentity()` (ADMIN.31/ADMIN.33). Footer displays `org_contact_email` (mailto link), `org_website_url` (link), and `org_location` (text) when set. Copyright line uses `{org_name}` dynamically (ADMIN.31b). `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session (corrected ADMIN.31).
+- OpenCall OS public page org identity sweep (ADMIN.33): All 13 public-facing pages and the admin Sidebar now use `resolveOrgIdentity()` for dynamic logo, alt text, and copyright. Affected pages: `app/not-found.tsx`, `app/cancel/page.tsx`, `app/calendar/page.tsx`, `app/opportunities/[id]/page.tsx`, `app/forms/[id]/page.tsx`, `app/crew/(auth)/login/page.tsx`, `app/consent/[token]/page.tsx`, `app/callboard/page.tsx`, `app/checkin/[token]/page.tsx`, `app/shows/page.tsx`, `app/shows/[id]/page.tsx`, `app/page.tsx` (second heading fixed), `components/crew/Sidebar.tsx` (logo — org fetched in layout, passed as prop). Dynamic logo pattern: `src={org.org_logo_url || '/logo.png'}`, alt text: `{org.org_name}`, copyright: `© {org.org_name}`.
 - Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
 - Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
 - Two equal-weight outlined CTA buttons above the signup form: "Update My Info" (→ `/update`) and "View Opportunities" (→ `/callboard`). Appear below the bridging text, above the form.
@@ -539,7 +540,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 **User Management (`/crew/settings/users`) — Super Admin only:**
 - List all admin users: name, email, role, status, last login, created
 - **Pending Registrations section** (appears above admin list when requests exist): per-request row with name, email, requested time, role selector (default Viewer), Approve and Decline buttons with inline confirmation. Badge on Users sidebar nav link showing pending count. Approve: creates `admin_users` row, sends approval email. Decline: deletes Supabase Auth user, sends decline email. Both log to `audit_log`. Built in ADMIN.15.
-- Create new account: Name, Email, Role (Editor/Viewer), Send Welcome Email toggle
+- Create new account: Name, Email, Role (Editor/Viewer/Owner Admin for SA+OA callers; Production additionally available to Super Admin only), Send Welcome Email toggle
   - Creates Supabase Auth user, inserts `admin_users` record, sends branded welcome email with login link + temp password + instructions to change password
 - Deactivate/reactivate (cannot deactivate own account)
 - Multiple Super Admins are supported. Deactivate button is disabled for ALL Super Admin rows in the Users table (not just own account).
@@ -547,7 +548,13 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - Super Admin cannot be demoted via this panel
 - **`calendar_editor` toggle** (CAL.6, updated SETUP.0): on each Editor, Viewer, and Owner Admin row — grants or revokes direct calendar write access. Toggle absent on Super Admin and Production rows. Calls `toggleCalendarEditor()` in `lib/actions/users.ts`.
 - **ADMIN.26:** All four user management actions (`createUser`, `deactivateUser`, `reactivateUser`, `changeRole`) migrated to `getServerClient()` with `revalidatePath('/crew/settings/users')`. Client components use `router.refresh()` instead of `window.location.href`. `changeRole()` guards: Production role cannot be set via role change; admin cannot change own role.
-- **SETUP.0 user management updates:** Deactivate button disabled on Owner Admin rows when the caller is an Owner Admin (Super Admin sees the button enabled on Owner Admin rows and can deactivate them). Role selector in create-account (`CreateUserModal.tsx`) and pending-registration approval (`PendingRegistrations.tsx`) flows: Owner Admin callers see only `editor`/`viewer` as assignable roles; Super Admin callers additionally see `owner_admin` (create-account) or `owner_admin`/`super_admin` (registration approval — the only path that can mint an additional Super Admin account). The change-role dropdown in `UsersTable.tsx` only ever offers `editor`/`viewer` regardless of caller, so no caller-conditional options were needed there — only which rows show the selector at all (Owner Admin rows are locked when the caller is Owner Admin). Server action guards are authoritative; UI selectors match. Owner Admin badge added to `UsersTable.tsx` (distinct color from Super Admin and Editor). `UsersTable.tsx`, `CreateUserModal.tsx`, `PendingRegistrations.tsx`, and `TopBar.tsx` all updated.
+- **SETUP.0 + ADMIN.33 user management updates:** Role permissions expanded in ADMIN.33. Current state:
+  Create account (`CreateUserModal.tsx`): Super Admin callers see Editor, Viewer, Production, and Owner Admin options. Owner Admin callers see Editor, Viewer, and Owner Admin options. Production is SA-only for direct create.
+  Registration approval (`PendingRegistrations.tsx`): Both Super Admin and Owner Admin callers can assign Editor, Viewer, Production, and Owner Admin. Only Super Admin can assign Super Admin via this flow (the only path that can mint an additional Super Admin account — ADMIN.34 F1 self-caught and corrected).
+  Change role (`UsersTable.tsx`): Dropdown offers Editor, Viewer, Production, and Owner Admin to all SA + OA callers. Super Admin rows always hidden (never show dropdown). Super Admin cannot be assigned via role change (server guard). Production rows now show the dropdown (previously hidden). OA-on-OA rows now show the dropdown (previously locked).
+  Deactivate: Owner Admin can deactivate other Owner Admin accounts (OA-on-OA lock removed ADMIN.33). Super Admin accounts cannot be deactivated by any caller.
+  Volunteer notes: Owner Admin can edit and delete volunteer notes (app-layer guards updated ADMIN.33; RLS updated Migration 028).
+  Server action guards are authoritative; UI selectors match. `UsersTable.tsx`, `CreateUserModal.tsx`, `PendingRegistrations.tsx`, `lib/actions/users.ts`, `lib/actions/admin-registration.ts`, and `lib/actions/volunteers.ts` all updated.
 - **Change Password** — `/crew/settings/password` page accessible to all logged-in admins via "Change Password" link in the top bar. New Password + Confirm New Password fields (min 8 chars). Uses Supabase Auth `updateUser({ password })`. No current password field required (relies on valid session). Logged to `audit_log` as `user.password_change`. Built in ADMIN.15.
 
 **Show Management (`/crew/shows`):**
@@ -616,7 +623,12 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   `email_log_recipients`. Server action:
   `sendShowBulkEmail()` in `lib/actions/shows.ts`.
   Component:
-  `components/crew/shows/BulkEmailSection.tsx`.
+  `components/crew/shows/BulkEmailSection.tsx`. (ADMIN.34:
+  the `DEFAULT_SUBJECT` constant has been removed from
+  `BulkEmailSection.tsx`. The component now accepts a
+  `defaultSubject` prop (type `string`) from its parent
+  show detail page, which constructs the default as
+  `Message from ${org.org_name}` via `resolveOrgIdentity()`.)
 
 - **Automated Post-Show Thank-You Email** (built 12.4): Vercel Cron Job at `app/api/cron/thankyou/route.ts`, runs daily at 07:00 UTC (02:00 CT). Finds show_dates where `show_date = CURRENT_DATE - 2` (48 hours after the show, giving Editors time to mark attendance) AND `thank_you_sent_at IS NULL`. For each date: fetches all slot_claims with status = 'claimed' that have an attendance record with status = 'showed'. Deduplicates by lowercased email. Sends via `sendBatchEmails()` helper (R8). Logs to `email_log` (recipient_type = 'transactional', sent_by = null, recipient_filter = 'show_date:{dateId}') + `email_log_recipients`. Sets `show_dates.thank_you_sent_at = now()` after successful send+log. Dates with zero showed volunteers: marked sent immediately, no emails sent. CRON_SECRET auth. Email function: `buildThankYouEmailPayload()` in `lib/email.ts`. `escapeHtml()` applied to recipientName and showName. Migration 015 adds `thank_you_sent_at timestamptz` (nullable) to `show_dates`.
 
@@ -861,7 +873,7 @@ Clicking Edit on a recurring event in the day panel opens the scope picker first
 - **Download (.ics file):** Same route with the admin's own token; download delivers a snapshot.
 - **`CalendarExportModal.tsx`:** In the calendar header (Export button, all roles). Subscribe section: URL display with copy button, per-platform instructions (Google/Apple/Outlook), "Rotate subscription URL" button (`rotateCalendarToken()` server action generates a new UUID, invalidates old URL). Download section: direct `<a>` link to the .ics route.
 - **Volunteer slot-claim `.ics` (CAL.7 + ADMIN.26):** `/api/calendar/claim.ics?token=[claim_token]`. Public route (no auth — uses claim_token for identity). Returns a single VEVENT for the claimed show date. DST-safe CT time construction (fromZonedTime pattern). Fixed filename `volunteer-call.ics`. Added to: (1) slot claim confirmation email ("📅 Add to your calendar" link), (2) waitlist promotion email (ADMIN.26 — `sendWaitlistPromotionEmail()` now accepts and uses `claimToken`), (3) Call Board call history rows (claimed status only).
-- **Shared iCalendar utility:** `lib/utils/ical.ts` — `generateVEvent()`, `wrapInCalendar()`, `buildClaimICalEvent()`, `buildAdminCalendarEvents()`. Pure TypeScript, RFC 5545 compliant, CRLF line endings, 75-octet line folding, text escaping.
+- **Shared iCalendar utility:** `lib/utils/ical.ts` — `generateVEvent()`, `wrapInCalendar()`, `buildClaimICalEvent()`, `buildAdminCalendarEvents()`. Pure TypeScript, RFC 5545 compliant, CRLF line endings, 75-octet line folding, text escaping. Updated ADMIN.33: PRODID changed to `-//OpenCall OS//Volunteer Platform//EN`; default `calName` changed to 'Volunteer Calendar'; event UID domains changed from `@30byninetyvolunteers.com` to `@opencallos.com`. Both .ics route handlers (`feed.ics` and `claim.ics`) now fetch `org_name` from `app_settings` and pass it as the `calName` to `wrapInCalendar()`.
 
 **Key files (CAL phase):**
 - `lib/actions/calendar-sync.ts` — `syncShowDateToCalendar()`
@@ -934,7 +946,7 @@ Production sidebar: Help link added (HELP.2b). Media Library link also visible t
 
 Settings section (owner decision): Settings is Super Admin + Owner Admin only (`roles: ['super_admin', 'owner_admin']`). The two new Settings subsections added in ADMIN.30 (`document-types`, `consent-forms`) follow the same SA/OA-only guard.
 
-Key files: `app/crew/(app)/help/page.tsx` (thin shell), `components/crew/help/HelpContent.tsx` (full content + role logic).
+Key files: `app/crew/(app)/help/page.tsx` (thin shell), `components/crew/help/HelpContent.tsx` (full content + role logic). Note: two previously hardcoded 30BN-specific references in `HelpContent.tsx` were replaced with generic language in ADMIN.33: the Reply-To default email address now reads "your organization's contact email"; the example platform URL now reads "your platform URL followed by /callboard".
 
 **Announcement Banner (`/crew/settings/announcement`):**
 Built in Phase 11.2. Text input (280 char limit with
@@ -1043,15 +1055,17 @@ Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management,
 
 Section 7 — Platform Identity: `instance_label`. Internal deployment label (e.g. "Pelican Playhouse"). Displayed in the Setup Panel page header only — never visible to other roles. Helps Jonathan identify which client's backend he is managing across multiple deployments.
 
+Section 8 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
+
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 14 `app_settings` keys
-- `components/crew/settings/SetupPanel.tsx` — Client Component, seven sections
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 18 `app_settings` keys
+- `components/crew/settings/SetupPanel.tsx` — Client Component, eight sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
-- `lib/actions/setup.ts` — eight server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `getSignedBrandUploadUrl()`
+- `lib/actions/setup.ts` — nine server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `getSignedBrandUploadUrl()`
 - `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
-- `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31)
-- `app/layout.tsx` — `generateMetadata()` reads `favicon_url` + `org_name` from `app_settings`
+- `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
+- `app/layout.tsx` — `generateMetadata()` reads `favicon_url`, `org_name`, and `org_tagline` from `app_settings` (ADMIN.34)
 
 **Document Management (`/crew/settings/documents`) — Built Phase 15.1–15.2:**
 Super Admin + Owner Admin only. "Beta" badge removed from the Settings hub card
@@ -1232,7 +1246,7 @@ Fixes `volunteer_notes` RLS: replaced generic `authenticated_all_admin` (FOR ALL
 Adds `requires_service_hours` boolean NOT NULL DEFAULT false to `volunteers` table.
 
 **Migration 004 status:** Applied — `004_volunteer_notes_superadmin_rls.sql`
-Adds UPDATE/DELETE policies on `volunteer_notes` restricted to `is_super_admin()`. Creates `is_super_admin()` helper function. Super Admins can edit and delete notes; Editors cannot.
+Adds UPDATE/DELETE policies on `volunteer_notes` restricted to `is_super_admin()`. Creates `is_super_admin()` helper function. Super Admins can edit and delete notes; Editors cannot. Updated in Migration 028: UPDATE/DELETE policies repointed to `is_super_admin_or_owner_admin()` — Owner Admin can now also edit and delete volunteer notes.
 
 **Migration 005 status:** Applied — `005_standing_opportunities.sql`
 Adds `standing_opportunities` and `opportunity_submissions` tables with indexes, `trg_standing_opportunities_updated_at` trigger (reuses `handle_updated_at()` function), and 4 RLS policies (admin_all + public_select_active on opportunities; admin_all + anon_insert on submissions).
@@ -1391,7 +1405,16 @@ applied defensively (`authenticated` has EXECUTE;
 PUBLIC and anon do not). `proacl` confirmed:
 `{postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres}`.
 
-**Next migration:** 028
+**Migration 028 status:** Applied — `028_owner_admin_notes_404_settings.sql` (ADMIN.33):
+
+Rewrote `volunteer_notes` UPDATE policy: dropped `superadmin_update_notes` (gated on `is_super_admin()`), created `volunteer_notes_update_sa_oa` (gated on `is_super_admin_or_owner_admin()`).
+Rewrote `volunteer_notes` DELETE policy: dropped `superadmin_delete_notes`, created `volunteer_notes_delete_sa_oa` (gated on `is_super_admin_or_owner_admin()`).
+Seeded two new `app_settings` keys: `not_found_heading` = 'Page Not Found' and `not_found_body` = "We couldn't find what you were looking for." (`ON CONFLICT DO NOTHING`).
+
+**Migration 029 status:** Applied — `029_qr_codes.sql` (ADMIN.34):
+Creates `qr_codes` table for shared QR code history. Indexes on `created_at DESC` and `created_by`. RLS enabled: SELECT for all authenticated, INSERT for all authenticated, DELETE for `is_super_admin_or_owner_admin()` only.
+
+**Next migration:** 030
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1664,8 +1687,10 @@ role             text NOT NULL CHECK (role IN (
 -- NOTE: 'owner_admin' added in Migration 023
 -- (SETUP.0). Sits between super_admin and editor.
 -- Full access except /crew/settings/setup. Can
--- manage Editor/Viewer/Production accounts but
--- cannot create super_admin or owner_admin accounts.
+-- create and manage Editor/Viewer/Production/Owner
+-- Admin accounts. Can deactivate other Owner Admin
+-- accounts. Cannot create or deactivate super_admin
+-- accounts. Permissions expanded in ADMIN.33.
 is_active        boolean NOT NULL DEFAULT true
 calendar_editor  boolean NOT NULL DEFAULT false
 calendar_subscription_token uuid NOT NULL
@@ -1951,6 +1976,38 @@ email_address    text NOT NULL
 -- Migration 015 was not needed or created)
 ```
 
+### qr_codes
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+url         text NOT NULL
+label       text
+svg         text NOT NULL
+png_base64  text NOT NULL
+created_by  uuid REFERENCES admin_users(id)
+            ON DELETE SET NULL
+created_at  timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_qr_codes_created_at on (created_at DESC)
+--   For chronological history queries.
+-- INDEX: idx_qr_codes_created_by
+--   For per-admin filtering (future use).
+-- RLS: qr_codes_select_authenticated — SELECT,
+--   authenticated, USING (true) — shared history,
+--   all admins see all saved QRs.
+-- RLS: qr_codes_insert_authenticated — INSERT,
+--   authenticated, WITH CHECK (true) — any admin
+--   can generate and save.
+-- RLS: qr_codes_delete_sa_oa — DELETE,
+--   authenticated, USING (is_super_admin_or_owner_admin())
+-- History capped at 50 rows in getQRHistory()
+--   (no DB-level cap — enforced in query LIMIT).
+-- png_base64 is stored without the data: URI prefix.
+--   Callers construct: data:image/png;base64,{png_base64}
+-- svg is the raw SVG string.
+--   Callers construct: data:image/svg+xml;charset=utf-8,
+--   {encodeURIComponent(svg)}
+-- Migration 029 (029_qr_codes.sql)
+```
+
 ### audit_log
 ```sql
 id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
@@ -2220,7 +2277,13 @@ Note: feature_opportunities, feature_hours_milestones,
 and feature_documents were seeded in Migration 023 but
 deleted in Migration 026 — these are core features, not
 optional flags. favicon_url was added in Migration 026.
-Total active SETUP keys: 15.
+Two additional keys added in Migration 028 (ADMIN.33):
+not_found_heading (default: 'Page Not Found') and
+not_found_body (default: "We couldn't find what you
+were looking for."). Total active SETUP keys: 17.
+Setup Panel page (setup/page.tsx) fetches 18 keys
+total (17 SETUP keys + default_reply_to from
+General Defaults).
 
 Runtime-added key (not seeded in Migration 001):
 ```
@@ -3005,12 +3068,27 @@ Claim flow:
   show detail Overview tab (4.3). Per-form QR pulled forward into 6.3 (not built here).
 - This prompt delivered only the standalone generator tool.
 - Standalone generator (`/crew/tools/qr-generator`): URL input (auto-prepends https://),
-  optional label (used in filename sanitization), "Generate QR Code" button, inline SVG
-  preview in white container, PNG and SVG data URI download links.
-- `lib/actions/qr.ts` — `generateQRCode(url)` server action: trims, validates, prepends
-  protocol, calls generateQR(), returns { svg, pngBase64 } or { error }.
-- Sidebar nav link to /crew/tools/qr-generator was already present from Phase 3 nav stub.
-- Phase 7 is now complete. The per-form QR (originally scoped here) shipped in 6.3.
+  optional label, "Generate QR Code" button, inline SVG preview in white container,
+  PNG and SVG data URI download links.
+- QR History Panel (added ADMIN.34): Every successful generation is saved to the
+  `qr_codes` table (Migration 029). History is shared across all admins (any admin can
+  see and re-download any saved QR). Chronological panel (newest first, capped at 50
+  rows) displays below the generator: label (or URL domain if no label), full URL,
+  "Generated by [name] · [date]", PNG download link, SVG download link. Download links
+  are data URIs constructed from stored `png_base64` / `svg` — no JS required, plain
+  `<a>` tags. Empty state: "No QR codes generated yet." Save is best-effort — failure
+  never blocks returning the QR to the user.
+- `lib/actions/qr.ts` — `generateQRCode(url, label)` server action: trims, validates,
+  prepends protocol, calls generateQR(), inserts into `qr_codes`, calls
+  `revalidatePath('/crew/tools/qr-generator')`, returns { svg, pngBase64 } or { error }.
+- `lib/data/qr.ts` — `getQRHistory(supabase)`: queries `qr_codes` with creator name
+  join, ordered by `created_at DESC`, limit 50.
+- Page restructured (ADMIN.34): Server Component `page.tsx` (fetches history) +
+  `components/crew/tools/QRGeneratorForm.tsx` (Client Component — form state) +
+  `components/crew/tools/QRHistoryPanel.tsx` (Server Component — history list,
+  plain `<a>` download links).
+- Sidebar nav link to /crew/tools/qr-generator unchanged.
+- Phase 7 is complete. The per-form QR (originally scoped here) shipped in 6.3.
 
 ---
 
@@ -3111,8 +3189,8 @@ Claim flow:
 **30BN-11.1 — Beta Stub Pages & Custom 404 ✓**
 - Three admin stub pages (Server Components, dark: variants, R20-compliant paths): `/crew/communication`, `/crew/tools/checkin`, `/crew/settings/documents`. Each has a "Coming Soon" badge, centered lucide-react icon, and a one-sentence feature description. No data fetching, no mutations.
 - "Check-In" sidebar nav link added to `components/crew/Sidebar.tsx` immediately after QR Generator (ScanLine icon, all roles, isActivePath() active state).
-- `app/not-found.tsx` — branded Server Component 404 page. Light-mode only (no dark: variants — public-facing). 30 By Ninety logo, "Page Not Found" heading, two `next/link` navigation links: `/` and `/crew/dashboard`. Note: spec originally said plain `<a>` tags; `next/link` was substituted to maintain zero-error lint baseline (`@next/next/no-html-link-for-pages` rule). R19's concern (Button/cva tailwind-merge) does not apply to Link.
-- `app/error.tsx` — branded Client Component ('use client' required by Next.js). Light-mode only. AlertTriangle icon (text-orange), "Something went wrong" heading, "Try again" plain `<button>` (calls `reset()`), "Go home" `next/link`. Error message/digest never displayed to user.
+- `app/not-found.tsx` — async Server Component 404 page (updated ADMIN.33). Light-mode only (no dark: variants — public-facing). Calls `resolveOrgIdentity()` for dynamic logo and org name. Fetches `not_found_heading` and `not_found_body` from `app_settings` (seeded Migration 028, customizable via Setup Panel Section 8). Dynamic logo (`org_logo_url || '/logo.png'`), dynamic heading, dynamic body text. Two `next/link` navigation links: `/` and `/crew/dashboard`.
+- `app/error.tsx` — Client Component ('use client' required by Next.js for error boundaries — cannot use `resolveOrgIdentity()`). Light-mode only. AlertTriangle icon (text-orange), "Something went wrong" heading, "Try again" plain `<button>` (calls `reset()`), "Go home" `next/link`. Logo uses static `/logo.png` with generic alt text "Organization logo" (ADMIN.33 — Client Component constraint). Error message/digest never displayed to user.
 
 **30BN-11.2 — App Settings & Announcement Banner ✓**
 - `/crew/settings` hub replaced — placeholder from Phase 3 replaced with full 8-card grid using LinkedCard/LockedCard role gating. See §8 App Settings for complete spec.
@@ -3245,7 +3323,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase SETUP complete (SETUP.0–4 + ADMIN.31/31b). Migrations 026–027 applied. Phase THEME pending next. Phase 17 (Launch) after THEME.*
+*ADMIN.32 (audit) + ADMIN.33 + ADMIN.34 complete. Migrations 028–029 applied. Phase THEME is next (THEME.A audit → THEME.1–3). Phase 17 (Launch) after THEME.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3527,6 +3605,60 @@ Phase 15 — Document & Media System ✓ Complete
                24 lines). Footer copyright © {org_name}
                dynamic. Commit 6540df9.
   30BN-DOC.43a ✓ Brief Update v3.9 (this prompt)
+  30BN-ADMIN.32 ✓ Read-only audit: Owner Admin
+               permission gaps (4 component files,
+               1 volunteer_notes RLS gap, 1 calendar
+               day panel UI gap), Production role
+               absent from all User Management paths,
+               hardcoded 30BN string inventory (10
+               action-needed items), 404 page state,
+               role badge completeness (all 5 roles
+               confirmed), changeRole() scope gaps.
+               No code changes. Findings drove ADMIN.33.
+  30BN-ADMIN.33 ✓ (+ ADMIN.33-CONT) Role permissions
+               sweep: OA canEdit in 4 components
+               (OpportunityList, FormList, ShowList,
+               ShowDetail) + CalendarDayPanel; OA/
+               Production in CreateUserModal +
+               PendingRegistrations + admin-
+               registration.ts; changeRole() expanded
+               (4 options, Production target rows
+               unlocked, OA-on-OA unlocked);
+               deactivateUser() OA-on-OA lock removed.
+               OpenCall OS branding sweep: resolveEmail
+               Settings() extended (orgName +
+               orgContactEmail); ~39 email body copy
+               hits replaced with dynamic org name;
+               blast.ts FROM_ADDRESS fix; all 13 public
+               pages + Sidebar wired through
+               resolveOrgIdentity() (incl. org_logo_url
+               extension + next.config.ts remotePatterns);
+               BulkEmailSection defaultSubject prop;
+               HelpContent generic language; iCal
+               PRODID + UID domains genericized; settings/
+               page.tsx production exclusion defense-in-
+               depth. Setup Panel Section 8 (404 Page):
+               not_found_heading + not_found_body keys,
+               saveNotFoundPage() action, SetupPanel.tsx
+               Section 8, not-found.tsx dynamic. Migration
+               028. 45 files. Commits 43f1b7d + 43f1b7d
+               (CONT same commit).
+  30BN-ADMIN.34 ✓ QR code history panel (Migration 029,
+               qr_codes table, QRGeneratorForm.tsx +
+               QRHistoryPanel.tsx, lib/data/qr.ts,
+               generateQRCode() extended to persist);
+               payload builder parameterization (from/
+               replyTo params, FROM_ADDRESS + REPLY_TO
+               constants deleted); metadata description
+               via org_tagline (|| fallback); resolve
+               EmailSettings() orgContactEmail (fixes
+               sendInfoUpdatedEmail + sendWelcomeEmail +
+               sendRegistrationDeclinedEmail); OA-can-
+               assign-OA in PendingRegistrations.tsx +
+               approveRegistration() (self-caught guard
+               bug corrected before commit — F1).
+               13 files. Commit 28e0c4e.
+  30BN-DOC.44 ✓ Brief Update v4.0 (this prompt)
 
 **SETUP.1** ✓ — Feature flag infrastructure.
 `lib/feature-flags.ts`: `getFeatureFlags()` + `FeatureFlags`
@@ -3960,3 +4092,4 @@ section and subsection role arrays (47 entries); DOC.41
 logged)*
 *v3.8 (July 2026 — HELP.2e completion: §8 Help System Owner Admin bullet updated (removed "known gap (ADMIN.30 Q1)" forward-reference note — HELP.2e fixed all 47 non-Settings ALL_SECTIONS entries; replaced with confirmation that the gap is closed); document header + §1 header bumped to v3.8; §11 prompt log unchanged (HELP.2e + DOC.41 already logged in v3.7); DOC.42 logged)*
 *v3.9 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §1 current phase updated (SETUP complete, THEME next); §3 react-easy-crop added; §5 brand public bucket added; §6 email design forward references replaced with implementation facts (resolveEmailSettings, buildEmailHtml logoUrl param, resolveOrgIdentity); §7 proxy feature flag guards documented; §8 Platform Setup section fully replaced (pending spec → built spec: 7 sections, BrandImageUploader, 3-flag set, correct action list, key files); §8 landing page heading/footer dynamic org identity noted; §8 Phase 12 deferred list: 3 items closed (waitlist RPC, phone search, reminder cron DST), 1 remaining; §8 Audit Log known gap closed (volunteer.signup); §9 Migrations 026–027 status blocks added, next migration 028; §9 app_settings seed list corrected (3 flag keys removed, favicon_url added, total 15); §9 AuditAction types: volunteer.signup added; §11 header status updated; §11 Phase SETUP entries SETUP.1–4 all marked complete with summaries; §11 prompt log updated (DOC.42, SETUP.1–4, ADMIN.31, ADMIN.31b, DOC.43a); §11 Phase 15 marked complete; §11 Phase 19 expanded to full communication preference spec; §11 Phase 21 Rehearsal Management System forward spec added; §11 Phase CAST named future phase added; §13 R32 SetupPanel.tsx grep exclusion noted; §13 R34 added (non-core features flag-ready); DOC.43a logged)*
+*v4.0 (July 2026 — ADMIN.32–34 complete: §1 current phase updated (ADMIN.32–34 complete, THEME next); §2 Owner Admin terminology updated (can now create/manage/deactivate OA accounts; cannot create SA); §3 next.config.ts images.remotePatterns entry added (.supabase.co — required for uploaded logo rendering); §6 resolveEmailSettings() return type updated (orgName + orgContactEmail added); resolveOrgIdentity() return type updated (org_logo_url added; layout prop pattern documented); generateMetadata() org_tagline documented (|| fallback); FROM_ADDRESS/REPLY_TO constants deleted, payload builders use explicit from/replyTo params; §7 Owner Admin roles table row updated (OA can create/deactivate OA; can edit/delete volunteer notes; permissions expanded ADMIN.33); Auth model updated (Production direct-create added; OA approval paths documented); §8 User Management SETUP.0 block replaced with accurate ADMIN.33 state; create account role description updated; Platform Setup Section 8 added (not_found_heading/body) + key count 18 + 9 server actions; not-found.tsx description updated (async, dynamic, resolveOrgIdentity); error.tsx Client Component constraint noted; Phase 7 QR Generator updated (QR history panel, lib/data/qr.ts, QRGeneratorForm/QRHistoryPanel components, generateQRCode extended); BulkEmailSection defaultSubject prop noted; HelpContent generic language note; public page org identity sweep documented (13 pages + Sidebar); iCal PRODID/UID domains updated to OpenCall OS; §9 Migration 004 OA volunteer_notes note added; Migrations 028–029 status blocks added; next migration 030; qr_codes table schema block added; admin_users owner_admin NOTE updated; app_settings not_found keys + count 17 + page fetch count 18; §11 header updated; prompt log ADMIN.32–34 + DOC.44 added; DOC.44 logged)*
