@@ -143,6 +143,7 @@ export async function updateVolunteerInfo(
           : false,
         referral_source: referralSourceValue,
         referral_name:   data.referral_name || null,
+        communication_preference: data.communication_preference || null,
         update_token:    newToken,
       })
       .eq('id', volunteerId)

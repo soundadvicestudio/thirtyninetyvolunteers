@@ -21,6 +21,7 @@ type InitialData = {
   referral_source_label: string
   referral_source_other: string
   referral_name: string
+  communication_preference: string
 }
 
 type Props = {
@@ -45,6 +46,7 @@ const schema = z.object({
   referral_source_label: z.string().optional(),
   referral_source_other: z.string().max(500).optional(),
   referral_name: z.string().max(200).optional(),
+  communication_preference: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.age_range === 'under_18') {
     if (!data.guardian_name?.trim()) {
@@ -89,7 +91,7 @@ export default function VolunteerUpdateForm({
     getValues,
   } = useForm<UpdateFormData>({
     resolver: zodResolver(schema) as Resolver<UpdateFormData>,
-    defaultValues: initialData,
+    defaultValues: initialData as unknown as UpdateFormData,
   })
 
   // react-hook-form's watch() is required (Brief §3); switching to useWatch() per
@@ -386,6 +388,20 @@ export default function VolunteerUpdateForm({
           If someone specific invited you, let us know!
         </p>
         <input type="text" className={inputClasses} {...register('referral_name')} />
+      </div>
+
+      {/* Preferred contact method */}
+      <div>
+        <label className={labelClasses}>Preferred contact method</label>
+        <select className={inputClasses} {...register('communication_preference')}>
+          <option value="">No preference</option>
+          <option value="email">Email</option>
+          <option value="phone">Phone</option>
+          <option value="either">Either is fine</option>
+        </select>
+        <p className="mt-1 text-sm text-mid-gray">
+          This helps us reach you the way you prefer.
+        </p>
       </div>
 
       {/* Error banner */}

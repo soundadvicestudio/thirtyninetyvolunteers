@@ -251,6 +251,7 @@ export async function mergeVolunteer(
           : false,
         referral_source: referralSourceValue,
         referral_name:  data.referral_name || null,
+        communication_preference: data.communication_preference || null,
       })
       .eq('id', existingId)
 

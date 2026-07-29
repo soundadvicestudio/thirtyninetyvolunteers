@@ -24,7 +24,7 @@ export default async function UpdatePage({
     .select(`
       id, full_name, email, phone, pronouns, school, age_range,
       guardian_name, guardian_phone, requires_service_hours,
-      referral_source, referral_name, update_token,
+      referral_source, referral_name, communication_preference, update_token,
       volunteer_category_assignments ( category_id )
     `)
     .eq('update_token', token)
@@ -108,6 +108,7 @@ export default async function UpdatePage({
     referral_source_label:  referralSourceLabel,
     referral_source_other:  referralSourceOther,
     referral_name:          volunteer.referral_name ?? '',
+    communication_preference: volunteer.communication_preference ?? '',
   }
 
   return (
