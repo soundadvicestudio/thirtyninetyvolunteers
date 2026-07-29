@@ -60,7 +60,7 @@ export async function updateVolunteer(
   const { data: current, error: fetchError } = await supabase
     .from('volunteers')
     .select(
-      'full_name, email, phone, pronouns, school, age_range, is_minor, guardian_name, guardian_phone, requires_service_hours, referral_source, referral_name'
+      'full_name, email, phone, pronouns, school, age_range, is_minor, guardian_name, guardian_phone, requires_service_hours, referral_source, referral_name, communication_preference'
     )
     .eq('id', volunteerId)
     .single()
@@ -106,6 +106,7 @@ export async function updateVolunteer(
     requires_service_hours: (value.school || null) ? (value.requires_service_hours ?? false) : false,
     referral_source: value.referral_source || null,
     referral_name: value.referral_name || null,
+    communication_preference: value.communication_preference || null,
   }
 
   const { error: updateError } = await supabase
@@ -144,6 +145,8 @@ export async function updateVolunteer(
   }
 
   await logAction(admin.id, 'volunteer.update', 'volunteer', volunteerId, current, afterRecord)
+
+  revalidatePath(`/crew/volunteers/${volunteerId}`)
 
   return { success: true }
 }
@@ -349,4 +352,32 @@ export async function addManualHours(
   revalidatePath(`/crew/volunteers/${volunteerId}`)
 
   return { success: true, newTotal }
+}
+
+export async function updateVolunteerPreference(
+  volunteerId: string,
+  preference: 'email' | 'phone' | 'either' | null
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Unauthorized' }
+
+  const allowedRoles = ['super_admin', 'owner_admin', 'editor']
+  if (!allowedRoles.includes(admin.role)) {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { error } = await supabase
+    .from('volunteers')
+    .update({
+      communication_preference: preference || null,
+    })
+    .eq('id', volunteerId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/crew/volunteers/${volunteerId}`)
+
+  return { success: true }
 }

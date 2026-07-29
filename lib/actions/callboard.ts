@@ -1,8 +1,10 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/utils/phone'
+import { getCallboardSession } from '@/lib/callboard/session'
 
 const SESSION_COOKIE = 'callboard_session'
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
@@ -64,4 +66,27 @@ export async function signOutCallboard(): Promise<{ success: true }> {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE)
   return { success: true }
+}
+
+export async function updateCallboardPreference(
+  preference: 'email' | 'phone' | 'either' | null
+): Promise<{ error?: string }> {
+  // Identity comes from the validated callboard_session cookie, never from
+  // a client-supplied volunteer ID — same rule as lookupVolunteer() above.
+  const session = await getCallboardSession()
+  if (!session) return { error: 'Not logged in' }
+
+  const client = getAdminClient()
+
+  const { error } = await client
+    .from('volunteers')
+    .update({
+      communication_preference: preference || null,
+    })
+    .eq('id', session.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/callboard')
+  return {}
 }

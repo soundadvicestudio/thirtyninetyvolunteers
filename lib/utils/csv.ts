@@ -12,6 +12,7 @@ const CSV_HEADERS = [
   'Guardian Name',
   'Guardian Phone',
   'Service Hours Required',
+  'Preferred Contact',
   'Categories',
   'Total Hours',
   'Calls',
@@ -27,6 +28,12 @@ export const AGE_RANGE_LABELS: Record<string, string> = {
   '36_50': '36–50',
   '51_plus': '51+',
   prefer_not: 'Prefer not to say',
+}
+
+export const COMMUNICATION_PREFERENCE_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone',
+  either: 'No preference',
 }
 
 export function escapeCsvField(value: string): string {
@@ -51,6 +58,9 @@ export function buildVolunteersCsv(rows: VolunteerListRow[]): string {
       row.guardian_name ?? '',
       row.guardian_phone ?? '',
       row.requires_service_hours ? 'Yes' : 'No',
+      row.communication_preference
+        ? (COMMUNICATION_PREFERENCE_LABELS[row.communication_preference] ?? row.communication_preference)
+        : '',
       row.categories.map((c) => c.name).join('|'),
       String(row.total_hours),
       String(row.calls),

@@ -85,6 +85,7 @@ export async function submitVolunteerForm(
           : false,
         referral_source: referralSourceValue,
         referral_name:  data.referral_name || null,
+        communication_preference: data.communication_preference || null,
       })
       .select('id, update_token')
       .single()

@@ -14,7 +14,7 @@ const DB_SORTABLE: Partial<Record<VolunteersUrlState['sort'], string>> = {
 const LIST_SELECT = `
   id, full_name, email, phone, pronouns, age_range, school, is_minor,
   guardian_name, guardian_phone, referral_source, requires_service_hours,
-  status, total_hours, created_at,
+  communication_preference, status, total_hours, created_at,
   volunteer_category_assignments ( volunteer_categories ( id, name ) )
 `
 
@@ -31,6 +31,7 @@ type RawVolunteerRow = {
   guardian_phone: string | null
   referral_source: string | null
   requires_service_hours: boolean
+  communication_preference: 'email' | 'phone' | 'either' | null
   status: string
   total_hours: number
   created_at: string
@@ -163,6 +164,7 @@ function toListRow(
     guardian_phone: row.guardian_phone,
     referral_source: row.referral_source,
     requires_service_hours: row.requires_service_hours,
+    communication_preference: row.communication_preference,
     status: row.status as 'active' | 'archived',
     total_hours: Number(row.total_hours),
     created_at: row.created_at,

@@ -13,6 +13,7 @@ export type VolunteerFormData = {
   referral_source_label?: string
   referral_source_other?: string
   referral_name?: string
+  communication_preference?: 'email' | 'phone' | 'either' | null
 }
 
 export type UpdateFormData = Omit<VolunteerFormData, 'email'>
@@ -30,6 +31,7 @@ export type VolunteerListRow = {
   guardian_phone: string | null
   referral_source: string | null
   requires_service_hours: boolean
+  communication_preference: 'email' | 'phone' | 'either' | null
   status: 'active' | 'archived'
   total_hours: number
   created_at: string
