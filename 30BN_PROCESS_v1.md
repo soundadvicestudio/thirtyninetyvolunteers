@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v3.9
-### Created: July 2026 | Last Updated: July 2026 — v3.9 (ADMIN.32–34 complete, OA permission model updated, resolveEmailSettings/OrgIdentity return types updated, || vs ?? pattern, new grep checks + checklist items)
+## 30BN_PROCESS_v1.md — v4.0
+### Created: July 2026 | Last Updated: July 2026 — v4.0 (Phase THEME complete — THEME.A through THEME.3b-4; lightenHex() server-side hex computation pattern; @react-pdf/renderer createStyles() factory pattern; resolveEmailSettings() brand params; new grep checks + checklist items; Phase 19+21 pre-launch; prompt log updated)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -915,6 +915,42 @@ grep -rn "FROM_ADDRESS\|REPLY_TO" \
 # '30BN defaults' string literals as fallback.
 ```
 
+```bash
+# Confirm no brand static Tailwind token classes in new
+# code after THEME.1 (R33 / THEME.1 — complete)
+# After THEME, brand-driven colors in the web UI must
+# use the @layer utilities classes (bg-brand-primary,
+# text-brand-accent, etc.) — not the static @theme tokens.
+grep -rn "bg-navy\|text-navy\|border-navy\|ring-navy\
+|bg-orange\|text-orange\|border-orange\|ring-orange\
+|bg-steel\|text-steel\|border-steel\|bg-light-navy\
+|text-light-navy\|bg-pale-orange\|text-slate" \
+  app/ components/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "node_modules\|\.next"
+# Must return zero results. Any hit in new code after
+# THEME ships is an R33 violation. Exception: if a hit
+# is in a KNOWN categorical exception (fixed to arbitrary
+# hex like bg-[#293994]) it will not appear in this grep
+# since that grep pattern searches for token names, not hex.
+```
+
+```bash
+# Confirm no hardcoded brand hex in email templates
+# (THEME.3/THEME.3b — brand colors must be dynamic)
+grep -n "#293994\|#F26522\|#f26522\|#EEF1FA\|#eef1fa" \
+  lib/email.ts \
+  lib/actions/blast.ts
+# Acceptable remaining hits — ONLY these:
+#   lib/email.ts: the two fallback default strings inside
+#   resolveEmailSettings() (brandPrimary || '#293994' and
+#   brandAccent || '#F26522'). brandPrimaryLight is computed
+#   from brandPrimary via lightenHex() — no #EEF1FA literal.
+# Any other hit outside resolveEmailSettings() fallbacks
+# is a hardcoded brand color — must be replaced with the
+# dynamic value from resolveEmailSettings().
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -1124,27 +1160,33 @@ Run before every Vercel deployment:
   after the fact — build it right the first time. (R34)
 □ Any new email send function added to lib/email.ts:
   confirm resolveEmailSettings() is called to get the
-  dynamic from address, logo URL, org name, and contact
-  email — NOT hardcoded constants or static strings.
-  Destructure: { from, logoUrl, orgName, orgContactEmail }
-  from resolveEmailSettings(). Thread emailSettings.from
-  into the Resend send call, emailSettings.logoUrl into
-  buildEmailHtml(), and use orgName / orgContactEmail
-  in any body copy that references the org or a contact
-  address. No hardcoded "30 By Ninety" or
-  "info@30byninety.com" in email body copy.
-  (SETUP.3/ADMIN.31/ADMIN.33/ADMIN.34 pattern)
+  dynamic from address, logo URL, org name, contact email,
+  and brand colors — NOT hardcoded constants or strings.
+  Destructure: { from, logoUrl, orgName, orgContactEmail,
+  brandPrimary, brandAccent, brandPrimaryLight } from
+  resolveEmailSettings(). Thread emailSettings.from into
+  the Resend send call, emailSettings.logoUrl into
+  buildEmailHtml(), orgName / orgContactEmail in body copy,
+  and brandPrimary + brandAccent + brandPrimaryLight into
+  buildEmailHtml() and buildCtaButton() calls. No hardcoded
+  hex colors (#293994, #F26522, #EEF1FA) anywhere in the
+  function body — only the fallback defaults inside
+  resolveEmailSettings() itself are acceptable.
+  (SETUP.3/ADMIN.31/ADMIN.33/ADMIN.34/THEME.3/THEME.3b)
 □ Any new payload builder function (batch email, cron
   route): confirm it accepts logoUrl?: string, from?:
-  string, and replyTo?: string parameters and passes
-  logoUrl to buildEmailHtml(). Confirm the call site
-  calls resolveEmailSettings() (or equivalent inline
-  app_settings fetch) before building the payload and
-  threads the dynamic from/replyTo values into the
-  builder call. FROM_ADDRESS and REPLY_TO constants
-  must not exist anywhere in the codebase — they were
-  deleted in ADMIN.34. Any hit of either constant name
-  is a regression. (ADMIN.31/ADMIN.34 pattern)
+  string, replyTo?: string, brandPrimary?: string, and
+  brandAccent?: string parameters. Pass logoUrl,
+  brandPrimary, brandAccent (and brandPrimaryLight if
+  the builder produces light-tint backgrounds) to
+  buildEmailHtml(). Confirm the call site calls
+  resolveEmailSettings() (or equivalent inline
+  app_settings fetch including brand_primary +
+  brand_accent) before building the payload and threads
+  all dynamic values into the builder call. FROM_ADDRESS
+  and REPLY_TO constants must not exist anywhere in the
+  codebase — deleted ADMIN.34. Any hit = regression.
+  (ADMIN.31/ADMIN.34/THEME.3 pattern)
 □ Any saveFeatureFlags() call or equivalent: confirm
   revalidatePath('/crew', 'layout') is included alongside
   individual route revalidations. The layout second
@@ -1175,6 +1217,31 @@ Run before every Vercel deployment:
   or similar in body copy — only in the resolveEmail
   Settings() fallback defaults which are the one
   acceptable location. (ADMIN.33/ADMIN.34 pattern)
+□ Any new web UI code (JSX/TSX) referencing brand-driven
+  colors after THEME.1 ships: use the @layer utilities
+  classes defined in globals.css (bg-brand-primary,
+  text-brand-accent, border-brand-primary-light, etc.)
+  — never the old static Tailwind token names (bg-navy,
+  text-orange, bg-steel, bg-light-navy, etc.). Structural/
+  neutral colors (footer-gray, divider, dark, mid-gray,
+  dark mode palette) remain as static Tailwind tokens —
+  unchanged. Run the brand static class grep in §10
+  after any new UI code is written. (R33 / THEME.1)
+□ Any new @react-pdf/renderer PDF component: use the
+  createStyles(brandPrimary, brandPrimaryLight) factory
+  pattern — call StyleSheet.create() inside the factory
+  function, not at module scope. Module-scope
+  StyleSheet.create() runs before props are available
+  and cannot be overridden at render time. Pass brand
+  color props from the route handler (which fetches from
+  app_settings). Provide default prop values matching
+  the 30BN colors as fallback. (THEME.4 pattern / §14)
+□ Any new hardcoded hex color added to lib/email.ts or
+  lib/actions/blast.ts: run the brand hex grep from §10
+  before committing. The only acceptable hardcoded hex
+  values in these files are the fallback defaults inside
+  resolveEmailSettings(). All other brand hex = violation.
+  (THEME.3/THEME.3b pattern)
 ```
 
 ---
@@ -1940,13 +2007,111 @@ Phase SETUP — OpenCall OS Setup Panel ✓ Complete
            deleted from app/page.tsx (consentDoc +
            showConsentLink + JSX — 24 lines). Footer
            copyright © {org_name} dynamic. Commit 6540df9.
-  30BN-DOC.43a ✓ Brief Update v3.9 (this session)
-Phase THEME — Dynamic CSS Brand System (pending)
-  THEME.A Read-only audit of brand color class usages.
-  THEME.1 Root layout CSS variable injection + public
-           pages sweep.
-  THEME.2 Admin UI sweep.
-  THEME.3 Email template sweep.
+  30BN-DOC.43a ✓ Brief Update v3.9.
+  30BN-DOC.43b-FIX ✓ One-line correction: Process v3.8
+               version history "six new checklist items"
+               → "five new checklist items" (DOC.43b F3).
+  30BN-DOC.44  ✓ Brief Update v4.0 (ADMIN.32–34 complete).
+  30BN-DOC.44-FIX ✓ Brief §8 QR Generator spec synced
+               with ADMIN.34 (history panel, new
+               components, generateQRCode signature).
+  30BN-DOC.45  ✓ Process Update v3.9 (ADMIN.32–34).
+  30BN-DOC.46  ✓ Deferred Verifications v15 (34 new
+               items: 7.1 V11–V17 QR history, ADMIN.33
+               V1–V23, ADMIN.34 V1–V4; 1 superseded).
+  30BN-DOC.46-FIX ✓ Three corrections: ADMIN.23 V4
+               attribution, item count 775→774, Brief
+               "Seven"→"Eight" sections.
+  30BN-THEME.A ✓ Read-only audit. 1,381 instances /
+               130 files / 6 token families. Options A
+               confirmed. 15 utility classes / 69 rules.
+               3 blocking flags resolved in design.
+  30BN-THEME.1 ✓ globals.css @layer utilities (69 rules).
+               app/layout.tsx resolveBrandColors() +
+               <style> injection. 30 public files, 305
+               instances. Commit 406b188.
+  30BN-THEME.2a ✓ 30 app/crew/ files, 110 instances.
+               Categorical exceptions. Commit 6576a55.
+  30BN-THEME.2b ✓ 21 crew shared + settings files.
+               Role badge + System badge exceptions.
+               Commit bf53e17.
+  30BN-THEME.2c ✓ 28 shows/volunteers/opp/forms/dashboard
+               files, 236 instances. Commit 1c40bc6.
+  30BN-THEME.2d ✓ 21 calendar/comm/media/tools/help
+               files, 201 instances. Final codebase grep:
+               zero static brand tokens. Commit 8bc26d5.
+  30BN-THEME.3 ✓ Email template sweep. resolveEmailSettings()
+               +brandPrimary +brandAccent. 5 files, 42 hits
+               replaced. Self-caught 4 additional helpers.
+               Commit 69d7dfa.
+  30BN-THEME.3b-4 ✓ Light-navy + PDF brand colors.
+               lib/utils/color.ts (lightenHex). resolve
+               EmailSettings() +brandPrimaryLight. Volunteer
+               ListPDF.tsx createStyles() factory (module-
+               scope StyleSheet.create() self-caught).
+               4 files + 1 new. Commit 66d2ba7.
+  30BN-DOC.47  ✓ Brief Update v4.1 (Phase THEME complete,
+               Phase 17 expanded, Phase 19+21 pre-launch,
+               color.ts, PDF brand colors).
+  30BN-DOC.48  ✓ Process Update v4.0 (this prompt)
+Phase THEME — Dynamic CSS Brand System ✓ Complete
+  THEME.A ✓ Read-only audit. 1,381 brand-derived class
+           instances across 130 files. 6 token families
+           (navy, orange, steel, slate, light-navy,
+           pale-orange). Confirmed Option A (CSS color-mix
+           derivation). 15 base utility classes (69 rules
+           with variants). F1: steel/slate hue mismatch —
+           percentages adjusted (59%/47%). F3: opacity
+           modifier pattern via color-mix(transparent).
+           F4: categorical color exception policy defined.
+           Email template THEME.3 preview (42 hex hits).
+           No code written.
+  THEME.1 ✓ CSS foundation + public pages (30 files,
+           305 instances). globals.css @layer utilities
+           (69 rules). app/layout.tsx resolveBrandColors()
+           + <style> tag (6 CSS custom properties at
+           adjusted percentages). Single injection point
+           in root layout. 305 instances replaced. Commit
+           406b188.
+  THEME.2a ✓ Admin pages sweep (30 app/crew/ files,
+           110 instances). Categorical exceptions:
+           claim-type badges → fixed hex. Commit 6576a55.
+  THEME.2b ✓ Crew shared + settings components (21
+           files). Categorical exceptions: role badges
+           (TopBar, UsersTable), System badge
+           (DocumentTypesManager). LocationsManager
+           useState default left untouched. Commit bf53e17.
+  THEME.2c ✓ Shows, volunteers, opportunities, forms,
+           dashboard (28 files, 236 instances). Categorical
+           exceptions: claim-type badges, activity-feed
+           borders. Commit 1c40bc6.
+  THEME.2d ✓ Calendar, communication, media, tools, help
+           (21 files, 201 instances). MediaLibrary access-
+           tier badge → fixed hex (including dark: variants
+           — categorical badges must be stable in dark mode
+           too). Full-codebase final grep: zero remaining
+           static brand token classes. Commit 8bc26d5.
+  THEME.3 ✓ Email template brand color sweep (5 files).
+           resolveEmailSettings() +brandPrimary +brand
+           Accent. buildEmailHtml() +brandPrimary +brand
+           Accent. All 42 hardcoded hex hits replaced with
+           dynamic string interpolation. 4 payload builders
+           gain brand params. Self-caught additional helpers
+           needing extension: emailShell(), instructions
+           BlockHtml(), cancelLinkHtml(), addToCalendar
+           LinkHtml(), milestoneEmailContent(). Commit
+           69d7dfa.
+  THEME.3b-4 ✓ Light-navy + PDF brand colors (4 files +
+           1 new). lib/utils/color.ts (new — lightenHex()
+           utility). resolveEmailSettings() +brandPrimary
+           Light (lightenHex(brandPrimary, 0.08)).
+           instructionsBlockHtml() self-derives tint
+           internally (called from payload builders without
+           precomputed brandPrimaryLight). VolunteerList
+           PDF.tsx refactored: createStyles() factory
+           (StyleSheet.create() at module scope silently
+           ignores props — factory required). PDF route
+           handler passes brand props. Commit 66d2ba7.
 
 Phase 14 — Check-In System ✓ Complete
   30BN-14.1  ✓ Migration 024 (show_dates.check_in_token
@@ -2130,14 +2295,15 @@ Phase 18 — Additional Alpha Features ✓ Complete
   - Bulk email from show detail
     ✓ Built ADMIN.23 (BulkEmailSection.tsx)
 Phase 19 — Volunteer Communication Preferences
-  (pending, post-launch) — general volunteer
-  communication preference field (email/phone/either)
-  on volunteers table. Advisory only, no enforcement.
-  Original "waitlist notification only" scope subsumed.
+  (pending, pre-launch) — 3-prompt structure confirmed:
+  19.1 (Migration 030 + server actions), 19.2 (public
+  forms), 19.3 (Call Board + admin profile + list).
+  communication_preference editable in admin volunteer
+  profile (confirmed). Planned before Phase 17.
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
 Phase 21 — Rehearsal Management System
-  (planned, post-launch) — /crew/rehearsals sidebar
+  (planned, pre-launch) — /crew/rehearsals sidebar
   tab; role-filtered visibility (Production sees only
   assigned schedules); bulk rehearsal submission
   (surfacing CalendarBulkRehearsalForm as primary
@@ -2635,7 +2801,7 @@ Cross-reference §7 for the dual-client pattern detail.
 
 Two new `app_settings` helper functions were introduced in SETUP.3 and ADMIN.31. Both use `getAdminClient()` internally — not `getServerClient()`:
 
-`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, and `org_contact_email` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string }` with 30BN defaults when keys are absent. Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. `getAdminClient()` ensures it works correctly in all contexts. Extended ADMIN.33 (orgName) and ADMIN.34 (orgContactEmail). The `FROM_ADDRESS` and `REPLY_TO` module-level constants in `lib/email.ts` were deleted in ADMIN.34 — the 4 payload builders (`buildReminderEmailPayload`, `buildThankYouEmailPayload`, `buildShowBulkEmailPayload`, `buildCategoryMatchNotificationPayload`) now accept explicit `from?: string` and `replyTo?: string` params with inline 30BN string defaults as fallback. All call sites in `lib/actions/shows.ts` and both cron routes pass the dynamic values from their inline `app_settings` fetches.
+`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, `org_contact_email`, `brand_primary`, and `brand_accent` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string, brandPrimary: string, brandAccent: string, brandPrimaryLight: string }` with 30BN defaults when keys are absent. `brandPrimaryLight` is derived server-side via `lightenHex(brandPrimary, 0.08)` from `lib/utils/color.ts` — an 8% tint of `brand_primary` (see lightenHex pattern below). Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. Extended ADMIN.33 (orgName), ADMIN.34 (orgContactEmail), THEME.3 (brandPrimary, brandAccent), THEME.3b (brandPrimaryLight). The `FROM_ADDRESS` and `REPLY_TO` module-level constants in `lib/email.ts` were deleted in ADMIN.34 — the 4 payload builders (`buildReminderEmailPayload`, `buildThankYouEmailPayload`, `buildShowBulkEmailPayload`, `buildCategoryMatchNotificationPayload`) now accept explicit `from?: string`, `replyTo?: string`, `brandPrimary?: string`, and `brandAccent?: string` params with inline 30BN string defaults as fallback. All call sites in `lib/actions/shows.ts` and both cron routes pass the dynamic values from their inline `app_settings` fetches. Email client constraint: Email clients do not support CSS custom properties (`var()`) or `color-mix()`. Brand hex values must be string-interpolated at send time — this is distinct from the CSS custom property approach used in the web UI. Never hardcode `#293994` or `#F26522` in email body copy or template helpers; always use the values destructured from `resolveEmailSettings()`.
 
 `resolveOrgIdentity()` (exported from `lib/utils/org-identity.ts`): Fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings`. Returns `OrgIdentity` with 30BN defaults. Uses `getAdminClient()` because it is called from public Server Components (`app/page.tsx`) and cron routes with no Supabase Auth session. Extended ADMIN.33 to include `org_logo_url` — required for all public pages that display the org logo dynamically. Never import `resolveOrgIdentity()` from a Client Component. When a Client Component needs org identity data (e.g., `Sidebar.tsx`), the parent Server Component layout (`app/crew/(app)/layout.tsx`) calls `resolveOrgIdentity()` and passes the result as a prop — same pattern as flags and admin. This is the correct pattern for any Client Component that needs `getAdminClient()` data.
 
@@ -2643,6 +2809,77 @@ Pattern principle: `app_settings` helper functions should use `getAdminClient()`
 
 `||` vs `??` for `app_settings` fallbacks (established ADMIN.34 F2):
 When applying a fallback to an `app_settings` value in code, always use `||`, not `??`. The reason: `app_settings` values are seeded as empty strings `''` (e.g., `org_tagline` → `''`), not as `null` or `undefined`. The nullish coalescing operator (`??`) only triggers on `null`/`undefined` — an empty string `''` is falsy but not nullish, so `value ?? 'fallback'` silently produces `''` instead of `'fallback'` when the key is seeded but empty. The logical OR (`||`) triggers on any falsy value including `''`, which is the correct behavior for `app_settings` reads. Confirmed failure mode caught in ADMIN.34 Task D before commit — if `??` had been used for `org_tagline` metadata description, every deployment where `org_tagline` is empty would silently produce a blank `<meta name="description">` instead of the intended fallback. Pattern: `settingsMap['key'] || 'fallback'` — not `settingsMap['key'] ?? 'fallback'`.
+
+### lightenHex() for Server-Side Hex Tint Computation (established THEME.3b)
+
+When a brand color tint is needed in a context that does not support CSS custom properties or `color-mix()` — specifically email templates and PDF exports via `@react-pdf/renderer` — compute the tint server-side using `lightenHex()` from `lib/utils/color.ts`:
+
+```typescript
+import { lightenHex } from '@/lib/utils/color'
+// amount = 0.08 → 8% brand + 92% white (matches --brand-primary-light)
+const brandPrimaryLight = lightenHex(brandPrimary, 0.08)
+```
+
+`lightenHex(hex, amount)` blends a hex color with white at the given percentage (amount = 1.0 = pure hex; amount = 0.0 = pure white). The function is pure (no DB calls, no server-only imports) and safe to call from any server-side context. It produces a concrete hex string at call time — no deferred CSS evaluation.
+
+Two call sites exist:
+- `resolveEmailSettings()` in `lib/email.ts` — computes `brandPrimaryLight` and returns it alongside the other email settings. Every email send function receives it via destructuring.
+- The PDF export route handler (`app/crew/(app)/volunteers/export/route.tsx`) — fetches `brand_primary` from `app_settings` and computes `brandPrimaryLight` via `lightenHex()` before passing both as props to `VolunteerListPDF`.
+
+Do NOT use `color-mix()` in email templates or PDF stylesheets — email clients and `@react-pdf/renderer` do not evaluate CSS functions. Do NOT hardcode the tint hex value — it must derive from the live `brand_primary` at render time.
+
+### @react-pdf/renderer — createStyles() Factory Pattern (established THEME.4)
+
+`@react-pdf/renderer` evaluates `StyleSheet.create({...})` at module load time, before any component renders and before any props are available. This means that if brand colors are stored in module-scope constants and passed to `StyleSheet.create()` at the top level, those constants are frozen at their initial (imported) values — component props cannot override them at render time.
+
+Confirmed failure mode (THEME.4 F2): the prompt suggested reassigning two constant declarations (`const NAVY = brandPrimary ?? '#293994'`) inside the component. This appeared correct at a code-review level but would silently have no effect — the `StyleSheet.create()` call that consumed those constants had already been evaluated at import time with the original hardcoded values. No error would be thrown; every PDF render would quietly use the original 30BN colors regardless of props.
+
+Correct pattern: Move `StyleSheet.create()` inside a factory function called from within the component body:
+
+```typescript
+// WRONG — StyleSheet.create() at module scope, frozen before props arrive
+const NAVY = '#293994'
+const styles = StyleSheet.create({
+  header: { backgroundColor: NAVY }
+})
+
+// CORRECT — factory function called at render time with resolved prop values
+function createStyles(brandPrimary = '#293994', brandPrimaryLight = '#EEF1FA') {
+  return StyleSheet.create({
+    header: { backgroundColor: brandPrimary }
+  })
+}
+
+export default function MyPdfComponent({ brandPrimary, brandPrimaryLight }) {
+  const styles = createStyles(brandPrimary, brandPrimaryLight)
+  // ... render
+}
+```
+
+Apply this pattern to any new `@react-pdf/renderer` component that needs dynamic styling from props or DB values. The performance cost of calling `StyleSheet.create()` at render time (rather than module load) is negligible for document generation.
+
+### R33 Enforcement — Brand Utility Classes in New UI Code (established THEME.1)
+
+After Phase THEME ships, all new code that references brand-driven colors in the web UI must use the CSS utility classes defined in `app/globals.css`'s `@layer utilities` block — not the old static Tailwind token names. The static token names (`bg-navy`, `text-orange`, `bg-steel`, `bg-light-navy`, etc.) still exist in `@theme` as static hex values (R7 — `@theme` cannot use `var()`) but referencing them in new code after THEME produces static colors that never change when `brand_primary` / `brand_accent` are updated in the Setup Panel.
+
+Correct new code (post-THEME):
+
+```tsx
+// ✓ Brand-driven color — uses the dynamic utility class
+<button className="bg-brand-primary hover:bg-brand-primary/80">
+
+// ✓ Structural/neutral color — static Tailwind token, stays forever
+<div className="bg-footer-gray border-divider">
+
+// ✗ Brand-driven color using old static token — never write after THEME
+<button className="bg-navy hover:bg-navy/80">
+```
+
+The `@layer utilities` block defines these classes: `.bg-brand-primary`, `.text-brand-primary`, `.border-brand-primary`, `.ring-brand-primary`, `.hover:bg-brand-primary`, etc. (full list in `globals.css`). For opacity variants: `.bg-brand-primary\/80` (color-mix with transparent).
+
+For brand-driven colors in email templates: use string interpolation from `resolveEmailSettings()` — not CSS classes. For PDF components: use the `createStyles()` factory pattern above.
+
+Enforced via R33 in Brief §13. See §11 checklist item below.
 
 `next.config.ts` `images.remotePatterns` for Supabase Storage (established ADMIN.33):
 When `org_logo_url` (or any `app_settings` value) references a URL from Supabase Storage, `next/image` requires that the hostname be declared in `images.remotePatterns` in `next.config.ts`. The required entry is `{ hostname: '*.supabase.co' }`. Without this, any deployment with a custom uploaded logo will throw a runtime error ("hostname not configured under images"). This entry was added in ADMIN.33 F1 when the public page org identity sweep wired `org_logo_url` into `next/image` across 13 pages. Confirmed required for all OpenCall OS deployments. Do not remove this entry from `next.config.ts`.
@@ -2693,3 +2930,4 @@ See §11 checklist for the required verification item.
 *v3.7 (July 2026 — HELP.2e + DOC.41/42: §2 header updated (HELP.2e owner_admin sweep + DOC.41/42 logged); §13 prompt log updated (HELP.2e ✓ — 47 HelpContent.tsx ALL_SECTIONS entries updated, commit f4394bd; DOC.41 ✓ — Brief v3.7; DOC.42 ✓ — this prompt); document header v3.7; DOC.42 logged)*
 *v3.8 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §2 header updated (SETUP complete + ADMIN.31/31b); §7 feature flag pattern updated (built SETUP.1 — "not yet built" removed, three active flags noted, proxy.ts conditional fetch noted, missing key behavior noted); §7 setup.ts note updated (dual-client pattern documented — getServerClient() for mutations, getAdminClient() for getSignedBrandUploadUrl()); §7 P-DC storage bucket note updated (two sanctioned buckets: media + brand, path namespacing for each); §7 XHR sanctioned files updated (ConsentUploadForm + MediaLibrary + BrandImageUploader — count 2 → 3); §10 feature flags grep updated (flag list trimmed to 3 active flags, SetupPanel.tsx exclusion added); §10 XHR grep updated (3 sanctioned files); §10 storage grep updated (brand bucket note + second grep for all buckets); §10 new proxy.ts matcher grep check added (SETUP.1 F1); §11 five new checklist items: R34 flag-ready for new features, resolveEmailSettings() in new email functions, payload builder logoUrl param, revalidatePath layout cascade on flag saves, proxy.ts matcher audit before public guards; §13 Phase SETUP marked complete (SETUP.1–4 all ✓ with commit hashes); §13 ADMIN.31 + ADMIN.31b + DOC.43a logged; §13 Phase 19 description updated (expanded scope); §13 Phase 21 + Phase CAST + ADMIN.32/33 added; §14 four new rules: proxy.ts matcher must include all guarded paths (SETUP.1 F1), setup.ts dual-client pattern (SETUP.2), resolveEmailSettings/resolveOrgIdentity use getAdminClient() (SETUP.3/ADMIN.31), R34 cross-reference added; DOC.43b logged)*
 *v3.9 (July 2026 — ADMIN.32–34 complete: §2 header updated (ADMIN.32–34 + DOC.44 logged); §7 Owner Admin role guard EXCEPTIONS updated (OA can now create/assign OA — only SA creation/deactivation remains SA-only); §14 resolveEmailSettings() return type updated (orgName + orgContactEmail added; FROM_ADDRESS/REPLY_TO deletion documented; payload builder from/replyTo params documented); §14 resolveOrgIdentity() return type updated (org_logo_url added; admin layout prop pattern documented); §14 new pattern: || vs ?? for app_settings fallbacks (confirmed failure mode ADMIN.34 F2); §14 new pattern: next.config.ts images.remotePatterns for Supabase Storage; §10 new grep check: FROM_ADDRESS/REPLY_TO must be zero; §10 Owner Admin grep comment updated (only SA-creation escalation guards remain legitimate SA-only hits); §11 payload builder checklist item updated (from/replyTo params, FROM_ADDRESS/REPLY_TO deleted); §11 resolveEmailSettings() checklist item updated (orgName + orgContactEmail); §11 Owner Admin role guard checklist item updated (OA can create OA); §11 two new checklist items (|| vs ?? pattern, no hardcoded org strings in email body copy); §13 ADMIN.32 + ADMIN.33 + ADMIN.34 all marked complete with summaries; Phase 21 prerequisites marked complete; DOC.43b-FIX + DOC.44 + DOC.45 added to prompt log; DOC.45 logged)*
+*v4.0 (July 2026 — Phase THEME complete: §2 header updated (THEME complete + Phase 19/21 pre-launch + DOC.47/DOC.48 logged); §14 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight added; email client constraint note added — string interpolation not CSS custom properties); §14 new pattern: lightenHex() from lib/utils/color.ts for server-side hex tint computation (email templates + PDF exports; do not use color-mix() in email or @react-pdf/renderer contexts); §14 new pattern: @react-pdf/renderer createStyles() factory pattern (StyleSheet.create() at module scope ignores props — confirmed failure mode THEME.4; factory function called inside component body is required); §14 R33 enforcement note added (post-THEME web UI code must use @layer utilities classes — bg-brand-primary etc. — never static token names); §10 two new grep checks (brand static Tailwind classes must be zero; brand hex in email templates outside resolveEmailSettings() fallbacks must be zero); §11 email send function checklist item updated (brand color params added); §11 payload builder checklist item updated (brand params added); §11 three new checklist items (post-THEME UI code uses utility classes, PDF factory pattern, email brand hex grep); §13 Phase THEME marked complete (THEME.A/1/2a–2d/3/3b-4 all ✓ with commit hashes); §13 Phase 19 status updated (pre-launch, 3-prompt structure confirmed); §13 Phase 21 updated (pre-launch); §13 prompt log: DOC.43b-FIX through DOC.48 + THEME.A through THEME.3b-4 added (14 new entries); DOC.48 logged)*
