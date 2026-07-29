@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.0
-### Created: July 2026 | Last Updated: July 2026 — v4.0 (ADMIN.32–34 complete, Migrations 028–029, Owner Admin permissions expanded, OpenCall OS branding sweep, QR history, Setup Panel Section 8)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.1
+### Created: July 2026 | Last Updated: July 2026 — v4.1 (Phase THEME complete — THEME.A through THEME.3b-4; Phase 17 scope expanded; Phase 19 + Phase 21 moved pre-launch; lib/utils/color.ts; PDF export brand colors; resolveEmailSettings() brandPrimary/brandAccent/brandPrimaryLight; buildEmailHtml() brand params)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** ADMIN.32–34 complete. Phase THEME is next (THEME.A audit → THEME.1–3). Phase 17 (Launch) after THEME. Phase 21 (Rehearsal Management) and Phase CAST planned post-launch.
+**Current phase:** Phase THEME complete (THEME.A through THEME.3b-4). Phase 19 (Communication Preferences) and Phase 21 (Rehearsal Management) planned pre-launch. Phase 17 (Launch) follows. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -64,7 +64,8 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Image Config** | next.config.ts images.remotePatterns | Must include *.supabase.co hostname pattern (added ADMIN.33). Required for dynamic logo rendering when org_logo_url points to Supabase Storage. Without this entry, next/image will throw a runtime error on any deployment with a custom uploaded logo. |
-| **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. |
+| **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. Brand colors passed as props via `createStyles()` factory (THEME.4 — see §8 Volunteer List PDF). |
+| **Color Utility** | `lib/utils/color.ts` | `lightenHex(hex, amount)` — pure server-side hex tint computation. Blends a hex color with white at the given percentage. Used by `resolveEmailSettings()` to compute `brandPrimaryLight` (8% tint of `brand_primary`) and by the PDF export route handler for the same derivation. Required because email clients and `@react-pdf/renderer` do not support CSS custom properties or `color-mix()` — tints must be concrete hex strings computed server-side. Established THEME.3b. |
 | **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. Installed 13.3b; extensions added ADMIN.27. |
 | **Image Cropping** | react-easy-crop v6.2.3 | Client-side image crop editor for brand asset uploads in the Setup Panel (BrandImageUploader.tsx). Used for logo (free aspect ratio) and favicon (1:1 square lock). Installed SETUP.2. |
 | **HTML Sanitization** | `sanitize-html` + `@types/sanitize-html` | Server-side sanitization of TipTap HTML output in `sendBlastEmail()` before the email payload is built. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href]` only. HTTP/HTTPS/mailto schemes only. Strips `<script>`, event handlers, and `javascript:` hrefs. Installed 13.4a. |
@@ -176,10 +177,10 @@ Mid Gray:             #555555  --color-mid-gray
 - **Background:** Transparent — works on white and navy backgrounds
 
 ### Email Design
-- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). Dynamic from-address implemented (SETUP.3/ADMIN.31): `resolveEmailSettings()` internal helper in `lib/email.ts` fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, and `org_contact_email` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string }`. Falls back to 30BN defaults when keys are absent or empty. Called in all direct-call send functions. Never exported — internal to `lib/email.ts`. The FROM_ADDRESS and REPLY_TO module-level constants were deleted in ADMIN.34; the 4 payload builders (buildReminderEmailPayload, buildThankYouEmailPayload, buildShowBulkEmailPayload, buildCategoryMatchNotificationPayload) now accept explicit from?: string and replyTo?: string params with inline 30BN defaults as fallback, and all call sites in lib/actions/shows.ts and both cron routes pass the dynamic values directly.
+- From address: `volunteers@30byninetyvolunteers.com` (domain verified in Resend during Alpha — no domain change needed at Launch). Dynamic from-address implemented (SETUP.3/ADMIN.31): `resolveEmailSettings()` internal helper in `lib/email.ts` fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, `org_contact_email`, and `brand_primary` + `brand_accent` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string, brandPrimary: string, brandAccent: string, brandPrimaryLight: string }`. `brandPrimaryLight` is derived server-side as `lightenHex(brandPrimary, 0.08)` from `lib/utils/color.ts` — an 8% tint of `brand_primary` matching the `--brand-primary-light` CSS custom property. Falls back to 30BN defaults when keys are absent or empty. Called in all direct-call send functions. Never exported — internal to `lib/email.ts`. Extended THEME.3 (brandPrimary/brandAccent) and THEME.3b (brandPrimaryLight). The FROM_ADDRESS and REPLY_TO module-level constants were deleted in ADMIN.34; the 4 payload builders (buildReminderEmailPayload, buildThankYouEmailPayload, buildShowBulkEmailPayload, buildCategoryMatchNotificationPayload) now accept explicit `from?: string`, `replyTo?: string`, `brandPrimary?: string`, and `brandAccent?: string` params with inline 30BN defaults as fallback, and all call sites in lib/actions/shows.ts and both cron routes pass the dynamic values directly.
 - Default Reply-To: `info@30byninety.com` (editable per send by Editor)
 - All emails use branded HTML templates (built Phase 13.2): table-based layout, inline styles only (email client compatibility), max 600px content width, navy (`#293994`) header, white content area, footer-gray (`#F5F5F5`) footer.
-- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote?, logoUrl? })` in `lib/email.ts` (internal, not exported). Now accepts optional `logoUrl` param (added SETUP.3). When provided, uses it for the email header logo; falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when absent. `logoUrl` value comes from `resolveEmailSettings()` at the call site — never hardcoded per-function. Public page org identity: `resolveOrgIdentity()` in `lib/utils/org-identity.ts` fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings` for use in public Server Components (landing page heading, footer, copyright, logo). Uses `getAdminClient()` — safe for public pages and cron routes with no admin session. Falls back to 30BN defaults. Extended in ADMIN.33 to include `org_logo_url` (required for the public page org identity sweep). The admin crew layout (`app/crew/(app)/layout.tsx`) fetches org via `resolveOrgIdentity()` and passes it as a prop to `Sidebar.tsx` (Client Component — cannot call `resolveOrgIdentity()` directly per R10). Never import from a Client Component.
+- Shared wrapper: `buildEmailHtml({ subject, preheader, body, footerNote?, logoUrl?, brandPrimary?, brandAccent?, brandPrimaryLight? })` in `lib/email.ts` (internal, not exported). Accepts optional `logoUrl` (added SETUP.3), `brandPrimary`, `brandAccent`, and `brandPrimaryLight` params (added THEME.3/THEME.3b). All values come from `resolveEmailSettings()` at the call site — never hardcoded per-function. Email client brand color approach: Email clients do not support CSS custom properties (`var()`) or `color-mix()`. Brand hex values are string-interpolated at send time using `brandPrimary` and `brandAccent` fetched from `app_settings`, and `brandPrimaryLight` computed server-side via `lightenHex()`. This is distinct from the CSS custom property approach used in the web UI (THEME.1/2). `buildCtaButton(label, url, color)` helper (internal): each call site passes the correct dynamic color — `brandPrimary` for structural/nav buttons, `brandAccent` for action/CTA buttons. Public page org identity: `resolveOrgIdentity()` in `lib/utils/org-identity.ts` fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings` for use in public Server Components (landing page heading, footer, copyright, logo). Uses `getAdminClient()` — safe for public pages and cron routes with no admin session. Falls back to 30BN defaults. Extended in ADMIN.33 to include `org_logo_url` (required for the public page org identity sweep). The admin crew layout (`app/crew/(app)/layout.tsx`) fetches org via `resolveOrgIdentity()` and passes it as a prop to `Sidebar.tsx` (Client Component — cannot call `resolveOrgIdentity()` directly per R10). Never import from a Client Component.
 - CTA buttons built via `buildCtaButton(label, url, color)` helper (internal). Volunteer-facing CTAs link to `/callboard`. Admin-facing CTAs link to `/crew/login` or `/crew/`.
 - All user-supplied values interpolated into HTML email strings must be wrapped in `escapeHtml()` (internal to `lib/email.ts`). Exception: the blast body passed from TipTap is sanitized via `sanitize-html` instead of escaped — escaping would corrupt the HTML structure. See `sendBlastEmail()` in `lib/actions/blast.ts`.
 - All outbound emails (system-triggered and admin-triggered) logged to `email_log` + `email_log_recipients` as of Phase 13.1.
@@ -231,6 +232,7 @@ Mid Gray:             #555555  --color-mid-gray
   - Volunteer interest areas: multi-select from active `volunteer_categories`
   - How did you hear about us: dropdown from `hearing_options` table + "Other" with text input
   - Referred by: free text (optional)
+  - Preferred contact method (Phase 19 — pending): optional dropdown (Email / Phone / No preference). Maps to `volunteers.communication_preference`. Advisory only — no system enforcement.
 - Honeypot spam prevention (built 12.1): hidden
   uncontrolled `<input name="website">` field
   (off-screen via CSS, not display:none). If populated
@@ -250,6 +252,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Entry via link in confirmation email or token re-request (enter email/phone → receive new link)
 - Pre-filled editable form (all fields; email read-only for reference; phone re-checked for duplicates on change)
 - Service hours question appears pre-filled when the volunteer has a school value on file. Same conditional trigger as the signup form.
+- Preferred contact method (Phase 19 — pending): preference field pre-filled from `volunteers.communication_preference`. Same options as signup form.
 - On submit: update record, send "Your info has been updated" email
 
 ### Public — Show Listing (`/shows`)
@@ -318,6 +321,7 @@ optional and additive: entering email or phone personalizes the view with a volu
   Hours" section for manual entries (note + date +
   hours) — omitted if no manual entries. Empty state:
   "No calls on record yet." Collapsed by default.
+- Preferred contact method (Phase 19 — pending): preference badge displayed on the volunteer card. Volunteer can update preference inline via a select element (calls `updateCallboardPreference()` in `lib/actions/callboard.ts`).
 - "Edit my info" → `/update?token=[update_token]`
 - "Sign out" → calls `signOutCallboard()` then
   `router.refresh()`
@@ -481,14 +485,12 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   (e.g. "(985) 555-1234" — ADMIN.21).
 - Bulk select: export selected to CSV. `requires_service_hours` included in CSV export.
 - **Export Matching (CSV):** filter-aware all-pages CSV export — exports all volunteers matching the current active filters, not just the current page. Built in ADMIN.19 (replaced the prior all-volunteers-ignoring-filters export).
+- Preferred contact method (Phase 19 — pending): `communication_preference` visible as a display-only badge in the volunteer list table. Filter deferred to a later phase.
 - PDF export available (Editor/Super Admin) via
   server-side route handler at `/crew/volunteers/export`.
   Landscape A4, branded header, 9-column table (added
   "Svc Hrs" column in ADMIN.17). Filter fix applied in
-  ADMIN.20: both `milestoneTier` and `service_hours`
-  params were previously dropped by the route handler;
-  both now pass through correctly. The CSV "Export
-  Matching" export was unaffected and remains correct.
+  ADMIN.20. Brand color architecture (THEME.4): `VolunteerListPDF.tsx` uses a `createStyles(brandPrimary, brandPrimaryLight)` factory function (called inside the component body with resolved prop values) instead of module-scope constants. `@react-pdf/renderer` calls `StyleSheet.create()` at module load time, making top-level constants invisible to component props — the factory pattern is required. The PDF route handler (`app/crew/(app)/volunteers/export/route.tsx`) fetches `brand_primary` from `app_settings` and computes `brandPrimaryLight` via `lightenHex()`, then passes both as props to `VolunteerListPDF`. Default prop values preserve the original 30BN colors as fallback.
 - Milestone Tier filter: active as of 30BN-9.2. Filter options: Any milestone earned, First Call, 10+ Hours, 20+ Hours, 50+ Hours, 100+ Hours. Filter runs a pre-query against `milestone_log` then applies `.in('id', matchingIds)` on the main volunteer query.
 - Row click → volunteer profile
 
@@ -510,6 +512,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - All profile mutation components standardized to `router.refresh()` in ADMIN.19 (EditorNotes, StatusToggle, VolunteerProfileForm). `setIsEditing(false)` added alongside refresh in VolunteerProfileForm to prevent stale form state.
 - **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors and Super Admins only. Never visible to volunteer (RLS enforced). Editors and Super Admins can add notes (append-only for Editors). Super Admins can also edit and delete existing notes. Implemented via Migration 004 RLS policies. For preferences, scheduling considerations, history, sensitive info.
 - Status toggle: Active / Archived (Editors only, confirmation prompt)
+- Preferred contact method (Phase 19 — pending): editable field in the personal info section (Editors, Super Admin, Owner Admin). Displays as an informational badge alongside contact fields when view-only. Stored in `volunteers.communication_preference`.
 - **Communication History** (built ADMIN.24, all roles):
   collapsible section below Milestone History. Shows all
   emails logged to this volunteer via
@@ -1050,7 +1053,7 @@ Eight independently-saving sections (each has its own Save button — no "Save A
 
 Section 1 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
-Section 2 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME must ship for colors to propagate into the admin UI — until then, colors update email templates and public pages from `app_settings` but the admin UI uses static Tailwind classes.
+Section 2 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME complete — brand colors now propagate dynamically across all rendering surfaces: public pages and admin UI via CSS custom properties injected in `app/layout.tsx` (THEME.1/2); email templates via string interpolation at send time using `resolveEmailSettings()` (THEME.3/3b); PDF exports via `createStyles()` factory props (THEME.4). Changing these values in the Setup Panel immediately affects all surfaces on next page render / email send.
 
 Section 3 — Logo: `org_logo_url`. Two input modes: (a) URL input (paste any public image URL), or (b) file upload via BrandImageUploader — P-DC pattern to `brand/logo/` in the `brand` public bucket, crop editor (react-easy-crop, free aspect ratio, PNG output). Whichever was used last wins. Falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset. Used in email templates (via `resolveEmailSettings()`) and public landing page.
 
@@ -1429,7 +1432,12 @@ Seeded two new `app_settings` keys: `not_found_heading` = 'Page Not Found' and `
 **Migration 029 status:** Applied — `029_qr_codes.sql` (ADMIN.34):
 Creates `qr_codes` table for shared QR code history. Indexes on `created_at DESC` and `created_by`. RLS enabled: SELECT for all authenticated, INSERT for all authenticated, DELETE for `is_super_admin_or_owner_admin()` only.
 
-**Next migration:** 030
+**Next migration:** 030 — planned for Phase 19:
+`030_communication_preference.sql`. Adds nullable
+`communication_preference` text CHECK ('email'|'phone'|'either') column to `volunteers` table. No index
+needed (advisory only — never filtered in Phase 19).
+RLS unchanged (volunteers table RLS already covers
+all write paths).
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1463,6 +1471,10 @@ total_hours      numeric(6,2) NOT NULL DEFAULT 0
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
 requires_service_hours boolean NOT NULL DEFAULT false
+-- communication_preference text CHECK (
+-- communication_preference IN ('email','phone','either')
+-- ) — Phase 19, pending. Nullable. Advisory only —
+-- no system enforcement. Migration 030.
 -- Constraint: UNIQUE (email), UNIQUE (phone)
 -- NOTE: phone stored as digits-only (no formatting)
 -- as of Migration 014 (ADMIN.21). All write paths
@@ -3338,7 +3350,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*ADMIN.32 (audit) + ADMIN.33 + ADMIN.34 complete. Migrations 028–029 applied. Phase THEME is next (THEME.A audit → THEME.1–3). Phase 17 (Launch) after THEME.*
+*Phase THEME complete (THEME.A through THEME.3b-4). Migrations 028–029 applied. Phase 19 (Communication Preferences) and Phase 21 (Rehearsal Management) planned pre-launch. Phase 17 (Launch) follows.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3673,7 +3685,89 @@ Phase 15 — Document & Media System ✓ Complete
                approveRegistration() (self-caught guard
                bug corrected before commit — F1).
                13 files. Commit 28e0c4e.
-  30BN-DOC.44 ✓ Brief Update v4.0 (this prompt)
+  30BN-DOC.44 ✓ Brief Update v4.0 (ADMIN.32–34:
+               OA permissions, OpenCall OS branding
+               sweep, QR history, Setup Panel
+               Section 8, Migrations 028–029).
+  30BN-DOC.44-FIX ✓ Brief §8 QR Generator spec
+               synced with ADMIN.34 (history panel,
+               generateQRCode signature, new components).
+               Commit 122ca3a.
+  30BN-DOC.45 ✓ Process Update v3.9 (ADMIN.32–34
+               complete, OA permission model, resolve
+               EmailSettings return types, || vs ??
+               pattern, new grep/checklist items).
+               Commit 122ca3a.
+  30BN-DOC.46 ✓ Deferred Verifications v15 (ADMIN.33–34
+               items: 34 new items — 7.1 V11–V17 QR
+               history, ADMIN.33 V1–V23, ADMIN.34 V1–V4;
+               stale ref fixes; ADMIN.26 V5 superseded).
+               Commit 8b32b85.
+  30BN-DOC.46-FIX ✓ Three corrections: ADMIN.23 V4
+               attribution (ADMIN.34 → ADMIN.33), item
+               count 775 → 774, Brief "Seven" → "Eight"
+               independently-saving sections. Commit 7f816fa.
+  30BN-THEME.A ✓ Read-only audit. 1,381 brand-derived
+               class instances across 130 files. 6 brand-
+               derived token families (navy, orange, steel,
+               slate, light-navy, pale-orange). Confirmed
+               Option A (CSS color-mix). 15 distinct utility
+               classes needed (69 rules with variants).
+               F1: steel/slate hue mismatch (percentages
+               adjusted to 59%/47%). F3: opacity modifier
+               pattern resolved via color-mix(transparent).
+               F4: categorical color exception policy set.
+               Email template THEME.3 preview (42 hex hits).
+               No code.
+  30BN-THEME.1 ✓ CSS foundation + public pages (30 files,
+               305 instances). globals.css @layer utilities
+               (69 rules). app/layout.tsx resolveBrandColors()
+               + <style> tag (6 custom properties). Commit
+               406b188.
+  30BN-THEME.2a ✓ Admin pages sweep (30 app/crew/ files,
+               110 instances). Categorical exceptions: claim-
+               type badges → fixed hex. Commit 6576a55.
+  30BN-THEME.2b ✓ Crew shared + settings components (21
+               files). Categorical exceptions: role badges
+               (TopBar, UsersTable), System badge (Document
+               TypesManager), LocationsManager L214/230 left
+               untouched. Commit bf53e17.
+  30BN-THEME.2c ✓ Shows, volunteers, opportunities, forms,
+               dashboard components (28 files, 236 instances).
+               Categorical exceptions: claim-type badges
+               (OpportunityList), activity-feed borders
+               (ActivityFeed). Commit 1c40bc6.
+  30BN-THEME.2d ✓ Calendar, communication, media, tools,
+               help components (21 files, 201 instances).
+               MediaLibrary categorical exception (access-
+               tier badge → fixed hex including dark: variants).
+               Full-codebase final grep: zero remaining static
+               brand token classes. Commit 8bc26d5.
+  30BN-THEME.3 ✓ Email template brand color sweep (5 files).
+               resolveEmailSettings() +brandPrimary +brand
+               Accent. buildEmailHtml() +brandPrimary +brand
+               Accent. 4 payload builders gain brand params.
+               All call sites in shows.ts + cron routes pass
+               dynamic values. Self-caught: emailShell(),
+               instructionsBlockHtml(), cancelLinkHtml(),
+               addToCalendarLinkHtml() all contain hardcoded
+               navy — extended. buildCtaButton() uses navy
+               at every call site (never orange — confirmed).
+               Commit 69d7dfa.
+  30BN-THEME.3b-4 ✓ Light-navy in emails + PDF export brand
+               colors (4 files + 1 new). lib/utils/color.ts
+               (new — lightenHex() utility). resolveEmail
+               Settings() +brandPrimaryLight (computed from
+               brandPrimary via lightenHex 8%). sendWelcome
+               Email() + instructionsBlockHtml() use brand
+               PrimaryLight. VolunteerListPDF.tsx refactored:
+               createStyles(brandPrimary, brandPrimaryLight)
+               factory (StyleSheet.create() at module-load
+               requires factory, not top-level constant —
+               self-caught). PDF route handler fetches
+               brand_primary + computes brandPrimaryLight.
+               Phase THEME fully complete. Commit 66d2ba7.
+  30BN-DOC.47 ✓ Brief Update v4.1 (this prompt)
 
 **SETUP.1** ✓ — Feature flag infrastructure.
 `lib/feature-flags.ts`: `getFeatureFlags()` + `FeatureFlags`
@@ -3727,28 +3821,76 @@ fetches 14 keys total (9 SETUP.2 + default_reply_to SETUP.3 +
 4 new: flag keys + instance_label). Phase SETUP complete.
 4 files modified. Commit 562f9d4.
 
-### Phase THEME — Dynamic CSS Brand System (pending)
+### Phase THEME — Dynamic CSS Brand System ✓ Complete
 
-**THEME.A** (pending) — Read-only audit. Grep all brand
-color class usages (`bg-navy`, `text-orange`, etc.).
-Categorize each as brand-driven vs. structural. Produce
-complete replacement plan before any code is written.
+**THEME.A ✓** — Read-only audit. Full inventory of all
+brand-derived color classes across 130 files: 1,381 class
+instances. Confirmed Option A (CSS `color-mix()` derivation for
+tints) with adjusted percentages (steel→59%, slate→47%).
+Identified 8 categorical color exceptions (role badges,
+claim-type badges, activity-feed borders). Surfaced F1
+(`color-mix()` hue mismatch — steel/slate are not pure navy
+tints), F3 (opacity modifier `/NN` pattern for `@layer`
+utilities), F4 (categorical color reuse). All three
+resolved in THEME.1 design decisions before any code.
 
-**THEME.1** (pending) — Root layout CSS variable injection.
-Both `app/layout.tsx` and `app/crew/(app)/layout.tsx`
-get a server-side `<style>` tag reading `brand_primary`
-and `brand_accent` from `app_settings` and writing them
-as `--brand-primary` and `--brand-accent` CSS custom
-properties. Public pages sweep.
+**THEME.1 ✓** — CSS foundation + public pages sweep.
+`app/globals.css`: new `@layer utilities` block (69 CSS
+rules — 15 base classes + variants + opacity variants via
+`color-mix(..., transparent)`). `app/layout.tsx`:
+`resolveBrandColors()` + `<style>` tag injecting 6 CSS
+custom properties (`--brand-primary`, `--brand-accent`,
+`--brand-primary-mid` 59%, `--brand-primary-tint` 47%,
+`--brand-primary-light` 8%, `--brand-accent-light` 5%).
+Single injection point in root layout (cascades to all
+routes including `/crew/*`). `@theme` block unchanged (R7).
+All 30 public files swept (17 app/ + 13 components/) —
+305 instances replaced. Categorical exceptions applied.
+Commit 406b188.
 
-**THEME.2** (pending) — Admin UI sweep. All brand-driven
-Tailwind utility classes replaced with CSS custom property
-references.
+**THEME.2a–2d ✓** — Admin UI sweep. 100 admin files
+(30 app/crew/ + 70 components/crew/). 1,076 instances
+replaced across 4 sub-prompts. Categorical exception rule:
+role badges, claim-type badges, access-tier badges,
+activity-feed borders converted to fixed Tailwind arbitrary
+hex (e.g. `bg-[#293994]`) — not brand utility classes.
+Full-codebase final grep after THEME.2d confirmed zero
+remaining brand-derived static token classes.
 
-**THEME.3** (pending) — Email template sweep. Confirm all
-hardcoded hex values in `buildEmailHtml()`,
-`buildCtaButton()`, and email functions reference custom
-properties or are read from `app_settings` at send time.
+**THEME.3 ✓** — Email template brand color sweep.
+`resolveEmailSettings()` extended: fetches `brand_primary`
+and `brand_accent` from `app_settings`, passes them plus
+computed `brandPrimaryLight` to all email functions. All
+~42 hardcoded `#293994`/`#F26522` hex hits in `lib/email.ts`
+and `lib/actions/blast.ts` replaced with dynamic string
+interpolation. 4 payload builders gain `brandPrimary?` and
+`brandAccent?` params. String substitution used (not CSS
+custom properties — email clients don't support `var()`).
+Additional helpers extended: `emailShell()`,
+`instructionsBlockHtml()`, `cancelLinkHtml()`,
+`addToCalendarLinkHtml()`, `milestoneEmailContent()`.
+5 files. Commit 69d7dfa.
+
+**THEME.3b ✓** — Light-navy (`#EEF1FA`) in email templates.
+`resolveEmailSettings()` further extended to return
+`brandPrimaryLight` computed via `lightenHex(brandPrimary, 0.08)` from new `lib/utils/color.ts`. `instructionsBlockHtml()`
+derives its own tint internally (called from payload builders
+that don't have a precomputed `brandPrimaryLight`).
+`sendWelcomeEmail()` uses `brandPrimaryLight` for login-
+details box background. Zero hardcoded `#EEF1FA` remain
+in email templates. Bundled with THEME.4 as THEME.3b-4.
+
+**THEME.4 ✓** — PDF export brand colors. `VolunteerListPDF.tsx`
+refactored: hardcoded NAVY/LIGHT_NAVY constants replaced
+with `createStyles(brandPrimary, brandPrimaryLight)` factory
+function called inside the component body. `@react-pdf/renderer`
+calls `StyleSheet.create()` at module load time (before props
+are available), making the factory pattern mandatory — top-level
+constant reassignment would silently fail. Route handler
+`app/crew/(app)/volunteers/export/route.tsx` fetches
+`brand_primary` from `app_settings`, computes `brandPrimaryLight`
+via `lightenHex()`, passes both as props. `lib/utils/color.ts`
+created (new file). 4 files. Commit 66d2ba7.
 
 ### Phase 14 — Check-In System ✓ Complete
 
@@ -3832,11 +3974,61 @@ viewable-mime-type files now route to player page instead of direct redirect.
 - Add "Sign in with Google" button to `/crew/login`
 - Confirm redirect URIs for production domain
 
-### Phase 17 — Launch (~2 prompts)
-- Domain setup (CNAME or new domain purchase)
-- Resend domain verification (SPF, DKIM, DMARC DNS records)
-- Production environment audit
-- End-to-end flow testing on production domain
+### Phase 17 — Launch
+
+**17.1 — Production Environment Audit + Setup Panel Configuration**
+- Confirm all 6 environment variables set in Vercel production
+  (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
+  `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`)
+- Confirm `NEXT_PUBLIC_SITE_URL` = `https://30byninetyvolunteers.com`
+- Run through all 8 Setup Panel sections and populate with
+  production 30BN values (org identity, brand colors, logo,
+  favicon, email config, feature flags, instance label, 404 page)
+- Confirm all three feature flags enabled for launch
+- Work through Deferred Verifications document (v15, 774 items)
+
+**17.2 — Domain & DNS**
+- Confirm `30byninetyvolunteers.com` CNAME/A record points to Vercel
+- Confirm domain is not expiring imminently
+- Confirm Vercel custom domain is active and SSL certificate valid
+
+**17.3 — Resend Production Configuration**
+- Switch from sandbox to production Resend API key in Vercel env
+- Confirm domain `30byninetyvolunteers.com` verified in Resend
+  (SPF, DKIM, DMARC DNS records — done during Alpha, re-confirm)
+- Send test email from live system; confirm delivery, formatting,
+  brand colors render correctly
+
+**17.4 — Seed Data Cleanup**
+- Run seed data cleanup SQL from Deferred Verifications document
+- Delete test volunteer signups, show/slot test data, test QR codes
+- Delete test email logs, test audit log entries
+- Review and clean `recurrence_groups` table
+- Delete test uploads from `brand/logo/` and `brand/favicon/`
+
+**17.5 — End-to-End Flow Testing**
+- Public volunteer signup → confirmation email received
+- Slot claiming → email received
+- Call Board access → volunteer card, hours, history
+- Admin login (email/password + Google SSO)
+- Show management (create, publish, volunteer visibility)
+- Email blast (compose → preview → send to test address)
+- Calendar (create event, public calendar visible)
+- Check-in (token generation, check-in flow)
+- Brand color propagation verification
+
+**17.6 — Google OAuth Production Redirect URIs**
+- Update Google Cloud Console OAuth redirect URIs to include
+  `https://30byninetyvolunteers.com/auth/callback`
+- Confirm in Supabase Auth settings (production URL in allowed
+  redirect URLs)
+
+**17.7 — Cron Job Verification**
+- Confirm both Vercel Cron jobs active in dashboard
+  (`/api/cron/reminders` + `/api/cron/thankyou`)
+- Confirm `CRON_SECRET` matches `vercel.json` config
+- Confirm cron schedules are correct
 
 ### Phase 18 — Additional Alpha Features ✓ Complete
 These features were added to Alpha scope and are now built:
@@ -3851,23 +4043,47 @@ These features were added to Alpha scope and are now built:
 - **Bulk email from show detail** ✓ Built ADMIN.23. "Message Volunteers" on Overview tab.
   See §8 Show Management.
 
-### Phase 19 — Volunteer Communication Preferences (pending, post-launch)
+### Phase 19 — Volunteer Communication Preferences (pending, pre-launch)
 
-Expanded scope (decided this session — supersedes original "waitlist notification only" description):
+Planned prompt structure: 19.1 (Migration 030 + all server
+actions) → 19.2 (public signup form + `/update` flow) →
+19.3 (Call Board + admin profile + volunteer list).
 
-- New `communication_preference` column on `volunteers` (nullable text, CHECK constraint: 'email' / 'phone' / 'either'). No migration yet — planned for Phase 19 build.
-- Signup form: optional "Preferred contact method" field (Email / Phone / No preference)
-- `/update` flow: preference field included, pre-filled
-- Call Board volunteer card: shows preference; volunteer can update
-- Admin volunteer profile: preference displayed as informational badge alongside contact fields
-- Volunteer list: preference visible (display-only in Phase 19; filter deferred)
-- No system enforcement — advisory only. SMS/automated phone delivery is future infrastructure.
-- Original scope (waitlist promotion notification opt-in) subsumed — general preference field serves that purpose and is broader.
+Migration 030: New nullable `communication_preference` text CHECK ('email'|'phone'|'either') column on `volunteers`.
+No FK, no index (advisory only — never filtered in Phase 19).
+
+**19.1 — Schema + Server Actions:**
+- Migration 030
+- `submitVolunteerForm()` — add to insert
+- `updateVolunteer()` — add to update (both in `lib/actions/volunteer.ts`)
+- New `updateCallboardPreference()` in `lib/actions/callboard.ts`
+  (volunteer-session-authenticated, updates own preference via cookie)
+- `updateVolunteerPreference()` in volunteer profile actions
+  (admin-authenticated, editable by Editors/SA/OA)
+- Volunteer CSV export headers updated to include preference
+
+**19.2 — Public Forms:**
+- `VolunteerForm.tsx` — optional "Preferred contact method"
+  dropdown (Email / Phone / No preference). Appears after Phone.
+- `VolunteerUpdateForm.tsx` — same field, pre-filled from DB
+
+**19.3 — Admin + Call Board:**
+- `VolunteerCard.tsx` — preference badge + inline update select
+  calling `updateCallboardPreference()`
+- `VolunteerProfileForm.tsx` — preference field editable in the
+  personal info section (Editors, SA, OA)
+- `VolunteersTable.tsx` — preference display-only badge
+- PDF export — decision deferred (adding a 10th column to landscape
+  A4 is very tight; may omit in Phase 19)
+
+No system enforcement — advisory only. SMS/automated phone delivery
+is future infrastructure. Original "waitlist notification only" scope
+subsumed — this general preference field serves that purpose.
 
 ~~**Automated thank-you email after a show**~~ —
 ✓ Built in Alpha (30BN-12.4). See §8 Show Management.
 
-### Phase 21 — Rehearsal Management System (planned, post-launch)
+### Phase 21 — Rehearsal Management System (planned, pre-launch)
 
 Master rehearsal schedule management surface, distinct from the Master Calendar (which handles space booking and conflict resolution). Phase 21 is about who is called, what is assigned, and tracking attendance.
 
@@ -4108,3 +4324,4 @@ logged)*
 *v3.8 (July 2026 — HELP.2e completion: §8 Help System Owner Admin bullet updated (removed "known gap (ADMIN.30 Q1)" forward-reference note — HELP.2e fixed all 47 non-Settings ALL_SECTIONS entries; replaced with confirmation that the gap is closed); document header + §1 header bumped to v3.8; §11 prompt log unchanged (HELP.2e + DOC.41 already logged in v3.7); DOC.42 logged)*
 *v3.9 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §1 current phase updated (SETUP complete, THEME next); §3 react-easy-crop added; §5 brand public bucket added; §6 email design forward references replaced with implementation facts (resolveEmailSettings, buildEmailHtml logoUrl param, resolveOrgIdentity); §7 proxy feature flag guards documented; §8 Platform Setup section fully replaced (pending spec → built spec: 7 sections, BrandImageUploader, 3-flag set, correct action list, key files); §8 landing page heading/footer dynamic org identity noted; §8 Phase 12 deferred list: 3 items closed (waitlist RPC, phone search, reminder cron DST), 1 remaining; §8 Audit Log known gap closed (volunteer.signup); §9 Migrations 026–027 status blocks added, next migration 028; §9 app_settings seed list corrected (3 flag keys removed, favicon_url added, total 15); §9 AuditAction types: volunteer.signup added; §11 header status updated; §11 Phase SETUP entries SETUP.1–4 all marked complete with summaries; §11 prompt log updated (DOC.42, SETUP.1–4, ADMIN.31, ADMIN.31b, DOC.43a); §11 Phase 15 marked complete; §11 Phase 19 expanded to full communication preference spec; §11 Phase 21 Rehearsal Management System forward spec added; §11 Phase CAST named future phase added; §13 R32 SetupPanel.tsx grep exclusion noted; §13 R34 added (non-core features flag-ready); DOC.43a logged)*
 *v4.0 (July 2026 — ADMIN.32–34 complete: §1 current phase updated (ADMIN.32–34 complete, THEME next); §2 Owner Admin terminology updated (can now create/manage/deactivate OA accounts; cannot create SA); §3 next.config.ts images.remotePatterns entry added (.supabase.co — required for uploaded logo rendering); §6 resolveEmailSettings() return type updated (orgName + orgContactEmail added); resolveOrgIdentity() return type updated (org_logo_url added; layout prop pattern documented); generateMetadata() org_tagline documented (|| fallback); FROM_ADDRESS/REPLY_TO constants deleted, payload builders use explicit from/replyTo params; §7 Owner Admin roles table row updated (OA can create/deactivate OA; can edit/delete volunteer notes; permissions expanded ADMIN.33); Auth model updated (Production direct-create added; OA approval paths documented); §8 User Management SETUP.0 block replaced with accurate ADMIN.33 state; create account role description updated; Platform Setup Section 8 added (not_found_heading/body) + key count 18 + 9 server actions; not-found.tsx description updated (async, dynamic, resolveOrgIdentity); error.tsx Client Component constraint noted; Phase 7 QR Generator updated (QR history panel, lib/data/qr.ts, QRGeneratorForm/QRHistoryPanel components, generateQRCode extended); BulkEmailSection defaultSubject prop noted; HelpContent generic language note; public page org identity sweep documented (13 pages + Sidebar); iCal PRODID/UID domains updated to OpenCall OS; §9 Migration 004 OA volunteer_notes note added; Migrations 028–029 status blocks added; next migration 030; qr_codes table schema block added; admin_users owner_admin NOTE updated; app_settings not_found keys + count 17 + page fetch count 18; §11 header updated; prompt log ADMIN.32–34 + DOC.44 added; DOC.44 logged)*
+*v4.1 (July 2026 — Phase THEME complete: §1 header + current phase updated (THEME complete, Phase 19 + 21 pre-launch); §3 color.ts utility added to tech stack; PDF export brand color architecture noted (@react-pdf/renderer createStyles factory — THEME.4); §6 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight via lightenHex); buildEmailHtml() brand color params documented; email client brand color approach note (string interpolation, not var()); buildCtaButton() dynamic color call sites noted; §8 signup form Phase 19 preference field noted; /update Phase 19 field noted; Call Board volunteer card Phase 19 preference badge + inline update noted; Volunteer Profile Phase 19 editable preference noted (confirmed editable in admin); Volunteer List Phase 19 display-only noted; PDF export createStyles factory architecture documented; Platform Setup Section 2 "Phase THEME must ship" language replaced with completed status; §9 volunteers table communication_preference column Phase 19 note added; Migration 030 context note added; §11 Beta Build header updated; Phase THEME section replaced (all 4 "pending" entries → completed summaries: THEME.A/1/2a–2d/3/3b/4); Phase 17 stub replaced with full 7-sub-phase spec (17.1–17.7); Phase 19 spec updated (prompt structure 19.1/19.2/19.3, admin editable confirmed, CSV export noted, PDF decision noted); Phase 21 moved from post-launch to pre-launch; §11 prompt log: DOC.44 note expanded, DOC.44-FIX + DOC.45 + DOC.46 + DOC.46-FIX + THEME.A + THEME.1 + THEME.2a–2d + THEME.3 + THEME.3b-4 + DOC.47 all added; DOC.47 logged)*
