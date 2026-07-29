@@ -6,15 +6,25 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_credentials: 'Invalid email or password. Please try again.',
   not_authorized: 'This account is not authorized for Production Crew access.',
   auth_callback_failed: 'Sign-in failed. Please try again.',
+  declined: 'Your access request was not approved. Please contact the Production Crew admin for assistance.',
+}
+
+const INFO_MESSAGES: Record<string, string> = {
+  pending: 'Your request is already pending. A Production Crew admin will review it shortly.',
+}
+
+const REGISTERED_MESSAGES: Record<string, string> = {
+  google: 'Your Google account has been submitted for approval. A Production Crew admin will review your request shortly.',
 }
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; pending?: string; registered?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, pending, registered } = await searchParams
   const errorMessage = error ? ERROR_MESSAGES[error] ?? 'Something went wrong. Please try again.' : null
+  const infoMessage = pending ? INFO_MESSAGES[pending] : registered ? REGISTERED_MESSAGES[registered] : null
   const org = await resolveOrgIdentity()
 
   return (
@@ -31,6 +41,12 @@ export default async function LoginPage({
         {errorMessage && (
           <div className="bg-brand-accent-light border border-brand-accent text-dark text-sm rounded px-3 py-2 mb-4">
             {errorMessage}
+          </div>
+        )}
+
+        {infoMessage && (
+          <div className="bg-brand-primary-light border border-divider text-dark text-sm rounded px-3 py-3 mb-4">
+            {infoMessage}
           </div>
         )}
 

@@ -1,19 +1,9 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { emailLogin } from './actions'
+import { signInWithGoogle } from './googleSignIn'
 
 export default function LoginForm() {
-  async function handleGoogleSignIn() {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/auth/callback',
-      },
-    })
-  }
-
   return (
     <div>
       <form action={emailLogin} className="space-y-4">
@@ -63,7 +53,7 @@ export default function LoginForm() {
 
       <button
         type="button"
-        onClick={handleGoogleSignIn}
+        onClick={signInWithGoogle}
         className="w-full flex items-center justify-center gap-2 bg-white border border-divider text-dark font-semibold py-2 rounded hover:bg-brand-primary-light transition-colors"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

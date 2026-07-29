@@ -9,6 +9,7 @@ import {
   sendPendingRegistrationEmail,
   sendRegistrationApprovedEmail,
   sendRegistrationDeclinedEmail,
+  sendGoogleApprovalEmail,
 } from '@/lib/email'
 
 export type ActionResult = { success: true } | { error: string }
@@ -196,34 +197,58 @@ export async function approveRegistration(pendingId: string, role: AdminRole): P
     console.error('approveRegistration pending_registrations update error:', updateError)
   }
 
+  // Determine whether this account signed up via Google OAuth (callback
+  // Branch 3, ADMIN.36) or the email/password Request Access form —
+  // the two paths need different approval emails (no temp password /
+  // no "sign in with your password" language for Google accounts).
+  let isGoogleIdentity = false
   try {
-    await sendRegistrationApprovedEmail({ to: pendingRow.email, name: pendingRow.name })
-
-    try {
-      const { data: logRow } = await client
-        .from('email_log')
-        .insert({
-          sent_by: admin.id,
-          subject: 'Your access request has been approved',
-          recipient_type: 'transactional',
-          recipient_filter: 'trigger:admin_approved',
-          recipient_count: 1,
-        })
-        .select('id')
-        .single()
-
-      if (logRow) {
-        await client.from('email_log_recipients').insert({
-          email_log_id: logRow.id,
-          volunteer_id: null,
-          email_address: pendingRow.email,
-        })
-      }
-    } catch {
-      // Logging failure must never block approval.
-    }
+    const { data: authUserData } = await client.auth.admin.getUserById(pendingRow.auth_user_id)
+    isGoogleIdentity = authUserData?.user?.identities?.some((i) => i.provider === 'google') ?? false
   } catch (err) {
-    console.error('[email] sendRegistrationApprovedEmail failed:', err)
+    console.error('approveRegistration getUserById error:', err)
+  }
+
+  if (isGoogleIdentity) {
+    try {
+      await sendGoogleApprovalEmail({
+        to: pendingRow.email,
+        name: pendingRow.name,
+        sentBy: admin.id,
+      })
+    } catch (err) {
+      console.error('[email] sendGoogleApprovalEmail failed:', err)
+    }
+  } else {
+    try {
+      await sendRegistrationApprovedEmail({ to: pendingRow.email, name: pendingRow.name })
+
+      try {
+        const { data: logRow } = await client
+          .from('email_log')
+          .insert({
+            sent_by: admin.id,
+            subject: 'Your access request has been approved',
+            recipient_type: 'transactional',
+            recipient_filter: 'trigger:admin_approved',
+            recipient_count: 1,
+          })
+          .select('id')
+          .single()
+
+        if (logRow) {
+          await client.from('email_log_recipients').insert({
+            email_log_id: logRow.id,
+            volunteer_id: null,
+            email_address: pendingRow.email,
+          })
+        }
+      } catch {
+        // Logging failure must never block approval.
+      }
+    } catch (err) {
+      console.error('[email] sendRegistrationApprovedEmail failed:', err)
+    }
   }
 
   await logAction(admin.id, 'user.create', 'admin_user', pendingRow.auth_user_id, undefined, {

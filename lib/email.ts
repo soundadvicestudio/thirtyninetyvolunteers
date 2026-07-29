@@ -1324,6 +1324,63 @@ export async function sendRegistrationApprovedEmail({
   })
 }
 
+type GoogleApprovalEmailParams = {
+  to: string
+  name: string
+  sentBy: string | null
+}
+
+// Approval welcome email for Google OAuth registrants — no temp password,
+// since the Google identity is the credential. Sign-in is via the
+// "Sign in with Google" button, not email/password.
+export async function sendGoogleApprovalEmail({
+  to,
+  name,
+  sentBy,
+}: GoogleApprovalEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/login`
+  const safeName = escapeHtml(name)
+  const safeOrgName = escapeHtml(emailSettings.orgName)
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName}, you're approved!</h1>
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Great news — your request to join the ${safeOrgName} Production Crew has been approved. Use the button below
+      to sign in with your Google account.
+    </p>
+    ${buildCtaButton('Sign In to Production Crew', loginUrl, emailSettings.brandPrimary)}
+  `
+
+  const subject = `Your ${emailSettings.orgName} Production Crew access has been approved`
+  const html = buildEmailHtml({
+    subject,
+    preheader: 'Your Production Crew access has been approved.',
+    body,
+    footerNote: `This email was sent because your Production Crew access request was approved at ${safeOrgName}.`,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await resend.emails.send({
+    from: emailSettings.from,
+    replyTo: emailSettings.orgContactEmail,
+    to,
+    subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: 'Your Google account has been approved for Production Crew access.',
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:google_approval',
+    sentBy,
+    recipients: [{ email: to }],
+  })
+}
+
 type RegistrationDeclinedEmailParams = {
   to: string
   name: string
