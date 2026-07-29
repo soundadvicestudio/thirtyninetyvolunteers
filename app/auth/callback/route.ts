@@ -46,9 +46,18 @@ export async function GET(request: Request) {
 
         const { data: adminUser } = await supabase
           .from('admin_users')
-          .select('role')
+          .select('role, is_active')
           .eq('id', data.user.id)
           .maybeSingle()
+
+        if (adminUser && adminUser.is_active === false) {
+          // Deactivated admin authenticating via Google — matches the
+          // email/password path (emailLogin() via getAdminUser()), which
+          // signs out and rejects rather than leaving a live session that
+          // could be used to reach a protected route before it expires.
+          await supabase.auth.signOut()
+          return NextResponse.redirect(`${origin}/crew/login?error=not_authorized`)
+        }
 
         if (adminUser?.role === 'production') {
           return NextResponse.redirect(`${origin}/crew/calendar`)
@@ -115,7 +124,41 @@ export async function GET(request: Request) {
               .eq('is_active', true)
 
             const recipients = ((superAdmins ?? []) as { email: string }[]).map((row) => row.email)
+            const subject = `New access request — ${name} (${email})`
             await sendPendingRegistrationEmail({ to: recipients, name, email })
+
+            // sendPendingRegistrationEmail() silently no-ops when recipients is
+            // empty — only log when there was actually something to send.
+            // Matches the inline log pattern in registerAdminRequest()
+            // (lib/actions/admin-registration.ts) exactly.
+            if (recipients.length > 0) {
+              try {
+                const { data: logRow } = await adminClient
+                  .from('email_log')
+                  .insert({
+                    sent_by: null,
+                    subject,
+                    body_preview: 'A new Production Crew access request is waiting for your review.',
+                    recipient_type: 'transactional',
+                    recipient_filter: 'trigger:admin_registration_request',
+                    recipient_count: recipients.length,
+                  })
+                  .select('id')
+                  .single()
+
+                if (logRow) {
+                  await adminClient.from('email_log_recipients').insert(
+                    recipients.map((address) => ({
+                      email_log_id: logRow.id,
+                      volunteer_id: null,
+                      email_address: address,
+                    }))
+                  )
+                }
+              } catch {
+                // Logging failure must never block the redirect.
+              }
+            }
           } catch (err) {
             console.error('[email] sendPendingRegistrationEmail failed:', err)
           }

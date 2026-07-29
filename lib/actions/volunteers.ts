@@ -156,7 +156,10 @@ export async function updateVolunteer(
 
 export async function addNote(volunteerId: string, body: string): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin) return { error: 'Unauthorized' }
+
+  const allowedRoles = ['super_admin', 'owner_admin', 'editor']
+  if (!allowedRoles.includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -252,7 +255,10 @@ export async function toggleStatus(
   newStatus: 'active' | 'archived'
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin) return { error: 'Unauthorized' }
+
+  const allowedRoles = ['super_admin', 'owner_admin', 'editor']
+  if (!allowedRoles.includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -295,7 +301,10 @@ export async function addManualHours(
   loggedDate: string
 ): Promise<AddManualHoursResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin) return { error: 'Unauthorized' }
+
+  const allowedRoles = ['super_admin', 'owner_admin', 'editor']
+  if (!allowedRoles.includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
