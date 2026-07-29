@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 15 | July 2026 | ADMIN.33–34 Complete
+## Version 16 | July 2026 | Phase THEME Complete
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -18,7 +18,9 @@ Phase 12 (12.1–12.4), ADMIN.25, CAL.1–CAL.10c, ADMIN.26,
 Phase 13 (13.1–13.4c), HELP.1–HELP.2d, ADMIN.27–29,
 SETUP.0, Phase 14 (14.1–14.3), Phase 15 (15.1–15.2),
 HELP.2e, ADMIN.33 (role permissions + branding + 404 page
-customization), ADMIN.34 (QR history panel + OA approval).
+customization), ADMIN.34 (QR history panel + OA approval),
+Phase THEME (dynamic CSS brand color system —
+THEME.A through THEME.3b-4).
 
 ---
 
@@ -303,6 +305,27 @@ cleared before launch with:
 Review before running — only delete test generations,
 not any QR codes created for real operational use
 (e.g. QRs generated for actual show check-in pages).
+
+Note for Phase THEME: No new database rows are created
+by the THEME build — the CSS brand color system reads
+from existing app_settings rows (brand_primary and
+brand_accent) that were seeded in Migration 023. If
+brand_primary or brand_accent were changed in the Setup
+Panel during THEME verification testing, restore them
+to the 30BN defaults before launch:
+
+  UPDATE app_settings
+  SET value = '#293994'
+  WHERE key = 'brand_primary';
+
+  UPDATE app_settings
+  SET value = '#F26522'
+  WHERE key = 'brand_accent';
+
+No other THEME-related cleanup is required. The
+@layer utilities block in globals.css and the
+CSS custom property injection in app/layout.tsx
+are production code, not test data.
 
 ---
 
@@ -1544,6 +1567,28 @@ ADMIN.34 V4 (metadata description tag check)
 
 ### Phase 7 QR History — requires second admin account:
 7.1 V16 (shared history cross-account check)
+
+### Phase THEME — requires Super Admin (Setup Panel):
+THEME V2 (brand_primary change on public page),
+THEME V7 (brand_primary propagation test),
+THEME V8 (brand_accent propagation test),
+THEME V13 (PDF export with test brand color),
+THEME V14 (PDF export restored to default)
+
+### Phase THEME — requires real email delivery:
+THEME V9 (signup confirmation email brand colors),
+THEME V10 (slot claim email brand colors),
+THEME V11 (email blast brand colors),
+THEME V12 (milestone email brand colors — optional)
+
+### Phase THEME — advanced/optional (devtools):
+THEME V1 (CSS custom property injection in <body>)
+
+### Phase THEME — browser only (no special requirements):
+THEME V3 (public pages /callboard, /shows, /forms),
+THEME V4 (/crew/login admin login page),
+THEME V5 (admin Production Crew dashboard),
+THEME V6 (admin volunteers and shows pages)
 
 ---
 
@@ -6174,29 +6219,165 @@ above (7.1 V11–V17).*
 
 ---
 
-*Total items in this carry-forward list: 774*
-*(742 v14 items + 34 new v15 items − 1 superseded −
-1 pre-existing count drift corrected)*
-*Prior (v14): 742 items*
-*v15 additions: 34 new items (Phase 7 QR history:
-7 items — 7.1 V11–V17; ADMIN.33: 23 items — V1–V23;
-ADMIN.34: 4 items — V1–V4).*
-*v15 superseded: 1 item (ADMIN.26 V5 — Production
-option absent from changeRole dropdown — superseded
-by ADMIN.33 which added Production to the dropdown).*
-*v15 updated: SETUP.2 V1 (seven → eight sections),
-SETUP.2 V13 (seven → eight, added 404 Page to list),
-ADMIN.23 V4 (hardcoded subject → dynamic org_name),
-SETUP.0 (OA permission expansion note added).*
-*Seed Data Cleanup: qr_codes cleanup note added
-(ADMIN.34 — review test generations before launch).*
+## Phase THEME — Dynamic CSS Brand Color System
+
+Phase THEME (THEME.A through THEME.3b-4) replaced all
+static hardcoded brand colors across the platform with a
+dynamic system driven by `brand_primary` and `brand_accent`
+in `app_settings`. Verification confirms colors propagate
+correctly at all rendering surfaces: web UI (CSS custom
+properties), email templates (dynamic hex interpolation),
+and PDF exports (`createStyles()` factory).
+
+**PREREQUISITE:** `brand_primary` and `brand_accent` must
+be set to recognizable test values in the Setup Panel
+(Section 2 — Brand Colors) before running V1–V8 and
+V13–V14. Use distinctive colors (e.g. hot pink `#FF1493`
+and lime green `#00FF00`) so any failure to update is
+immediately obvious. Restore to 30BN defaults
+(`#293994` / `#F26522`) after completing verification.
+
+**CSS custom property injection:**
+
+- [ ] **THEME V1** — *(Advanced/optional — requires
+      browser devtools)* Open any page on the production
+      site (e.g. /). Open browser devtools → Elements
+      → <body> element. Confirm a <style> tag exists as
+      the first child of <body> containing:
+      `:root { --brand-primary: [hex]; --brand-accent:
+      [hex]; --brand-primary-mid: color-mix(...);
+      --brand-primary-tint: color-mix(...);
+      --brand-primary-light: color-mix(...);
+      --brand-accent-light: color-mix(...); }`
+      Confirm the --brand-primary and --brand-accent
+      values match what is set in the Setup Panel.
+
+**Public page brand colors:**
+
+- [ ] **THEME V2** — Navigate to the public landing page
+      (/). Confirm the primary brand color (e.g. the
+      header background, CTA button fill, or nav bar)
+      reflects the current brand_primary value set in
+      the Setup Panel — not a hardcoded navy blue.
+      Change brand_primary in the Setup Panel. Reload
+      the public page. Confirm the color updates.
+      *(Requires Setup Panel access — Super Admin)*
+
+- [ ] **THEME V3** — Navigate to /callboard, /shows,
+      and /forms/[id] (a live form). Confirm primary
+      brand colors (buttons, headers, borders) on all
+      three pages match the current brand_primary value.
+      Confirm accent colors (CTA buttons, highlights)
+      match brand_accent.
+
+- [ ] **THEME V4** — Navigate to /crew/login (the admin
+      login page). Confirm the primary brand color on
+      the login form (button, border, focus ring) matches
+      the current brand_primary — not hardcoded navy.
+
+**Admin UI brand colors:**
+
+- [ ] **THEME V5** — Log in to the admin Production Crew
+      (/crew/dashboard). Confirm the sidebar, top bar,
+      active nav item highlight, and primary action
+      buttons all reflect the current brand_primary.
+      Confirm CTA buttons and accent elements reflect
+      brand_accent.
+
+- [ ] **THEME V6** — Navigate to /crew/volunteers, a
+      volunteer profile, and /crew/shows. Confirm table
+      headers, active filters, primary buttons, and link
+      colors match the current brand_primary / brand_accent
+      values. No element should show hardcoded navy or
+      orange if test colors are set.
+
+**Brand color change propagation:**
+
+- [ ] **THEME V7** — As Super Admin: navigate to
+      /crew/settings/setup → Section 2 (Brand Colors).
+      Change brand_primary to a distinctly different test
+      color. Click Save. Navigate to a public page (/).
+      Confirm the new color appears immediately (may
+      require a page reload — SSR fetches at render time).
+      Navigate to an admin page (/crew/dashboard). Confirm
+      the new color appears there too. Restore brand_primary
+      to `#293994` after confirming.
+      *(Requires Super Admin access and Setup Panel)*
+
+- [ ] **THEME V8** — Repeat V7 for brand_accent (change
+      to a test color, confirm CTA buttons and accent
+      elements update on both public and admin pages,
+      restore to `#F26522`).
+      *(Requires Super Admin access and Setup Panel)*
+
+**Email brand colors:**
+
+- [ ] **THEME V9** — Sign up as a new test volunteer on /
+      using a real email address. Receive the confirmation
+      email. Confirm the email header background, CTA
+      button color, and any colored text use the current
+      brand_primary / brand_accent values — not hardcoded
+      navy/orange. *(Requires real email delivery)*
+
+- [ ] **THEME V10** — Claim a slot on a live show as a
+      test volunteer (real email). Receive the slot claim
+      confirmation email. Confirm the email uses dynamic
+      brand colors matching the current Setup Panel values.
+      *(Requires real email delivery)*
+
+- [ ] **THEME V11** — As Super Admin or Editor: send an
+      email blast via /crew/communication to a test
+      recipient. Receive the blast email. Confirm the
+      email header and any structural colors reflect the
+      current brand_primary. *(Requires real email delivery)*
+
+- [ ] **THEME V12** — *(Optional — requires milestone
+      trigger)* Trigger a milestone for a test volunteer
+      (e.g. mark Showed for their first time). Receive the
+      milestone congratulations email. Confirm the email
+      uses dynamic brand colors — particularly the colored
+      milestone tier badge and CTA button.
+      *(Requires real email delivery)*
+
+**PDF export brand colors:**
+
+- [ ] **THEME V13** — With a distinctive test color set
+      for brand_primary (not the default navy): navigate
+      to /crew/volunteers and download the PDF export.
+      Open the downloaded PDF. Confirm the branded header
+      background reflects the test brand_primary color —
+      not hardcoded navy. *(Requires Super Admin or Editor
+      account + PDF viewer)*
+
+- [ ] **THEME V14** — Restore brand_primary to `#293994`.
+      Download the PDF export again. Confirm the header
+      returns to navy (`#293994` — the 30BN default).
+      This confirms the PDF correctly reads the live
+      app_settings value rather than a cached static value.
+      *(Requires PDF viewer)*
+
+---
+
+*Total items in this carry-forward list: 788*
+*(774 v15 items + 14 new v16 items)*
+*Prior (v15): 774 items*
+*v16 additions: 14 new items (Phase THEME: THEME V1–V14
+— CSS custom property injection, public page brand
+colors, admin UI brand colors, brand color propagation,
+email brand colors, PDF export brand colors).*
+*v16 superseded: none.*
+*v16 updated: none.*
+*Seed Data Cleanup: THEME note added (brand_primary /
+brand_accent restore SQL if changed during testing;
+no other THEME cleanup needed — no test DB rows).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v15 (ADMIN.33: Owner Admin
-permissions expanded, OpenCall OS branding sweep, Setup
-Panel Section 8 / 404 page customization; ADMIN.34: QR
-code history panel, OA registration approval fix,
-org_tagline metadata, org_contact_email in emails.)*
+*Last updated: July 2026 — v16 (Phase THEME complete:
+CSS custom property injection in app/layout.tsx,
+@layer utilities in globals.css, 1,381 brand-derived
+class instances replaced across 130 files, email
+templates dynamic via resolveEmailSettings() brand
+params, PDF export via createStyles() factory.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
