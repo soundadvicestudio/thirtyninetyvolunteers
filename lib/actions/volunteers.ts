@@ -44,7 +44,10 @@ export async function updateVolunteer(
   data: VolunteerProfileFormValues
 ): Promise<ActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin) return { error: 'Unauthorized' }
+
+  const allowedRoles = ['super_admin', 'owner_admin', 'editor']
+  if (!allowedRoles.includes(admin.role)) {
     return { error: 'Unauthorized' }
   }
 
@@ -179,6 +182,8 @@ export async function addNote(volunteerId: string, body: string): Promise<Action
 
   await logAction(admin.id, 'volunteer.note.add', 'volunteer', volunteerId)
 
+  revalidatePath(`/crew/volunteers/${volunteerId}`)
+
   return { success: true }
 }
 
@@ -197,17 +202,21 @@ export async function editNote(noteId: string, body: string): Promise<ActionResu
   }
 
   const supabase = await getServerClient()
-  const { error } = await supabase
+  const { data: updatedNote, error } = await supabase
     .from('volunteer_notes')
     .update({ body: trimmed })
     .eq('id', noteId)
+    .select('volunteer_id')
+    .single()
 
-  if (error) {
+  if (error || !updatedNote) {
     console.error('editNote error:', error)
     return { error: 'Something went wrong saving this note. Please try again.' }
   }
 
   await logAction(admin.id, 'volunteer.note.edit', 'volunteer_note', noteId)
+
+  revalidatePath(`/crew/volunteers/${updatedNote.volunteer_id}`)
 
   return { success: true }
 }
@@ -219,14 +228,21 @@ export async function deleteNote(noteId: string): Promise<ActionResult> {
   }
 
   const supabase = await getServerClient()
-  const { error } = await supabase.from('volunteer_notes').delete().eq('id', noteId)
+  const { data: deletedNote, error } = await supabase
+    .from('volunteer_notes')
+    .delete()
+    .eq('id', noteId)
+    .select('volunteer_id')
+    .single()
 
-  if (error) {
+  if (error || !deletedNote) {
     console.error('deleteNote error:', error)
     return { error: 'Something went wrong deleting this note. Please try again.' }
   }
 
   await logAction(admin.id, 'volunteer.note.delete', 'volunteer_note', noteId)
+
+  revalidatePath(`/crew/volunteers/${deletedNote.volunteer_id}`)
 
   return { success: true }
 }
@@ -261,6 +277,9 @@ export async function toggleStatus(
     'volunteer',
     volunteerId
   )
+
+  revalidatePath(`/crew/volunteers/${volunteerId}`)
+  revalidatePath('/crew/volunteers')
 
   return { success: true }
 }
