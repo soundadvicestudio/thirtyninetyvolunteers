@@ -4,6 +4,9 @@ export type VolunteersSort = (typeof SORT_VALUES)[number]
 export const MILESTONE_TIER_VALUES = ['all', 'any', 'first_call', '10', '20', '50', '100'] as const
 export type MilestoneTier = (typeof MILESTONE_TIER_VALUES)[number]
 
+export const PREFERENCE_VALUES = ['all', 'email', 'phone', 'either'] as const
+export type PreferenceFilter = (typeof PREFERENCE_VALUES)[number]
+
 export type VolunteersUrlState = {
   q: string
   categoryIds: string[]
@@ -12,6 +15,7 @@ export type VolunteersUrlState = {
   school: 'yes' | 'no' | 'all'
   isMinor: 'yes' | 'no' | 'all'
   serviceHours: 'yes' | 'no' | 'all'
+  preference: PreferenceFilter
   milestoneTier: MilestoneTier
   sort: VolunteersSort
   dir: 'asc' | 'desc'
@@ -26,6 +30,7 @@ export const DEFAULT_URL_STATE: VolunteersUrlState = {
   school: 'all',
   isMinor: 'all',
   serviceHours: 'all',
+  preference: 'all',
   milestoneTier: 'all',
   sort: 'name',
   dir: 'asc',
@@ -40,6 +45,7 @@ export type RawSearchParams = {
   school?: string
   is_minor?: string
   service_hours?: string
+  preference?: string
   milestone_tier?: string
   sort?: string
   dir?: string
@@ -62,6 +68,9 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
     params.service_hours === 'yes' || params.service_hours === 'no'
       ? params.service_hours
       : 'all'
+  const preference = (PREFERENCE_VALUES as readonly string[]).includes(params.preference ?? '')
+    ? (params.preference as PreferenceFilter)
+    : 'all'
   const milestoneTier = (MILESTONE_TIER_VALUES as readonly string[]).includes(
     params.milestone_tier ?? ''
   )
@@ -81,6 +90,7 @@ export function parseVolunteersUrlState(params: RawSearchParams): VolunteersUrlS
     school,
     isMinor,
     serviceHours,
+    preference,
     milestoneTier,
     sort,
     dir,
@@ -107,6 +117,8 @@ export function buildVolunteersQueryString(
   if (state.isMinor !== DEFAULT_URL_STATE.isMinor) usp.set('is_minor', state.isMinor)
   if (state.serviceHours !== DEFAULT_URL_STATE.serviceHours)
     usp.set('service_hours', state.serviceHours)
+  if (state.preference !== DEFAULT_URL_STATE.preference)
+    usp.set('preference', state.preference)
   if (state.milestoneTier !== DEFAULT_URL_STATE.milestoneTier)
     usp.set('milestone_tier', state.milestoneTier)
   if (state.sort !== DEFAULT_URL_STATE.sort) usp.set('sort', state.sort)
@@ -136,6 +148,7 @@ export function isNonDefaultFilter(state: VolunteersUrlState): boolean {
     state.school !== DEFAULT_URL_STATE.school ||
     state.isMinor !== DEFAULT_URL_STATE.isMinor ||
     state.serviceHours !== DEFAULT_URL_STATE.serviceHours ||
+    state.preference !== DEFAULT_URL_STATE.preference ||
     state.milestoneTier !== DEFAULT_URL_STATE.milestoneTier
   )
 }

@@ -20,6 +20,12 @@ const COLUMN_LABELS: Record<SortableColumn, string> = {
   joined: 'Joined',
 }
 
+const PREFERENCE_BADGE_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone',
+  either: 'Either',
+}
+
 function getPageNumbers(current: number, totalPages: number): (number | 'ellipsis')[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -235,6 +241,11 @@ export default function VolunteersTable({
                   {v.requires_service_hours && (
                     <span className="ml-2 text-xs bg-brand-accent-light text-brand-accent px-1.5 py-0.5 rounded font-medium">
                       SH
+                    </span>
+                  )}
+                  {v.communication_preference && (
+                    <span className="ml-2 text-xs bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text px-1.5 py-0.5 rounded font-medium">
+                      {PREFERENCE_BADGE_LABELS[v.communication_preference]}
                     </span>
                   )}
                 </td>

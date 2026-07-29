@@ -26,6 +26,16 @@ function ageRangeLabel(value: string | null): string {
   return AGE_RANGE_OPTIONS.find((o) => o.value === value)?.label ?? '—'
 }
 
+const PREFERENCE_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone',
+  either: 'Either is fine',
+}
+
+function preferenceLabel(value: string | null): string | null {
+  return value ? (PREFERENCE_LABELS[value] ?? value) : null
+}
+
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
@@ -80,6 +90,7 @@ export default function VolunteerProfileForm({
       category_ids: categories.map((c) => c.id),
       referral_source: volunteer.referral_source ?? '',
       referral_name: volunteer.referral_name ?? '',
+      communication_preference: volunteer.communication_preference ?? '',
     },
   })
 
@@ -145,6 +156,7 @@ export default function VolunteerProfileForm({
             <Field label="Email" value={volunteer.email} />
             <Field label="Phone" value={formatPhone(volunteer.phone)} />
             <Field label="Preferred Pronouns" value={volunteer.pronouns} />
+            <Field label="Preferred Contact Method" value={preferenceLabel(volunteer.communication_preference)} />
           </section>
 
           <section className="space-y-4">
@@ -240,6 +252,19 @@ export default function VolunteerProfileForm({
             <div>
               <label className={labelClasses}>Preferred Pronouns</label>
               <input type="text" className={inputClasses} {...register('pronouns')} />
+            </div>
+
+            <div>
+              <label className={labelClasses}>Preferred contact method</label>
+              <select className={inputClasses} {...register('communication_preference')}>
+                <option value="">No preference</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="either">Either is fine</option>
+              </select>
+              <p className="mt-1 text-xs text-mid-gray dark:text-dark-muted">
+                Helps the team reach this volunteer the right way.
+              </p>
             </div>
 
             <div>

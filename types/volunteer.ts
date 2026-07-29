@@ -54,6 +54,7 @@ export type VolunteerProfile = {
   referral_source: string | null
   referral_name: string | null
   requires_service_hours: boolean
+  communication_preference: 'email' | 'phone' | 'either' | null
   status: 'active' | 'archived'
   total_hours: number
   created_at: string

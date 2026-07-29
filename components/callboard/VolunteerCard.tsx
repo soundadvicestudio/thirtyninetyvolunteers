@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatWallClockCT } from '@/lib/utils/date'
-import { signOutCallboard } from '@/lib/actions/callboard'
+import { signOutCallboard, updateCallboardPreference } from '@/lib/actions/callboard'
 import { getNextMilestone } from '@/lib/milestones-shared'
 import type {
   CallboardVolunteer,
@@ -30,6 +30,12 @@ const STATUS_COLOR: Record<string, string> = {
   excused: 'text-amber-600',
   claimed: 'text-mid-gray',
   cancelled: 'text-mid-gray',
+}
+
+const PREFERENCE_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone',
+  either: 'Either is fine',
 }
 
 type ShowGroup = {
@@ -141,6 +147,8 @@ export default function VolunteerCard({
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [preference, setPreference] = useState(volunteer.communication_preference)
+  const [isSavingPreference, setIsSavingPreference] = useState(false)
 
   const nextMilestone = getNextMilestone(
     volunteer.total_hours,
@@ -184,6 +192,15 @@ export default function VolunteerCard({
     router.refresh()
   }
 
+  async function handlePreferenceChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = (e.target.value || null) as 'email' | 'phone' | 'either' | null
+    setPreference(value)
+    setIsSavingPreference(true)
+    await updateCallboardPreference(value)
+    setIsSavingPreference(false)
+    router.refresh()
+  }
+
   return (
     <div className="rounded-xl border border-divider bg-white p-6 shadow-sm">
       <h2 className="text-brand-primary font-bold text-xl mb-1">{volunteer.full_name}</h2>
@@ -218,6 +235,29 @@ export default function VolunteerCard({
           ))}
         </div>
       )}
+
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-sm font-semibold text-dark">Preferred contact method</p>
+          {preference && (
+            <span className="inline-block text-xs font-semibold rounded-full px-2 py-0.5 bg-brand-primary-light text-brand-primary">
+              {PREFERENCE_LABELS[preference]}
+            </span>
+          )}
+        </div>
+        <select
+          value={preference ?? ''}
+          onChange={handlePreferenceChange}
+          disabled={isSavingPreference}
+          className="rounded-lg border border-divider px-3 py-2 text-sm text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors disabled:opacity-50"
+        >
+          <option value="">No preference</option>
+          <option value="email">Email</option>
+          <option value="phone">Phone</option>
+          <option value="either">Either is fine</option>
+        </select>
+        {isSavingPreference && <span className="ml-2 text-xs text-mid-gray">Saving…</span>}
+      </div>
 
       <button
         type="button"

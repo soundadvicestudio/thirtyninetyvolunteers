@@ -82,6 +82,9 @@ function applyBaseFilters(query: any, filters: VolunteersUrlState) {
   } else if (filters.serviceHours === 'no') {
     q = q.eq('requires_service_hours', false)
   }
+  if (filters.preference !== 'all') {
+    q = q.eq('communication_preference', filters.preference)
+  }
   return q
 }
 

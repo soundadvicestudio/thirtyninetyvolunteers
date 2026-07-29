@@ -15,6 +15,7 @@ export type CallboardVolunteer = {
   update_token: string
   status: 'active' | 'archived'
   requires_service_hours: boolean
+  communication_preference: 'email' | 'phone' | 'either' | null
   created_at: string
 }
 

@@ -15,7 +15,7 @@ export const volunteerProfileSchema = z
     category_ids: z.array(z.string()).optional().default([]),
     referral_source: z.string().optional(),
     referral_name: z.string().optional(),
-    communication_preference: z.enum(['email', 'phone', 'either']).nullable().optional(),
+    communication_preference: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.is_minor) {

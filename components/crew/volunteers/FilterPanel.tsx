@@ -179,6 +179,22 @@ export default function FilterPanel({
         </div>
 
         <div>
+          <label className="block text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">Preferred Contact</label>
+          <select
+            value={state.preference}
+            onChange={(e) =>
+              navigate({ preference: e.target.value as VolunteersUrlState['preference'] })
+            }
+            className="rounded border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-brand-primary"
+          >
+            <option value="all">All</option>
+            <option value="email">Email only</option>
+            <option value="phone">Phone only</option>
+            <option value="either">Either is fine</option>
+          </select>
+        </div>
+
+        <div>
           <label className="flex items-center gap-1.5 text-xs font-semibold text-mid-gray dark:text-dark-muted mb-1">
             Milestone Tier
             <HelpTooltip anchor="milestones" label="Milestone Tier Filter" />
