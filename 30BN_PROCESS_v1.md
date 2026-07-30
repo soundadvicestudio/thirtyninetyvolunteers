@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.0
-### Created: July 2026 | Last Updated: July 2026 — v4.0 (Phase THEME complete — THEME.A through THEME.3b-4; lightenHex() server-side hex computation pattern; @react-pdf/renderer createStyles() factory pattern; resolveEmailSettings() brand params; new grep checks + checklist items; Phase 19+21 pre-launch; prompt log updated)
+## 30BN_PROCESS_v1.md — v4.1
+### Created: July 2026 | Last Updated: July 2026 — v4.1 (Phase 19 complete — 19.1–19.3; ADMIN.35–38; Google OAuth callback dual-client pattern; updateVolunteerInfo() public-route identity; revalidatePath via .select() for parent ID retrieval; role guard allowlist pattern; zod <select> schema pattern; dark mode cascade defect note; new §11 checklist items; phase tracker updated)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -303,6 +303,22 @@ established sanctioned exception documented in Brief §7. All `admin_users` tabl
 within `createUser()` should use `getServerClient()` — only the two `auth.admin.*` calls require
 `getAdminClient()`. Confirmed during ADMIN.26 Task A audit.
 
+**Google OAuth callback dual-client pattern (established ADMIN.36/38):**
+`app/auth/callback/route.ts` uses both clients with different responsibilities:
+- Session client (`createServerClient()`): code exchange (`supabase.auth.exchangeCodeForSession()`), `admin_users` query, and `supabase.auth.signOut()` when blocking an inactive account.
+- Admin client (`getAdminClient()`): all `pending_registrations` operations (INSERT + SELECT) and `email_log`/`email_log_recipients` inserts in the new-registrant branch.
+
+A newly Google-OAuth'd user with no `admin_users` row is authenticated (has a valid Supabase Auth session) but is not a Super Admin. The `pending_registrations` RLS policy only grants INSERT to anon and full access to `is_super_admin()`. The authenticated-but-not-admin user fails both policies. `getAdminClient()` is required to bypass RLS for these inserts — this is a fourth distinct sanctioned context alongside (1) account creation, (2) Call Board session, (3) public/cron routes, (4) iCalendar route handlers.
+
+**`is_active` check must sign out before redirecting (established ADMIN.38):**
+When a deactivated admin (`adminUser.is_active === false`) completes Google OAuth, the callback must call `supabase.auth.signOut()` using the session client BEFORE redirecting to `?error=not_authorized`. A bare redirect without sign-out leaves a valid Supabase Auth session in the browser. On next navigation, the session client would return a live user and the proxy would pass them through before the session expires. Sign out + redirect is the required pattern — matches what `emailLogin()` does via `getAdminUser()` for the email/password path.
+
+**`updateVolunteerInfo()` is the public-route submit action for `/update` (established 19.2):**
+`app/update/actions.ts` — `updateVolunteerInfo()` — is the server action called by `VolunteerUpdateForm.tsx` on the `/update` public form. It uses `getAdminClient()` (no session — public route). It is NOT the same as `updateVolunteer()` in `lib/actions/volunteers.ts` (admin-session, `getServerClient()`). These are two separate action files at two different auth levels. When adding a new field to the volunteer profile that must also be editable via the `/update` self-service form, BOTH files must be updated:
+1. `updateVolunteerInfo()` in `app/update/actions.ts` — for volunteers editing their own record
+2. `updateVolunteer()` in `lib/actions/volunteers.ts` — for admins editing via the crew backend
+Failing to update `app/update/actions.ts` causes the field to be silently dropped on `/update` saves. Confirmed gap caught in 19.2 — `communication_preference` was missing from `updateVolunteerInfo()` and would have been silently dropped without this fix.
+
 **Content-Disposition headers must use fixed filenames (established ADMIN.26):**
 HTTP `Content-Disposition: attachment; filename="..."` headers must never interpolate
 user-supplied or DB-sourced values (show names, volunteer names, etc.) into the filename field.
@@ -420,6 +436,31 @@ When a text CHECK constraint column is replaced by a FK to a new lookup table (e
 7. Drop the old text column.
 The RAISE EXCEPTION safety guard in step 4 is mandatory — it prevents silent data loss if any
 rows had an unmapped value. Confirmed in CAL.1 Migration 016.
+
+**`revalidatePath()` via `.select()` for parent ID retrieval (established ADMIN.37):**
+When a server action operates on a child record by its own ID (e.g. `deleteNote(noteId)`, `editNote(noteId, body)`) and needs to call `revalidatePath` for the parent record's page, but the parent record's ID is not a direct parameter, the action must retrieve it from the query result:
+
+```typescript
+// WRONG — no parent ID available for revalidatePath
+const { error } = await supabase
+  .from('volunteer_notes')
+  .delete()
+  .eq('id', noteId)
+
+// CORRECT — retrieve volunteer_id via .select()
+const { data: deletedNote, error } = await supabase
+  .from('volunteer_notes')
+  .delete()
+  .eq('id', noteId)
+  .select('volunteer_id')
+  .single()
+
+if (!error && deletedNote) {
+  revalidatePath(`/crew/volunteers/${deletedNote.volunteer_id}`)
+}
+```
+
+This pattern avoids a separate pre-delete SELECT query and retrieves the parent ID in a single operation. Confirmed in ADMIN.37: `editNote()` and `deleteNote()` both required this pattern when `revalidatePath()` was added — the functions had only `noteId` as a parameter and no other way to obtain `volunteer_id`.
 
 **`detectLinkType()` independence — recognized DRY exception (established 15.3/15.4):**
 Three independent implementations of `detectLinkType()` (and related helpers
@@ -1242,6 +1283,38 @@ Run before every Vercel deployment:
   values in these files are the fallback defaults inside
   resolveEmailSettings(). All other brand hex = violation.
   (THEME.3/THEME.3b pattern)
+□ Any new field added to the volunteer profile edit form
+  that must also be editable via the /update public form:
+  confirm it is added to BOTH updateVolunteerInfo() in
+  app/update/actions.ts (public route, getAdminClient())
+  AND updateVolunteer() in lib/actions/volunteers.ts
+  (admin session, getServerClient()). These are separate
+  files at different auth levels. Missing one causes silent
+  data loss on the path that was skipped. (19.2 pattern)
+□ Any new <select> field in a form that maps to a nullable
+  CHECK-constrained DB column: use z.string().optional()
+  in the zod schema — NOT z.enum([...]).nullable().optional().
+  An unselected <select> submits an empty string '' which
+  fails z.enum() validation silently, blocking saves at
+  the default state. The server action normalizes '' → null
+  via || null (R18) before the DB write, satisfying the
+  CHECK constraint. Confirmed failure mode: volunteerProfile
+  Schema authored in 19.1 with z.enum() broke every profile
+  save where communication_preference was left at "No
+  preference" — corrected in 19.3. (19.1/19.3 pattern)
+□ Any new role guard on a volunteer mutation server action
+  (or any operational server action where Production must
+  be blocked): use the explicit allowlist pattern rather
+  than a single-exclusion pattern:
+  WRONG: if (!admin || admin.role === 'viewer') return error
+  CORRECT: const allowedRoles = ['super_admin','owner_admin','editor']
+           if (!allowedRoles.includes(admin.role)) return error
+  The single-exclusion pattern silently permits Production
+  role. Production has no access to the volunteer database
+  per Brief §7 — it must be explicitly blocked by the
+  allowlist. Confirmed gap fixed in ADMIN.37 (updateVolunteer)
+  and ADMIN.38 (addNote, toggleStatus, addManualHours).
+  (ADMIN.37/38 pattern)
 ```
 
 ---
@@ -2294,12 +2367,13 @@ Phase 18 — Additional Alpha Features ✓ Complete
     "Other Hours" section, simplified summary line)
   - Bulk email from show detail
     ✓ Built ADMIN.23 (BulkEmailSection.tsx)
-Phase 19 — Volunteer Communication Preferences
-  (pending, pre-launch) — 3-prompt structure confirmed:
-  19.1 (Migration 030 + server actions), 19.2 (public
-  forms), 19.3 (Call Board + admin profile + list).
-  communication_preference editable in admin volunteer
-  profile (confirmed). Planned before Phase 17.
+Phase 19 — Volunteer Communication Preferences ✓ Complete
+  30BN-19.1  ✓ Migration 030 + server actions
+  30BN-19.2  ✓ Public forms (VolunteerForm + UpdateForm
+               + mergeVolunteer fix)
+  30BN-19.3  ✓ Admin + Call Board (VolunteerCard,
+               VolunteerProfileForm, VolunteersTable
+               badge + filter, session.ts)
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
 Phase 21 — Rehearsal Management System
@@ -2419,6 +2493,99 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
 30BN-ADMIN.27  ✓ (see Phase HELP above)
 30BN-ADMIN.28  ✓ (see Phase HELP above)
 30BN-ADMIN.29  ✓ (see Phase HELP above)
+30BN-ADMIN.35-AUDIT ✓ Dark mode background regression
+             audit (read-only). Root cause confirmed:
+             bg-brand-primary-light (hand-authored
+             @layer utilities, compiled after Tailwind
+             auto-generated utilities) overrides
+             dark:bg-dark-bg on same element due to
+             PostCSS source order. ~74 lines across ~50
+             files affected. Main content area gap
+             identified at layout.tsx:74.
+30BN-ADMIN.35 ✓ Dark mode main content area fix.
+             app/crew/(app)/layout.tsx: bg-brand-
+             primary-light → bg-gray-50 on <main>
+             wrapper. Broader cascade defect deferred
+             to ADMIN.39-AUDIT + ADMIN.39. Commit
+             7ffbee9.
+30BN-ADMIN.36 ✓ Google OAuth registration path for
+             Request Access flow. auth/callback/route.ts:
+             if (!adminUser) branch (new registrant →
+             insert pending_registrations + notify SAs
+             + ?registered=google; pending → ?pending=true;
+             declined → ?error=declined). googleSignIn.ts
+             (new — shared handler). RegisterForm.tsx:
+             Google button + 3 new param states. lib/
+             actions/admin-registration.ts: getUserById()
+             for Google identity detection; sendGoogle
+             ApprovalEmail() routing. lib/email.ts:
+             sendGoogleApprovalEmail(). Discovered: Google
+             path never checked is_active (fixed ADMIN.38).
+             Discovered: approveRegistration() never called
+             createUser() — always reused auth_user_id.
+             7 files.
+30BN-ADMIN.37 ✓ revalidatePath gaps + role guard fix.
+             lib/actions/volunteers.ts: revalidatePath()
+             added to addNote(), editNote(), deleteNote(),
+             toggleStatus(). editNote()/deleteNote()
+             required .select('volunteer_id').single()
+             to retrieve parent ID for revalidation path.
+             updateVolunteer() role guard: role==='viewer'
+             → allowedRoles allowlist (blocks Production).
+             1 file.
+30BN-ADMIN.38 ✓ is_active Google path + email log +
+             Production role guards. auth/callback/
+             route.ts: SELECT widened to include is_active;
+             is_active===false → signOut() + ?error=
+             not_authorized. Inline email_log +
+             email_log_recipients for Google registrants
+             (non-blocking, getAdminClient(), trigger:
+             admin_registration_request). lib/actions/
+             volunteers.ts: addNote(), toggleStatus(),
+             addManualHours() guards → allowedRoles
+             allowlist. 2 files.
+30BN-19.1    ✓ Migration 030 + server actions.
+             communication_preference column on volunteers
+             (nullable text CHECK). submitVolunteerForm()
+             (app/actions/volunteer.ts) + updateVolunteer()
+             (lib/actions/volunteers.ts): field added.
+             updateCallboardPreference() (lib/actions/
+             callboard.ts): getAdminClient(), session
+             cookie. updateVolunteerPreference() (lib/
+             actions/volunteers.ts): getServerClient(),
+             allowedRoles guard. CSV export: 'Preferred
+             Contact' header + COMMUNICATION_PREFERENCE_
+             LABELS. Key finding: lib/actions/volunteer.ts
+             (singular) does not exist — Brief spec had
+             wrong path. Actual: app/actions/volunteer.ts
+             (public) + lib/actions/volunteers.ts (admin).
+             8 files.
+30BN-19.2    ✓ Public forms. VolunteerForm.tsx + Volunteer
+             UpdateForm.tsx: preference dropdown added.
+             app/update/page.tsx: SELECT extended. app/
+             update/actions.ts (updateVolunteerInfo()):
+             field added — discovered /update submits
+             here, not through lib/actions/volunteers.ts.
+             mergeVolunteer(): field added (19.1 Q3). Zod:
+             z.string().optional() not z.enum() — empty
+             string from <select> fails enum silently.
+             5 files.
+30BN-19.3    ✓ Admin + Call Board UI. session.ts:
+             VOLUNTEER_COLUMNS extended. types/callboard.ts:
+             CallboardVolunteer extended. VolunteerCard.tsx:
+             badge + inline select, optimistic state,
+             router.refresh(). types/volunteer.ts:
+             VolunteerProfile extended (discovered gap).
+             lib/validations/volunteerProfile.ts: schema
+             bug fixed (z.enum→z.string). VolunteerProfile
+             Form.tsx: view Field + edit select. url.ts:
+             preference filter state. list.ts: query filter.
+             FilterPanel.tsx: filter control. Volunteers
+             Table.tsx: row badge. PDF omitted (10-column
+             A4 too tight). 10 files.
+30BN-DOC.50  ✓ Brief Update v4.2 (Phase 19 complete,
+             ADMIN.35–38, auth patterns, zod select
+             pattern, update form action clarification)
 ```
 
 ---
@@ -2904,6 +3071,18 @@ media library, hours, opportunities, Call Board) are never flagged. Current flag
 feature_calendar, feature_checkin, feature_blast. Enforced from SETUP.4 onward.
 See §11 checklist for the required verification item.
 
+**Dark mode cascade defect — architectural note (ADMIN.35-AUDIT):**
+In Tailwind v4 with `@tailwindcss/postcss`, hand-authored `@layer utilities` rules compile AFTER Tailwind's auto-generated utilities in the PostCSS output. This means: if a hand-authored class (e.g. `bg-brand-primary-light`) and a Tailwind dark-variant class (e.g. `dark:bg-dark-bg`) appear on the same element, the hand-authored class wins in dark mode due to source order — even though the dark variant is active. Both have equal specificity (0,0,1,0); last-in-cascade wins.
+
+Confirmed diagnosis (ADMIN.35-AUDIT): the `app/crew/(app)/layout.tsx` main content wrapper had `bg-brand-primary-light dark:bg-dark-bg` — `bg-brand-primary-light` (8% brand/92% white blend) compiled at line ~2880 of the PostCSS output; `dark:bg-dark-bg` compiled at line ~2362. The hand-authored class won, rendering an off-white background in both light and dark mode.
+
+**Fix pattern for layout wrappers:** Replace `bg-brand-primary-light` with a native Tailwind static neutral (`bg-gray-50`) on elements where true dark mode background switching is required. Native Tailwind pairs (`bg-gray-50 dark:bg-dark-bg`) are both auto-generated and Tailwind handles their ordering correctly.
+
+**Broader defect:** ~74 lines across ~50 files share this pattern (table headers, cards, badges, button hover states). Full cascade sweep scheduled as ADMIN.39. Do not introduce new `bg-brand-primary-light dark:bg-dark-*` pairings on layout-level elements until the sweep is complete and a structural resolution is in place.
+
+**Related — `editNote()`/`deleteNote()` role guard (deferred to ADMIN.39):**
+`editNote()` and `deleteNote()` in `lib/actions/volunteers.ts` currently use `!['super_admin','owner_admin'].includes(admin.role)` — this blocks Editors from editing or deleting notes. Per Brief §8, Editors should be able to edit and delete notes (they are append-only by convention, but the Brief confirms SA + Editor both have edit/delete capability). The guard needs correction to `['super_admin','owner_admin','editor'].includes(admin.role)` — this fix is bundled into ADMIN.39 alongside the dark mode sweep.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -2931,3 +3110,4 @@ See §11 checklist for the required verification item.
 *v3.8 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §2 header updated (SETUP complete + ADMIN.31/31b); §7 feature flag pattern updated (built SETUP.1 — "not yet built" removed, three active flags noted, proxy.ts conditional fetch noted, missing key behavior noted); §7 setup.ts note updated (dual-client pattern documented — getServerClient() for mutations, getAdminClient() for getSignedBrandUploadUrl()); §7 P-DC storage bucket note updated (two sanctioned buckets: media + brand, path namespacing for each); §7 XHR sanctioned files updated (ConsentUploadForm + MediaLibrary + BrandImageUploader — count 2 → 3); §10 feature flags grep updated (flag list trimmed to 3 active flags, SetupPanel.tsx exclusion added); §10 XHR grep updated (3 sanctioned files); §10 storage grep updated (brand bucket note + second grep for all buckets); §10 new proxy.ts matcher grep check added (SETUP.1 F1); §11 five new checklist items: R34 flag-ready for new features, resolveEmailSettings() in new email functions, payload builder logoUrl param, revalidatePath layout cascade on flag saves, proxy.ts matcher audit before public guards; §13 Phase SETUP marked complete (SETUP.1–4 all ✓ with commit hashes); §13 ADMIN.31 + ADMIN.31b + DOC.43a logged; §13 Phase 19 description updated (expanded scope); §13 Phase 21 + Phase CAST + ADMIN.32/33 added; §14 four new rules: proxy.ts matcher must include all guarded paths (SETUP.1 F1), setup.ts dual-client pattern (SETUP.2), resolveEmailSettings/resolveOrgIdentity use getAdminClient() (SETUP.3/ADMIN.31), R34 cross-reference added; DOC.43b logged)*
 *v3.9 (July 2026 — ADMIN.32–34 complete: §2 header updated (ADMIN.32–34 + DOC.44 logged); §7 Owner Admin role guard EXCEPTIONS updated (OA can now create/assign OA — only SA creation/deactivation remains SA-only); §14 resolveEmailSettings() return type updated (orgName + orgContactEmail added; FROM_ADDRESS/REPLY_TO deletion documented; payload builder from/replyTo params documented); §14 resolveOrgIdentity() return type updated (org_logo_url added; admin layout prop pattern documented); §14 new pattern: || vs ?? for app_settings fallbacks (confirmed failure mode ADMIN.34 F2); §14 new pattern: next.config.ts images.remotePatterns for Supabase Storage; §10 new grep check: FROM_ADDRESS/REPLY_TO must be zero; §10 Owner Admin grep comment updated (only SA-creation escalation guards remain legitimate SA-only hits); §11 payload builder checklist item updated (from/replyTo params, FROM_ADDRESS/REPLY_TO deleted); §11 resolveEmailSettings() checklist item updated (orgName + orgContactEmail); §11 Owner Admin role guard checklist item updated (OA can create OA); §11 two new checklist items (|| vs ?? pattern, no hardcoded org strings in email body copy); §13 ADMIN.32 + ADMIN.33 + ADMIN.34 all marked complete with summaries; Phase 21 prerequisites marked complete; DOC.43b-FIX + DOC.44 + DOC.45 added to prompt log; DOC.45 logged)*
 *v4.0 (July 2026 — Phase THEME complete: §2 header updated (THEME complete + Phase 19/21 pre-launch + DOC.47/DOC.48 logged); §14 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight added; email client constraint note added — string interpolation not CSS custom properties); §14 new pattern: lightenHex() from lib/utils/color.ts for server-side hex tint computation (email templates + PDF exports; do not use color-mix() in email or @react-pdf/renderer contexts); §14 new pattern: @react-pdf/renderer createStyles() factory pattern (StyleSheet.create() at module scope ignores props — confirmed failure mode THEME.4; factory function called inside component body is required); §14 R33 enforcement note added (post-THEME web UI code must use @layer utilities classes — bg-brand-primary etc. — never static token names); §10 two new grep checks (brand static Tailwind classes must be zero; brand hex in email templates outside resolveEmailSettings() fallbacks must be zero); §11 email send function checklist item updated (brand color params added); §11 payload builder checklist item updated (brand params added); §11 three new checklist items (post-THEME UI code uses utility classes, PDF factory pattern, email brand hex grep); §13 Phase THEME marked complete (THEME.A/1/2a–2d/3/3b-4 all ✓ with commit hashes); §13 Phase 19 status updated (pre-launch, 3-prompt structure confirmed); §13 Phase 21 updated (pre-launch); §13 prompt log: DOC.43b-FIX through DOC.48 + THEME.A through THEME.3b-4 added (14 new entries); DOC.48 logged)*
+*v4.1 (July 2026 — Phase 19 complete + ADMIN.35–38: §1 header updated (v4.1, Phase 19 + ADMIN.35–38 summary); §7 three new patterns added: Google OAuth callback dual-client pattern (getAdminClient() for pending_registrations ops — newly-OAuth'd user fails session-client RLS; ADMIN.36/38), is_active sign-out pattern (signOut() before redirect on inactive Google auth — ADMIN.38), updateVolunteerInfo() public-route identity (app/update/actions.ts is the /update submit action, distinct from updateVolunteer() in lib/actions/volunteers.ts — any new profile field must update both — 19.2); §7 revalidatePath via .select() pattern added (deleteNote/editNote — retrieve parent ID in single operation to avoid pre-delete SELECT — ADMIN.37); §11 three new checklist items: /update two-file field update pattern (19.2), z.string().optional() for <select> fields (enum rejects '' silently — 19.1/19.3), role guard allowlist pattern for volunteer mutations (Production must be explicitly blocked — ADMIN.37/38); §13 Phase 19 marked complete (19.1–19.3 ✓); §13 prompt log ADMIN.35-AUDIT + ADMIN.35–38 + 19.1–19.3 + DOC.50–51 added; §14 dark mode cascade defect note added (hand-authored @layer utilities compile after Tailwind auto-generated — bg-brand-primary-light overrides dark:bg-dark-bg; ADMIN.35-AUDIT root cause; ADMIN.39 sweep pending); §14 editNote()/deleteNote() role guard gap noted (should allow Editor — deferred to ADMIN.39); DOC.51 logged)*
