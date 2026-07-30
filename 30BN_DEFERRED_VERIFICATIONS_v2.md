@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 16 | July 2026 | Phase THEME Complete
+## Version 17 | July 2026 | Phase 19 Complete
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -20,7 +20,12 @@ SETUP.0, Phase 14 (14.1–14.3), Phase 15 (15.1–15.2),
 HELP.2e, ADMIN.33 (role permissions + branding + 404 page
 customization), ADMIN.34 (QR history panel + OA approval),
 Phase THEME (dynamic CSS brand color system —
-THEME.A through THEME.3b-4).
+THEME.A through THEME.3b-4), ADMIN.35 (dark mode main
+content fix), ADMIN.36 (Google OAuth registration path),
+ADMIN.37 (revalidatePath gaps + role guard fix),
+ADMIN.38 (is_active Google path + Production role guards),
+Phase 19 (communication preferences — 19.2 public forms,
+19.3 Call Board + admin + volunteer list).
 
 ---
 
@@ -326,6 +331,36 @@ No other THEME-related cleanup is required. The
 @layer utilities block in globals.css and the
 CSS custom property injection in app/layout.tsx
 are production code, not test data.
+
+Note for ADMIN.36: Any pending_registrations rows created
+during Google OAuth registration testing (test Google
+accounts used to verify the new "Continue with Google"
+path in the Request Access panel) should be cleaned up
+before launch. Declined test registrations are automatically
+removed via declineRegistration() → auth.admin.deleteUser().
+For any pending or approved test registrations, run:
+
+  DELETE FROM pending_registrations
+  WHERE email IN (
+    '[test-google-email-1@gmail.com]',
+    '[test-google-email-2@gmail.com]'
+  );
+  -- Replace with actual test Google email addresses used
+  -- during ADMIN.36 verification. Only delete test accounts
+  -- — not any real staff members who registered via Google.
+
+Also remove the corresponding Supabase Auth users manually
+via the Supabase dashboard → Authentication → Users for
+any test Google accounts that were approved and then not
+deactivated via the normal flow.
+
+Note for Phase 19: No new test database rows are created
+specifically by the communication_preference feature
+(Migration 030 adds a nullable column with no default).
+Any preference values set during 19.2/19.3 testing on
+volunteers with test emails (LIKE '%@30bn-test.invalid')
+will be removed by the existing volunteer cleanup SQL
+block above. No additional cleanup SQL is needed.
 
 ---
 
@@ -1589,6 +1624,33 @@ THEME V3 (public pages /callboard, /shows, /forms),
 THEME V4 (/crew/login admin login page),
 THEME V5 (admin Production Crew dashboard),
 THEME V6 (admin volunteers and shows pages)
+
+### ADMIN.35 — dark mode browser verification:
+ADMIN.35 V1–V4 (all browser)
+
+### ADMIN.36 — requires real Google account:
+ADMIN.36 V2, V5, V8, V9, V10, V11
+
+### ADMIN.36 — requires Supabase cross-check:
+ADMIN.36 V3, V10
+
+### ADMIN.36 — requires real email delivery:
+ADMIN.36 V4 (to Super Admin), V7 (to Google account)
+
+### ADMIN.37 — browser verification:
+ADMIN.37 V1–V5 (all browser)
+
+### ADMIN.38 — requires Production account:
+ADMIN.38 V1, V2
+
+### Phase 19.2 — requires Supabase cross-check:
+19.2 V2, V3, V5, V6
+
+### Phase 19.3 Call Board — requires Supabase cross-check:
+19.3 V3, V4
+
+### Phase 19.3 Admin Profile — requires Viewer account (A1):
+19.3 V8
 
 ---
 
@@ -6219,6 +6281,399 @@ above (7.1 V11–V17).*
 
 ---
 
+## ADMIN.35 — Dark Mode Main Content Area Fix
+
+*Context: ADMIN.35 replaced `bg-brand-primary-light` with
+`bg-gray-50` on the `<main>` content wrapper in
+`app/crew/(app)/layout.tsx`. This fixed the main content
+area showing an off-white background in dark mode instead
+of the correct dark palette color. The sidebar and top bar
+were unaffected. A broader cascade defect (~50 files)
+remains deferred to ADMIN.39.*
+
+**Main content area in dark mode:**
+
+- [ ] **ADMIN.35 V1** — Toggle to dark mode using the
+      sidebar toggle. Navigate to /crew/dashboard. Confirm
+      the main content area (the region displaying the
+      Quick Stats cards and Season at a Glance section)
+      renders with a visibly dark background — NOT an
+      off-white or light-grey background. The background
+      should be clearly darker than the card surfaces.
+
+- [ ] **ADMIN.35 V2** — While in dark mode on
+      /crew/dashboard: confirm the sidebar (left column)
+      and top bar (header strip) also show dark
+      backgrounds. These were unaffected by the regression
+      and should be correct — this is a baseline
+      confirmation.
+
+- [ ] **ADMIN.35 V3** — While in dark mode: navigate to
+      /crew/volunteers, /crew/shows, and
+      /crew/settings/users. Confirm the main content area
+      background on each page is consistently dark —
+      not light or off-white.
+
+- [ ] **ADMIN.35 V4** — Switch back to light mode.
+      Confirm the main content area returns to a neutral
+      light background (not dark). Confirm toggle works
+      correctly in both directions.
+
+---
+
+## ADMIN.36 — Google OAuth Registration Path
+
+*Context: ADMIN.36 added a "Continue with Google" button
+to the Request Access panel on /crew/login. Google
+registrants enter the same pending approval queue as
+email/password registrants. The OAuth callback handles
+three states: new registrant, already pending, and
+previously declined. ADMIN.38 added the is_active check
+on the Google path.*
+
+*Prerequisites: A real Google account to use for testing.
+A Super Admin account to approve/decline. A real email
+address on the Super Admin account to receive notification
+emails.*
+
+**"Continue with Google" button visible in Request Access:**
+
+- [ ] **ADMIN.36 V1** — Navigate to /crew/login. Click
+      "Request Access" (the toggle that reveals the
+      registration panel). Confirm a "Continue with
+      Google" button (or "Sign in with Google") is visible
+      below the email/password fields, separated by a
+      visual divider (e.g. "or" divider line).
+
+**New Google registrant flow:**
+
+- [ ] **ADMIN.36 V2** — From the Request Access panel,
+      click "Continue with Google." Complete the Google
+      OAuth flow using a Google account that has never
+      registered on this platform. Confirm you are
+      redirected to /crew/login with a success message
+      referencing Google account submission (e.g. "Your
+      Google account has been submitted for approval").
+
+- [ ] **ADMIN.36 V3** — Supabase: confirm a row exists
+      in pending_registrations with the Google account's
+      email, a non-empty name (from Google profile), and
+      status = 'pending'. Confirm auth_user_id is set to
+      a valid Supabase Auth user UUID. *(Supabase)*
+
+- [ ] **ADMIN.36 V4** — Super Admin receives a
+      notification email: "New access request — [name]
+      ([email])" with a link to /crew/settings/users.
+      *(Requires real email delivery to Super Admin)*
+
+**Already-pending state:**
+
+- [ ] **ADMIN.36 V5** — From the Request Access panel,
+      click "Continue with Google" again using the same
+      Google account (which is now pending). Confirm
+      redirect to /crew/login with a "request already
+      pending" message — not an error and no duplicate
+      row created.
+
+**Approval flow — Google registrant:**
+
+- [ ] **ADMIN.36 V6** — As Super Admin: navigate to
+      /crew/settings/users. Confirm the Google registrant
+      appears in the Pending Registrations section with
+      their name and email from Google. Approve with any
+      role (e.g. Editor).
+
+- [ ] **ADMIN.36 V7** — After approval: approved Google
+      registrant receives an email with a link to sign in
+      via Google — NO temp password, NO "change your
+      password" instructions. CTA button links to
+      /crew/login. *(Requires real email delivery to the
+      Google account's email address)*
+
+- [ ] **ADMIN.36 V8** — The approved Google account
+      clicks "Sign in with Google" on the main /crew/login
+      form (not Request Access). Confirm redirect to
+      /crew/dashboard with the correct role (e.g. Editor
+      sidebar and permissions). *(Requires the Google
+      account used in V2)*
+
+**is_active check on Google path (ADMIN.38):**
+
+- [ ] **ADMIN.36 V9** — As Super Admin: deactivate the
+      approved Google test account. Log out. Navigate to
+      /crew/login. Click "Sign in with Google" on the main
+      login form. Complete the Google OAuth flow. Confirm
+      redirect to /crew/login?error=not_authorized — NOT
+      to /crew/dashboard. The deactivated account must
+      not gain access.
+      *(Requires the approved test Google account from V8)*
+
+**Decline flow — Google registrant:**
+
+- [ ] **ADMIN.36 V10** — Register a second test Google
+      account via the Request Access panel. As Super Admin:
+      decline the registration. Confirm the pending row
+      disappears. Supabase: confirm pending_registrations
+      status = 'declined' AND the Supabase Auth user no
+      longer exists in Authentication → Users.
+      *(Supabase)*
+
+**Previously-declined state:**
+
+- [ ] **ADMIN.36 V11** — Using the second Google account
+      that was just declined in V10: navigate to
+      /crew/login → Request Access → "Continue with
+      Google." Complete the OAuth flow. Confirm redirect
+      to /crew/login?error=declined with a declined
+      message — not the new-registrant path.
+
+---
+
+## ADMIN.37 — revalidatePath Gaps + Role Guard Fix
+
+*Context: ADMIN.37 added missing revalidatePath() calls
+to addNote(), editNote(), deleteNote(), and toggleStatus()
+in lib/actions/volunteers.ts. It also fixed the
+updateVolunteer() role guard from a viewer-only exclusion
+to an allowlist that correctly blocks Production role.*
+
+*Prerequisites: Editor account. A volunteer profile with
+at least one existing note (or create one during testing).*
+
+**Note actions — immediate refresh without hard reload:**
+
+- [ ] **ADMIN.37 V1** — As Editor: navigate to a
+      volunteer profile. Add a new note. Confirm the note
+      appears on the page immediately after saving —
+      without a hard reload or manual page refresh.
+
+- [ ] **ADMIN.37 V2** — Edit an existing note (as Editor
+      or Super Admin if note editing is available). Confirm
+      the updated content appears on the page immediately
+      after saving — no hard reload required.
+
+- [ ] **ADMIN.37 V3** — Delete a note (as Super Admin).
+      Confirm it disappears from the page immediately —
+      no hard reload required.
+
+**Status toggle — immediate refresh on list and profile:**
+
+- [ ] **ADMIN.37 V4** — As Editor: navigate to
+      /crew/volunteers (the volunteer list). Open a
+      volunteer profile. Archive the volunteer. Navigate
+      back to /crew/volunteers. Confirm the archived
+      volunteer is no longer visible on the active list
+      (assuming the default filter shows active volunteers
+      only) — without a hard reload.
+
+- [ ] **ADMIN.37 V5** — Reactivate the archived volunteer
+      from their profile. Navigate back to /crew/volunteers.
+      Confirm they reappear on the active list immediately.
+
+---
+
+## ADMIN.38 — is_active Google Path + Production Role Guards
+
+*Context: ADMIN.38 fixed two gaps: (1) the Google OAuth
+callback now checks is_active and signs out + redirects
+inactive accounts, matching the email/password path; (2)
+addNote(), toggleStatus(), and addManualHours() in
+lib/actions/volunteers.ts now correctly block Production
+role via the allowlist pattern.*
+
+*Note: ADMIN.38 V1 (is_active Google check) is covered by
+ADMIN.36 V9 above — do not duplicate. The Production role
+guard corrections are server-action-level fixes; the
+browser-level Production role routing verification (cannot
+access /crew/volunteers) is the primary check.*
+
+**Production role cannot access volunteer database:**
+
+- [ ] **ADMIN.38 V1** — Log in as a Production role
+      account. Confirm the sidebar shows Calendar, Media
+      Library, and Help only — no Volunteers, Shows, or
+      other sections. Attempt to navigate directly to
+      /crew/volunteers. Confirm redirect to /crew/calendar
+      (proxy blocks this route for Production). Confirm
+      no volunteer data is exposed.
+
+- [ ] **ADMIN.38 V2** — As Production: attempt to navigate
+      to /crew/volunteers/[any-volunteer-id]. Confirm
+      redirect to /crew/calendar. Production must not be
+      able to access any volunteer profile page directly.
+      *(Requires Production account — may need to create
+      one via /crew/settings/users if none exists)*
+
+---
+
+## Phase 19 — Volunteer Communication Preferences
+
+*Context: Phase 19 (19.1–19.3) added the optional
+`communication_preference` column to volunteers (nullable
+text CHECK 'email'|'phone'|'either'). Advisory only — no
+system enforcement. Displayed in the volunteer signup form,
+/update form, Call Board volunteer card, admin volunteer
+profile, and volunteer list.*
+
+*Label mapping: 'email'→"Email", 'phone'→"Phone",
+'either'→"Either is fine", null→"No preference" (forms
+and Call Board) or "—" (admin profile view mode).*
+
+---
+
+### Phase 19.2 — Public Forms
+
+*Prerequisites: A volunteer with a known update token for
+/update testing. A real browser session for the public
+signup form at /.*
+
+**Signup form (/)**:
+
+- [ ] **19.2 V1** — Navigate to / (public volunteer signup
+      form). Scroll to the bottom of the form fields.
+      Confirm a "Preferred contact method" dropdown appears
+      after the "Referred by" field. Confirm four options:
+      "No preference," "Email," "Phone," "Either is fine."
+      Confirm the field has no required indicator (it is
+      optional).
+
+- [ ] **19.2 V2** — Submit the signup form with "Email"
+      selected for preferred contact method (use a test
+      email). Supabase: confirm `volunteers.
+      communication_preference = 'email'` for the new
+      volunteer row. *(Supabase)*
+
+- [ ] **19.2 V3** — Submit the signup form with "No
+      preference" selected (the default empty option).
+      Supabase: confirm `volunteers.communication_preference
+      IS NULL` for the resulting volunteer row. *(Supabase)*
+
+**Update form (/update):**
+
+- [ ] **19.2 V4** — Navigate to /update using a volunteer's
+      update token (for a volunteer who has a non-null
+      communication_preference). Confirm the "Preferred
+      contact method" dropdown appears pre-filled with their
+      current preference value.
+
+- [ ] **19.2 V5** — Change the preference on /update to
+      a different value and submit. Confirm the in-page
+      success message appears. Supabase: confirm
+      `volunteers.communication_preference` updated to the
+      new value. *(Supabase)*
+
+- [ ] **19.2 V6** — Change the preference to "No
+      preference" (empty option) and submit. Supabase:
+      confirm `volunteers.communication_preference IS NULL`
+      after update — not an empty string ''. *(Supabase)*
+
+---
+
+### Phase 19.3 — Call Board Volunteer Card
+
+*Prerequisites: A volunteer with a known email or phone
+for Call Board lookup.*
+
+- [ ] **19.3 V1** — Navigate to /callboard. Look up a
+      known volunteer (enter their email or phone). After
+      the volunteer card loads, confirm a "Preferred
+      contact method" section is visible on the card with
+      a dropdown/select element.
+
+- [ ] **19.3 V2** — On the Call Board volunteer card:
+      change the preference using the inline select (e.g.
+      select "Phone"). Confirm the UI updates (optimistic
+      state). Reload the page. Look up the same volunteer.
+      Confirm the preference persists as "Phone."
+
+- [ ] **19.3 V3** — Supabase: confirm `volunteers.
+      communication_preference = 'phone'` for the volunteer
+      updated in V2. *(Supabase)*
+
+- [ ] **19.3 V4** — Change the preference on the Call
+      Board card back to "No preference" (empty option).
+      Reload. Confirm the select shows "No preference" as
+      the selected state. Supabase: confirm
+      `communication_preference IS NULL`. *(Supabase)*
+
+---
+
+### Phase 19.3 — Admin Volunteer Profile
+
+*Prerequisites: Editor account. Viewer account (A1).
+A volunteer with a known preference value.*
+
+- [ ] **19.3 V5** — As Editor or Super Admin: navigate
+      to a volunteer profile. In view mode (not editing),
+      confirm "Preferred contact method" appears in the
+      personal info section alongside other contact fields.
+      For a volunteer with a saved preference, confirm the
+      value displays (e.g. "Email"). For a volunteer with
+      null preference, confirm "—" displays.
+
+- [ ] **19.3 V6** — Click "Edit" to enter edit mode.
+      Confirm a "Preferred contact method" select appears
+      with the volunteer's current value pre-filled. The
+      select shows "No preference" for null values.
+
+- [ ] **19.3 V7** — Change the preference in edit mode
+      to a different value. Click Save. Confirm the updated
+      value appears in view mode immediately without a
+      hard reload.
+
+- [ ] **19.3 V8** — As Viewer (A1): navigate to a
+      volunteer profile. Confirm the "Preferred contact
+      method" field is visible in view mode (all roles can
+      see it). Confirm no edit select or edit button is
+      shown — view-only for Viewers.
+
+---
+
+### Phase 19.3 — Volunteer List
+
+*Prerequisites: At least one volunteer with a non-null
+communication_preference and at least one volunteer with
+null preference exist in the system.*
+
+- [ ] **19.3 V9** — Navigate to /crew/volunteers. Find
+      a volunteer row where the volunteer has a non-null
+      communication_preference. Confirm a small badge
+      appears on their row (e.g. "Email," "Phone," or
+      "Either") appended to the Name cell alongside any
+      existing SH badge.
+
+- [ ] **19.3 V10** — Find a volunteer row where
+      communication_preference is null. Confirm no
+      preference badge appears on their row — empty/clean
+      state.
+
+- [ ] **19.3 V11** — Locate the "Preferred Contact" filter
+      in the volunteer list filter bar (alongside other
+      filters: status, category, etc.). Select "Email
+      only." Confirm only volunteers with
+      communication_preference = 'email' appear in the
+      list. No null-preference volunteers should appear.
+
+- [ ] **19.3 V12** — Change the filter to "Phone only."
+      Confirm only phone-preference volunteers appear.
+      Change to "Either is fine." Change to "All" (default).
+      Confirm the full list restores on "All."
+
+- [ ] **19.3 V13** — Combine the preference filter with
+      another filter (e.g. category or status). Confirm
+      both filters apply simultaneously — only volunteers
+      matching both conditions appear.
+
+- [ ] **19.3 V14** — Download the volunteer CSV export
+      (with no active filters, or with the preference
+      filter active). Open the CSV. Confirm a "Preferred
+      Contact" column exists. Confirm values read "Email,"
+      "Phone," "No preference," or blank (empty string for
+      null) — never the raw DB values ('email', 'phone',
+      'either').
+
+---
+
 ## Phase THEME — Dynamic CSS Brand Color System
 
 Phase THEME (THEME.A through THEME.3b-4) replaced all
@@ -6358,26 +6813,29 @@ immediately obvious. Restore to 30BN defaults
 
 ---
 
-*Total items in this carry-forward list: 788*
-*(774 v15 items + 14 new v16 items)*
-*Prior (v15): 774 items*
-*v16 additions: 14 new items (Phase THEME: THEME V1–V14
-— CSS custom property injection, public page brand
-colors, admin UI brand colors, brand color propagation,
-email brand colors, PDF export brand colors).*
-*v16 superseded: none.*
-*v16 updated: none.*
-*Seed Data Cleanup: THEME note added (brand_primary /
-brand_accent restore SQL if changed during testing;
-no other THEME cleanup needed — no test DB rows).*
+*Total items in this carry-forward list: 830*
+*(788 v16 items + 42 new v17 items)*
+*Prior (v16): 788 items*
+*v17 additions: 42 new items — ADMIN.35 (V1–V4: dark
+mode main content area verification), ADMIN.36 (V1–V11:
+Google OAuth registration path — new registrant, pending,
+declined, approval, is_active check), ADMIN.37 (V1–V5:
+revalidatePath gaps — note add/edit/delete, status toggle
+list refresh), ADMIN.38 (V1–V2: Production role routing
+verification), Phase 19.2 (V1–V6: communication_preference
+on public signup form and /update form), Phase 19.3 (V1–V4:
+Call Board inline select, V5–V8: admin volunteer profile
+view/edit, V9–V14: volunteer list badge + filter + CSV).*
+*v17 superseded: none.*
+*v17 updated: none (Seed Data Cleanup: ADMIN.36 Google test
+registration cleanup note added; Phase 19 no-cleanup note
+added).*
 *Database-verifiable items handled separately in*
-*30BN-DB-VERIFY.3 (not counted here)*
-*Last updated: July 2026 — v16 (Phase THEME complete:
-CSS custom property injection in app/layout.tsx,
-@layer utilities in globals.css, 1,381 brand-derived
-class instances replaced across 130 files, email
-templates dynamic via resolveEmailSettings() brand
-params, PDF export via createStyles() factory.)*
+*30BN-DB-VERIFY.4 (not counted here)*
+*Last updated: July 2026 — v17 (Phase 19 complete:
+communication_preference on volunteers; Google OAuth
+registration path; dark mode main content fix; revalidatePath
+gaps fixed; Production role guard corrections.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
