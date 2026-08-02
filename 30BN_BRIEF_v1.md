@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.1
-### Created: July 2026 | Last Updated: July 2026 — v4.1 (Phase THEME complete — THEME.A through THEME.3b-4; Phase 17 scope expanded; Phase 19 + Phase 21 moved pre-launch; lib/utils/color.ts; PDF export brand colors; resolveEmailSettings() brandPrimary/brandAccent/brandPrimaryLight; buildEmailHtml() brand params)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.3
+### Created: July 2026 | Last Updated: July 2026 — v4.3 (Dark mode cascade defect fully closed — ADMIN.39-AUDIT + ADMIN.39a–c; ADMIN.37 revalidatePath sweep + role guards; ADMIN.38 is_active + email log + role guards; Editors confirmed append-only for notes; new R35 @layer utilities dark mode pairing rule; ADMIN.40 carry-forward; Phase 21 next. Folded in this session: the v4.2 update (Phase 19 complete — 19.1–19.3; ADMIN.35–38; Google OAuth registration path; is_active Google path fix; revalidatePath + role guard sweep; communication_preference fully wired; dark mode main content fix; zod &lt;select&gt; pattern; update form action clarification) had been logged as shipped but was never actually applied to this file — reconstructed and applied here alongside v4.3. See v4.2/v4.3 version history entries below.)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase THEME complete (THEME.A through THEME.3b-4). Phase 19 (Communication Preferences) and Phase 21 (Rehearsal Management) planned pre-launch. Phase 17 (Launch) follows. Phase CAST planned post-launch.
+**Current phase:** ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete. Dark mode cascade defect fully closed across 54 files (one residual: ADMIN.40 — OpportunityForm.tsx). Phase 21 (Rehearsal Management) is next pre-launch phase. Phase 17 (Launch) follows Phase 21. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -204,6 +204,10 @@ Mid Gray:             #555555  --color-mid-gray
 **Auth model:** Admin accounts exist in `admin_users` table (linked to Supabase Auth). Admins authenticate via email/password or Google OAuth — both routes verify the `admin_users` record before granting access. Volunteers are NOT Supabase Auth users — they identify themselves via email or phone lookup on the Call Board; a match sets a 7-day cookie session with no magic link or email step required.
 **Admin accounts:** Created by Super Admin OR via the self-registration "Request Access" flow on the login page. Production accounts can be created two ways: (1) directly by Super Admin via CreateUserModal (Super Admin callers only — added ADMIN.33), or (2) via the Request Access flow, assigned `role = 'production'` by Super Admin or Owner Admin on approval (added ADMIN.33/34). Owner Admin accounts can be created directly by both Super Admin and Owner Admin callers, and assigned via the registration approval flow by both callers. Google OAuth callback updated in CAL.3 to redirect production-role users to `/crew/calendar` instead of `/crew/dashboard`.
 
+**Google OAuth registration path (built ADMIN.36):** A user with no `admin_users` row who authenticates via Google OAuth is routed through the same Request Access approval flow as email/password self-registration — `app/auth/callback/route.ts` inserts a `pending_registrations` row and notifies active Super Admins, exactly as `registerAdminRequest()` does for the email/password path. Google-registered pending requests are approved/declined identically to email/password requests via `approveRegistration()` / `declineRegistration()`. The callback uses two Supabase clients with different responsibilities: the session client (`createServerClient()`) handles code exchange, the `admin_users` lookup, and `signOut()` when blocking an inactive account; the admin client (`getAdminClient()`) handles all `pending_registrations` operations and the `email_log`/`email_log_recipients` inserts for the new-registrant notification — required because a newly-OAuth'd user has a valid Supabase Auth session but is not yet a Super Admin, and fails the `pending_registrations` RLS policy under the session client.
+
+**`is_active` gating on the Google OAuth path (fixed ADMIN.38):** The callback's `admin_users` lookup originally selected only the columns needed to establish identity, omitting `is_active` — a deactivated admin could complete Google OAuth and reach `/crew/dashboard` despite being deactivated everywhere else. Fixed: the SELECT was widened to include `is_active`; when `is_active === false`, the callback calls `supabase.auth.signOut()` on the session client BEFORE redirecting to `?error=not_authorized` — a bare redirect without sign-out would leave a live Supabase Auth session in the browser. This matches the sign-out-before-redirect pattern the email/password path already used via `getAdminUser()`.
+
 **Proxy/Middleware (CAL.2, renamed ADMIN.28):** Route protection is handled by `proxy.ts` at the repo root (renamed from `middleware.ts` to `proxy.ts` in ADMIN.28 — Next.js 16 convention). Production-role users are restricted — any `/crew/*` route other than `/crew/calendar`, `/crew/calendar/*`, and `/crew/help` redirects to `/crew/calendar` (`/crew/help` exception added HELP.2a). Owner Admin is permitted on all `/crew/*` routes EXCEPT `/crew/settings/setup` (hard-redirect to `/crew/dashboard`). Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request. Feature flag route guards (SETUP.1): `proxy.ts` matcher extended to include public routes `/calendar` and `/checkin/:path*`. When a flagged feature is off, proxy blocks: `/crew/calendar` and `/crew/calendar/*` (`feature_calendar`); `/crew/tools/checkin` (`feature_checkin`); `/crew/communication` (`feature_blast`); `/calendar` (`feature_calendar`); `/checkin/*` (`feature_checkin`). Flag fetch is conditional — only fires when the request path matches one of the five guarded paths. Uses `getAdminClient()` and `getFeatureFlags()`.
 
 ---
@@ -232,7 +236,7 @@ Mid Gray:             #555555  --color-mid-gray
   - Volunteer interest areas: multi-select from active `volunteer_categories`
   - How did you hear about us: dropdown from `hearing_options` table + "Other" with text input
   - Referred by: free text (optional)
-  - Preferred contact method (Phase 19 — pending): optional dropdown (Email / Phone / No preference). Maps to `volunteers.communication_preference`. Advisory only — no system enforcement.
+  - Preferred contact method (built 19.1–19.3): optional dropdown (Email / Phone / No preference). Maps to `volunteers.communication_preference`. Advisory only — no system enforcement.
 - Honeypot spam prevention (built 12.1): hidden
   uncontrolled `<input name="website">` field
   (off-screen via CSS, not display:none). If populated
@@ -252,7 +256,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Entry via link in confirmation email or token re-request (enter email/phone → receive new link)
 - Pre-filled editable form (all fields; email read-only for reference; phone re-checked for duplicates on change)
 - Service hours question appears pre-filled when the volunteer has a school value on file. Same conditional trigger as the signup form.
-- Preferred contact method (Phase 19 — pending): preference field pre-filled from `volunteers.communication_preference`. Same options as signup form.
+- Preferred contact method (built 19.2): preference field pre-filled from `volunteers.communication_preference`. Same options as signup form. Submits via `updateVolunteerInfo()` in `app/update/actions.ts` — the public-route action for this form, distinct from `updateVolunteer()` in `lib/actions/volunteers.ts` (the admin-session action used by the Production Crew backend). Any future field added to the volunteer profile that must also be editable here needs to be added to both action files; missing one silently drops the field on whichever path was skipped (gap confirmed and closed in 19.2).
 - On submit: update record, send "Your info has been updated" email
 
 ### Public — Show Listing (`/shows`)
@@ -321,7 +325,7 @@ optional and additive: entering email or phone personalizes the view with a volu
   Hours" section for manual entries (note + date +
   hours) — omitted if no manual entries. Empty state:
   "No calls on record yet." Collapsed by default.
-- Preferred contact method (Phase 19 — pending): preference badge displayed on the volunteer card. Volunteer can update preference inline via a select element (calls `updateCallboardPreference()` in `lib/actions/callboard.ts`).
+- Preferred contact method (built 19.3): preference badge displayed on the volunteer card. Volunteer can update preference inline via a select element (calls `updateCallboardPreference()` in `lib/actions/callboard.ts`).
 - "Edit my info" → `/update?token=[update_token]`
 - "Sign out" → calls `signOutCallboard()` then
   `router.refresh()`
@@ -394,6 +398,16 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 
 **General:**
 - **Light/Dark Mode:** The admin UI supports a Light/Dark mode toggle in the crew sidebar (sun/moon icon, bottom of sidebar). Preference persisted to localStorage. Always defaults to light mode when no saved preference exists — `prefers-color-scheme` OS detection was explicitly removed in ADMIN.27. Implemented via Tailwind v4 `@variant dark` scoped to `[data-theme="dark"]` on the admin layout wrapper. Dark palette uses static hex values in `@theme` (dark-bg, dark-surface, dark-border, dark-nav, dark-text, dark-muted). Public pages unaffected.
+
+  **Dark mode cascade defect — resolved ADMIN.39a–c:** A systemic PostCSS cascade ordering defect was confirmed in ADMIN.35-AUDIT and fully resolved across 54 files in ADMIN.39a–c. Root cause: hand-authored `@layer utilities` classes (e.g. `bg-brand-primary-light`) compile at ~line 2880 of the PostCSS output; Tailwind's auto-generated dark: utilities compile at ~line 2362. Equal specificity (0,0,1,0) — last-in-cascade wins. Any element pairing a hand-authored brand utility with a native dark: utility on the same property rendered the light-mode brand color in both modes.
+
+  Fix pattern: replace `bg-brand-primary-light` with a static Tailwind neutral (`bg-gray-50`, `bg-white`, or `bg-gray-100` depending on element context and dark: target) on each affected element. The dark: classes were preserved throughout — they were correct intent, just losing to the cascade. Special cases addressed: three zebra-stripe dark targets corrected (dark-surface → dark-bg); two dark hover targets corrected (RecurrenceScopePicker: dark-surface → dark-border; FieldRow: dark-nav → dark-border); one incorrectly swept badge dark class removed (ShowDetail:421 — dark:bg-dark-nav removed, brand base preserved); heading text fixed via `dark:text-brand-primary-mid` (not dark:text-dark-text — the latter is a native class and would lose to the hand-authored base via the same cascade defect).
+
+  Light mode visual impact: uniform subtle brand tint removal across all admin card headers, table headers, badges, and button hover states. `bg-brand-primary-light` was an 8% brand/92% white blend; replacements are pure neutrals (`bg-gray-50`, `bg-white`, `bg-gray-100`). The shift is uniform and intentional — tradeoff accepted in ADMIN.35 and applied consistently throughout ADMIN.39a–c.
+
+  One residual instance: `components/crew/opportunities/OpportunityForm.tsx:99,115` — `has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50`. Not in the original ADMIN.39-AUDIT inventory. Requires its own investigation (element type, dark-mode intent, correct fix value). Logged as ADMIN.40 — not a launch blocker but should close before Phase 17.
+
+  **New standing rule (R35):** See §13. Never pair a hand-authored `@layer utilities` class with a native Tailwind dark: utility on the same CSS property. Use native Tailwind pairs on both sides, or use hand-authored pairs on both sides in the correct order within the `@layer utilities` block.
 - **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`.
 - **Mobile sidebar** (built 12.1): Hamburger button (Menu icon) in TopBar, visible only below the `md` breakpoint (768px). Opens a full-height slide-in drawer with overlay. Three close methods: tap overlay, tap X button inside drawer, or navigate to any route (auto-close via `usePathname()` effect). State managed via `MobileSidebarContext` (see §3). Sidebar renders as a fixed left column on tablet+ (768px+) — unchanged from original desktop behavior.
 
@@ -485,7 +499,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   (e.g. "(985) 555-1234" — ADMIN.21).
 - Bulk select: export selected to CSV. `requires_service_hours` included in CSV export.
 - **Export Matching (CSV):** filter-aware all-pages CSV export — exports all volunteers matching the current active filters, not just the current page. Built in ADMIN.19 (replaced the prior all-volunteers-ignoring-filters export).
-- Preferred contact method (Phase 19 — pending): `communication_preference` visible as a display-only badge in the volunteer list table. Filter deferred to a later phase.
+- Preferred contact method (built 19.3): `communication_preference` visible as a display-only badge in the volunteer list table. Filter deferred to a later phase.
 - PDF export available (Editor/Super Admin) via
   server-side route handler at `/crew/volunteers/export`.
   Landscape A4, branded header, 9-column table (added
@@ -510,9 +524,9 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   - Manual entry form (Editors only): Hours, Date (defaults today), Note (required). Calls `addManualHours()` → inserts `volunteer_hours_log` (source_type: 'manual', logged_date set), updates `volunteers.total_hours`, calls milestone stubs.
 - **Milestone history section** (built in 30BN-9.1, populated by 30BN-9.2): read-only list of all `milestone_log` rows for this volunteer. milestone_label | `formatCT(triggered_at)`. Empty state: "No milestones yet."
 - All profile mutation components standardized to `router.refresh()` in ADMIN.19 (EditorNotes, StatusToggle, VolunteerProfileForm). `setIsEditing(false)` added alongside refresh in VolunteerProfileForm to prevent stale form state.
-- **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors and Super Admins only. Never visible to volunteer (RLS enforced). Editors and Super Admins can add notes (append-only for Editors). Super Admins can also edit and delete existing notes. Implemented via Migration 004 RLS policies. For preferences, scheduling considerations, history, sensitive info.
+- **Editor Notes:** comment-style entries — each note logged with author name + timestamp. Stacked chronologically. Visible to Editors and Super Admins only. Never visible to volunteer (RLS enforced). Editors and Super Admins can add notes (append-only for Editors). Super Admins and Owner Admins can also edit and delete existing notes (Owner Admin permission added ADMIN.33). Editors are confirmed append-only — editNote() and deleteNote() guards use ['super_admin','owner_admin'] allowlist, explicitly excluding Editor. This was re-confirmed in ADMIN.39-AUDIT F4 (session decision, July 2026). No migration needed — the RLS policies on volunteer_notes UPDATE/DELETE only cover is_super_admin_or_owner_admin(), consistent with this decision. Implemented via Migration 004 RLS policies. For preferences, scheduling considerations, history, sensitive info.
 - Status toggle: Active / Archived (Editors only, confirmation prompt)
-- Preferred contact method (Phase 19 — pending): editable field in the personal info section (Editors, Super Admin, Owner Admin). Displays as an informational badge alongside contact fields when view-only. Stored in `volunteers.communication_preference`.
+- Preferred contact method (built 19.3): editable field in the personal info section (Editors, Super Admin, Owner Admin). Displays as an informational badge alongside contact fields when view-only. Stored in `volunteers.communication_preference`. `<select>` uses `z.string().optional()` in `lib/validations/volunteerProfile.ts` — not `z.enum([...]).nullable().optional()`. An unselected `<select>` submits an empty string, which fails `z.enum()` validation silently and blocks the save at the default state; the server action normalizes `'' → null` via `|| null` (R18) before the DB write. Confirmed failure mode: the original 19.1 schema used `z.enum()` and broke every profile save where the preference was left at "No preference" — corrected in 19.3.
 - **Communication History** (built ADMIN.24, all roles):
   collapsible section below Milestone History. Shows all
   emails logged to this volunteer via
@@ -1432,12 +1446,12 @@ Seeded two new `app_settings` keys: `not_found_heading` = 'Page Not Found' and `
 **Migration 029 status:** Applied — `029_qr_codes.sql` (ADMIN.34):
 Creates `qr_codes` table for shared QR code history. Indexes on `created_at DESC` and `created_by`. RLS enabled: SELECT for all authenticated, INSERT for all authenticated, DELETE for `is_super_admin_or_owner_admin()` only.
 
-**Next migration:** 030 — planned for Phase 19:
-`030_communication_preference.sql`. Adds nullable
+**Migration 030 status:** Applied — `030_communication_preference.sql` (19.1). Adds nullable
 `communication_preference` text CHECK ('email'|'phone'|'either') column to `volunteers` table. No index
-needed (advisory only — never filtered in Phase 19).
-RLS unchanged (volunteers table RLS already covers
+needed (advisory only — never filtered). RLS unchanged (volunteers table RLS already covers
 all write paths).
+
+**Next migration:** None shipped since 030. ADMIN.35–39c (dark mode cascade defect audit and sweep) was CSS/UI only — no schema changes. Phase 21 (Rehearsal Management) is expected to introduce the next migration, scope not yet finalized.
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1471,10 +1485,8 @@ total_hours      numeric(6,2) NOT NULL DEFAULT 0
 created_at       timestamptz NOT NULL DEFAULT now()
 updated_at       timestamptz NOT NULL DEFAULT now()
 requires_service_hours boolean NOT NULL DEFAULT false
--- communication_preference text CHECK (
--- communication_preference IN ('email','phone','either')
--- ) — Phase 19, pending. Nullable. Advisory only —
--- no system enforcement. Migration 030.
+communication_preference text CHECK (communication_preference IN ('email','phone','either'))
+-- communication_preference: nullable, advisory only, no system enforcement. Applied Migration 030 (19.1).
 -- Constraint: UNIQUE (email), UNIQUE (phone)
 -- NOTE: phone stored as digits-only (no formatting)
 -- as of Migration 014 (ADMIN.21). All write paths
@@ -3350,7 +3362,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete (THEME.A through THEME.3b-4). Migrations 028–029 applied. Phase 19 (Communication Preferences) and Phase 21 (Rehearsal Management) planned pre-launch. Phase 17 (Launch) follows.*
+*Phase THEME complete (THEME.A through THEME.3b-4). Phase 19 (Communication Preferences) complete — 19.1–19.3. ADMIN.35–38 complete. Migration 030 applied. Dark mode cascade defect fully closed (ADMIN.39-AUDIT + ADMIN.39a–c, 54 files; one residual — ADMIN.40). Phase 21 (Rehearsal Management) is next pre-launch phase. Phase 17 (Launch) follows.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -3768,6 +3780,163 @@ Phase 15 — Document & Media System ✓ Complete
                brand_primary + computes brandPrimaryLight.
                Phase THEME fully complete. Commit 66d2ba7.
   30BN-DOC.47 ✓ Brief Update v4.1 (this prompt)
+  30BN-ADMIN.35-AUDIT ✓ Dark mode background regression
+               audit (read-only). Root cause confirmed:
+               bg-brand-primary-light (hand-authored
+               @layer utilities, compiled after Tailwind
+               auto-generated utilities) overrides
+               dark:bg-dark-bg on same element due to
+               PostCSS source order. ~74 lines across ~50
+               files affected. Main content area gap
+               identified at layout.tsx:74.
+  30BN-ADMIN.35 ✓ Dark mode main content area fix.
+               app/crew/(app)/layout.tsx: bg-brand-
+               primary-light → bg-gray-50 on <main>
+               wrapper. Broader cascade defect deferred
+               to ADMIN.39-AUDIT + ADMIN.39. Commit
+               7ffbee9.
+  30BN-ADMIN.36 ✓ Google OAuth registration path for
+               Request Access flow. auth/callback/route.ts:
+               if (!adminUser) branch (new registrant →
+               insert pending_registrations + notify SAs
+               + ?registered=google; pending → ?pending=true;
+               declined → ?error=declined). googleSignIn.ts
+               (new — shared handler). RegisterForm.tsx:
+               Google button + 3 new param states. lib/
+               actions/admin-registration.ts: getUserById()
+               for Google identity detection; sendGoogle
+               ApprovalEmail() routing. lib/email.ts:
+               sendGoogleApprovalEmail(). Discovered: Google
+               path never checked is_active (fixed ADMIN.38).
+               Discovered: approveRegistration() never called
+               createUser() — always reused auth_user_id.
+               7 files.
+  30BN-ADMIN.37 ✓ revalidatePath gaps + role guard fix.
+               lib/actions/volunteers.ts: revalidatePath()
+               added to addNote(), editNote(), deleteNote(),
+               toggleStatus(). editNote()/deleteNote()
+               required .select('volunteer_id').single()
+               to retrieve parent ID for revalidation path.
+               updateVolunteer() role guard: role==='viewer'
+               → allowedRoles allowlist (blocks Production).
+               1 file.
+  30BN-ADMIN.38 ✓ is_active Google path + email log +
+               Production role guards. auth/callback/
+               route.ts: SELECT widened to include is_active;
+               is_active===false → signOut() + ?error=
+               not_authorized. Inline email_log +
+               email_log_recipients for Google registrants
+               (non-blocking, getAdminClient(), trigger:
+               admin_registration_request). lib/actions/
+               volunteers.ts: addNote(), toggleStatus(),
+               addManualHours() guards → allowedRoles
+               allowlist. 2 files.
+  30BN-19.1    ✓ Migration 030 + server actions.
+               communication_preference column on volunteers
+               (nullable text CHECK). submitVolunteerForm()
+               (app/actions/volunteer.ts) + updateVolunteer()
+               (lib/actions/volunteers.ts): field added.
+               updateCallboardPreference() (lib/actions/
+               callboard.ts): getAdminClient(), session
+               cookie. updateVolunteerPreference() (lib/
+               actions/volunteers.ts): getServerClient(),
+               allowedRoles guard. CSV export: 'Preferred
+               Contact' header. 8 files.
+  30BN-19.2    ✓ Public forms. VolunteerForm.tsx + Volunteer
+               UpdateForm.tsx: preference dropdown added.
+               app/update/actions.ts (updateVolunteerInfo()):
+               field added — discovered /update submits
+               here, not through lib/actions/volunteers.ts.
+               mergeVolunteer(): field added. Zod:
+               z.string().optional() not z.enum() — empty
+               string from <select> fails enum silently.
+               5 files.
+  30BN-19.3    ✓ Admin + Call Board UI. session.ts:
+               VOLUNTEER_COLUMNS extended. VolunteerCard.tsx:
+               badge + inline select, optimistic state,
+               router.refresh(). VolunteerProfileForm.tsx:
+               view field + edit select, z.enum→z.string
+               schema bug fixed. VolunteersTable.tsx: row
+               badge. PDF omitted (10-column A4 too tight).
+               10 files.
+  30BN-DOC.50  ✓ Brief Update v4.2 (Phase 19 complete,
+               ADMIN.35–38, auth patterns, zod select
+               pattern, update form action clarification).
+               Note (added retroactively in DOC.53):
+               this update was logged as shipped in the
+               Process doc's prompt history but was never
+               actually committed to this file — the Brief
+               remained at v4.1 in the live repo. Its
+               intended content was reconstructed from the
+               Process doc and applied together with DOC.53
+               in a single v4.1→v4.3 session. See DOC.53
+               Flags.
+  30BN-ADMIN.39-AUDIT ✓ Full dark mode cascade defect
+               inventory. Raw B1–B5 grep: 346 lines /
+               87 files. After property-group-aware
+               filtering: 245 confirmed pairs across 54
+               files. Groups: A (122 REPLACE_BASE), B
+               (none), C (4 SHADCN), D (18 decisions).
+               All Group D items resolved via owner
+               decisions. Companion fix (editNote/delete
+               Note role guard) dropped — Editors remain
+               append-only (RLS incompatible + design
+               intent confirmed). Split into 3 execution
+               prompts: 39a/39b/39c.
+  30BN-ADMIN.39a ✓ Calendar components + shadcn. 15
+               files, 38 edits. CalendarShell (12),
+               MonthView, WeekView, DayPanel, EventChip,
+               FilterBar, ExportModal, BookSpacePanel,
+               EventForm, BulkRehearsalForm, Recurring
+               EventForm (including two-part text fix),
+               RecurrenceScopePicker (base + dark target
+               dark-surface→dark-border), PendingQueue
+               Client, dialog.tsx, alert-dialog.tsx.
+               Key: governing hover rule established
+               (dark target determines gray-50 vs
+               gray-100 replacement). Commit db7ebcc.
+  30BN-ADMIN.39b ✓ Volunteer/show/forms/settings. 25
+               files, 64 edits. Volunteer: Volunteers
+               Table (badge two-part text fix), Volunteer
+               ProfileForm (dark target correction +
+               has-[:checked]: extension), EditorNotes,
+               StatusToggle, CommunicationHistory (zebra
+               dark-surface→dark-bg), CallHistoryTable
+               (same), volunteers/[id]/page. Shows:
+               ShowDetail (dark:bg-dark-nav removed from
+               brand badge; /30 notice box), ShowList,
+               ShowForm, PostShowReport, BulkEmailSection.
+               Forms: FormList, FormBuilder, FormDetail
+               Actions, FieldRow (dark-nav→dark-border),
+               ResponseViewer. Settings: AuditLogTable,
+               LocationsManager, HearingOptionsManager,
+               CategoriesTable, CreateUserModal, Pending
+               Registrations, DocumentTypesManager,
+               ConsentSubmissionsQueue. Commit 5213fb4.
+  30BN-ADMIN.39c ✓ Dashboard/help/media/tools/comm/
+               sidebar/email-activity/opportunities.
+               14 files (13 scoped + audit-log/page.tsx
+               recovered via F7 sweep), 43 edits.
+               HelpContent: Tip/Warning callouts + heading
+               text (dark:text-brand-primary-mid, not
+               dark:text-dark-text — native class loses
+               to hand-authored base via same cascade
+               defect). MediaLibrary: 13 instances incl.
+               folder-pill base fix + 2 page-level hover
+               exceptions. CheckInDashboard (/50 opacity
+               preserved). email-activity: badge two-part
+               + zebra dark-surface→dark-bg + hover. All
+               others standard substitutions. F7 final
+               sweep: cascade defect closed across all
+               54 audited files. Residual: Opportunity
+               Form.tsx:99,115 (not in original audit
+               scope — ADMIN.40). Commit 5b9aa6d.
+  30BN-DOC.51  ✓ Process Update v4.1 (Phase 19, ADMIN.35–38,
+               new patterns and checklist items)
+  30BN-DOC.52  ✓ Deferred Verifications v17 (ADMIN.35–38 +
+               Phase 19 verification items)
+  30BN-DOC.53  ✓ Brief Update v4.3 (this prompt — folds in
+               the reconstructed v4.2 content above)
 
 **SETUP.1** ✓ — Feature flag infrastructure.
 `lib/feature-flags.ts`: `getFeatureFlags()` + `FeatureFlags`
@@ -4043,38 +4212,43 @@ These features were added to Alpha scope and are now built:
 - **Bulk email from show detail** ✓ Built ADMIN.23. "Message Volunteers" on Overview tab.
   See §8 Show Management.
 
-### Phase 19 — Volunteer Communication Preferences (pending, pre-launch)
+### Phase 19 — Volunteer Communication Preferences ✓ Complete
 
-Planned prompt structure: 19.1 (Migration 030 + all server
+Prompt structure: 19.1 (Migration 030 + all server
 actions) → 19.2 (public signup form + `/update` flow) →
 19.3 (Call Board + admin profile + volunteer list).
 
-Migration 030: New nullable `communication_preference` text CHECK ('email'|'phone'|'either') column on `volunteers`.
-No FK, no index (advisory only — never filtered in Phase 19).
+Migration 030 status: Applied. New nullable `communication_preference` text CHECK ('email'|'phone'|'either') column on `volunteers`.
+No FK, no index (advisory only — never filtered).
 
-**19.1 — Schema + Server Actions:**
-- Migration 030
-- `submitVolunteerForm()` — add to insert
-- `updateVolunteer()` — add to update (both in `lib/actions/volunteer.ts`)
+**19.1 ✓ — Schema + Server Actions:**
+- Migration 030 applied
+- `submitVolunteerForm()` (`app/actions/volunteer.ts`, public) — field added to insert
+- `updateVolunteer()` (`lib/actions/volunteers.ts`, admin) — field added to update
+- Key finding: `lib/actions/volunteer.ts` (singular) does not exist — the original spec had the wrong path. Actual: `app/actions/volunteer.ts` (public) + `lib/actions/volunteers.ts` (admin)
 - New `updateCallboardPreference()` in `lib/actions/callboard.ts`
   (volunteer-session-authenticated, updates own preference via cookie)
-- `updateVolunteerPreference()` in volunteer profile actions
-  (admin-authenticated, editable by Editors/SA/OA)
+- `updateVolunteerPreference()` in `lib/actions/volunteers.ts`
+  (admin-authenticated, `getServerClient()`, allowedRoles guard)
 - Volunteer CSV export headers updated to include preference
 
-**19.2 — Public Forms:**
-- `VolunteerForm.tsx` — optional "Preferred contact method"
+**19.2 ✓ — Public Forms:**
+- `VolunteerForm.tsx` — "Preferred contact method"
   dropdown (Email / Phone / No preference). Appears after Phone.
 - `VolunteerUpdateForm.tsx` — same field, pre-filled from DB
+- `app/update/actions.ts` (`updateVolunteerInfo()`) — field added. This is the public-route submit action for `/update`, distinct from `updateVolunteer()` in `lib/actions/volunteers.ts` (admin session). Any field added to the volunteer profile that must also be editable via `/update` needs both files updated — missing one silently drops the field on the skipped path
+- `mergeVolunteer()` — field added to the duplicate-merge path
+- Zod: `z.string().optional()`, not `z.enum([...]).nullable().optional()` — an unselected `<select>` submits an empty string, which fails `z.enum()` validation silently
 
-**19.3 — Admin + Call Board:**
+**19.3 ✓ — Admin + Call Board:**
+- `session.ts` — `VOLUNTEER_COLUMNS` extended; `types/callboard.ts` — `CallboardVolunteer` extended
 - `VolunteerCard.tsx` — preference badge + inline update select
-  calling `updateCallboardPreference()`
+  calling `updateCallboardPreference()`, optimistic state, `router.refresh()`
 - `VolunteerProfileForm.tsx` — preference field editable in the
-  personal info section (Editors, SA, OA)
+  personal info section (Editors, SA, OA); zod schema bug fixed (`z.enum` → `z.string`)
 - `VolunteersTable.tsx` — preference display-only badge
-- PDF export — decision deferred (adding a 10th column to landscape
-  A4 is very tight; may omit in Phase 19)
+- `url.ts` / `list.ts` / `FilterPanel.tsx` — preference filter state, query filter, and filter control
+- PDF export — omitted (10-column A4 too tight)
 
 No system enforcement — advisory only. SMS/automated phone delivery
 is future infrastructure. Original "waitlist notification only" scope
@@ -4083,7 +4257,7 @@ subsumed — this general preference field serves that purpose.
 ~~**Automated thank-you email after a show**~~ —
 ✓ Built in Alpha (30BN-12.4). See §8 Show Management.
 
-### Phase 21 — Rehearsal Management System (planned, pre-launch)
+### Phase 21 — Rehearsal Management System — next pre-launch phase
 
 Master rehearsal schedule management surface, distinct from the Master Calendar (which handles space booking and conflict resolution). Phase 21 is about who is called, what is assigned, and tracking attendance.
 
@@ -4105,8 +4279,25 @@ Core feature set:
 - Feature flag: `feature_rehearsals` (default `'true'`, gates sidebar link + routes per R34)
 
 Pre-Phase 21 required:
-- ADMIN.32 — Owner Admin comprehensive permission audit (read-only sweep to confirm all operational contexts pass owner_admin through correctly — added late in SETUP.0, may have edge cases)
-- ADMIN.33 — Production role permission audit (confirm all Production access restrictions are still correct and intentional as the platform grows)
+- ADMIN.32 ✓ Complete — Owner Admin comprehensive permission audit (read-only sweep confirming all operational contexts pass owner_admin through correctly)
+- ADMIN.33 ✓ Complete — Production role permission audit + OA permissions sweep + OpenCall OS branding sweep
+
+Phase 21 prerequisites met.
+
+**ADMIN.40 (pre-Phase-17, not blocking launch):**
+`components/crew/opportunities/OpportunityForm.tsx:99,115`
+— two `has-[:checked]:bg-brand-primary-light dark:has-
+[:checked]:bg-dark-surface/50` instances. Not in the
+original ADMIN.39-AUDIT inventory (the file was not
+surfaced in the B1–B5 grep pass). Discovered during
+ADMIN.39c F7 final sweep. Requires investigation before
+fix: element type (opportunity-type radio buttons or
+similar), dark-mode intent, whether the dark: target
+itself is also wrong (dark-surface/50 at low opacity may
+match the container background — same near-zero contrast
+pattern as the zebra stripe fixes). Short audit + one-line
+fix expected. Target: before Phase 17 launch, after
+Phase 21.
 
 ### Phase CAST — Cast Member Portal (named future phase, post-Phase 21)
 
@@ -4270,6 +4461,30 @@ After Phase THEME ships, all components that reference brand-driven colors (`bg-
 
 Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (feature_calendar), Check-In (feature_checkin), Email Blast (feature_blast). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
 
+### R35 — Never Pair Hand-Authored @layer utilities Classes With Native Tailwind dark: Utilities on the Same Property
+
+Hand-authored classes in the `@layer utilities` block in `app/globals.css` compile AFTER Tailwind's auto-generated utilities in the PostCSS output (~line 2880 vs ~2362). Equal specificity — last-in-cascade wins. This means any hand-authored class (e.g. `bg-brand-primary-light`) on an element will override a native dark: class (e.g. `dark:bg-dark-bg`) on the same element in dark mode, because the hand-authored class compiles later.
+
+Correct approaches:
+(a) Use native Tailwind pairs on both sides:
+    `bg-gray-50 dark:bg-dark-bg` — both auto-generated,
+    Tailwind handles ordering correctly. (Preferred for
+    layout wrappers and structural backgrounds.)
+(b) Use hand-authored pairs on both sides in the correct
+    order within the `@layer utilities` block:
+    Define the base class first, then define a
+    `.dark\:...-variant { }` override after it in the
+    same block. (Preferred for brand-colored interactive
+    elements where the brand tint must appear in both
+    modes with a different shade in dark.)
+
+Never use: `bg-brand-primary-light dark:bg-dark-bg`
+(mixed: hand-authored base + native dark: class —
+the base always wins in dark mode regardless of which
+dark: class is specified.)
+
+This defect was confirmed empirically via live PostCSS compilation in ADMIN.35-AUDIT and fully resolved across 54 files in ADMIN.39a–c. ADMIN.40 covers the one remaining instance not in the original audit scope.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -4325,3 +4540,5 @@ logged)*
 *v3.9 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §1 current phase updated (SETUP complete, THEME next); §3 react-easy-crop added; §5 brand public bucket added; §6 email design forward references replaced with implementation facts (resolveEmailSettings, buildEmailHtml logoUrl param, resolveOrgIdentity); §7 proxy feature flag guards documented; §8 Platform Setup section fully replaced (pending spec → built spec: 7 sections, BrandImageUploader, 3-flag set, correct action list, key files); §8 landing page heading/footer dynamic org identity noted; §8 Phase 12 deferred list: 3 items closed (waitlist RPC, phone search, reminder cron DST), 1 remaining; §8 Audit Log known gap closed (volunteer.signup); §9 Migrations 026–027 status blocks added, next migration 028; §9 app_settings seed list corrected (3 flag keys removed, favicon_url added, total 15); §9 AuditAction types: volunteer.signup added; §11 header status updated; §11 Phase SETUP entries SETUP.1–4 all marked complete with summaries; §11 prompt log updated (DOC.42, SETUP.1–4, ADMIN.31, ADMIN.31b, DOC.43a); §11 Phase 15 marked complete; §11 Phase 19 expanded to full communication preference spec; §11 Phase 21 Rehearsal Management System forward spec added; §11 Phase CAST named future phase added; §13 R32 SetupPanel.tsx grep exclusion noted; §13 R34 added (non-core features flag-ready); DOC.43a logged)*
 *v4.0 (July 2026 — ADMIN.32–34 complete: §1 current phase updated (ADMIN.32–34 complete, THEME next); §2 Owner Admin terminology updated (can now create/manage/deactivate OA accounts; cannot create SA); §3 next.config.ts images.remotePatterns entry added (.supabase.co — required for uploaded logo rendering); §6 resolveEmailSettings() return type updated (orgName + orgContactEmail added); resolveOrgIdentity() return type updated (org_logo_url added; layout prop pattern documented); generateMetadata() org_tagline documented (|| fallback); FROM_ADDRESS/REPLY_TO constants deleted, payload builders use explicit from/replyTo params; §7 Owner Admin roles table row updated (OA can create/deactivate OA; can edit/delete volunteer notes; permissions expanded ADMIN.33); Auth model updated (Production direct-create added; OA approval paths documented); §8 User Management SETUP.0 block replaced with accurate ADMIN.33 state; create account role description updated; Platform Setup Section 8 added (not_found_heading/body) + key count 18 + 9 server actions; not-found.tsx description updated (async, dynamic, resolveOrgIdentity); error.tsx Client Component constraint noted; Phase 7 QR Generator updated (QR history panel, lib/data/qr.ts, QRGeneratorForm/QRHistoryPanel components, generateQRCode extended); BulkEmailSection defaultSubject prop noted; HelpContent generic language note; public page org identity sweep documented (13 pages + Sidebar); iCal PRODID/UID domains updated to OpenCall OS; §9 Migration 004 OA volunteer_notes note added; Migrations 028–029 status blocks added; next migration 030; qr_codes table schema block added; admin_users owner_admin NOTE updated; app_settings not_found keys + count 17 + page fetch count 18; §11 header updated; prompt log ADMIN.32–34 + DOC.44 added; DOC.44 logged)*
 *v4.1 (July 2026 — Phase THEME complete: §1 header + current phase updated (THEME complete, Phase 19 + 21 pre-launch); §3 color.ts utility added to tech stack; PDF export brand color architecture noted (@react-pdf/renderer createStyles factory — THEME.4); §6 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight via lightenHex); buildEmailHtml() brand color params documented; email client brand color approach note (string interpolation, not var()); buildCtaButton() dynamic color call sites noted; §8 signup form Phase 19 preference field noted; /update Phase 19 field noted; Call Board volunteer card Phase 19 preference badge + inline update noted; Volunteer Profile Phase 19 editable preference noted (confirmed editable in admin); Volunteer List Phase 19 display-only noted; PDF export createStyles factory architecture documented; Platform Setup Section 2 "Phase THEME must ship" language replaced with completed status; §9 volunteers table communication_preference column Phase 19 note added; Migration 030 context note added; §11 Beta Build header updated; Phase THEME section replaced (all 4 "pending" entries → completed summaries: THEME.A/1/2a–2d/3/3b/4); Phase 17 stub replaced with full 7-sub-phase spec (17.1–17.7); Phase 19 spec updated (prompt structure 19.1/19.2/19.3, admin editable confirmed, CSV export noted, PDF decision noted); Phase 21 moved from post-launch to pre-launch; §11 prompt log: DOC.44 note expanded, DOC.44-FIX + DOC.45 + DOC.46 + DOC.46-FIX + THEME.A + THEME.1 + THEME.2a–2d + THEME.3 + THEME.3b-4 + DOC.47 all added; DOC.47 logged)*
+*v4.2 (July 2026 — Phase 19 complete + ADMIN.35–38: reconstructed retroactively during the DOC.53 session — this update was logged as shipped in 30BN_PROCESS_v1.md's §13 prompt history but was never actually committed to this file; the live Brief remained at v4.1 until this session closed the gap. §1 header + current phase updated (Phase 19 + ADMIN.35–38 complete); §7 two new patterns added: Google OAuth registration path (ADMIN.36 — routes through the same Request Access approval flow as email/password self-registration, dual-client pattern in auth/callback/route.ts) and is_active gating on the Google OAuth path (ADMIN.38 — sign out before redirect on inactive account, matching the existing email/password pattern); §8 five "Phase 19 — pending" markers updated to built (signup form, /update, Call Board card, volunteer list, volunteer profile); §8 /update field note extended with the updateVolunteerInfo()/updateVolunteer() two-file update pattern (19.2); §8 Volunteer Profile field note extended with the zod <select> pattern (z.string().optional(), not z.enum() — empty string from an unselected <select> fails enum validation silently; corrected 19.1→19.3); §9 Migration 030 marked applied, volunteers.communication_preference column def uncommented, next-migration pointer updated; §11 header updated; §11 prompt log: ADMIN.35-AUDIT + ADMIN.35 + ADMIN.36 + ADMIN.37 + ADMIN.38 + 19.1 + 19.2 + 19.3 added; §11 Phase 19 section rewritten from planned spec to complete build summary; DOC.50 logged)*
+*v4.3 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header + current phase updated (ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete; dark mode cascade defect closed across 54 files; Phase 21 next); §8 Volunteer Profile notes spec: Editors confirmed append-only for notes (editNote/deleteNote guards stay SA+OA only — RLS + design intent re-confirmed ADMIN.39-AUDIT F4, July 2026); stale pre-ADMIN.33 wording also corrected here (Owner Admin included alongside Super Admin for edit/delete); §8 Light/Dark Mode: dark mode cascade defect resolution documented (root cause, fix pattern, 54 files, special cases, light mode visual impact, ADMIN.40 residual); §13 R35 added (never pair hand-authored @layer utilities class with native Tailwind dark: utility on same property — two correct approaches documented); §11 prompt log ADMIN.39-AUDIT + ADMIN.39a–c + DOC.51 + DOC.52 + DOC.53 added; §11 Phase 21 pre-requisite bullets corrected from forward-looking language to ✓ Complete (ADMIN.32/33 — stale since v4.0, whose own history entry had claimed this was already fixed); §11 ADMIN.40 carry-forward noted (OpportunityForm.tsx:99,115 — not in original audit scope, pre-Phase-17); DOC.53 logged)*
