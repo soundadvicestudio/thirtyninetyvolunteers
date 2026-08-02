@@ -102,7 +102,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
       )}
 
       <div className="flex flex-wrap items-center gap-3 mb-10">
-        <span className="text-sm text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-1.5 rounded break-all">
+        <span className="text-sm text-dark dark:text-dark-text font-mono bg-white dark:bg-dark-surface px-3 py-1.5 rounded break-all">
           {publicUrl}
         </span>
         <CopyUrlButton url={publicUrl} />
@@ -126,7 +126,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
           <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Name</th>
                   <th className="px-4 py-2 font-semibold">Email</th>
                   <th className="px-4 py-2 font-semibold">Phone</th>

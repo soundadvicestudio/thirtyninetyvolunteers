@@ -94,7 +94,7 @@ function StatTile({
 }) {
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-5 flex items-center gap-4">
-      <div className="shrink-0 rounded-full bg-brand-primary-light dark:bg-dark-nav p-2.5">
+      <div className="shrink-0 rounded-full bg-gray-50 dark:bg-dark-nav p-2.5">
         <Icon className="w-5 h-5 text-brand-primary dark:text-brand-primary-mid" aria-hidden="true" />
       </div>
       <div>

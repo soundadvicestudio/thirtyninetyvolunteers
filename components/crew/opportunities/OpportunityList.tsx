@@ -106,7 +106,7 @@ export default function OpportunityList({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Title</th>
                   <th className="px-4 py-2 font-semibold">Claim Type</th>
                   <th className="px-4 py-2 font-semibold">Slot Cap</th>
@@ -178,7 +178,7 @@ export default function OpportunityList({
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+                                  <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
                                     Cancel
                                   </AlertDialogPrimitive.Cancel>
                                   <AlertDialogPrimitive.Action

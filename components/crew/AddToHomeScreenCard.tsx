@@ -61,7 +61,7 @@ export default function AddToHomeScreenCard() {
 
   return (
     <div className="md:hidden mb-6">
-      <div className="relative bg-brand-primary-light dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4">
+      <div className="relative bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4">
         <button
           type="button"
           onClick={handleDismiss}

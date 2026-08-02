@@ -99,7 +99,7 @@ export default function Sidebar({
           type="button"
           onClick={close}
           aria-label="Close menu"
-          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
+          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-gray-100 cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
         >
           <X size={20} />
         </button>
@@ -121,7 +121,7 @@ export default function Sidebar({
               className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? 'bg-brand-primary text-white'
-                  : 'text-dark hover:bg-brand-primary-light dark:text-dark-text dark:hover:bg-dark-surface/50'
+                  : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
               }`}
             >
               <Icon size={18} />
@@ -136,7 +136,7 @@ export default function Sidebar({
             className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
               isActivePath(pathname, '/crew/settings/users')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark hover:bg-brand-primary-light dark:text-dark-text dark:hover:bg-dark-surface/50'
+                : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
             }`}
           >
             <UserCog size={18} />

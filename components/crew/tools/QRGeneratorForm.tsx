@@ -97,14 +97,14 @@ export default function QRGeneratorForm() {
             <a
               href={`data:image/png;base64,${qrResult.pngBase64}`}
               download={`${sanitizedLabel}.png`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
             >
               Download PNG
             </a>
             <a
               href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrResult.svg)}`}
               download={`${sanitizedLabel}.svg`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
             >
               Download SVG
             </a>

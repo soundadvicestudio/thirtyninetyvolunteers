@@ -153,7 +153,7 @@ export default async function AuditLogPage({
             <div className="flex items-center justify-between mt-4 text-sm">
               <Link
                 href={buildAuditLogHref(filters, Math.max(1, currentPage - 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage <= 1 ? 'pointer-events-none opacity-40' : ''
                 }`}
               >
@@ -164,7 +164,7 @@ export default async function AuditLogPage({
               </span>
               <Link
                 href={buildAuditLogHref(filters, Math.min(totalPages, currentPage + 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''
                 }`}
               >

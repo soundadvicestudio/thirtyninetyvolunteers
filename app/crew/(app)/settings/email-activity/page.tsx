@@ -145,7 +145,7 @@ export default async function EmailActivityPage({
                   <span className="text-xs text-mid-gray dark:text-dark-muted">
                     {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a')}
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-brand-primary dark:text-brand-primary-mid font-medium">
                     {getEmailTypeLabel(entry.recipient_type, entry.recipient_filter, entry.sent_by)}
                   </span>
                 </div>
@@ -161,7 +161,7 @@ export default async function EmailActivityPage({
                 </div>
 
                 {entry.recipient_filter && (
-                  <span className="inline-block text-xs font-mono px-1.5 py-0.5 rounded bg-brand-primary-light dark:bg-dark-border text-mid-gray dark:text-dark-muted">
+                  <span className="inline-block text-xs font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-dark-border text-mid-gray dark:text-dark-muted">
                     {entry.recipient_filter}
                   </span>
                 )}
@@ -198,7 +198,7 @@ export default async function EmailActivityPage({
                   <tr
                     key={entry.id}
                     className={`border-b border-divider dark:border-dark-border ${
-                      i % 2 === 0 ? 'bg-brand-primary-light/30 dark:bg-dark-surface/30' : ''
+                      i % 2 === 0 ? 'bg-gray-50 dark:bg-dark-bg' : ''
                     }`}
                   >
                     <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
@@ -214,7 +214,7 @@ export default async function EmailActivityPage({
                     <td className="px-4 py-3 text-dark dark:text-dark-text">{entry.recipient_count}</td>
                     <td className="px-4 py-3">
                       {entry.recipient_filter ? (
-                        <span className="font-mono text-xs text-mid-gray dark:text-dark-muted bg-brand-primary-light/50 dark:bg-dark-bg px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-xs text-mid-gray dark:text-dark-muted bg-gray-50/50 dark:bg-dark-bg px-1.5 py-0.5 rounded">
                           {entry.recipient_filter}
                         </span>
                       ) : (
@@ -231,7 +231,7 @@ export default async function EmailActivityPage({
             <div className="flex items-center justify-between mt-4 text-sm">
               <Link
                 href={buildEmailActivityHref(tab, Math.max(1, currentPage - 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage <= 1 ? 'pointer-events-none opacity-40' : ''
                 }`}
               >
@@ -242,7 +242,7 @@ export default async function EmailActivityPage({
               </span>
               <Link
                 href={buildEmailActivityHref(tab, Math.min(totalPages, currentPage + 1))}
-                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors ${
+                className={`px-3 py-1.5 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors ${
                   currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''
                 }`}
               >

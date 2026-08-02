@@ -80,7 +80,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
         <div className="overflow-x-auto border border-divider dark:border-dark-border rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
+              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
                 <th className="px-4 py-2 font-semibold">Volunteer Name</th>
                 <th className="px-4 py-2 font-semibold">Role</th>
                 <th className="px-4 py-2 font-semibold">Status</th>
@@ -89,7 +89,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
             <tbody className="bg-white dark:bg-dark-surface">
               {Array.from(grouped.entries()).map(([roleName, entries]) => (
                 <Fragment key={roleName}>
-                  <tr className="bg-brand-primary-light/50 dark:bg-dark-nav/50">
+                  <tr className="bg-gray-50/50 dark:bg-dark-nav/50">
                     <td
                       colSpan={3}
                       className="px-4 py-1.5 text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide"
@@ -295,7 +295,7 @@ export function CheckInDashboard({ initialData }: Props) {
                   <button
                     type="button"
                     onClick={() => handleExpand(show.showId, show.nearestDateId)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav text-left cursor-pointer"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-dark-nav text-left cursor-pointer"
                   >
                     <div>
                       <p className="font-semibold text-dark dark:text-dark-text">{show.showName}</p>

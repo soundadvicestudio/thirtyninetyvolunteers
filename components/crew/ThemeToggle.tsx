@@ -14,7 +14,7 @@ export function ThemeToggle() {
         flex items-center justify-center
         w-8 h-8 rounded-md
         text-mid-gray hover:text-brand-primary
-        hover:bg-brand-primary-light
+        hover:bg-gray-100
         dark:text-dark-muted
         dark:hover:text-dark-text
         dark:hover:bg-dark-surface

@@ -167,7 +167,7 @@ function isSectionVisible(id: string, role: AdminRole, calendarEditor: boolean):
 
 function Tip({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-brand-primary-light dark:bg-dark-surface border-l-4 border-brand-primary dark:border-brand-primary-mid p-4 rounded-r my-4">
+    <div className="bg-gray-50 dark:bg-dark-surface border-l-4 border-brand-primary dark:border-brand-primary-mid p-4 rounded-r my-4">
       <p className="text-sm text-dark dark:text-dark-text leading-relaxed">
         <span className="font-semibold">{'\u{1F4A1} Tip:'}</span> {children}
       </p>
@@ -177,7 +177,7 @@ function Tip({ children }: { children: ReactNode }) {
 
 function Warning({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-brand-accent-light dark:bg-dark-surface border-l-4 border-brand-accent p-4 rounded-r my-4">
+    <div className="bg-gray-50 dark:bg-dark-surface border-l-4 border-brand-accent p-4 rounded-r my-4">
       <p className="text-sm text-dark dark:text-dark-text leading-relaxed">
         <span className="font-semibold">{'⚠️ Important:'}</span> {children}
       </p>
@@ -189,7 +189,7 @@ function Divider() {
   return <hr className="border-t border-divider dark:border-dark-border my-12" />
 }
 
-const h2Classes = 'text-2xl font-bold text-brand-primary dark:text-dark-text mb-4 mt-12'
+const h2Classes = 'text-2xl font-bold text-brand-primary dark:text-brand-primary-mid mb-4 mt-12'
 const h3Classes = 'text-lg font-semibold text-dark dark:text-dark-text mb-2 mt-8'
 const pClasses = 'text-dark dark:text-dark-text leading-relaxed mb-4'
 const ulClasses = 'list-disc pl-5 space-y-1 text-dark dark:text-dark-text leading-relaxed mb-4'
@@ -230,7 +230,7 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
 
   return (
     <div className="max-w-6xl mx-auto" style={{ scrollBehavior: 'smooth' }}>
-      <h1 className="text-2xl font-bold text-brand-primary dark:text-dark-text mb-2">{`Help & How-To Guide`}</h1>
+      <h1 className="text-2xl font-bold text-brand-primary dark:text-brand-primary-mid mb-2">{`Help & How-To Guide`}</h1>
       <p className="text-dark dark:text-dark-text leading-relaxed mb-8">
         {`Everything you need to know to manage volunteers in Production Crew.`}
       </p>

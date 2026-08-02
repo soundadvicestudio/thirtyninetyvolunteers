@@ -38,7 +38,7 @@ export default function TopBar({
           type="button"
           onClick={toggle}
           aria-label="Open menu"
-          className="md:hidden p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
+          className="md:hidden p-1 rounded text-dark hover:bg-gray-100 cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
         >
           <Menu size={22} />
         </button>

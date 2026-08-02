@@ -194,7 +194,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-dark dark:text-dark-text">Confirm &amp; Send</h2>
 
-        <div className="bg-brand-primary-light dark:bg-dark-surface rounded-lg p-5 space-y-3">
+        <div className="bg-white dark:bg-dark-surface rounded-lg p-5 space-y-3">
           <div>
             <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
               Subject
@@ -252,7 +252,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
               setStep('compose')
               setActionError(null)
             }}
-            className="px-5 py-2 border border-divider dark:border-dark-border rounded text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-border"
+            className="px-5 py-2 border border-divider dark:border-dark-border rounded text-sm text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border"
           >
             ← Back
           </button>
@@ -345,7 +345,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
                       setSearchQuery('')
                       setSearchResults([])
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-border"
+                    className="w-full text-left px-3 py-2 text-sm text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border"
                   >
                     {v.full_name}
                     <span className="text-mid-gray dark:text-dark-muted ml-1">{v.email}</span>
@@ -407,7 +407,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Message</label>
         {/* Toolbar */}
-        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-brand-primary-light dark:bg-dark-surface rounded-t-md">
+        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-gray-50 dark:bg-dark-surface rounded-t-md">
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleBold().run()}
