@@ -37,7 +37,7 @@ export default function CalendarMonthView({
 
   return (
     <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-      <div className="grid grid-cols-7 bg-brand-primary-light dark:bg-dark-nav">
+      <div className="grid grid-cols-7 bg-gray-50 dark:bg-dark-nav">
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
@@ -68,7 +68,7 @@ export default function CalendarMonthView({
                   onDayClick(dayStr)
                 }
               }}
-              className={`flex flex-col items-stretch text-left p-1.5 border-t border-l border-divider dark:border-dark-border min-h-[120px] cursor-pointer hover:bg-brand-primary-light/30 dark:hover:bg-dark-bg/40 transition-colors ${
+              className={`flex flex-col items-stretch text-left p-1.5 border-t border-l border-divider dark:border-dark-border min-h-[120px] cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg/40 transition-colors ${
                 isCurrentMonth ? '' : 'bg-gray-50 dark:bg-dark-bg/20'
               }`}
             >

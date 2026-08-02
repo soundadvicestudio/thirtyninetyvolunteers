@@ -128,14 +128,14 @@ export default function CalendarRecurringEventForm({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
+                className="p-1 rounded text-dark dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-bg cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
             {!canDirectCreate && (
-              <div className="px-4 pt-3 pb-3 text-sm text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-bg border-b border-divider dark:border-dark-border">
+              <div className="px-4 pt-3 pb-3 text-sm text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-bg border-b border-divider dark:border-dark-border">
                 Your recurring event series will be reviewed. An admin will assign a location and approve occurrences
                 to the calendar.
               </div>
@@ -250,7 +250,7 @@ export default function CalendarRecurringEventForm({
               </div>
 
               {previewText && (
-                <div className="rounded-md bg-brand-primary-light dark:bg-dark-surface border border-divider dark:border-dark-border px-4 py-3 text-sm text-brand-primary dark:text-dark-text flex items-start gap-2">
+                <div className="rounded-md bg-white dark:bg-dark-surface border border-divider dark:border-dark-border px-4 py-3 text-sm text-brand-primary dark:text-brand-primary-mid flex items-start gap-2">
                   <span aria-hidden="true">📅</span>
                   <span>{previewText}</span>
                 </div>
@@ -325,7 +325,7 @@ export default function CalendarRecurringEventForm({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>

@@ -64,7 +64,7 @@ export default function CalendarBookSpacePanel({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
+            className="p-1 rounded text-dark dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-bg cursor-pointer"
           >
             <X size={20} />
           </button>

@@ -69,7 +69,7 @@ function MultiSelectDropdown({
       </button>
       {open && (
         <div className="absolute z-20 mt-1 w-56 bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg shadow-lg p-2 max-h-72 overflow-y-auto">
-          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer text-sm font-semibold text-dark dark:text-dark-text">
+          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-dark-bg cursor-pointer text-sm font-semibold text-dark dark:text-dark-text">
             <input type="checkbox" checked={isAllSelected} onChange={toggleAll} />
             All {label}
           </label>
@@ -77,7 +77,7 @@ function MultiSelectDropdown({
           {options.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer text-sm text-dark dark:text-dark-text"
+              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-dark-bg cursor-pointer text-sm text-dark dark:text-dark-text"
             >
               <input
                 type="checkbox"

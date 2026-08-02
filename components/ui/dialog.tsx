@@ -70,7 +70,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-2 right-2 inline-flex size-7 shrink-0 items-center justify-center rounded-[min(var(--radius-md),12px)] border border-transparent outline-none transition-all select-none hover:bg-brand-primary-light hover:text-dark focus-visible:border-brand-primary focus-visible:ring-3 focus-visible:ring-brand-primary/50 dark:text-dark-muted dark:hover:bg-dark-border dark:hover:text-dark-text"
+            className="absolute top-2 right-2 inline-flex size-7 shrink-0 items-center justify-center rounded-[min(var(--radius-md),12px)] border border-transparent outline-none transition-all select-none hover:bg-gray-100 hover:text-dark focus-visible:border-brand-primary focus-visible:ring-3 focus-visible:ring-brand-primary/50 dark:text-dark-muted dark:hover:bg-dark-border dark:hover:text-dark-text"
           >
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
@@ -103,7 +103,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-surface/30 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t border-divider dark:border-dark-border bg-gray-50/30 dark:bg-dark-surface/30 p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

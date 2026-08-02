@@ -196,7 +196,7 @@ export default function CalendarEventForm({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="p-1 rounded text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-bg cursor-pointer"
+              className="p-1 rounded text-dark dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-bg cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -393,7 +393,7 @@ export default function CalendarEventForm({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>

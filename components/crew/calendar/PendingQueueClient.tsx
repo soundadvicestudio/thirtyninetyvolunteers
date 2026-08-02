@@ -313,7 +313,7 @@ export default function PendingQueueClient({
                 <button
                   type="button"
                   onClick={() => toggleBatch(batch.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-brand-primary-light/40 dark:bg-dark-bg hover:bg-brand-primary-light dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50/40 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 text-left">
                     {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -427,14 +427,14 @@ export default function PendingQueueClient({
                 <button
                   type="button"
                   onClick={() => toggleBatch(group.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-brand-primary-light/40 dark:bg-dark-bg hover:bg-brand-primary-light dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50/40 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-bg/70 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2 text-left">
                     {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-dark dark:text-dark-text">{group.title}</p>
-                        <span className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid bg-brand-primary-light dark:bg-dark-nav rounded px-1.5 py-0.5">
+                        <span className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid bg-gray-50 dark:bg-dark-nav rounded px-1.5 py-0.5">
                           {FREQ_LABELS[group.frequency] ?? group.frequency}
                         </span>
                       </div>
