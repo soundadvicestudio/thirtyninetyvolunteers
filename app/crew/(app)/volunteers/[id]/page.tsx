@@ -318,7 +318,7 @@ export default async function VolunteerProfilePage({
                   <span>{manualTotal.toFixed(1)} hrs</span>
                 </div>
               )}
-              <div className="flex justify-between px-4 py-2 font-semibold bg-brand-primary-light dark:bg-dark-border/40">
+              <div className="flex justify-between px-4 py-2 font-semibold bg-gray-100 dark:bg-dark-border/40">
                 <span>Total</span>
                 <span>{breakdownTotal.toFixed(1)} hrs</span>
               </div>

@@ -92,7 +92,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
       )}
 
       {picking && canManage && (
-        <div className="mt-2 rounded-lg border border-divider dark:border-dark-border p-3 bg-brand-primary-light/30 dark:bg-dark-bg/40">
+        <div className="mt-2 rounded-lg border border-divider dark:border-dark-border p-3 bg-gray-50/30 dark:bg-dark-bg/40">
           {otherDocuments.length === 0 ? (
             <p className="text-xs text-mid-gray dark:text-dark-muted">No documents of this type yet.</p>
           ) : (
@@ -246,7 +246,7 @@ function TypeRow({
               onClick={() => handleReorder('up')}
               disabled={isFirst}
               aria-label={`Move ${type.name} up`}
-              className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               <ChevronUp size={16} />
             </button>
@@ -255,7 +255,7 @@ function TypeRow({
               onClick={() => handleReorder('down')}
               disabled={isLast}
               aria-label={`Move ${type.name} down`}
-              className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               <ChevronDown size={16} />
             </button>
@@ -320,7 +320,7 @@ function TypeRow({
               type="button"
               onClick={() => setEditMode(true)}
               aria-label={`Edit ${type.name}`}
-              className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:hover:bg-dark-surface/50"
             >
               <Pencil size={16} />
             </button>

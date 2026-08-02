@@ -112,7 +112,7 @@ export default function VolunteersTable({
             <button
               type="button"
               onClick={() => router.replace(pathname, { scroll: false })}
-              className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-4 py-2 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+              className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
             >
               Clear Filters
             </button>
@@ -138,7 +138,7 @@ export default function VolunteersTable({
   return (
     <div>
       {canManage && selected.size > 0 && (
-        <div className="flex items-center gap-4 bg-brand-primary-light dark:bg-dark-surface/50 border border-divider dark:border-dark-border rounded-lg px-4 py-2 mb-3 text-sm">
+        <div className="flex items-center gap-4 bg-white dark:bg-dark-surface/50 border border-divider dark:border-dark-border rounded-lg px-4 py-2 mb-3 text-sm">
           <span className="text-dark dark:text-dark-text font-medium">{selected.size} volunteer(s) selected</span>
           <button
             type="button"
@@ -162,7 +162,7 @@ export default function VolunteersTable({
           <button
             type="button"
             onClick={() => exportCsv('page')}
-            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
           >
             <Download size={14} />
             Export All (CSV)
@@ -219,7 +219,7 @@ export default function VolunteersTable({
           </thead>
           <tbody className="divide-y divide-divider dark:divide-dark-border">
             {volunteers.map((v) => (
-              <tr key={v.id} className="hover:bg-brand-primary-light/50 dark:hover:bg-dark-surface/50">
+              <tr key={v.id} className="hover:bg-gray-100 dark:hover:bg-dark-surface/50">
                 {canManage && (
                   <td className="px-4 py-3">
                     <input
@@ -244,7 +244,7 @@ export default function VolunteersTable({
                     </span>
                   )}
                   {v.communication_preference && (
-                    <span className="ml-2 text-xs bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text px-1.5 py-0.5 rounded font-medium">
+                    <span className="ml-2 text-xs bg-gray-100 dark:bg-dark-border text-brand-primary dark:text-brand-primary-mid px-1.5 py-0.5 rounded font-medium">
                       {PREFERENCE_BADGE_LABELS[v.communication_preference]}
                     </span>
                   )}
@@ -256,7 +256,7 @@ export default function VolunteersTable({
                     {v.categories.slice(0, 3).map((c) => (
                       <span
                         key={c.id}
-                        className="bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text text-xs rounded-full px-2 py-0.5"
+                        className="bg-gray-100 dark:bg-dark-border text-brand-primary dark:text-brand-primary-mid text-xs rounded-full px-2 py-0.5"
                       >
                         {c.name}
                       </span>
@@ -299,7 +299,7 @@ export default function VolunteersTable({
               type="button"
               disabled={page <= 1}
               onClick={() => goTo({ page: page - 1 })}
-              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-primary-light dark:hover:bg-dark-surface/50"
+              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-dark-surface/50"
             >
               Previous
             </button>
@@ -316,7 +316,7 @@ export default function VolunteersTable({
                   className={`px-2.5 py-1 rounded border ${
                     p === page
                       ? 'bg-brand-primary text-white border-brand-primary'
-                      : 'border-divider text-dark hover:bg-brand-primary-light dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50'
+                      : 'border-divider text-dark hover:bg-gray-100 dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50'
                   }`}
                 >
                   {p}
@@ -327,7 +327,7 @@ export default function VolunteersTable({
               type="button"
               disabled={page >= totalPages}
               onClick={() => goTo({ page: page + 1 })}
-              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-primary-light dark:hover:bg-dark-surface/50"
+              className="px-2 py-1 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-dark-surface/50"
             >
               Next
             </button>
@@ -356,7 +356,7 @@ function SortableTh({
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1 -mx-1.5 -my-0.5 px-1.5 py-0.5 rounded cursor-pointer select-none hover:bg-brand-primary-light hover:text-brand-primary dark:hover:bg-dark-surface/50 transition-colors duration-150 ${
+        className={`inline-flex items-center gap-1 -mx-1.5 -my-0.5 px-1.5 py-0.5 rounded cursor-pointer select-none hover:bg-gray-100 hover:text-brand-primary dark:hover:bg-dark-surface/50 transition-colors duration-150 ${
           align === 'right' ? 'flex-row-reverse' : ''
         }`}
       >

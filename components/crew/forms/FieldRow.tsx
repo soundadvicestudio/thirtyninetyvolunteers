@@ -52,7 +52,7 @@ export default function FieldRow({
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-4 space-y-4">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold uppercase text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav rounded px-2 py-1 shrink-0">
+        <span className="text-xs font-semibold uppercase text-mid-gray dark:text-dark-muted bg-gray-100 dark:bg-dark-border rounded px-2 py-1 shrink-0">
           {FIELD_TYPE_OPTIONS.find((t) => t.value === fieldType)?.label ?? fieldType}
         </span>
         <span className="flex-1 text-sm font-medium text-dark dark:text-dark-text truncate">

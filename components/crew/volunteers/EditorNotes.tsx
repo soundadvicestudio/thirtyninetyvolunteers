@@ -96,7 +96,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={() => setMode('view')}
               disabled={isSubmitting}
-              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -126,7 +126,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
               type="button"
               onClick={handleCancelEdit}
               disabled={isSubmitting}
-              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
+              className="text-xs border border-divider dark:border-dark-border text-dark dark:text-dark-text px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>

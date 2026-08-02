@@ -83,7 +83,7 @@ function CategoryRow({
             onClick={() => handleReorder('up')}
             disabled={isFirst}
             aria-label={`Move ${category.name} up`}
-            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronUp size={16} />
           </button>
@@ -92,7 +92,7 @@ function CategoryRow({
             onClick={() => handleReorder('down')}
             disabled={isLast}
             aria-label={`Move ${category.name} down`}
-            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronDown size={16} />
           </button>
@@ -163,7 +163,7 @@ function CategoryRow({
             type="button"
             onClick={() => setEditMode(true)}
             aria-label={`Edit ${category.name}`}
-            className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:hover:bg-dark-surface/50"
           >
             <Pencil size={16} />
           </button>

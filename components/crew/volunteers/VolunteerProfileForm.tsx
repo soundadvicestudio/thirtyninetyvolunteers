@@ -140,7 +140,7 @@ export default function VolunteerProfileForm({
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary font-semibold px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
           >
             <Pencil size={14} />
             Edit Profile
@@ -194,7 +194,7 @@ export default function VolunteerProfileForm({
                 {categories.map((c) => (
                   <span
                     key={c.id}
-                    className="bg-brand-primary-light dark:bg-dark-border text-brand-primary dark:text-dark-text text-xs rounded-full px-2 py-0.5"
+                    className="bg-gray-100 dark:bg-dark-border text-brand-primary dark:text-brand-primary-mid text-xs rounded-full px-2 py-0.5"
                   >
                     {c.name}
                   </span>
@@ -356,7 +356,7 @@ export default function VolunteerProfileForm({
                 {allCategories.map((cat) => (
                   <label
                     key={cat.id}
-                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider dark:border-dark-border hover:border-brand-primary-mid hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50"
+                    className="flex items-center gap-2 cursor-pointer p-2 rounded border border-divider dark:border-dark-border hover:border-brand-primary-mid hover:bg-gray-100 dark:hover:bg-dark-border transition-colors has-[:checked]:border-brand-primary has-[:checked]:bg-gray-100 dark:has-[:checked]:bg-dark-border"
                   >
                     <input
                       type="checkbox"
@@ -411,7 +411,7 @@ export default function VolunteerProfileForm({
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+              className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border text-dark dark:text-dark-text font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
             >
               Cancel
             </button>

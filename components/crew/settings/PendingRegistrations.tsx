@@ -127,7 +127,7 @@ function PendingRow({
               type="button"
               onClick={() => setConfirming(null)}
               disabled={isSubmitting}
-              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
@@ -148,7 +148,7 @@ function PendingRow({
               type="button"
               onClick={() => setConfirming(null)}
               disabled={isSubmitting}
-              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
+              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors text-sm px-3 py-1 rounded-md cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>

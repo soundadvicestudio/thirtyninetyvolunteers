@@ -224,7 +224,7 @@ function DateRow({
               roleField.dbId && blockedRoleIds.includes(roleField.dbId) ? ROLE_BLOCKED_MESSAGE : null
             const roleErrors = dateErrors?.roles?.[roleIndex]
             return (
-              <div key={roleField.id} className="bg-brand-primary-light/30 dark:bg-dark-bg/40 rounded-lg p-3">
+              <div key={roleField.id} className="bg-gray-50/30 dark:bg-dark-bg/40 rounded-lg p-3">
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1fr_auto] gap-3 sm:items-end">
                   <div>
                     <label className={labelClasses}>
@@ -721,7 +721,7 @@ export default function ShowForm({
           type="button"
           onClick={onClickSaveDraft}
           disabled={busy}
-          className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+          className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
         >
           {submittingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}
         </button>
@@ -737,7 +737,7 @@ export default function ShowForm({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+            <AlertDialogPrimitive.Cancel className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
               Cancel
             </AlertDialogPrimitive.Cancel>
             <AlertDialogPrimitive.Action

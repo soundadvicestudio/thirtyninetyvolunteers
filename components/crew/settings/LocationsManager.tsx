@@ -94,7 +94,7 @@ function LocationRow({
             onClick={() => handleReorder('up')}
             disabled={!canReorder || isFirst}
             aria-label={`Move ${location.name} up`}
-            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronUp size={16} />
           </button>
@@ -103,7 +103,7 @@ function LocationRow({
             onClick={() => handleReorder('down')}
             disabled={!canReorder || isLast}
             aria-label={`Move ${location.name} down`}
-            className="p-1 rounded text-dark hover:bg-brand-primary-light cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
+            className="p-1 rounded text-dark hover:bg-gray-100 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:text-dark-text dark:hover:bg-dark-surface/50"
           >
             <ChevronDown size={16} />
           </button>
@@ -184,7 +184,7 @@ function LocationRow({
               type="button"
               onClick={() => setEditMode(true)}
               aria-label={`Edit ${location.name}`}
-              className="p-1 rounded text-brand-primary hover:bg-brand-primary-light cursor-pointer dark:hover:bg-dark-surface/50"
+              className="p-1 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:hover:bg-dark-surface/50"
             >
               <Pencil size={16} />
             </button>

@@ -31,7 +31,7 @@ export default function FormDetailActions({
       <div>
         <p className="text-sm font-semibold text-dark dark:text-dark-text mb-1">Public URL</p>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-1.5 rounded break-all">
+          <span className="text-sm text-dark dark:text-dark-text font-mono bg-white dark:bg-dark-surface px-3 py-1.5 rounded break-all">
             {publicUrl}
           </span>
           <button
@@ -46,7 +46,7 @@ export default function FormDetailActions({
 
       <div>
         <p className="text-sm font-semibold text-dark dark:text-dark-text mb-1">Embed Code</p>
-        <pre className="text-xs text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
+        <pre className="text-xs text-dark dark:text-dark-text font-mono bg-white dark:bg-dark-surface px-3 py-2 rounded overflow-x-auto whitespace-pre-wrap break-all">
           {embedCode}
         </pre>
         <button

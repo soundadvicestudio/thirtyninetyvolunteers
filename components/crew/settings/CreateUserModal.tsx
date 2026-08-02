@@ -156,7 +156,7 @@ export default function CreateUserModal({ callerRole }: { callerRole: AdminRole 
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="w-full border border-divider text-dark hover:bg-brand-primary-light transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50"
+              className="w-full border border-divider text-dark hover:bg-gray-100 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer dark:border-dark-border dark:text-dark-text dark:hover:bg-dark-surface/50"
             >
               Cancel
             </button>

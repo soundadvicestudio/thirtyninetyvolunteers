@@ -46,7 +46,7 @@ export default function FormList({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
+                <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
                   <th className="px-4 py-2 font-semibold">Title</th>
                   <th className="px-4 py-2 font-semibold">Status</th>
                   <th className="px-4 py-2 font-semibold">Responses</th>

@@ -223,7 +223,7 @@ export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] })
                   </td>
                 </tr>
                 {isExpanded && (
-                  <tr className="border-b border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/50">
+                  <tr className="border-b border-divider dark:border-dark-border bg-gray-50/30 dark:bg-dark-bg/50">
                     <td colSpan={5} className="p-0">
                       <DiffPanel entry={entry} />
                     </td>

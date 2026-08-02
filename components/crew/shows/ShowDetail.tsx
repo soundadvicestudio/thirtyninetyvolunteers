@@ -110,14 +110,14 @@ function OverviewTab({
           <p className="text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide mb-1">
             Volunteer Instructions (included in confirmation emails)
           </p>
-          <blockquote className="border-l-4 border-brand-primary-mid bg-brand-primary-light dark:bg-dark-surface rounded-r-lg p-4 text-dark dark:text-dark-text">
+          <blockquote className="border-l-4 border-brand-primary-mid bg-white dark:bg-dark-surface rounded-r-lg p-4 text-dark dark:text-dark-text">
             {show.volunteer_instructions}
           </blockquote>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-dark dark:text-dark-text font-mono bg-brand-primary-light dark:bg-dark-surface px-3 py-1.5 rounded break-all">
+        <span className="text-sm text-dark dark:text-dark-text font-mono bg-white dark:bg-dark-surface px-3 py-1.5 rounded break-all">
           {publicUrl}
         </span>
         <button
@@ -262,7 +262,7 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors"
+          className="bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
         >
           Send Again
         </button>
@@ -364,7 +364,7 @@ function VolunteersTab({
           )
           return (
             <div key={role.id} className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-dark-nav">
                 <h3 className="font-bold text-dark dark:text-dark-text">
                   {role.role_name} — {role.slots_available} {role.slots_available === 1 ? 'slot' : 'slots'}
                 </h3>
@@ -373,7 +373,7 @@ function VolunteersTab({
                     type="button"
                     onClick={() => handleBulkMark(role.id, claimsForRole.map((c) => c.id))}
                     disabled={bulkMarkingRoleId === role.id}
-                    className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-3 py-1.5 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+                    className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     {bulkMarkingRoleId === role.id ? 'Marking…' : 'Mark All Showed'}
                   </button>
@@ -418,7 +418,7 @@ function VolunteersTab({
                             </td>
                             <td className="px-4 py-2 align-top">
                               {record?.source === 'checkin' && (
-                                <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-brand-primary-light dark:bg-dark-nav text-brand-primary dark:text-brand-primary-mid border border-brand-primary/20 dark:border-brand-primary-mid/30 mb-1">
+                                <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-brand-primary-light text-brand-primary dark:text-brand-primary-mid border border-brand-primary/20 dark:border-brand-primary-mid/30 mb-1">
                                   Self Check-In
                                 </span>
                               )}
@@ -488,7 +488,7 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
         <div className="space-y-6">
           {rolesWithWaitlist.map(({ role, claims }) => (
         <div key={role.id} className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-brand-primary-light dark:bg-dark-nav">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-dark-nav">
             <h3 className="font-bold text-dark dark:text-dark-text">{role.role_name}</h3>
           </div>
           <div className="overflow-x-auto bg-white dark:bg-dark-surface">
@@ -577,7 +577,7 @@ function DatesTab({
       <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-brand-primary-light dark:bg-dark-nav">
+            <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
               <th className="px-4 py-2 font-semibold">Date</th>
               <th className="px-4 py-2 font-semibold">Time</th>
               <th className="px-4 py-2 font-semibold">Day of Week</th>
@@ -806,7 +806,7 @@ function SettingsTab({
                       type="button"
                       onClick={() => handleAdd(u.id)}
                       disabled={addingId === u.id}
-                      className="w-full text-left px-4 py-2 hover:bg-brand-primary-light dark:hover:bg-dark-bg transition-colors cursor-pointer disabled:opacity-50"
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors cursor-pointer disabled:opacity-50"
                     >
                       <span className="text-sm text-dark dark:text-dark-text font-medium">{u.name}</span>
                       <span className="text-xs text-mid-gray dark:text-dark-muted ml-2">{u.email}</span>
@@ -853,7 +853,7 @@ function SettingsTab({
           {statusError && <p className="text-sm text-brand-accent mt-2">{statusError}</p>}
 
           {showLivePanel && (
-            <div className="mt-4 rounded-lg border border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/40 p-4 space-y-3 max-w-md">
+            <div className="mt-4 rounded-lg border border-divider dark:border-dark-border bg-gray-50/30 dark:bg-dark-bg/40 p-4 space-y-3 max-w-md">
               <label className="flex items-start gap-2 text-sm text-dark dark:text-dark-text">
                 <input
                   type="checkbox"

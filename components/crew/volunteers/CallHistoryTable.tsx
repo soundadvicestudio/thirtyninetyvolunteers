@@ -48,7 +48,7 @@ export default function CallHistoryTable({ calls }: { calls: CallHistoryRow[] })
           {calls.map((call, i) => (
             <tr
               key={call.id}
-              className={`border-b border-divider dark:border-dark-border ${i % 2 === 0 ? 'bg-brand-primary-light/30 dark:bg-dark-surface/30' : ''}`}
+              className={`border-b border-divider dark:border-dark-border ${i % 2 === 0 ? 'bg-gray-50 dark:bg-dark-bg' : ''}`}
             >
               <td className="px-4 py-3 text-dark dark:text-dark-text">{call.show_name}</td>
               <td className="px-4 py-3 text-dark dark:text-dark-text">

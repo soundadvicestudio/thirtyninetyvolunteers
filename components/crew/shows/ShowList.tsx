@@ -107,7 +107,7 @@ function ShowCard({
               type="button"
               onClick={onToggleStatus}
               disabled={isToggling}
-              className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-2.5 py-1 rounded hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+              className="text-xs font-semibold border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid px-2.5 py-1 rounded hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isToggling ? 'Saving…' : show.status === 'draft' ? 'Set Live' : 'Set Draft'}
             </button>
@@ -349,7 +349,7 @@ export default function ShowList({
             <button
               type="button"
               onClick={() => setSeasonPanelOpen(true)}
-              className="border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid text-sm font-semibold px-4 py-2 rounded-md hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+              className="border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid text-sm font-semibold px-4 py-2 rounded-md hover:bg-white dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
             >
               ＋ New Season
             </button>
@@ -399,7 +399,7 @@ export default function ShowList({
                 <button
                   type="button"
                   onClick={resetSeasonPanel}
-                  className="border border-divider dark:border-dark-border text-dark dark:text-dark-text px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+                  className="border border-divider dark:border-dark-border text-dark dark:text-dark-text px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -451,7 +451,7 @@ export default function ShowList({
                 <button
                   type="button"
                   onClick={() => toggleExpand(group.key)}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-brand-primary-light dark:bg-dark-nav text-left hover:bg-brand-primary-light/70 dark:hover:bg-dark-nav/70 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-dark-nav text-left hover:bg-gray-100 dark:hover:bg-dark-nav/70 transition-colors cursor-pointer"
                 >
                   <div className="flex flex-wrap items-center gap-3 min-w-0">
                     <span className="font-bold text-dark dark:text-dark-text">{title}</span>

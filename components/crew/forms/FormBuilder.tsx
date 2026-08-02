@@ -226,7 +226,7 @@ export default function FormBuilder({
             type="button"
             onClick={onSaveDraft}
             disabled={busy}
-            className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-brand-primary-light dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
+            className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {submittingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}
           </button>

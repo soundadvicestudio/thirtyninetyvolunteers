@@ -169,7 +169,7 @@ export default function BulkEmailSection({
             </button>
           </div>
         ) : (
-          <div className="rounded-lg border border-divider dark:border-dark-border bg-brand-primary-light/30 dark:bg-dark-bg/40 p-4 space-y-3">
+          <div className="rounded-lg border border-divider dark:border-dark-border bg-gray-50/30 dark:bg-dark-bg/40 p-4 space-y-3">
             <p className="text-sm text-dark dark:text-dark-text">
               Send this message to {recipientCount} volunteer{recipientCount !== 1 ? 's' : ''}?
             </p>
