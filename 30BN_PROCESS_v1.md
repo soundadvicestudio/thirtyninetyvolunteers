@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.1
-### Created: July 2026 | Last Updated: July 2026 — v4.1 (Phase 19 complete — 19.1–19.3; ADMIN.35–38; Google OAuth callback dual-client pattern; updateVolunteerInfo() public-route identity; revalidatePath via .select() for parent ID retrieval; role guard allowlist pattern; zod <select> schema pattern; dark mode cascade defect note; new §11 checklist items; phase tracker updated)
+## 30BN_PROCESS_v1.md — v4.2
+### Created: July 2026 | Last Updated: July 2026 — v4.2 (ADMIN.39-AUDIT + ADMIN.39a–c — dark mode cascade defect fully closed; §14 editNote/deleteNote contradiction corrected (Editors confirmed append-only); R35 added to §14; governing hover rule + static neutral substitution table + dark text fix pattern + two-part dark target correction + has-[:checked]: scope rule added to §7; R35 grep added to §10; two new §11 checklist items; §13 phase tracker cascade sweep marked complete + ADMIN.40 carry-forward; stale Phase 14/15 pending stubs removed; prompt log completed through DOC.53)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -318,6 +318,60 @@ When a deactivated admin (`adminUser.is_active === false`) completes Google OAut
 1. `updateVolunteerInfo()` in `app/update/actions.ts` — for volunteers editing their own record
 2. `updateVolunteer()` in `lib/actions/volunteers.ts` — for admins editing via the crew backend
 Failing to update `app/update/actions.ts` causes the field to be silently dropped on `/update` saves. Confirmed gap caught in 19.2 — `communication_preference` was missing from `updateVolunteerInfo()` and would have been silently dropped without this fix.
+
+**Dark mode cascade defect — execution patterns (established ADMIN.39a–c):**
+The root cause (R35 — see §14) was documented in the ADMIN.35-AUDIT §14 note. ADMIN.39a–c established the following concrete execution patterns for any dark mode fix work and for avoiding re-introduction of the defect:
+
+**GOVERNING HOVER RULE** (authoritative — overrides per-file audit prescriptions when they conflict). Determine the correct hover replacement by the dark: target on the element:
+```
+dark:hover:bg-dark-bg      → hover:bg-gray-50
+dark:hover:bg-dark-surface → hover:bg-gray-100
+dark:hover:bg-dark-border  → hover:bg-gray-100
+```
+WHITE-ON-WHITE CHECK — apply before every hover fix:
+- Resting bg is bg-white → use hover:bg-gray-100 (not hover:bg-white — would be invisible)
+- Resting bg is bg-gray-50 → use hover:bg-white (not hover:bg-gray-50 — would be invisible)
+
+**STATIC NEUTRAL SUBSTITUTION TABLE** (base class replacements for bg-brand-primary-light):
+```
+dark: target         → Replace base class with
+---------------------|------------------------
+dark:bg-dark-bg      → bg-gray-50
+dark:bg-dark-nav     → bg-gray-50
+dark:bg-dark-surface → bg-white
+dark:bg-dark-border  → bg-gray-100  (badges/chips)
+/NN opacity suffix   → always preserved:
+                       bg-brand-primary-light/30
+                       → bg-gray-50/30
+```
+
+**TEXT COLOR FIX PATTERN:**
+When `text-brand-primary` pairs with `dark:text-dark-text` the native dark: class loses to the hand-authored base via the same cascade defect. Use the hand-authored variant `dark:text-brand-primary-mid` instead — defined in the `@layer utilities` block after its base class, compiles correctly relative to `text-brand-primary`.
+```
+WRONG:   text-brand-primary dark:text-dark-text
+CORRECT: text-brand-primary dark:text-brand-primary-mid
+```
+
+**DARK TARGET CORRECTION — two-part fix pattern:**
+When an element's dark: target value is itself wrong (e.g. `dark:hover:bg-dark-surface` matches the parent panel background, making hover invisible), the fix requires changing BOTH the base class AND the dark: target value in the same edit:
+```
+OLD: hover:bg-brand-primary-light dark:hover:bg-dark-surface
+NEW: hover:bg-gray-100 dark:hover:bg-dark-border
+```
+Confirmed instances in ADMIN.39a–c:
+- RecurrenceScopePicker: dark-surface → dark-border
+- Zebra stripes (×3 files): dark-surface/30 → dark-bg
+- FieldRow badge: dark-nav → dark-border
+
+**has-[:checked]: AND VARIANT SCOPE RULE:**
+When fixing a cascade defect on a `hover:` state, inspect the same element for `has-[:checked]:`, `has-[:focus]:`, `aria-expanded:`, or any other variant-prefixed class on the same CSS property. If the same defect exists on a sibling variant, fix all affected variants in the same edit. Leaving one fixed and one broken on the same line is a half-fix. Confirmed: VolunteerProfileForm.tsx:359 had both `hover:bg-brand-primary-light` and `has-[:checked]:bg-brand-primary-light` with the same defective dark: target — both required correction (ADMIN.39b).
+
+**READ-BEFORE-EDIT DISCIPLINE (confirmed essential for sweep prompts):**
+The ADMIN.39-AUDIT's per-line prescriptions contained synthesis errors where prose descriptions of an element's context did not match the live file. Three recurring mismatch categories:
+1. Dark target mismatch: audit described dark-nav but live code showed dark-surface (or vice versa). → Governing hover rule resolves this.
+2. Opacity suffix not noted in audit: audit prescribed bare bg-gray-50 but live code had /30 or /50 suffix. → "Always preserve /NN" rule resolves this.
+3. Element type mismatch: audit described a hover state as a base class or vice versa.
+In all cases the governing rules took precedence over per-file audit prescriptions. This is now the authoritative build discipline for any future dark mode sweep work — direct file reads resolve conflicts, not audit table values.
 
 **Content-Disposition headers must use fixed filenames (established ADMIN.26):**
 HTTP `Content-Disposition: attachment; filename="..."` headers must never interpolate
@@ -992,6 +1046,23 @@ grep -n "#293994\|#F26522\|#f26522\|#EEF1FA\|#eef1fa" \
 # dynamic value from resolveEmailSettings().
 ```
 
+```bash
+# Confirm no new hand-authored/native dark: pairings were
+# introduced (R35 violation — confirmed defect pattern,
+# ADMIN.39-AUDIT/39a-c). Run after any new crew admin UI work.
+grep -rn "bg-brand-primary-light" \
+  app/crew/ components/crew/ components/ui/ \
+  --include="*.tsx" \
+  | grep -v "dark:bg-brand-primary-light" \
+  | grep "dark:"
+# Must return zero hits, with one confirmed exception:
+# components/crew/shows/ShowDetail.tsx (~line 421) —
+# bg-brand-primary-light is intentionally preserved on the
+# Self Check-In badge; its dark:bg-dark-nav was correctly
+# removed in ADMIN.39b. The base class stays. Any other hit
+# is a new R35 violation — fix before committing.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -1315,6 +1386,23 @@ Run before every Vercel deployment:
   allowlist. Confirmed gap fixed in ADMIN.37 (updateVolunteer)
   and ADMIN.38 (addNote, toggleStatus, addManualHours).
   (ADMIN.37/38 pattern)
+□ Any new crew admin UI className that includes a brand
+  utility class (bg-brand-primary-light, text-brand-
+  primary, border-brand-primary, etc.): confirm it is
+  NOT paired with a native Tailwind dark: utility on
+  the same CSS property (R35). Use one of the correct
+  pairing patterns documented in §7 and §14. Apply the
+  static neutral substitution table and governing hover
+  rule from §7 when replacing an affected class.
+  (ADMIN.39a–c pattern)
+□ When fixing any cascade defect on a hover: state:
+  inspect the same element for sibling variant classes
+  on the same CSS property (has-[:checked]:,
+  has-[:focus]:, aria-expanded:, aria-selected:, etc.).
+  If the same defect exists on a sibling variant, fix
+  all in the same edit — never leave a partial fix on
+  a single element. (ADMIN.39b — VolunteerProfileForm
+  .tsx:359)
 ```
 
 ---
@@ -2016,8 +2104,6 @@ Phase HELP — In-App Help System ✓ Complete
            Confirmed: HelpTooltip works correctly in
            Client Components (no server-only imports).
 
-Phase 14 — Check-In System          (pending)
-Phase 15 — Document Management      (pending)
 Phase SETUP — OpenCall OS Setup Panel ✓ Complete
   SETUP.0 ✓ Migration 023 + role guard sweep. owner_admin
            role CHECK, is_editor() update, is_super_admin_
@@ -2374,6 +2460,40 @@ Phase 19 — Volunteer Communication Preferences ✓ Complete
   30BN-19.3  ✓ Admin + Call Board (VolunteerCard,
                VolunteerProfileForm, VolunteersTable
                badge + filter, session.ts)
+
+Dark Mode Cascade Defect Sweep — ✓ Complete (ADMIN.39-AUDIT + ADMIN.39a–c)
+  - ADMIN.39-AUDIT: 245 confirmed pairs across 54 files
+    after property-group-aware filtering (raw: 346 / 87
+    files). Groups A/C/D all resolved. Group B: none.
+    Companion fix (Editor note permissions) dropped —
+    append-only confirmed by design.
+  - ADMIN.39a ✓: 15 files — calendar components + shadcn
+    primitives. Governing hover rule established.
+    Commit db7ebcc.
+  - ADMIN.39b ✓: 25 files — volunteer/show/forms/settings.
+    Zebra stripe dark targets corrected (×3). ShowDetail
+    badge dark class removed. FieldRow dark target
+    corrected. has-[:checked]: scope extension applied.
+    Commit 5213fb4.
+  - ADMIN.39c ✓: 14 files (13 scoped + audit-log recovery
+    via F7 sweep) — dashboard/help/media/tools/comm/
+    sidebar/email-activity/opportunities. dark:text-brand-
+    primary-mid pattern confirmed for text fixes. F7 final
+    sweep: cascade closed across all audited files.
+    Commit 5b9aa6d.
+  - Residual: OpportunityForm.tsx:99,115 → ADMIN.40
+
+ADMIN.40 (pre-Phase-17, not blocking launch):
+  `components/crew/opportunities/OpportunityForm.tsx:99,115`
+  — `has-[:checked]:bg-brand-primary-light dark:has-
+  [:checked]:bg-dark-surface/50`. Not in original
+  ADMIN.39-AUDIT inventory. Discovered during ADMIN.39c
+  F7 final sweep. Requires short investigation before fix
+  (element type, dark-mode intent, whether dark: target
+  is also wrong — dark-surface/50 at low opacity likely
+  matches container, same pattern as zebra stripe fixes).
+  Target: before Phase 17, after Phase 21.
+
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
 Phase 21 — Rehearsal Management System
@@ -2586,6 +2706,48 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
 30BN-DOC.50  ✓ Brief Update v4.2 (Phase 19 complete,
              ADMIN.35–38, auth patterns, zod select
              pattern, update form action clarification)
+30BN-ADMIN.39-AUDIT ✓ Full dark mode cascade inventory.
+             Raw grep: 346 lines / 87 files. After
+             property-group-aware filtering: 245
+             confirmed pairs / 54 files. Groups A
+             (122 REPLACE_BASE), B (none), C (4
+             SHADCN), D (18 resolved via owner
+             decisions). Companion fix (editNote/
+             deleteNote guard) dropped — Editors
+             confirmed append-only, RLS incompatible.
+             Execution split into 3 prompts.
+30BN-ADMIN.39a ✓ Calendar + shadcn. 15 files, 38
+             edits. Governing hover rule established
+             (dark: target determines gray-50 vs
+             gray-100 replacement). RecurrenceScopePicker
+             dark target corrected (dark-surface →
+             dark-border). Commit db7ebcc.
+30BN-ADMIN.39b ✓ Volunteer/show/forms/settings. 25
+             files, 64 edits. Zebra stripe dark targets
+             corrected ×3 (dark-surface → dark-bg).
+             ShowDetail badge dark:bg-dark-nav removed.
+             FieldRow dark target corrected (dark-nav
+             → dark-border). has-[:checked]: scope
+             extension confirmed (VolunteerProfileForm
+             :359). Commit 5213fb4.
+30BN-ADMIN.39c ✓ Dashboard/help/media/tools/comm/
+             sidebar/email-activity/opportunities. 14
+             files (13 scoped + audit-log/page.tsx
+             recovery via F7 sweep), 43 edits.
+             dark:text-brand-primary-mid confirmed as
+             correct text fix pattern (not dark:text-
+             dark-text — native class loses to hand-
+             authored base). F7 final sweep: cascade
+             defect closed across all 54 audited files.
+             OpportunityForm.tsx:99,115 residual →
+             ADMIN.40. Commit 5b9aa6d.
+30BN-DOC.51  ✓ Process Update v4.1 (Phase 19, ADMIN.35-
+             38, new patterns + checklist items)
+30BN-DOC.52  ✓ Deferred Verifications v17 (ADMIN.35-38
+             + Phase 19 verification items, ~830 items)
+30BN-DOC.53  ✓ Brief Update v4.3 (reconstructed missing
+             v4.2 content + dark mode cascade closure,
+             ADMIN.37-39c, R35, ADMIN.40 carry-forward)
 ```
 
 ---
@@ -3080,8 +3242,41 @@ Confirmed diagnosis (ADMIN.35-AUDIT): the `app/crew/(app)/layout.tsx` main conte
 
 **Broader defect:** ~74 lines across ~50 files share this pattern (table headers, cards, badges, button hover states). Full cascade sweep scheduled as ADMIN.39. Do not introduce new `bg-brand-primary-light dark:bg-dark-*` pairings on layout-level elements until the sweep is complete and a structural resolution is in place.
 
-**Related — `editNote()`/`deleteNote()` role guard (deferred to ADMIN.39):**
-`editNote()` and `deleteNote()` in `lib/actions/volunteers.ts` currently use `!['super_admin','owner_admin'].includes(admin.role)` — this blocks Editors from editing or deleting notes. Per Brief §8, Editors should be able to edit and delete notes (they are append-only by convention, but the Brief confirms SA + Editor both have edit/delete capability). The guard needs correction to `['super_admin','owner_admin','editor'].includes(admin.role)` — this fix is bundled into ADMIN.39 alongside the dark mode sweep.
+**`editNote()`/`deleteNote()` role guard — confirmed correct (ADMIN.39-AUDIT F4, July 2026):**
+`editNote()` and `deleteNote()` in `lib/actions/volunteers.ts` correctly use `!['super_admin','owner_admin'].includes(admin.role)` — Editors are explicitly excluded. This is intentional and was re-confirmed as the correct design in ADMIN.39-AUDIT F4. Two reasons:
+1. **RLS layer:** `volunteer_notes` UPDATE/DELETE policies (Migration 028) only cover `is_super_admin_or_owner_admin()`. Adding Editor to the app-layer guard without a matching migration would produce a confusing silent failure — Editor passes the server action guard but Supabase RLS filters the operation to 0 rows, causing a misleading error state.
+2. **Design intent:** Brief §8/§9 confirm notes as "append-only for Editors." `addNote()` is Editor-accessible; `editNote()`/`deleteNote()` are not.
+Do NOT change these guards to include Editor. If this permission model is ever revisited, a migration granting `is_editor()` UPDATE/DELETE on `volunteer_notes` is required alongside any app-layer guard change.
+
+**R35 — Never pair hand-authored `@layer utilities` classes with native Tailwind dark: utilities on the same CSS property (established ADMIN.39-AUDIT / ADMIN.39a–c):**
+
+This is the formal rule derived from the architectural note above. The note explains the problem; R35 defines what to do instead.
+
+WRONG — will silently break dark mode:
+```
+className="bg-brand-primary-light dark:bg-dark-bg"
+```
+`bg-brand-primary-light` (hand-authored, @layer utilities, ~line 2880 in compiled output) beats `dark:bg-dark-bg` (native, ~line 2362) because last-in-cascade wins at equal specificity.
+
+CORRECT option A — both native Tailwind (preferred for layout wrappers and structural backgrounds):
+```
+className="bg-gray-50 dark:bg-dark-bg"
+```
+Both auto-generated; Tailwind handles their ordering.
+
+CORRECT option B — both hand-authored in correct order in globals.css @layer utilities block (preferred for brand-colored interactive elements):
+Define the base class first, then define the override using the `&:where([data-theme="dark"], ...)` selector after it. See globals.css lines ~73–97 for correct examples.
+
+CORRECT option C — hand-authored dark: text variant:
+```
+className="text-brand-primary dark:text-brand-primary-mid"
+```
+`dark:text-brand-primary-mid` is hand-authored after its base class in globals.css — correctly ordered. Do NOT use `dark:text-dark-text` (native — loses to hand-authored `text-brand-primary` via cascade).
+
+Known exception: `components/crew/shows/ShowDetail.tsx` ~line 421 — `bg-brand-primary-light` intentionally preserved with no dark: override (brand-colored badge in all modes; its incorrect `dark:bg-dark-nav` was removed in ADMIN.39b).
+Known residual: `OpportunityForm.tsx:99,115` → ADMIN.40.
+
+Use the §7 substitution table and governing hover rule when replacing any affected class.
 
 ---
 
@@ -3111,3 +3306,4 @@ Confirmed diagnosis (ADMIN.35-AUDIT): the `app/crew/(app)/layout.tsx` main conte
 *v3.9 (July 2026 — ADMIN.32–34 complete: §2 header updated (ADMIN.32–34 + DOC.44 logged); §7 Owner Admin role guard EXCEPTIONS updated (OA can now create/assign OA — only SA creation/deactivation remains SA-only); §14 resolveEmailSettings() return type updated (orgName + orgContactEmail added; FROM_ADDRESS/REPLY_TO deletion documented; payload builder from/replyTo params documented); §14 resolveOrgIdentity() return type updated (org_logo_url added; admin layout prop pattern documented); §14 new pattern: || vs ?? for app_settings fallbacks (confirmed failure mode ADMIN.34 F2); §14 new pattern: next.config.ts images.remotePatterns for Supabase Storage; §10 new grep check: FROM_ADDRESS/REPLY_TO must be zero; §10 Owner Admin grep comment updated (only SA-creation escalation guards remain legitimate SA-only hits); §11 payload builder checklist item updated (from/replyTo params, FROM_ADDRESS/REPLY_TO deleted); §11 resolveEmailSettings() checklist item updated (orgName + orgContactEmail); §11 Owner Admin role guard checklist item updated (OA can create OA); §11 two new checklist items (|| vs ?? pattern, no hardcoded org strings in email body copy); §13 ADMIN.32 + ADMIN.33 + ADMIN.34 all marked complete with summaries; Phase 21 prerequisites marked complete; DOC.43b-FIX + DOC.44 + DOC.45 added to prompt log; DOC.45 logged)*
 *v4.0 (July 2026 — Phase THEME complete: §2 header updated (THEME complete + Phase 19/21 pre-launch + DOC.47/DOC.48 logged); §14 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight added; email client constraint note added — string interpolation not CSS custom properties); §14 new pattern: lightenHex() from lib/utils/color.ts for server-side hex tint computation (email templates + PDF exports; do not use color-mix() in email or @react-pdf/renderer contexts); §14 new pattern: @react-pdf/renderer createStyles() factory pattern (StyleSheet.create() at module scope ignores props — confirmed failure mode THEME.4; factory function called inside component body is required); §14 R33 enforcement note added (post-THEME web UI code must use @layer utilities classes — bg-brand-primary etc. — never static token names); §10 two new grep checks (brand static Tailwind classes must be zero; brand hex in email templates outside resolveEmailSettings() fallbacks must be zero); §11 email send function checklist item updated (brand color params added); §11 payload builder checklist item updated (brand params added); §11 three new checklist items (post-THEME UI code uses utility classes, PDF factory pattern, email brand hex grep); §13 Phase THEME marked complete (THEME.A/1/2a–2d/3/3b-4 all ✓ with commit hashes); §13 Phase 19 status updated (pre-launch, 3-prompt structure confirmed); §13 Phase 21 updated (pre-launch); §13 prompt log: DOC.43b-FIX through DOC.48 + THEME.A through THEME.3b-4 added (14 new entries); DOC.48 logged)*
 *v4.1 (July 2026 — Phase 19 complete + ADMIN.35–38: §1 header updated (v4.1, Phase 19 + ADMIN.35–38 summary); §7 three new patterns added: Google OAuth callback dual-client pattern (getAdminClient() for pending_registrations ops — newly-OAuth'd user fails session-client RLS; ADMIN.36/38), is_active sign-out pattern (signOut() before redirect on inactive Google auth — ADMIN.38), updateVolunteerInfo() public-route identity (app/update/actions.ts is the /update submit action, distinct from updateVolunteer() in lib/actions/volunteers.ts — any new profile field must update both — 19.2); §7 revalidatePath via .select() pattern added (deleteNote/editNote — retrieve parent ID in single operation to avoid pre-delete SELECT — ADMIN.37); §11 three new checklist items: /update two-file field update pattern (19.2), z.string().optional() for <select> fields (enum rejects '' silently — 19.1/19.3), role guard allowlist pattern for volunteer mutations (Production must be explicitly blocked — ADMIN.37/38); §13 Phase 19 marked complete (19.1–19.3 ✓); §13 prompt log ADMIN.35-AUDIT + ADMIN.35–38 + 19.1–19.3 + DOC.50–51 added; §14 dark mode cascade defect note added (hand-authored @layer utilities compile after Tailwind auto-generated — bg-brand-primary-light overrides dark:bg-dark-bg; ADMIN.35-AUDIT root cause; ADMIN.39 sweep pending); §14 editNote()/deleteNote() role guard gap noted (should allow Editor — deferred to ADMIN.39); DOC.51 logged)*
+*v4.2 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header updated (v4.2); §14 editNote/deleteNote contradiction corrected — "needs correction to include Editor" replaced with "Editors confirmed append-only, guard correct as-is, migration required if ever revisited"; §7 ADMIN.39a–c pattern set added (governing hover rule, static neutral substitution table, dark:text-brand-primary-mid text fix pattern, two-part dark target correction pattern, has-[:checked]: variant scope rule, read-before-edit discipline note); §10 R35 grep check added; §11 R35 pairing checklist item added; §11 has-[:checked]: scope checklist item added; §13 stale Phase 14/15 pending stubs removed; §13 dark mode cascade sweep marked complete (ADMIN.39-AUDIT + 39a/39b/39c ✓); §13 ADMIN.40 carry-forward added; §13 prompt log completed (ADMIN.39-AUDIT, ADMIN.39a–c, DOC.51–53 all added); §14 R35 formal rule added (three correct options: native+native, hand-authored+hand-authored in correct order, hand-authored dark: text variant); DOC.54 logged)*
