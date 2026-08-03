@@ -499,7 +499,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   (e.g. "(985) 555-1234" — ADMIN.21).
 - Bulk select: export selected to CSV. `requires_service_hours` included in CSV export.
 - **Export Matching (CSV):** filter-aware all-pages CSV export — exports all volunteers matching the current active filters, not just the current page. Built in ADMIN.19 (replaced the prior all-volunteers-ignoring-filters export).
-- Preferred contact method (built 19.3): `communication_preference` visible as a display-only badge in the volunteer list table. Filter deferred to a later phase.
+- Preferred contact method (built 19.3): `communication_preference` visible as a display-only badge appended to the Name cell in the volunteer list table (matching the `requires_service_hours` SH badge pattern — non-null values only; null rows show nothing). Preference filter built in Phase 19.3 and added to the existing filter bar (All / Email only / Phone only / Either is fine). Filter is server-side: URL param `?preference=` → `applyBaseFilters()` in `lib/volunteers/list.ts` → `.eq('communication_preference', value)`. Filter state plumbing in `lib/volunteers/url.ts`. Filter bar control in `components/crew/volunteers/FilterPanel.tsx`.
 - PDF export available (Editor/Super Admin) via
   server-side route handler at `/crew/volunteers/export`.
   Landscape A4, branded header, 9-column table (added
