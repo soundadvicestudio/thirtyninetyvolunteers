@@ -96,7 +96,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
           Claim Type<span className="text-brand-accent ml-0.5">*</span>
         </legend>
         <div className="space-y-3">
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50 transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-white dark:has-[:checked]:bg-dark-surface/50 transition-colors">
             <input
               type="radio"
               value="eoi"
@@ -112,7 +112,7 @@ export default function OpportunityForm({ opportunity }: { opportunity?: Standin
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50 transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-divider dark:border-dark-border cursor-pointer has-[:checked]:border-brand-primary has-[:checked]:bg-white dark:has-[:checked]:bg-dark-surface/50 transition-colors">
             <input
               type="radio"
               value="slot_claim"
