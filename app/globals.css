@@ -102,6 +102,10 @@ body {
   .bg-brand-primary-light\/50 { background-color: color-mix(in srgb, var(--brand-primary-light) 50%, transparent); }
   .bg-brand-primary-light\/70 { background-color: color-mix(in srgb, var(--brand-primary-light) 70%, transparent); }
 
+  /* Dark-mode opacity variants (button.tsx outline/ghost) */
+  .dark\:bg-brand-primary-light\/30:where([data-theme="dark"], [data-theme="dark"] *)         { background-color: color-mix(in srgb, var(--brand-primary-light) 30%, transparent); }
+  .dark\:hover\:bg-brand-primary-light\/50:where([data-theme="dark"], [data-theme="dark"] *):hover { background-color: color-mix(in srgb, var(--brand-primary-light) 50%, transparent); }
+
   /* ── Accent (orange → brand_accent) ──────── */
   .bg-brand-accent        { background-color: var(--brand-accent); }
   .text-brand-accent      { color: var(--brand-accent); }
