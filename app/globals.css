@@ -60,6 +60,8 @@ body {
   .bg-brand-primary\/80   { background-color: color-mix(in srgb, var(--brand-primary) 80%, transparent); }
   .border-brand-primary\/20 { border-color: color-mix(in srgb, var(--brand-primary) 20%, transparent); }
   .ring-brand-primary\/50   { --tw-ring-color: color-mix(in srgb, var(--brand-primary) 50%, transparent); }
+  .hover\:bg-brand-primary\/80:hover { background-color: color-mix(in srgb, var(--brand-primary) 80%, transparent); }
+  .focus-visible\:ring-brand-primary\/50:focus-visible { --tw-ring-color: color-mix(in srgb, var(--brand-primary) 50%, transparent); }
 
   /* ── Primary Mid (steel → brand_primary_mid) */
   .bg-brand-primary-mid        { background-color: var(--brand-primary-mid); }
@@ -81,6 +83,7 @@ body {
   .bg-brand-primary-mid\/20 { background-color: color-mix(in srgb, var(--brand-primary-mid) 20%, transparent); }
   .bg-brand-primary-mid\/80 { background-color: color-mix(in srgb, var(--brand-primary-mid) 80%, transparent); }
   .border-brand-primary-mid\/30 { border-color: color-mix(in srgb, var(--brand-primary-mid) 30%, transparent); }
+  .hover\:bg-brand-primary-mid\/80:hover { background-color: color-mix(in srgb, var(--brand-primary-mid) 80%, transparent); }
 
   /* ── Primary Tint (slate → brand_primary_tint) */
   .text-brand-primary-tint { color: var(--brand-primary-tint); }
@@ -140,6 +143,15 @@ body {
   .border-brand-accent\/50 { border-color: color-mix(in srgb, var(--brand-accent) 50%, transparent); }
   .ring-brand-accent\/20  { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
   .ring-brand-accent\/40  { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
+  .hover\:bg-brand-accent\/20:hover { background-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .focus-visible\:border-brand-accent\/40:focus-visible { border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
+  .focus-visible\:ring-brand-accent\/20:focus-visible { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .aria-invalid\:ring-brand-accent\/20[aria-invalid="true"] { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .dark\:bg-brand-accent\/20:where([data-theme="dark"], [data-theme="dark"] *) { background-color: color-mix(in srgb, var(--brand-accent) 20%, transparent); }
+  .dark\:hover\:bg-brand-accent\/30:where([data-theme="dark"], [data-theme="dark"] *):hover { background-color: color-mix(in srgb, var(--brand-accent) 30%, transparent); }
+  .dark\:aria-invalid\:border-brand-accent\/50:where([data-theme="dark"], [data-theme="dark"] *)[aria-invalid="true"] { border-color: color-mix(in srgb, var(--brand-accent) 50%, transparent); }
+  .dark\:aria-invalid\:ring-brand-accent\/40:where([data-theme="dark"], [data-theme="dark"] *)[aria-invalid="true"] { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
+  .dark\:focus-visible\:ring-brand-accent\/40:where([data-theme="dark"], [data-theme="dark"] *):focus-visible { --tw-ring-color: color-mix(in srgb, var(--brand-accent) 40%, transparent); }
 
   /* ── Accent Light (pale-orange → brand_accent_light) */
   .bg-brand-accent-light      { background-color: var(--brand-accent-light); }
