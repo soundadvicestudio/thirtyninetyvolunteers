@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.5
-### Created: July 2026 | Last Updated: August 2026 — v4.5 (Phase 21 — Rehearsal Management System complete: 21.A audit through 21.3 attendance/QR/help; Migration 031 applied; new schema (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance, calendar_events.check_in_token); feature_rehearsals flag; public /rehearsal-checkin/[token] route; HelpContent 14th section; R37 added (admin_users.id = auth.uid() for RLS); Phase 17 Launch is next)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.6
+### Created: July 2026 | Last Updated: August 2026 — v4.6 (Phase AUDITIONS — Audition Management System specced as pre-launch phase: full schema (8 new tables), 11-prompt structure (AUDITIONS.A/1a/1b/2a/2b/2c/3a/3b/4a/4b + DOC.59), Production show + audition assignment model, feature_auditions flag (5th active flag), TipTap merge tag extension, email notification template system; R38 added; Phase AUDITIONS added to §11; Phase 17 Launch follows Phase AUDITIONS)
 
 ---
 
@@ -11,7 +11,7 @@
 **Built and maintained by:** Jonathan Sturcken (YLC member) — sole point of contact for questions, updates, and future development.
 
 **Two user-facing surfaces:**
-- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`) · Rehearsal self check-in (`/rehearsal-checkin/[token]`)
+- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`) · Rehearsal self check-in (`/rehearsal-checkin/[token]`) · Audition signup (`/auditions/[id]`) · Audition self check-in (`/audition-checkin/[token]`)
 - **Private (Production Crew):** Full admin backend for Super Admins, Editors, and Viewers
 
 **Supabase project:** `thirtyninetyvolunteers` (ID: `nutvjkplbtobcmymqtzx`, org: `thirtybyninety`)
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 21 (Rehearsal Management System) complete — all four prompts shipped (21.A audit, 21.1 schema + server actions, 21.2 schedule list/roster/dates UI, 21.3 attendance/QR check-in/help). Migration 031 applied. Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase 21 (Rehearsal Management System) complete. Phase AUDITIONS (Audition Management System) is next — fully specced and approved as a pre-launch build in August 2026, comprising 11 prompts (AUDITIONS.A through AUDITIONS.4b + DOC.59). Phase 17 (Launch) follows Phase AUDITIONS. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -39,7 +39,8 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
-| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, and `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules). |
+| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules), and `/crew/auditions` (Audition Management — Phase AUDITIONS, feature_auditions flag; full read/write on assigned auditions and shows). Assignment is independent per resource: Production users are granted access to a show explicitly (via show editors assignment) OR to a standalone audition directly (via audition assignments). Both paths are independent. Show assignment grants access to all auditions linked to that show via show_id. Audition assignment grants access to that specific audition only. |
+| **Auditioner** | A person who signs up to audition for a show or production. Auditioners are NOT volunteers — they are a separate data entity stored in `audition_signups`, not in the `volunteers` table. Signing up to audition does not create a volunteer record. A "convert to volunteer" admin action (Phase AUDITIONS, status = Cast) can optionally create a linked volunteer record after casting. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can create and manage Editor, Viewer, Production, and Owner Admin accounts. Owner Admin can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
@@ -195,9 +196,9 @@ Mid Gray:             #555555  --color-mid-gray
 | Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can create and manage Editor, Viewer, Production, and Owner Admin accounts. Can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. Can edit and delete volunteer notes (ADMIN.33 — RLS updated Migration 028). Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. Permissions expanded ADMIN.33. |
 | Editor | All `/crew/*` except Settings hub and user management | Yes | Yes | Full operational access. Cannot access Settings sub-pages (owner decision — Settings is Super Admin and Owner Admin only). Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
-| Production | `/crew/calendar`, `/crew/media`, and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar, Media Library, and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library (`/crew/media`) access confirmed ADMIN.30. |
+| Production | `/crew/calendar`, `/crew/media`, `/crew/help`, `/crew/rehearsals` (assigned only), `/crew/auditions` (assigned only) | Calendar submission only | No | Directors and Stage Managers. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Full read/write on assigned rehearsal schedules (Phase 21) and assigned auditions and shows (Phase AUDITIONS — AUDITIONS.2a). Assignment is per-resource and independent: show assignment (via show editors) grants access to all auditions linked to that show; direct audition assignment grants access to that audition only. Sidebar shows Calendar, Media Library, Help, Rehearsals, and Auditions. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library confirmed ADMIN.30. Rehearsals added Phase 21. Show + audition access added AUDITIONS.2a. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
-| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]`, `/auditions/[id]`, `/audition-checkin/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). `/auditions/[id]` — public audition signup page (open call and timed-slot modes, role selection, material uploads, is_minor/guardian fields, consent trigger for under-18). `/audition-checkin/[token]` — audition self check-in page (token-gated, no auth required, roster dropdown identity — same pattern as rehearsal check-in). |
 
 **`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor, Viewer, or Owner Admin account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this; `owner_admin` CAN have `calendar_editor = true` — CHECK constraint updated in Migration 023). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
@@ -212,6 +213,8 @@ Mid Gray:             #555555  --color-mid-gray
 
 **Phase 21 proxy.ts additions (21.2 + 21.3):** Four changes were made to `proxy.ts` across Phase 21: (1) `needsFlagCheck` extended to cover `/crew/rehearsals` (21.2) and `/rehearsal-checkin/` paths (21.3 — required a separate condition; the `/crew/rehearsals` addition did not cover it). (2) Production-role restriction exception: `!pathname.startsWith('/crew/rehearsals')` added to the Production allowlist alongside `/crew/calendar`, `/crew/help`, and `/crew/media`. Production users may access the Rehearsals route tree; per-schedule filtering happens at the data layer. (3) Crew-route flag block for `/crew/rehearsals` added after the calendar/checkin/blast blocks — redirects to `/crew/dashboard` when `flags.rehearsals` is false. (4) `/rehearsal-checkin/:path*` added to the matcher array (21.3, before the public flag block was written — SETUP.1 F1 discipline); public flag block redirects to `/` when `flags.rehearsals` is false and pathname starts with `/rehearsal-checkin/`.
 
+**Phase AUDITIONS proxy.ts additions (AUDITIONS.2a + AUDITIONS.3a/3b):** Five changes required across Phase AUDITIONS: (1) `needsFlagCheck` extended to cover `/crew/auditions` and `/audition-checkin/` paths — two separate conditions, same pattern as Phase 21 rehearsals. (2) Production-role restriction exception: `!pathname.startsWith('/crew/auditions')` added to the Production allowlist — Production users may access the Auditions route tree; per-audition access filtering happens at the data layer. (3) Crew-route flag block for `/crew/auditions` added after the rehearsals block — redirects to `/crew/dashboard` when `flags.auditions` is false. (4) `/auditions/:path*` and `/audition-checkin/:path*` added to the matcher array BEFORE any flag block or guard logic is written (SETUP.1 F1 discipline — matcher must cover all guarded paths before guards are written). (5) Public flag block redirects to `/` when `flags.auditions` is false and pathname starts with `/auditions/` or `/audition-checkin/`.
+
 ---
 
 ## 8. Complete Feature Set
@@ -224,6 +227,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
 - Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
 - Two equal-weight outlined CTA buttons above the signup form: "Update My Info" (→ `/update`) and "View Opportunities" (→ `/callboard`). Appear below the bridging text, above the form.
+- **Upcoming Auditions card (Phase AUDITIONS):** When `feature_auditions` is on, a card or section showing published upcoming auditions appears on the landing page. Each entry links to `/auditions/[id]`. Hidden entirely when no auditions are published or the flag is off.
 - "Sign up to add your name to our volunteer list" subheading appears immediately above the form.
 - Discreet "Production Crew" text link in page footer → `/crew/login` (intentionally subtle — small text, not a CTA button)
 - Volunteer registration form:
@@ -266,6 +270,7 @@ Mid Gray:             #555555  --color-mid-gray
 - Shows with no open slots hidden entirely
 - Per-show card: name, type, dates, open roles with slot counts, "Volunteer" button
 - Mobile-first, QR-friendly
+- **Upcoming Auditions card (Phase AUDITIONS):** When `feature_auditions` is on, a card or section appears on this page showing all published upcoming auditions. Each entry links to `/auditions/[id]`. Hidden entirely when no auditions are published or the flag is off.
 
 ### Public — Per-Show Claiming Page (`/shows/[id]`)
 - Unique public URL per show — shareable independently (works for non-database volunteers, rental productions)
@@ -1001,6 +1006,74 @@ Pages and components:
 - `app/rehearsal-checkin/[token]/page.tsx` — public check-in
 - `components/rehearsal-checkin/RehearsalCheckInClient.tsx`
 
+**Audition Management (`/crew/auditions`, Phase AUDITIONS — pre-launch):**
+Gated behind `feature_auditions` flag (R34 compliant). Visible to Super Admin, Owner Admin, Editor, Production (assigned only), and Viewer (read-only). Production users see only auditions and shows they are explicitly assigned to.
+
+**Audition types:** Open call (no slots) or timed slots (configurable slot duration, total slot count, and cap per slot — 1 for appointment model, N for group session). Both types support callbacks as linked child auditions via `parent_audition_id` FK.
+
+**Show linkage:** An audition can optionally be linked to a show via nullable `show_id` FK, or exist as a standalone audition. Both are supported.
+
+**Per-audition configuration (admin-controlled at creation):**
+- Type (open_call / timed_slots), slot config (duration, total, cap per slot)
+- Role/character selection: toggle on/off. When on: admin defines a list of roles via `audition_roles` table; auditioners pick from this list at signup.
+- Material uploads: per-type toggles (headshot image, resume PDF, sheet music PDF, MP3/backing track, video reel). Each independently enabled/disabled per audition.
+- Calendar visibility: admin_only or public (public auditions sync to `calendar_events` as `event_type = 'audition'`).
+- Notification emails: toggle (default off). When on: status change to Callback, Cast, or Not Cast automatically sends the configured template for that audition. When off: no automatic send; manual bulk email still available.
+
+**Production assignment model:** Two independent paths grant a Production user access to an audition. (1) Show assignment: Production user added to a show via the show editors mechanism — grants full read/write on that show AND all auditions linked to it via `show_id`. (2) Direct audition assignment: Production user added to a standalone audition via `audition_assignments` join table — grants full read/write on that audition only. Neither path implies the other. Managed from the audition detail Settings tab.
+
+**Audition list (`/crew/auditions`):** Server Component. Columns: title, linked show (or "Standalone"), type badge, date(s), signup count, status. Active / All filter (client-side toggle, default Active). "New Audition" button (SA/OA/Editor/Production — Production users who are newly creating an audition are responsible for assigning themselves). Viewer sees no "New Audition" button.
+
+**Audition detail (`/crew/auditions/[id]`):** Server Component shell + Client Component tabs. Six tabs:
+
+*Overview* — title, dates, type, show link (if any), parent audition link (if callback), status toggle (Draft / Published / Closed / Archived), public URL copy button, auditions card preview.
+
+*Signups* — full auditioner roster with expandable rows (same pattern as Rehearsal attendance tab). Collapsed per row: name, email, slot/time, role selected, status badge, material indicators (✓ per type submitted). Expanded per row: private admin notes (append-only, Editor+), cast role assignment field, communication history for this auditioner, status changer, "Convert to Volunteer" button (visible when status = Cast; SA/OA/Editor only — inserts `volunteers` record pre-populated with name/email/phone, logs to audit_log, no automatic Supabase Auth account created). SA/OA/Editor/Production (assigned): full read/write including status changes and notes. Viewer: read-only status badges only.
+
+*Materials* — aggregate view of all submitted materials, filterable by type. Per row: auditioner name, material type badge, upload date, view/download link.
+
+*Communication* — ad-hoc bulk email to all signups for this audition, or filtered by status (Callback only / Cast only / Not Cast only / all). TipTap composer (same as blast composer). Separate from the template system — for ad-hoc sends only.
+
+*Email Templates* — three independently configurable email templates, one per status transition: Callback, Cast, and Not Cast. Each template section has a TipTap editor with a merge tag inserter (custom TipTap extension — Phase AUDITIONS.4a), a live preview panel (server action substitutes sample values and renders through `buildEmailHtml()` with real brand colors), and a Save button. Notification emails enabled/disabled toggle at the top of the tab (default off). If no template exists for a status, automatic firing is silently skipped even when the toggle is on — prevents blank emails. Template content stored in `audition_email_templates` table (one row per audition per status type). Supported merge tags: `{{auditioner_name}}`, `{{show_title}}`, `{{audition_title}}`, `{{audition_date}}`, `{{audition_location}}`, `{{role_name}}`, `{{cast_role}}`, `{{org_name}}`. This tab is built as a stub in AUDITIONS.2b and fully implemented in AUDITIONS.2c (after AUDITIONS.4a ships the TipTap extension).
+
+*Settings* — all audition configuration (type, slot config, role selection list, material toggles, calendar visibility, show link, parent audition link for callbacks, `audition_assignments` roster for Production users, archive/delete actions).
+
+**Public signup page (`/auditions/[id]`):**
+Public Server Component + Client Component. `getAdminClient()` only. Light mode only. `noindex` metadata. Branded header (`resolveOrgIdentity()`). Shows audition title, description, date(s)/time(s), location. Form fields: name (required), email (required), phone (required), age range / is_minor, guardian name + phone (when is_minor = true), role selection (when enabled for this audition — dropdown from `audition_roles`), time slot picker (when timed_slots type — grid of available slots; full slots shown as unavailable/grayed), material uploads (whichever types are enabled — inline P-DC upload, one per type). Duplicate detection by email per audition — friendly message if already registered. On submit: sends `sendAuditionSignupConfirmation()` containing a cancel link (via `cancel_token`) and an upload link (via `upload_token`) for submitting missed materials later. Under-18 auditioners: non-blocking consent trigger — queries `document_types` for `slug = 'cast_consent_form'` and `is_active = true`, inserts `consent_form_submissions` row, sends `sendConsentFormRequestEmail()`. Same pattern as Phase 15.2 volunteer consent; uses the separately-seeded `cast_consent_form` system document type.
+
+**Self-cancel:** Via `cancel_token` link in confirmation email. Same pattern as slot claim cancellations.
+
+**Late material upload:** Via `upload_token` link. Unique per signup. Routes to `/auditions/upload/[token]` — allows uploading any material type that was enabled for the audition but not submitted at signup. Same P-DC pattern as Phase 15.
+
+**Public auditions card:** A card or section on the landing page (`/`) and `/shows` showing all published upcoming auditions. Each card entry: audition title, linked show name (if applicable), date(s), "Sign up to audition →" link to `/auditions/[id]`. Visible when `feature_auditions` is on. Does not require a dedicated `/auditions` listing page.
+
+**Check-in (day-of):** `check_in_token` on the `auditions` table. Public self-check-in at `/audition-checkin/[token]`. Same five UI states as rehearsal check-in: invalid token, awaiting check-in, success, already checked in, not on roster. Auditioner picks their name from the effective signup roster dropdown — self-reported identity, not email/phone lookup. Attendance record created with `source = 'checkin'`. Self Check-In badge appears on the Signups tab for that row. Admin can also mark attendance manually from the Signups tab (`source = 'manual'`).
+
+**Calendar integration:** When `calendar_visibility = 'public'`, the audition syncs to `calendar_events` as `event_type = 'audition'`, `status = 'approved'`. Sync follows the same `syncShowDateToCalendar()` pattern extended for auditions. Public `/calendar` shows it when visibility is public. Admin calendar always shows it.
+
+**Email functions (all in `lib/email.ts`):**
+- `sendAuditionSignupConfirmation()` — sent on successful signup. Contains cancel link and upload link.
+- `sendAuditionStatusEmail(signupId, status)` — fires automatically when notification toggle is on and a template exists for the given status. Substitutes merge tags at send time. Called from `updateAuditionSignupStatus()` server action.
+- Cancellation email — sent when auditioner self-cancels via cancel link.
+- All logged to `email_log` / `email_log_recipients`.
+
+**Key files (Phase AUDITIONS):**
+Server actions:
+- `lib/actions/auditions.ts` — PUBLIC ROUTE file: `getAuditionPublicData()`, `submitAuditionSignup()`, `cancelAuditionSignup()`, `getAuditionUploadData()`, `confirmAuditionMaterialUpload()`, `getAuditionCheckInData()`, `checkInToAudition()` — `getAdminClient()` only.
+- `lib/actions/auditions-admin.ts` — authenticated: `getAuditionSchedules()`, `getAuditionDetail()`, `createAudition()`, `updateAudition()`, `updateAuditionStatus()`, `updateAuditionSignupStatus()`, `addAuditionNote()`, `assignProductionUser()`, `removeProductionUser()`, `sendAuditionBulkEmail()`, `saveAuditionEmailTemplate()`, `getAuditionEmailTemplate()`, `convertToVolunteer()`.
+Utilities and types:
+- `types/audition.ts` — all Phase AUDITIONS types.
+Pages and components:
+- `app/crew/(app)/auditions/page.tsx` — schedule list.
+- `app/crew/(app)/auditions/[id]/page.tsx` — detail shell + Production access guard.
+- `components/crew/auditions/AuditionsListClient.tsx`
+- `components/crew/auditions/AuditionDetailTabs.tsx` — six tabs.
+- `app/auditions/[id]/page.tsx` — public signup page.
+- `app/auditions/upload/[token]/page.tsx` — late material upload page.
+- `app/audition-checkin/[token]/page.tsx` — public check-in.
+- `components/audition/AuditionSignupClient.tsx`
+- `components/audition-checkin/AuditionCheckInClient.tsx`
+
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
 (Viewers see a locked message). Stub replaced entirely.
@@ -1161,6 +1234,7 @@ Section 6 — Feature Flags: Four toggles, one per flag, one Save button. Each f
 | Check-In System | `feature_checkin` | `'true'` | `/crew/tools/checkin`, public `/checkin/*`, check-in action guards |
 | Email Blast Composer | `feature_blast` | `'true'` | `/crew/communication`, blast action guards |
 | Rehearsal Management | `feature_rehearsals` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/rehearsals/*`, `/rehearsal-checkin/*`, `createRehearsalBatch()` flag guard, Rehearsals sidebar link |
+| Audition Management | `feature_auditions` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/auditions/*`, `/auditions/*`, `/audition-checkin/*`, all audition server action guards, Auditions sidebar link |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -1550,10 +1624,166 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** None pending. Migration 031 (Phase 21 —
-rehearsal management schema) was the most recent. Future
-migrations will be introduced for Phase CAST or other
-post-launch phases.
+**Next migration:** 032 — `032_audition_management.sql` (Phase AUDITIONS). Pending — not yet applied.
+
+**Migration 032 status:** Pending — `032_audition_management.sql` (Phase AUDITIONS).
+Creates eight new tables and seeds `feature_auditions` in `app_settings`.
+
+### auditions
+```sql
+id                    uuid PRIMARY KEY DEFAULT gen_random_uuid()
+title                 text NOT NULL
+description           text
+show_id               uuid REFERENCES shows(id) ON DELETE SET NULL
+parent_audition_id    uuid REFERENCES auditions(id) ON DELETE SET NULL
+location_id           uuid REFERENCES locations(id) ON DELETE SET NULL
+type                  text NOT NULL DEFAULT 'open_call'
+                      CHECK (type IN ('open_call','timed_slots'))
+status                text NOT NULL DEFAULT 'draft'
+                      CHECK (status IN ('draft','published','closed','archived'))
+date_start            date NOT NULL
+date_end              date
+time_start            time without time zone
+time_end              time without time zone
+slot_duration_minutes integer
+slots_total           integer
+slot_cap              integer NOT NULL DEFAULT 1
+role_selection_enabled boolean NOT NULL DEFAULT false
+material_headshot     boolean NOT NULL DEFAULT false
+material_resume       boolean NOT NULL DEFAULT false
+material_sheet_music  boolean NOT NULL DEFAULT false
+material_mp3          boolean NOT NULL DEFAULT false
+material_video        boolean NOT NULL DEFAULT false
+calendar_visibility   text NOT NULL DEFAULT 'admin_only'
+                      CHECK (calendar_visibility IN ('admin_only','public'))
+notification_emails_enabled boolean NOT NULL DEFAULT false
+check_in_token        uuid NOT NULL DEFAULT gen_random_uuid()
+created_by            uuid REFERENCES admin_users(id)
+created_at            timestamptz NOT NULL DEFAULT now()
+updated_at            timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_auditions_check_in_token on check_in_token
+-- INDEX: idx_auditions_show_id
+-- INDEX: idx_auditions_status
+-- INDEX: idx_auditions_created_by
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: is_editor() all operations; authenticated SELECT; anon SELECT WHERE status='published'
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_roles
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+audition_id   uuid NOT NULL REFERENCES auditions(id) ON DELETE CASCADE
+name          text NOT NULL
+sort_order    integer NOT NULL DEFAULT 0
+created_at    timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_audition_roles_audition_id
+-- RLS: is_editor() INSERT/UPDATE/DELETE; authenticated SELECT
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_slots
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+audition_id   uuid NOT NULL REFERENCES auditions(id) ON DELETE CASCADE
+start_time    timestamptz NOT NULL
+cap           integer NOT NULL DEFAULT 1
+created_at    timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_audition_slots_audition_id
+-- RLS: is_editor() INSERT/UPDATE/DELETE; authenticated SELECT; anon SELECT
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_signups
+```sql
+id                  uuid PRIMARY KEY DEFAULT gen_random_uuid()
+audition_id         uuid NOT NULL REFERENCES auditions(id) ON DELETE CASCADE
+slot_id             uuid REFERENCES audition_slots(id) ON DELETE SET NULL
+audition_role_id    uuid REFERENCES audition_roles(id) ON DELETE SET NULL
+name                text NOT NULL
+email               text NOT NULL
+phone               text
+is_minor            boolean NOT NULL DEFAULT false
+guardian_name       text
+guardian_phone      text
+status              text NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending','callback','cast','not_cast','withdrawn'))
+cast_role           text
+cancel_token        uuid NOT NULL DEFAULT gen_random_uuid()
+upload_token        uuid NOT NULL DEFAULT gen_random_uuid()
+checked_in_at       timestamptz
+check_in_source     text CHECK (check_in_source IN ('checkin','manual'))
+signed_up_at        timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_audition_signups_cancel_token on cancel_token
+-- UNIQUE INDEX: idx_audition_signups_upload_token on upload_token
+-- INDEX: idx_audition_signups_audition_id
+-- INDEX: idx_audition_signups_slot_id
+-- INDEX: idx_audition_signups_status
+-- RLS: is_editor() all authenticated operations; anon INSERT (public signup);
+--      anon SELECT WHERE cancel_token matches (for cancel page token validation)
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_signup_notes
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+signup_id   uuid NOT NULL REFERENCES audition_signups(id) ON DELETE CASCADE
+content     text NOT NULL
+created_by  uuid REFERENCES admin_users(id)
+created_at  timestamptz NOT NULL DEFAULT now()
+-- Append-only (no UPDATE/DELETE RLS policies)
+-- INDEX: idx_audition_signup_notes_signup_id
+-- RLS: is_editor() SELECT + INSERT; no UPDATE or DELETE
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_materials
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+signup_id       uuid NOT NULL REFERENCES audition_signups(id) ON DELETE CASCADE
+material_type   text NOT NULL
+                CHECK (material_type IN ('headshot','resume','sheet_music','mp3','video'))
+storage_path    text NOT NULL
+uploaded_at     timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_audition_materials_signup_id
+-- RLS: is_editor() SELECT + DELETE; anon INSERT (upload token validated in action)
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_assignments
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+audition_id     uuid NOT NULL REFERENCES auditions(id) ON DELETE CASCADE
+admin_user_id   uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE
+created_at      timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_audition_assignments_unique on (audition_id, admin_user_id)
+-- INDEX: idx_audition_assignments_admin_user_id
+-- RLS: is_editor() INSERT/DELETE; authenticated SELECT
+-- Governs Production-role direct audition access (standalone auditions).
+-- Show-linked access is governed by show_editors (existing table).
+-- Migration 032 (032_audition_management.sql)
+```
+
+### audition_email_templates
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+audition_id     uuid NOT NULL REFERENCES auditions(id) ON DELETE CASCADE
+status_type     text NOT NULL
+                CHECK (status_type IN ('callback','cast','not_cast'))
+subject         text NOT NULL DEFAULT ''
+body_html       text NOT NULL DEFAULT ''
+updated_by      uuid REFERENCES admin_users(id)
+updated_at      timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_audition_email_templates_unique on (audition_id, status_type)
+-- RLS: is_editor() all operations; authenticated SELECT
+-- Stores TipTap HTML output per audition per status type.
+-- If no row exists for a status, automatic email firing is silently skipped.
+-- Merge tags in body_html are substituted at send time:
+--   {{auditioner_name}}, {{show_title}}, {{audition_title}},
+--   {{audition_date}}, {{audition_location}}, {{role_name}},
+--   {{cast_role}}, {{org_name}}
+-- Migration 032 (032_audition_management.sql)
+```
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -2538,6 +2768,17 @@ toggle row for this flag. `saveFeatureFlags()` revalidates
 `/crew/rehearsals` alongside existing routes.
 Total active SETUP keys: 18. Setup Panel fetches 19 keys
 total (18 SETUP keys + default_reply_to).
+
+**`feature_auditions` key added in Migration 032 (Phase AUDITIONS):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_auditions', '') ON CONFLICT (key) DO NOTHING`.
+Value `''` evaluates as enabled (`!== 'false'`). Added to
+`FeatureFlags` type and `getFeatureFlags()` in
+`lib/feature-flags.ts`. Setup Panel Section 6 has a fifth
+toggle row for this flag. `saveFeatureFlags()` revalidates
+`/crew/auditions` alongside existing routes.
+Total active SETUP keys: 19. Setup Panel fetches 20 keys
+total (19 SETUP keys + default_reply_to).
 
 Runtime-added key (not seeded in Migration 001):
 ```
@@ -3577,7 +3818,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete — all four prompts shipped (21.A/21.1/21.2/21.3). Migration 031 applied. Phase 17 (Launch) is next.*
+*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete — all four prompts shipped (21.A/21.1/21.2/21.3). Migration 031 applied. Phase AUDITIONS (Audition Management) is next — fully specced August 2026 (11 prompts: AUDITIONS.A/1a/1b/2a/2b/2c/3a/3b/4a/4b + DOC.59). Phase 17 (Launch) follows Phase AUDITIONS.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -4391,6 +4632,47 @@ viewable-mime-type files now route to player page instead of direct redirect.
 - Add "Sign in with Google" button to `/crew/login`
 - Confirm redirect URIs for production domain
 
+### Phase AUDITIONS — Audition Management System (pre-launch, next)
+
+**Confirmed as pre-launch build:** Specced in full August 2026 during the Build Pt 14 planning session. All decisions locked. Placed before Phase 17 (Launch) in the build sequence.
+
+**Architecture decisions (confirmed):**
+- Auditioners are a separate data entity from volunteers. `audition_signups` table, not `volunteers`. No automatic volunteer record created at signup.
+- Auditions can be show-linked (`show_id` FK, nullable) or standalone. Both supported.
+- Callbacks are child auditions via `parent_audition_id` FK, nullable. Can be same-day or separate events.
+- Two audition types: open_call and timed_slots. Configurable per audition.
+- Slot cap is configurable per audition: 1 = appointment model, N = group session.
+- Material uploads are per-type toggles per audition: headshot, resume, sheet music, MP3, video.
+- Upload at signup AND late upload via unique `upload_token` link (same P-DC pattern as Phase 15).
+- Under-18 consent trigger: `cast_consent_form` document type (already seeded in Migration 025). Same non-blocking pattern as Phase 15.2 volunteer consent.
+- Notification emails: toggle (default off). When on, status changes fire the configured template automatically. Three templates: Callback, Cast, Not Cast. TipTap editor with merge tags + live preview. Stored in `audition_email_templates` table.
+- Public discovery: auditions card on landing page (`/`) and `/shows` only. No dedicated `/auditions` listing page.
+- Check-in: `check_in_token` on `auditions` table. Self-check-in at `/audition-checkin/[token]`. Roster-dropdown identity (same as rehearsal check-in). Admin manual marking also available.
+- Calendar: auditions with `calendar_visibility = 'public'` sync to `calendar_events` as `event_type = 'audition'`, `status = 'approved'`.
+- Convert to volunteer: action available on Signups tab when signup status = Cast (SA/OA/Editor only). Inserts `volunteers` record pre-populated with name/email/phone. No Supabase Auth account created.
+- Feature flag: `feature_auditions` (5th active flag, seeded in Migration 032).
+- Production access: two independent paths — show assignment (via show editors, grants access to show + all linked auditions) or direct audition assignment (via `audition_assignments` table, standalone auditions only). Managed from audition detail Settings tab. AUDITIONS.2a is a targeted infrastructure prompt that expands Production show access and wires both paths before the admin UI is built.
+- Email Templates tab stub pattern: built as a stub in AUDITIONS.2b, fully implemented in AUDITIONS.2c after AUDITIONS.4a ships the TipTap merge tag extension.
+- Role access: SA/OA/Editor/Production (assigned) = full read/write. Viewer = read-only. Convert-to-volunteer and archive/delete = SA/OA/Editor only.
+
+**Schema (Migration 032 — 8 new tables):**
+`auditions`, `audition_roles`, `audition_slots`, `audition_signups`, `audition_signup_notes`, `audition_materials`, `audition_assignments`, `audition_email_templates`. Full schema blocks in §9.
+
+**11-prompt structure:**
+
+AUDITIONS.A Read-only audit (no code — reuse surface assessment)
+AUDITIONS.1a Migration 032 (8 tables + feature_auditions seed) + types/audition.ts
+AUDITIONS.1b Server actions (lib/actions/auditions.ts public + lib/actions/auditions-admin.ts authenticated + calendar sync extension)
+AUDITIONS.2a Production show access expansion (proxy.ts + show detail guards + sidebar Production allowlist for shows — ADMIN-style infra prompt)
+AUDITIONS.2b Admin UI — /crew/auditions list + detail page Overview/Signups/Materials/Communication tabs + sidebar nav (three-part atomic edit) + feature flag guard + Production access guard + audition_assignments roster on Settings tab
+AUDITIONS.2c Admin UI — Settings tab + Email Templates tab (TipTap editor stub in 2b, full implementation in 2c after 4a ships)
+AUDITIONS.3a Public signup page /auditions/[id] (open call + timed slots + role picker + is_minor + consent trigger + confirmation email)
+AUDITIONS.3b Material uploads on signup + late upload route /auditions/upload/[token] + auditions card on / and /shows + /audition-checkin/[token] public check-in + calendar sync
+AUDITIONS.4a TipTap merge tag extension (custom TipTap node type, toolbar inserter, live preview server action)
+AUDITIONS.4b All email send functions + bulk communication tab + convert-to-volunteer action + HelpContent 15th section + Deferred Verifications v19 additions
+DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complete)
+
+
 ### Phase 17 — Launch
 
 **17.1 — Production Environment Audit + Setup Panel Configuration**
@@ -4402,7 +4684,7 @@ viewable-mime-type files now route to player page instead of direct redirect.
 - Run through all 8 Setup Panel sections and populate with
   production 30BN values (org identity, brand colors, logo,
   favicon, email config, feature flags, instance label, 404 page)
-- Confirm all three feature flags enabled for launch
+- Confirm all five feature flags enabled for launch (`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`)
 - Work through Deferred Verifications document (v15, 774 items)
 
 **17.2 — Domain & DNS**
@@ -4755,7 +5037,7 @@ After Phase THEME ships, all components that reference brand-driven colors (`bg-
 
 ### R34 — All Non-Core Features Must Be Built Flag-Ready
 
-Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
+Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21), Audition Management (`feature_auditions` — Phase AUDITIONS). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
 
 ### R35 — Never Pair Hand-Authored @layer utilities Classes With Native Tailwind dark: Utilities on the Same Property
 
@@ -4812,6 +5094,18 @@ Never construct a subquery joining through a non-existent `auth_user_id` column 
 The existing RLS helper functions (`is_editor()`, `is_super_admin()`, `is_super_admin_or_owner_admin()`, `is_admin()`) all verify role via `EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid() AND role IN (...))` — this pattern is correct and consistent with R37.
 
 Confirmed failure mode: the 21.1 prompt draft used `auth_user_id = auth.uid()` in Migration 031 RLS policies for Production self-scoping. Task A schema verification confirmed the column does not exist. Corrected to `admin_user_id = auth.uid()` before applying. Migration applied successfully with the correction.
+
+### R38 — TipTap Merge Tag Extension Pattern
+
+The audition email template system uses a custom TipTap extension to render merge tags (e.g. `{{auditioner_name}}`) as non-editable inline pill nodes in the editor. Key constraints:
+
+- **Custom node type:** A TipTap `Node` extension defines `mergeTag` as an inline, atom, non-editable node. The node stores the tag name as an attribute. Renders as a styled `<span>` pill in the editor DOM.
+- **Toolbar inserter:** A custom toolbar button opens a dropdown of available merge tags. On selection, `editor.commands.insertContent({ type: 'mergeTag', attrs: { tag: '{{tag_name}}' } })` inserts the node at the current cursor position.
+- **HTML serialization:** The extension's `renderHTML()` method outputs `<span data-merge-tag="{{tag_name}}">{{tag_name}}</span>`. This is what `editor.getHTML()` returns and what gets stored in `audition_email_templates.body_html`.
+- **Substitution at send time:** A `substituteMergeTags(html, values)` utility in `lib/utils/merge-tags.ts` performs string replacement of `{{tag_name}}` patterns before the HTML reaches `buildEmailHtml()`. Applied in both `sendAuditionStatusEmail()` and the live preview server action.
+- **Live preview:** A server action `previewAuditionEmailTemplate(body_html, subject, auditionId)` substitutes sample values (auditioner name "Alex Sample", show title from DB, etc.) and returns rendered HTML via `buildEmailHtml()` with real brand colors. Preview panel in the Email Templates tab renders this HTML in an iframe-safe container.
+- **Never use regex in email HTML:** The substitution utility uses `String.prototype.replaceAll()` on known merge tag strings — not a general regex against the full HTML string. Escaping is applied to substituted values via `escapeHtml()` per the existing email escaping rule. Merge tag names themselves are system-controlled (not user-supplied) and do not need escaping.
+- **Established AUDITIONS.4a.** Apply this pattern to any future template system that needs inline merge tags in a TipTap editor context.
 
 ---
 
@@ -4872,3 +5166,4 @@ logged)*
 *v4.3 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header + current phase updated (ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete; dark mode cascade defect closed across 54 files; Phase 21 next); §8 Volunteer Profile notes spec: Editors confirmed append-only for notes (editNote/deleteNote guards stay SA+OA only — RLS + design intent re-confirmed ADMIN.39-AUDIT F4, July 2026); stale pre-ADMIN.33 wording also corrected here (Owner Admin included alongside Super Admin for edit/delete); §8 Light/Dark Mode: dark mode cascade defect resolution documented (root cause, fix pattern, 54 files, special cases, light mode visual impact, ADMIN.40 residual); §13 R35 added (never pair hand-authored @layer utilities class with native Tailwind dark: utility on same property — two correct approaches documented); §11 prompt log ADMIN.39-AUDIT + ADMIN.39a–c + DOC.51 + DOC.52 + DOC.53 added; §11 Phase 21 pre-requisite bullets corrected from forward-looking language to ✓ Complete (ADMIN.32/33 — stale since v4.0, whose own history entry had claimed this was already fixed); §11 ADMIN.40 carry-forward noted (OpportunityForm.tsx:99,115 — not in original audit scope, pre-Phase-17); DOC.53 logged)*
 *v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
 *v4.5 (August 2026 — Phase 21 complete: §1 header + current phase updated (Phase 21 complete, Phase 17 next); §1 public surfaces: /rehearsal-checkin/[token] added; §2 Production row: /crew/rehearsals added (flag-gated, assigned-only); §7 proxy.ts section: Phase 21 additions documented (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /rehearsal-checkin/[token] added; §8 Help System: 13 → 14 sections, 32 → 37 HelpTooltips, Phase 21 anchors added, Rehearsals visible to Production; §8 Setup Panel Section 6: 4th flag toggle (feature_rehearsals); §8 new Rehearsal Management section (full spec: schedule list, detail, roster/dates/attendance tabs, public check-in, key files, two-file server action split confirmed); §9 calendar_events.check_in_token added; §9 three new table blocks (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance); §9 Migration 031 status block; §9 next migration pointer updated (no pending migrations); §9 feature_rehearsals seed documented + SETUP key count 17 → 18, fetch count 18 → 19; §9 admin_users.id RLS note expanded; §11 header updated (Phase 21 complete, Phase 17 next); §11 Phase 21 section replaced (forward-looking spec → completed 4-prompt build summary with 21.A–21.3 each described, key findings documented); §13 R34 flag list: feature_rehearsals added; §13 R37 added (admin_users.id = auth.uid(), no auth_user_id column — RLS authoring rule); DOC.56 logged)*
+*v4.6 (August 2026 — Phase AUDITIONS specced as pre-launch build: §1 header + current phase updated (Phase AUDITIONS next, Phase 17 follows); §1 public surfaces: /auditions/[id] + /audition-checkin/[token] added; §2 Production row expanded (assigned shows + assigned auditions, two independent paths); §2 Auditioner terminology row added; §7 roles table Production row updated (shows + auditions access, assignment model); §7 proxy.ts: Phase AUDITIONS proxy additions block added (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /auditions/[id] + /audition-checkin/[token] added; §8 new Audition Management section (full spec: list, six-tab detail, public signup, check-in, email templates, email functions, key files, calendar integration, Production assignment model); §8 Show Listing + Landing Page: Upcoming Auditions card noted; §8 Setup Panel Section 6: 5th flag toggle (feature_auditions); §9 feature_auditions seed block + SETUP key count 18→19 + fetch count 19→20; §9 Migration 032 pending status block; §9 eight new table schema blocks (auditions, audition_roles, audition_slots, audition_signups, audition_signup_notes, audition_materials, audition_assignments, audition_email_templates); §11 header updated (Phase AUDITIONS next, Phase 17 follows); §11 Phase AUDITIONS forward-spec section added (11-prompt structure, all architectural decisions); §11 Phase 17.1 flag count updated (three → five); §13 R34 flag list: feature_auditions added; §13 R38 added (TipTap merge tag extension pattern — mergeTag node type, toolbar inserter, substitution at send time, live preview server action, escapeHtml on substituted values); DOC.58 logged)*
