@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   CalendarDays,
+  ClipboardList,
   Users,
   Theater,
   Briefcase,
@@ -23,12 +24,14 @@ import {
 import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
 import type { OrgIdentity } from '@/lib/utils/org-identity'
+import { HelpTooltip } from './HelpTooltip'
 import { ThemeToggle } from './ThemeToggle'
 import { useMobileSidebar } from './MobileSidebarContext'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
   { label: 'Calendar', href: '/crew/calendar', icon: CalendarDays },
+  { label: 'Rehearsals', href: '/crew/rehearsals', icon: ClipboardList },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
@@ -67,12 +70,17 @@ export default function Sidebar({
     '/crew/calendar': flags.calendar,
     '/crew/tools/checkin': flags.checkin,
     '/crew/communication': flags.blast,
+    '/crew/rehearsals': flags.rehearsals,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
   const visibleNavItems = isProduction
     ? flagFilteredNavItems.filter(
-        (item) => item.href === '/crew/calendar' || item.href === '/crew/help' || item.href === '/crew/media'
+        (item) =>
+          item.href === '/crew/calendar' ||
+          item.href === '/crew/help' ||
+          item.href === '/crew/media' ||
+          item.href === '/crew/rehearsals'
       )
     : flagFilteredNavItems
 
@@ -114,16 +122,29 @@ export default function Sidebar({
             href === '/crew/shows'
               ? isActivePath(pathname, href) && !isActivePath(pathname, '/crew/shows/opportunities')
               : isActivePath(pathname, href)
+          const linkClasses = `flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
+            active
+              ? 'bg-brand-primary text-white'
+              : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
+          }`
+
+          // HelpTooltip renders its own <Link> (<a>) — it cannot nest inside
+          // this item's <Link>, so Rehearsals gets a sibling wrapper instead
+          // of the plain per-item Link every other nav item uses.
+          if (href === '/crew/rehearsals') {
+            return (
+              <div key={href} className="flex items-center gap-1">
+                <Link href={href} className={`flex-1 ${linkClasses}`}>
+                  <Icon size={18} />
+                  {label}
+                </Link>
+                <HelpTooltip anchor="rehearsals" label="Rehearsals" />
+              </div>
+            )
+          }
+
           return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-brand-primary text-white'
-                  : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
-              }`}
-            >
+            <Link key={href} href={href} className={linkClasses}>
               <Icon size={18} />
               {label}
             </Link>

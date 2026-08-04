@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
-import { resolveEffectiveRoster } from '@/lib/utils/rehearsal-roster'
+import { resolveEffectiveRoster, computeEffectiveRosterIds } from '@/lib/utils/rehearsal-roster'
 import type {
   RehearsalScheduleRow,
   RehearsalScheduleDetail,
@@ -70,9 +70,12 @@ export async function getRehearsalSchedules(): Promise<GetRehearsalSchedulesResu
 
     const sortedTimes = batchEvents.map((e) => e.start_time).sort()
     const statuses = new Set(batchEvents.map((e) => e.status))
-    let status: 'pending' | 'approved' | 'cancelled' = 'cancelled'
-    if (statuses.has('pending')) status = 'pending'
-    else if (statuses.has('approved')) status = 'approved'
+    let status: 'pending' | 'approved' | 'cancelled' | 'partial' = 'cancelled'
+    if (statuses.size === 1) {
+      status = [...statuses][0] as 'pending' | 'approved' | 'cancelled'
+    } else if (statuses.size > 1) {
+      status = 'partial'
+    }
 
     const futureTimes = sortedTimes.filter((t) => t >= todayIso)
 
@@ -114,7 +117,9 @@ export async function getRehearsalScheduleDetail(batchId: string): Promise<GetRe
 
   const { data: events } = await supabase
     .from('calendar_events')
-    .select('id, title, start_time, end_time, location_id, rehearsal_batch_id, status')
+    .select(
+      'id, title, start_time, end_time, location_id, rehearsal_batch_id, status, check_in_token, location:locations(name)'
+    )
     .eq('rehearsal_batch_id', batchId)
     .order('start_time', { ascending: true })
 
@@ -123,28 +128,43 @@ export async function getRehearsalScheduleDetail(batchId: string): Promise<GetRe
     .select('admin_user_id, admin_users(id, name, email, role)')
     .eq('rehearsal_batch_id', batchId)
 
+  const scheduleAssigneeIds = (assignments ?? []).map((a: { admin_user_id: string }) => a.admin_user_id)
+
   const eventIds = (events ?? []).map((e) => e.id)
 
   const [{ data: overrideRows }, { data: attendanceRows }] = await Promise.all([
     eventIds.length > 0
-      ? supabase.from('rehearsal_date_assignments').select('calendar_event_id').in('calendar_event_id', eventIds)
-      : Promise.resolve({ data: [] as { calendar_event_id: string }[] }),
+      ? supabase
+          .from('rehearsal_date_assignments')
+          .select('calendar_event_id, admin_user_id, override_type')
+          .in('calendar_event_id', eventIds)
+      : Promise.resolve({ data: [] as { calendar_event_id: string; admin_user_id: string; override_type: string }[] }),
     eventIds.length > 0
       ? supabase.from('rehearsal_attendance').select('calendar_event_id').in('calendar_event_id', eventIds)
       : Promise.resolve({ data: [] as { calendar_event_id: string }[] }),
   ])
 
-  const eventRows: RehearsalEventRow[] = (events ?? []).map((e) => ({
-    id: e.id,
-    title: e.title,
-    start_time: e.start_time,
-    end_time: e.end_time,
-    location_id: e.location_id,
-    rehearsal_batch_id: e.rehearsal_batch_id,
-    status: e.status,
-    overrideCount: (overrideRows ?? []).filter((o) => o.calendar_event_id === e.id).length,
-    attendanceCount: (attendanceRows ?? []).filter((a) => a.calendar_event_id === e.id).length,
-  }))
+  const eventRows: RehearsalEventRow[] = (events ?? []).map((e) => {
+    const eventOverrides = (overrideRows ?? []).filter((o) => o.calendar_event_id === e.id)
+    const excludeIds = eventOverrides.filter((o) => o.override_type === 'exclude').map((o) => o.admin_user_id)
+    const includeIds = eventOverrides.filter((o) => o.override_type === 'include').map((o) => o.admin_user_id)
+    const rosterCount = computeEffectiveRosterIds(scheduleAssigneeIds, excludeIds, includeIds).length
+
+    return {
+      id: e.id,
+      title: e.title,
+      start_time: e.start_time,
+      end_time: e.end_time,
+      location_id: e.location_id,
+      rehearsal_batch_id: e.rehearsal_batch_id,
+      status: e.status,
+      check_in_token: e.check_in_token,
+      location_name: Array.isArray(e.location) ? (e.location[0]?.name ?? null) : null,
+      rosterCount,
+      overrideCount: eventOverrides.length,
+      attendanceCount: (attendanceRows ?? []).filter((a) => a.calendar_event_id === e.id).length,
+    }
+  })
 
   const scheduleAssignees: RehearsalScheduleAssignee[] = (assignments ?? []).map(
     (a: { admin_user_id: string; admin_users: { id: string; name: string; email: string; role: string }[] }) => {
@@ -154,6 +174,7 @@ export async function getRehearsalScheduleDetail(batchId: string): Promise<GetRe
         name: user?.name ?? '',
         email: user?.email ?? '',
         role: user?.role ?? '',
+        overrideCount: (overrideRows ?? []).filter((o) => o.admin_user_id === a.admin_user_id).length,
       }
     }
   )

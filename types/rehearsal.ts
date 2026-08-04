@@ -38,7 +38,7 @@ export type RehearsalScheduleRow = {
   dateRangeStart: string | null
   dateRangeEnd: string | null
   nextDate: string | null
-  status: 'pending' | 'approved' | 'cancelled'
+  status: 'pending' | 'approved' | 'cancelled' | 'partial'
 }
 
 export type RehearsalScheduleAssignee = {
@@ -46,11 +46,15 @@ export type RehearsalScheduleAssignee = {
   name: string
   email: string
   role: string
+  overrideCount: number
 }
 
 export type RehearsalEventRow = RehearsalEventSummary & {
+  rosterCount: number
   overrideCount: number
   attendanceCount: number
+  check_in_token: string | null
+  location_name: string | null
 }
 
 export type RehearsalScheduleDetail = {

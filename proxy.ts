@@ -37,12 +37,13 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Feature flags: fetched once per request, only when the path is one of
-  // the five guarded routes (perf — skips the app_settings query entirely
+  // the six guarded routes (perf — skips the app_settings query entirely
   // for every other request).
   const needsFlagCheck =
     pathname.startsWith('/crew/calendar') ||
     pathname.startsWith('/crew/tools/checkin') ||
     pathname.startsWith('/crew/communication') ||
+    pathname.startsWith('/crew/rehearsals') ||
     pathname === '/calendar' ||
     pathname.startsWith('/checkin/')
 
@@ -97,19 +98,23 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Production role: restricted to /crew/calendar only. Additive check —
-  // runs after all existing logic and only queries admin_users when a
-  // signed-in user is headed somewhere under /crew that isn't already
-  // /crew/calendar, so it never affects other roles' existing behavior.
+  // Production role: restricted to /crew/calendar, /crew/help, /crew/media,
+  // and /crew/rehearsals. Additive check — runs after all existing logic
+  // and only queries admin_users when a signed-in user is headed somewhere
+  // under /crew that isn't already an allowed path, so it never affects
+  // other roles' existing behavior.
   // /crew/media exception added 15.3 (Media Library, all roles) — same
-  // pattern as the /crew/help exception added in HELP.2a.
+  // pattern as the /crew/help exception added in HELP.2a. /crew/rehearsals
+  // exception added 21.2 — per-schedule filtering happens at the data
+  // layer (getRehearsalSchedules()), not here.
   if (
     user &&
     pathname.startsWith('/crew') &&
     pathname !== '/crew/login' &&
     !pathname.startsWith('/crew/calendar') &&
     pathname !== '/crew/help' &&
-    pathname !== '/crew/media'
+    pathname !== '/crew/media' &&
+    !pathname.startsWith('/crew/rehearsals')
   ) {
     const { data: adminUser } = await supabase
       .from('admin_users')
@@ -134,6 +139,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
   if (pathname.startsWith('/crew/communication') && flags && !flags.blast) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+  if (pathname.startsWith('/crew/rehearsals') && flags && !flags.rehearsals) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
 
