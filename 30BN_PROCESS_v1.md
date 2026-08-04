@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.4
-### Created: July 2026 | Last Updated: August 2026 — v4.4 (Phase 21 complete — 21.A through 21.3; R37 cross-reference added (admin_users.id = auth.uid() for RLS — no auth_user_id column); three new §7 patterns (admin_users.id RLS, Sidebar three-part atomic edit, effective-roster-first attendance); feature_rehearsals added to flag list; §10 two grep updates; §11 three new checklist items; §13 Phase 21 completed; §14 R34 + public-route invariant + R37 updates)
+## 30BN_PROCESS_v1.md — v4.5
+### Created: July 2026 | Last Updated: August 2026 — v4.5 (Phase AUDITIONS specced as pre-launch build, companion to Brief DOC.58: §7 audition Production assignment pattern added (two independent paths — show assignment vs. direct audition assignment); §10 feature flags grep updated (feature_auditions, 5th active flag); §11 new checklist item (stub tabs for not-yet-built dependencies — Email Templates tab pattern); §13 Phase AUDITIONS 11-prompt pending block added; DOC.58 + DOC.59 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -593,6 +593,17 @@ Confirmed in 21.2: the four-part sidebar edit (NAV_ITEMS + FLAG_GATED_HREFS + Pr
 
 This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all three locations before making any edit, confirm all three are updated in the same commit.
 
+**Audition Production access — two independent assignment paths (established AUDITIONS.2a):**
+Production-role users gain access to auditions through two independent mechanisms, and neither implies the other:
+
+1. **Show assignment** (existing mechanism — `show_editors` table): Adding a Production user as an editor on a show grants full read/write on that show AND on all auditions linked to that show via `auditions.show_id`. The show_editors join is the access credential — no separate audition assignment is needed for show-linked auditions.
+
+2. **Direct audition assignment** (`audition_assignments` table — new in Migration 032): Adding a Production user directly to a standalone audition (one with `show_id = null`) grants full read/write on that audition only. Managed from the audition detail Settings tab via `assignProductionUser()` / `removeProductionUser()` server actions.
+
+Both paths are independent. A Production user with show assignment does NOT automatically get access to standalone auditions from that show's creative team. A Production user with direct audition assignment does NOT automatically get access to the show that audition is later linked to.
+
+Access enforcement: `lib/actions/auditions-admin.ts` checks (1) whether the caller has show_editors membership for any show linked to the requested audition, OR (2) whether the caller has a row in `audition_assignments` for the requested audition. Either is sufficient. This check is in addition to the standard `is_editor()` guard — Production users who pass neither check are rejected with an auth error.
+
 **`getRehearsalAttendanceForEvent()` — effective-roster-first pattern (established 21.3):**
 Any server action or data function that returns per-person attendance status for a rehearsal event must compute the effective roster first, then LEFT JOIN attendance records onto it. Never query `rehearsal_attendance` alone to produce a roster — that table only contains rows for people who have already been marked, so roster members with no attendance record yet would be silently absent from the result.
 
@@ -998,12 +1009,12 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 
 ```bash
 # Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
-# Active flags after Migration 031 (Phase 21):
+# Active flags after Migration 032 (Phase AUDITIONS):
 #   feature_calendar, feature_checkin, feature_blast,
-#   feature_rehearsals
+#   feature_rehearsals, feature_auditions
 # (feature_opportunities, feature_hours_milestones,
 #  feature_documents deleted — core features)
-grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals" \
+grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
@@ -1549,6 +1560,16 @@ Run before every Vercel deployment:
   array upsert natively. A per-person loop achieves the same
   result but is needlessly slow and not atomic.
   (21.3 — markAllRehearsalAttended() pattern)
+□ Any new detail page tab that depends on a not-yet-built
+  shared component (e.g. the Email Templates tab depending on
+  the TipTap merge tag extension from a later prompt): build
+  the tab as a stub in the initial UI prompt. The stub renders
+  a placeholder ("Email templates — coming soon") and nothing
+  else. The full implementation is delivered in a later prompt
+  once the dependency ships. Never leave a tab wired to a
+  non-existent component — it will throw a build error. Never
+  skip the stub — a missing tab in the UI is confusing and
+  hard to retrofit cleanly. Established AUDITIONS.2b/2c.
 □ Any prompt that adds items to 30BN_DEFERRED_VERIFICATIONS_
   v2.md: confirm items are manual owner browser-verification
   steps only. DB-confirmable schema items (table existence,
@@ -2987,6 +3008,29 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
                rehearsals seed, §11 Phase 21 completed
                summary, §13 R34 update + R37 new rule)
 30BN-DOC.57  ✓ Process Update v4.4 (this prompt)
+30BN-DOC.58  ✓ Brief Update v4.6 (Phase AUDITIONS fully
+               specced: §1/§2/§7/§8/§9/§11/§13 all updated;
+               8 new table schema blocks; Migration 032
+               pending; feature_auditions (5th flag); 11-
+               prompt structure; Production assignment model;
+               R38 TipTap merge tag extension pattern)
+
+Phase AUDITIONS — Audition Management System (pre-launch, next)
+  AUDITIONS.A   Pending — read-only audit
+  AUDITIONS.1a  Pending — Migration 032 + schema + types
+  AUDITIONS.1b  Pending — server actions
+  AUDITIONS.2a  Pending — Production show access (ADMIN-style)
+  AUDITIONS.2b  Pending — admin UI list + detail tabs 1–4
+  AUDITIONS.2c  Pending — Settings + Email Templates tab
+  AUDITIONS.3a  Pending — public signup page
+  AUDITIONS.3b  Pending — uploads + check-in + cards
+  AUDITIONS.4a  Pending — TipTap merge tag extension
+  AUDITIONS.4b  Pending — emails + polish + help + Deferred
+  DOC.59        Pending — Brief v4.7 + Process v4.5
+30BN-DOC.59  ✓ Process Update v4.5 (this prompt — Phase
+               AUDITIONS: §7 audition assignment pattern;
+               §10 feature_auditions grep; §11 stub tab
+               checklist item; §13 phase log + DOC.58/59)
 ```
 
 ---
