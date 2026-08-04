@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 17 | July 2026 | Phase 19 Complete
+## Version 18 | July 2026 | Phase 21 Complete
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -25,7 +25,10 @@ content fix), ADMIN.36 (Google OAuth registration path),
 ADMIN.37 (revalidatePath gaps + role guard fix),
 ADMIN.38 (is_active Google path + Production role guards),
 Phase 19 (communication preferences — 19.2 public forms,
-19.3 Call Board + admin + volunteer list).
+19.3 Call Board + admin + volunteer list), Phase 21
+(Rehearsal Management System — 21.1 feature flag, 21.2
+sidebar/schedule list/roster/dates, 21.3 attendance/public
+check-in/help).
 
 ---
 
@@ -6813,29 +6816,366 @@ immediately obvious. Restore to 30BN defaults
 
 ---
 
-*Total items in this carry-forward list: 830*
-*(788 v16 items + 42 new v17 items)*
-*Prior (v16): 788 items*
-*v17 additions: 42 new items — ADMIN.35 (V1–V4: dark
-mode main content area verification), ADMIN.36 (V1–V11:
-Google OAuth registration path — new registrant, pending,
-declined, approval, is_active check), ADMIN.37 (V1–V5:
-revalidatePath gaps — note add/edit/delete, status toggle
-list refresh), ADMIN.38 (V1–V2: Production role routing
-verification), Phase 19.2 (V1–V6: communication_preference
-on public signup form and /update form), Phase 19.3 (V1–V4:
-Call Board inline select, V5–V8: admin volunteer profile
-view/edit, V9–V14: volunteer list badge + filter + CSV).*
+## Phase 21 — Rehearsal Management System
+
+*Context: Phase 21 (21.A audit, 21.1 schema + server actions,
+21.2 sidebar/schedule list/roster/dates UI, 21.3 attendance +
+public QR check-in + help) added a full rehearsal scheduling
+system: `/crew/rehearsals` (list + detail with Roster/Dates/
+Attendance tabs), the public `/rehearsal-checkin/[token]`
+route, and a `feature_rehearsals` flag. Schema/RLS/migration
+items (rehearsal_schedule_assignments, rehearsal_date_
+assignments, rehearsal_attendance, calendar_events.
+check_in_token, feature_rehearsals app_settings row) are
+NOT listed here — they were confirmed directly via live
+Supabase queries in the 30BN-21.1 build report per the
+established "Database-state verification in build reports"
+convention (Process §8) and are out of this document's
+stated scope (manual/browser-only items).*
+
+---
+
+### Phase 21.1 — Feature Flag & Access
+
+*Prerequisites: Super Admin account (Setup Panel access).
+At least one rehearsal schedule with an assigned Production
+user for the role-based checks below.*
+
+- [ ] **21.1 V1** — As Super Admin: navigate to
+      /crew/settings/setup → Section 6 (Feature Flags).
+      Confirm a "Rehearsal Management" toggle row appears
+      alongside Calendar, Check-In, and Email Blast.
+
+- [ ] **21.1 V2** — Turn the Rehearsal Management toggle
+      off. Save. Navigate to /crew/rehearsals. Confirm
+      redirect to /crew/dashboard.
+
+- [ ] **21.1 V3** — With the toggle still off, open a
+      /rehearsal-checkin/[token] URL for an existing
+      rehearsal date. Confirm redirect to / (the public
+      landing page).
+
+- [ ] **21.1 V4** — As any role: confirm the Rehearsals
+      link disappears from the Sidebar entirely while the
+      toggle is off.
+
+- [ ] **21.1 V5** — Turn the Rehearsal Management toggle
+      back on. Save. Confirm /crew/rehearsals is accessible
+      again and the Sidebar link reappears without a hard
+      reload.
+
+---
+
+### Phase 21.2 — Sidebar & Schedule List
+
+*Prerequisites: Feature flag on (21.1 V5). Accounts for
+Super Admin, Owner Admin, Editor, Viewer, and Production
+roles.*
+
+- [ ] **21.2 V1** — Log in as each of Super Admin, Owner
+      Admin, Editor, Viewer, and Production. Confirm the
+      Sidebar shows a "Rehearsals" link (clipboard icon)
+      positioned directly after Calendar for every role.
+
+- [ ] **21.2 V2** — Hover the HelpTooltip (?) icon next to
+      the Rehearsals Sidebar link. Click it. Confirm
+      navigation to /crew/help#rehearsals.
+
+- [ ] **21.2 V3** — As each role above, click the
+      Rehearsals Sidebar link. Confirm /crew/rehearsals
+      loads without a redirect for every role, including
+      Production.
+
+- [ ] **21.2 V4** — As a Production user assigned to at
+      least one schedule: confirm the schedule list shows
+      only schedules that user is assigned to — not
+      schedules they are not on.
+
+- [ ] **21.2 V5** — As Super Admin, Owner Admin, Editor, or
+      Viewer: confirm the schedule list shows every
+      schedule regardless of assignment.
+
+- [ ] **21.2 V6** — As Super Admin, Owner Admin, Editor, or
+      Production: confirm a "New Schedule" button is
+      visible on the schedule list page. Click it. Confirm
+      the bulk rehearsal form opens.
+
+- [ ] **21.2 V7** — As Viewer: confirm no "New Schedule"
+      button appears on the schedule list page.
+
+- [ ] **21.2 V8** — On the schedule list page, toggle
+      between "Active" and "All." Confirm "Active" shows
+      only schedules with a future date, and "All" shows
+      every schedule regardless of date.
+
+- [ ] **21.2 V9** — Click the HelpTooltip next to the
+      "Rehearsals" page header. Confirm navigation to
+      /crew/help#rehearsals.
+
+---
+
+### Phase 21.2 — Roster Tab
+
+*Prerequisites: A rehearsal schedule with SA/OA/Editor
+access. At least one active Production user not yet
+assigned to the schedule.*
+
+- [ ] **21.2 V10** — Open a schedule detail page. On the
+      Roster tab, use the "Add User" search. Type a partial
+      name or email of an unassigned Production user.
+      Confirm matching results appear as you type.
+
+- [ ] **21.2 V11** — Click a search result. Confirm the
+      user appears in the assignee list without a page
+      reload.
+
+- [ ] **21.2 V12** — Click "Remove" on an assignee. Confirm
+      the browser confirmation prompt appears. Confirm the
+      user is removed from the list after confirming.
+
+- [ ] **21.2 V13** — As Viewer or Production: open the
+      Roster tab. Confirm the assignee list is visible but
+      no "Add User" search or "Remove" buttons appear.
+
+---
+
+### Phase 21.2 — Dates Tab
+
+*Prerequisites: A rehearsal schedule with at least two
+dates and at least one schedule assignee.*
+
+- [ ] **21.2 V14** — On the Dates tab, click a date row to
+      expand it. Confirm the effective roster loads (a
+      brief loading indicator, then a table of names).
+
+- [ ] **21.2 V15** — Collapse the row, then re-expand it.
+      Confirm no loading indicator appears the second time
+      (cached).
+
+- [ ] **21.2 V16** — Expand a different date row. Confirm
+      the previously expanded row collapses automatically —
+      only one open at a time.
+
+- [ ] **21.2 V17** — As SA/OA/Editor: on an expanded date,
+      click "Exclude from this date" for a schedule
+      assignee. Confirm that person disappears from this
+      date's effective roster only — still shows on the
+      Roster tab and on other dates.
+
+- [ ] **21.2 V18** — On the same date, use "Add user to
+      this date" to include a non-assigned Production user.
+      Confirm they appear in this date's effective roster
+      only.
+
+- [ ] **21.2 V19** — Remove the override added in V18
+      ("Remove from this date"). Confirm the roster returns
+      to the default (schedule assignees only) for that
+      date.
+
+- [ ] **21.2 V20** — As Viewer or Production: expand a
+      date on the Dates tab. Confirm the roster table is
+      visible but no override or "Add user" controls
+      appear.
+
+- [ ] **21.2 V21** — On an expanded date with a check-in
+      token, confirm a QR code renders in a white box —
+      visible in both light and dark admin mode; the
+      background never switches to the dark surface color.
+
+- [ ] **21.2 V22** — Click "Download PNG" under the QR
+      code. Confirm a rehearsal-checkin.png file downloads
+      and the QR scans correctly with a phone camera or QR
+      reader app.
+
+---
+
+### Phase 21.3 — Attendance Tab
+
+*Prerequisites: A rehearsal schedule with a known roster
+(21.2 V14). Accounts for SA/OA/Editor, Production (on and
+off the roster for the test date), and Viewer.*
+
+- [ ] **21.3 V1** — As any role, open the Attendance tab.
+      Confirm it renders real content — not the "Attendance
+      tracking will be available here" placeholder from
+      21.2.
+
+- [ ] **21.3 V2** — Confirm each date section header shows
+      "[X] of [Y] attended" before expanding, matching the
+      roster size and any existing attendance count.
+
+- [ ] **21.3 V3** — Expand a date. As SA/OA/Editor: confirm
+      every roster member has Showed / No-Show / Excused
+      buttons.
+
+- [ ] **21.3 V4** — Click "Showed" for one person. Confirm
+      their row updates to a green "Showed" badge without a
+      page reload, and the "[X] of [Y] attended" count
+      increments.
+
+- [ ] **21.3 V5** — Click "Change" on a marked row. Confirm
+      the three buttons reappear. Click "No-Show." Confirm
+      the badge switches to red "No-Show" and the attended
+      count decrements.
+
+- [ ] **21.3 V6** — As a Production user who IS on the
+      roster for this date: confirm mark buttons appear
+      only on their own row — all other rows show status
+      badges with no buttons.
+
+- [ ] **21.3 V7** — As a Production user who is NOT on the
+      roster for this date: confirm no mark buttons appear
+      anywhere on the Attendance tab for this date.
+
+- [ ] **21.3 V8** — As Viewer: confirm every row shows a
+      status badge only — no mark buttons anywhere.
+
+- [ ] **21.3 V9** — As SA/OA/Editor: click "Mark All
+      Present." Confirm an inline confirmation appears
+      ("Confirm — mark all [N] people as showed?") — no
+      modal popup. Click Cancel. Confirm nothing changes.
+
+- [ ] **21.3 V10** — Click "Mark All Present" again, then
+      Confirm. Confirm every roster member's status becomes
+      "Showed," a brief success notice shows the count
+      marked, and the "[X] of [Y]" count updates to Y of Y.
+
+- [ ] **21.3 V11** — Complete a public check-in for one
+      roster member (see Phase 21.3 — Public Check-In
+      below). Return to the Attendance tab for that date.
+      Confirm that person's row shows a "Self Check-In"
+      badge alongside their status badge.
+
+- [ ] **21.3 V12** — Confirm a person marked via "Mark All
+      Present" or an individual button does NOT show the
+      "Self Check-In" badge — only actual public check-ins
+      show it.
+
+- [ ] **21.3 V13** — Click the HelpTooltip on the Attendance
+      tab header. Confirm navigation to
+      /crew/help#rehearsals-attendance.
+
+---
+
+### Phase 21.3 — Public Check-In
+
+*Prerequisites: A rehearsal date with a generated QR code /
+check-in token (from the Dates tab). A roster member's name
+to select. A phone or second browser for a clean
+unauthenticated session.*
+
+- [ ] **21.3 V14** — Scan the QR code from the Dates tab
+      (or open the /rehearsal-checkin/[token] URL directly)
+      on a phone or in a private/incognito browser window.
+      Confirm the page loads with no login prompt.
+
+- [ ] **21.3 V15** — Confirm the rehearsal title, date,
+      time, and location (or "TBD") display correctly at
+      the top of the page.
+
+- [ ] **21.3 V16** — Confirm a dropdown lists every
+      effective roster member's name, with
+      "— Select your name —" as the default unselected
+      option.
+
+- [ ] **21.3 V17** — Confirm the "Check In" button is
+      disabled until a name is selected.
+
+- [ ] **21.3 V18** — Select a name. Confirm the Check In
+      button becomes enabled. Tap it. Confirm a success
+      message appears with the rehearsal title, date, and a
+      checked-in timestamp.
+
+- [ ] **21.3 V19** — Reload the same check-in URL and
+      select the same name again. Tap Check In. Confirm an
+      "already checked in" message appears showing the
+      ORIGINAL check-in time — not a new one.
+
+- [ ] **21.3 V20** — Open an invalid or made-up token URL
+      (e.g. /rehearsal-checkin/not-a-real-token). Confirm
+      the "Invalid or expired check-in link" message
+      appears — no crash, no roster dropdown.
+
+- [ ] **21.3 V21** — On a phone, confirm the dropdown and
+      Check In button are large enough to tap easily (no
+      accidental mis-taps) and the page reads clearly in a
+      dim room (e.g. a theater hallway).
+
+- [ ] **21.3 V22** — Confirm the page has no dark mode
+      styling — it looks identical regardless of the
+      device's system theme (light background throughout).
+
+- [ ] **21.3 V23** — View the page source or a search
+      engine's cache checker. Confirm the page is marked
+      noindex (won't appear in search results).
+
+---
+
+### Phase 21.3 — Help System
+
+*Prerequisites: Any admin account.*
+
+- [ ] **21.3 V24** — Navigate to /crew/help. Confirm
+      "Rehearsals" appears in the table of contents (both
+      the sticky sidebar TOC on desktop and the "Jump to
+      section" list on mobile), positioned after "Getting
+      Help."
+
+- [ ] **21.3 V25** — Click "Rehearsals" in the TOC. Confirm
+      the page scrolls to the Rehearsals section
+      (#rehearsals).
+
+- [ ] **21.3 V26** — Confirm all four subsections are
+      listed under Rehearsals in the TOC: Understanding
+      Schedules, Managing Assignments, Recording Attendance,
+      and The Check-In QR Code. Click each. Confirm each
+      scrolls to its matching anchor.
+
+- [ ] **21.3 V27** — As a Production user: navigate to
+      /crew/help. Confirm the Rehearsals section (and all
+      four subsections) is visible — not hidden for this
+      role.
+
+- [ ] **21.3 V28** — Read through the Rehearsals section
+      content. Confirm it accurately describes the actual
+      Roster/Dates/Attendance tab behavior and the public
+      check-in flow.
+
+---
+
+*Total items in this carry-forward list: 885*
+*(830 v17 items + 55 new v18 items)*
+*Prior (v17): 830 items*
+*v18 additions: 55 new items — Phase 21 Rehearsal Management
+System: 21.1 (V1–V5: feature_rehearsals toggle, flag-off
+blocking of /crew/rehearsals and /rehearsal-checkin/,
+Sidebar link visibility, flag re-enable), 21.2 (V1–V9:
+Sidebar link + HelpTooltip + role access + schedule list
+filters and New Schedule button; V10–V13: Roster tab
+assign/remove/search/read-only guard; V14–V22: Dates tab
+expand/collapse/cache, override controls, QR render +
+download), 21.3 (V1–V13: Attendance tab marking, role-scoped
+controls, Mark All Present inline confirm, Self Check-In
+badge; V14–V23: public /rehearsal-checkin/[token] flow —
+roster dropdown, success/already-checked-in/invalid-token
+states, mobile/noindex; V24–V28: Help System Rehearsals
+section navigation, role visibility, content accuracy).
+Schema/RLS/migration verification intentionally excluded —
+already confirmed live via Supabase queries in the 30BN-21.1
+build report; out of this document's manual-verification-only
+scope.*
+*v18 superseded: none.*
+*v18 updated: none.*
 *v17 superseded: none.*
 *v17 updated: none (Seed Data Cleanup: ADMIN.36 Google test
 registration cleanup note added; Phase 19 no-cleanup note
 added).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.4 (not counted here)*
-*Last updated: July 2026 — v17 (Phase 19 complete:
-communication_preference on volunteers; Google OAuth
-registration path; dark mode main content fix; revalidatePath
-gaps fixed; Production role guard corrections.)*
+*Last updated: July 2026 — v18 (Phase 21 complete:
+Rehearsal Management System — feature flag, sidebar/schedule
+list/roster/dates UI, attendance tracking, public QR
+check-in, Help System section.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*

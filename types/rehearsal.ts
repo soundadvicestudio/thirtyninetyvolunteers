@@ -4,6 +4,7 @@ export type RehearsalEventSummary = {
   start_time: string
   end_time: string
   location_id: string | null
+  location_name: string | null
   rehearsal_batch_id: string | null
   status: 'pending' | 'approved' | 'cancelled'
 }
@@ -54,7 +55,6 @@ export type RehearsalEventRow = RehearsalEventSummary & {
   overrideCount: number
   attendanceCount: number
   check_in_token: string | null
-  location_name: string | null
 }
 
 export type RehearsalScheduleDetail = {
@@ -64,3 +64,12 @@ export type RehearsalScheduleDetail = {
 }
 
 export type RehearsalActionResult = { success: boolean; error?: string }
+
+export type RehearsalAttendanceEntry = {
+  adminUserId: string
+  name: string
+  role: string
+  status: 'showed' | 'no-show' | 'excused' | null
+  source: 'checkin' | 'manual' | null
+  checkedInAt: string | null
+}

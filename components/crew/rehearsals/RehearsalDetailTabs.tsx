@@ -11,8 +11,16 @@ import {
   addDateOverride,
   removeDateOverride,
   getEffectiveRoster,
+  getRehearsalAttendanceForEvent,
+  markRehearsalAttendance,
+  markAllRehearsalAttended,
 } from '@/lib/actions/rehearsals-admin'
-import type { RehearsalScheduleDetail, RehearsalEventRow, RehearsalScheduleAssignee } from '@/types/rehearsal'
+import type {
+  RehearsalScheduleDetail,
+  RehearsalEventRow,
+  RehearsalScheduleAssignee,
+  RehearsalAttendanceEntry,
+} from '@/types/rehearsal'
 import type { EffectiveRosterMember } from '@/lib/utils/rehearsal-roster'
 import type { AdminRole } from '@/types/admin'
 
@@ -44,6 +52,19 @@ function eventStatusBadge(status: RehearsalEventRow['status']) {
         label: 'Cancelled',
         className: 'bg-gray-100 text-gray-600 dark:bg-dark-border dark:text-dark-muted',
       }
+  }
+}
+
+function attendanceStatusBadge(status: RehearsalAttendanceEntry['status']) {
+  switch (status) {
+    case 'showed':
+      return { label: 'Showed', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' }
+    case 'no-show':
+      return { label: 'No-Show', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }
+    case 'excused':
+      return { label: 'Excused', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' }
+    default:
+      return null
   }
 }
 
@@ -458,9 +479,337 @@ function DatesTab({
   )
 }
 
+function AttendanceSection({
+  event,
+  isExpanded,
+  onToggle,
+  entries,
+  hasLoaded,
+  isLoading,
+  canMarkAny,
+  canMarkOwn,
+  adminId,
+  onMark,
+  onMarkAll,
+  isPending,
+  error,
+  markAllSuccess,
+}: {
+  event: RehearsalEventRow
+  isExpanded: boolean
+  onToggle: () => void
+  entries: RehearsalAttendanceEntry[]
+  hasLoaded: boolean
+  isLoading: boolean
+  canMarkAny: boolean
+  canMarkOwn: boolean
+  adminId: string
+  onMark: (userId: string, status: 'showed' | 'no-show' | 'excused') => void
+  onMarkAll: () => void
+  isPending: boolean
+  error?: string
+  markAllSuccess?: number
+}) {
+  const [confirmingMarkAll, setConfirmingMarkAll] = useState(false)
+  const [changingUserId, setChangingUserId] = useState<string | null>(null)
+
+  const attendedCount = hasLoaded ? entries.filter((e) => e.status === 'showed').length : event.attendanceCount
+  const totalCount = hasLoaded ? entries.length : event.rosterCount
+
+  return (
+    <div className="border border-divider dark:border-dark-border rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors cursor-pointer"
+      >
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="font-medium text-dark dark:text-dark-text">
+            {formatCT(event.start_time, 'EEE, MMM d')} · {formatCT(event.start_time, 'h:mm a')}–
+            {formatCT(event.end_time, 'h:mm a')}
+          </span>
+          <span className="text-mid-gray dark:text-dark-muted">{event.location_name ?? 'TBD'}</span>
+        </div>
+        <span className="text-xs font-semibold text-mid-gray dark:text-dark-muted shrink-0">
+          {attendedCount} of {totalCount} attended
+        </span>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-divider dark:border-dark-border p-4 space-y-4">
+          {error && (
+            <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
+              {error}
+            </div>
+          )}
+
+          {markAllSuccess !== undefined && (
+            <div className="rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-800 p-3 text-sm text-green-800 dark:text-green-400">
+              {`Marked ${markAllSuccess} ${markAllSuccess === 1 ? 'person' : 'people'} as showed.`}
+            </div>
+          )}
+
+          {canMarkAny && totalCount > 0 && (
+            <div>
+              {confirmingMarkAll ? (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-sm text-dark dark:text-dark-text">
+                    {`Confirm — mark all ${totalCount} people as showed?`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMarkAll()
+                      setConfirmingMarkAll(false)
+                    }}
+                    disabled={isPending}
+                    className="text-sm font-semibold text-white bg-brand-primary px-3 py-1.5 rounded-lg hover:bg-brand-primary-mid transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingMarkAll(false)}
+                    className="text-sm font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingMarkAll(true)}
+                  className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
+                >
+                  Mark All Present
+                </button>
+              )}
+            </div>
+          )}
+
+          {isLoading ? (
+            <p className="text-sm text-mid-gray dark:text-dark-muted">Loading attendance…</p>
+          ) : hasLoaded && entries.length === 0 ? (
+            <p className="text-sm text-mid-gray dark:text-dark-muted">No one on the roster for this date.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-divider dark:border-dark-border">
+                    <th className="px-2 py-2 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                      Name
+                    </th>
+                    <th className="px-2 py-2 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                      Role
+                    </th>
+                    <th className="px-2 py-2 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                      Status
+                    </th>
+                    <th className="px-2 py-2 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                      Checked In
+                    </th>
+                    {(canMarkAny || canMarkOwn) && <th className="px-2 py-2" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry) => {
+                    const badgeInfo = roleBadge(entry.role)
+                    const statusBadgeInfo = attendanceStatusBadge(entry.status)
+                    const canMarkThis = canMarkAny || (canMarkOwn && entry.adminUserId === adminId)
+                    const showButtons = canMarkThis && (entry.status === null || changingUserId === entry.adminUserId)
+
+                    return (
+                      <tr key={entry.adminUserId} className="border-b border-divider dark:border-dark-border last:border-0">
+                        <td className="px-2 py-2 text-dark dark:text-dark-text">{entry.name}</td>
+                        <td className="px-2 py-2">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${badgeInfo.className}`}>
+                            {badgeInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {statusBadgeInfo && (
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${statusBadgeInfo.className}`}>
+                                {statusBadgeInfo.label}
+                              </span>
+                            )}
+                            {entry.source === 'checkin' && (
+                              <span className="block w-fit text-xs px-1.5 py-0.5 rounded bg-brand-primary-light text-brand-primary dark:text-brand-primary-mid border border-brand-primary/20 dark:border-brand-primary-mid/30">
+                                Self Check-In
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-mid-gray dark:text-dark-muted">
+                          {entry.checkedInAt ? formatCT(entry.checkedInAt, 'h:mm a') : '—'}
+                        </td>
+                        {(canMarkAny || canMarkOwn) && (
+                          <td className="px-2 py-2 text-right">
+                            {canMarkThis ? (
+                              showButtons ? (
+                                <div className="flex items-center gap-2 justify-end flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onMark(entry.adminUserId, 'showed')
+                                      setChangingUserId(null)
+                                    }}
+                                    disabled={isPending}
+                                    className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-50"
+                                  >
+                                    Showed
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onMark(entry.adminUserId, 'no-show')
+                                      setChangingUserId(null)
+                                    }}
+                                    disabled={isPending}
+                                    className="text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-50"
+                                  >
+                                    No-Show
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onMark(entry.adminUserId, 'excused')
+                                      setChangingUserId(null)
+                                    }}
+                                    disabled={isPending}
+                                    className="text-xs font-semibold px-2 py-1 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-50"
+                                  >
+                                    Excused
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setChangingUserId(entry.adminUserId)}
+                                  className="text-xs font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer"
+                                >
+                                  Change
+                                </button>
+                              )
+                            ) : null}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AttendanceTab({
+  events,
+  adminRole,
+  adminId,
+}: {
+  events: RehearsalEventRow[]
+  adminRole: AdminRole
+  adminId: string
+}) {
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  const [attendanceCache, setAttendanceCache] = useState<Map<string, RehearsalAttendanceEntry[]>>(new Map())
+  const [loadingEventId, setLoadingEventId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [errorByEvent, setErrorByEvent] = useState<Record<string, string>>({})
+  const [markAllSuccessByEvent, setMarkAllSuccessByEvent] = useState<Record<string, number>>({})
+
+  const canMarkAny = EDITOR_TIER_ROLES.includes(adminRole)
+  const canMarkOwn = adminRole === 'production'
+
+  function fetchAttendance(eventId: string) {
+    setLoadingEventId(eventId)
+    startTransition(async () => {
+      const result = await getRehearsalAttendanceForEvent(eventId)
+      setLoadingEventId(null)
+      if (result.success) {
+        setAttendanceCache((prev) => new Map(prev).set(eventId, result.attendance))
+      }
+    })
+  }
+
+  function toggleExpand(eventId: string) {
+    if (expandedEventId === eventId) {
+      setExpandedEventId(null)
+      return
+    }
+    setExpandedEventId(eventId)
+    if (!attendanceCache.has(eventId)) {
+      fetchAttendance(eventId)
+    }
+  }
+
+  function handleMark(eventId: string, userId: string, status: 'showed' | 'no-show' | 'excused') {
+    setErrorByEvent((prev) => ({ ...prev, [eventId]: '' }))
+    startTransition(async () => {
+      const result = await markRehearsalAttendance(eventId, userId, status)
+      if (!result.success) {
+        setErrorByEvent((prev) => ({ ...prev, [eventId]: result.error ?? 'Something went wrong.' }))
+        return
+      }
+      fetchAttendance(eventId)
+    })
+  }
+
+  function handleMarkAll(eventId: string) {
+    setErrorByEvent((prev) => ({ ...prev, [eventId]: '' }))
+    startTransition(async () => {
+      const result = await markAllRehearsalAttended(eventId)
+      if (!result.success) {
+        setErrorByEvent((prev) => ({ ...prev, [eventId]: result.error ?? 'Something went wrong.' }))
+        return
+      }
+      setMarkAllSuccessByEvent((prev) => ({ ...prev, [eventId]: result.markedCount }))
+      fetchAttendance(eventId)
+      setTimeout(() => {
+        setMarkAllSuccessByEvent((prev) => {
+          const next = { ...prev }
+          delete next[eventId]
+          return next
+        })
+      }, 3000)
+    })
+  }
+
+  return (
+    <div className="space-y-3">
+      {events.length === 0 && <p className="text-sm text-mid-gray dark:text-dark-muted">No dates on this schedule.</p>}
+      {events.map((event) => (
+        <AttendanceSection
+          key={event.id}
+          event={event}
+          isExpanded={expandedEventId === event.id}
+          onToggle={() => toggleExpand(event.id)}
+          entries={attendanceCache.get(event.id) ?? []}
+          hasLoaded={attendanceCache.has(event.id)}
+          isLoading={loadingEventId === event.id}
+          canMarkAny={canMarkAny}
+          canMarkOwn={canMarkOwn}
+          adminId={adminId}
+          onMark={(userId, status) => handleMark(event.id, userId, status)}
+          onMarkAll={() => handleMarkAll(event.id)}
+          isPending={isPending}
+          error={errorByEvent[event.id]}
+          markAllSuccess={markAllSuccessByEvent[event.id]}
+        />
+      ))}
+    </div>
+  )
+}
+
 export default function RehearsalDetailTabs({
   detail,
   adminRole,
+  adminId,
   productionUsers,
   qrData,
 }: {
@@ -521,9 +870,7 @@ export default function RehearsalDetailTabs({
           />
         )}
         {activeTab === 'attendance' && (
-          <div className="py-10 text-center text-sm text-mid-gray dark:text-dark-muted">
-            Attendance tracking will be available here.
-          </div>
+          <AttendanceTab events={detail.events} adminRole={adminRole} adminId={adminId} />
         )}
       </div>
     </div>

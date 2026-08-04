@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Feature flags: fetched once per request, only when the path is one of
-  // the six guarded routes (perf — skips the app_settings query entirely
+  // the seven guarded routes (perf — skips the app_settings query entirely
   // for every other request).
   const needsFlagCheck =
     pathname.startsWith('/crew/calendar') ||
@@ -45,7 +45,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/crew/communication') ||
     pathname.startsWith('/crew/rehearsals') ||
     pathname === '/calendar' ||
-    pathname.startsWith('/checkin/')
+    pathname.startsWith('/checkin/') ||
+    pathname.startsWith('/rehearsal-checkin/')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -58,6 +59,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
   if (pathname.startsWith('/checkin/') && flags && !flags.checkin) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  if (pathname.startsWith('/rehearsal-checkin/') && flags && !flags.rehearsals) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
@@ -154,5 +158,6 @@ export const config = {
     '/auth/callback',
     '/calendar',
     '/checkin/:path*',
+    '/rehearsal-checkin/:path*',
   ],
 }

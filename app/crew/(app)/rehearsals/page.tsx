@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getRehearsalSchedules } from '@/lib/actions/rehearsals-admin'
 import RehearsalsListClient from '@/components/crew/rehearsals/RehearsalsListClient'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { Location } from '@/types/show'
 
 export default async function RehearsalsPage() {
@@ -28,7 +29,10 @@ export default async function RehearsalsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Rehearsals</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text flex items-center gap-1.5">
+          Rehearsals
+          <HelpTooltip anchor="rehearsals" label="Rehearsals" />
+        </h1>
         <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
           Rehearsal schedules, assignments, and check-in.
         </p>

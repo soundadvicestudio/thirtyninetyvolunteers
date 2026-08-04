@@ -13,7 +13,7 @@ export async function getRehearsalCheckInData(token: string): Promise<RehearsalC
 
   const { data: event } = await supabase
     .from('calendar_events')
-    .select('id, title, start_time, end_time, location_id, rehearsal_batch_id, status')
+    .select('id, title, start_time, end_time, location_id, rehearsal_batch_id, status, location:locations(name)')
     .eq('check_in_token', token)
     .maybeSingle()
 
@@ -32,7 +32,16 @@ export async function getRehearsalCheckInData(token: string): Promise<RehearsalC
   const roster = await resolveEffectiveRoster(supabase, event.id, event.rehearsal_batch_id)
 
   return {
-    event,
+    event: {
+      id: event.id,
+      title: event.title,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      location_id: event.location_id,
+      location_name: Array.isArray(event.location) ? (event.location[0]?.name ?? null) : null,
+      rehearsal_batch_id: event.rehearsal_batch_id,
+      status: event.status,
+    },
     batchTitle,
     effectiveRoster: roster.map((r) => ({ id: r.id, full_name: r.full_name })),
   }

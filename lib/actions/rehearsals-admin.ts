@@ -11,6 +11,7 @@ import type {
   RehearsalEventRow,
   RehearsalScheduleAssignee,
   RehearsalActionResult,
+  RehearsalAttendanceEntry,
 } from '@/types/rehearsal'
 import type { EffectiveRosterMember } from '@/lib/utils/rehearsal-roster'
 
@@ -364,4 +365,95 @@ export async function markRehearsalAttendance(
 
   revalidatePath(`/crew/rehearsals/${event.rehearsal_batch_id}`)
   return { success: true }
+}
+
+export type GetRehearsalAttendanceForEventResult =
+  | { success: true; attendance: RehearsalAttendanceEntry[] }
+  | { success: false; error: string }
+
+// Returns the full effective roster for the event, LEFT-JOINed against
+// rehearsal_attendance — every roster member appears even if they have no
+// attendance record yet (status/source/checkedInAt = null in that case).
+// Querying rehearsal_attendance alone would silently omit unmarked members.
+export async function getRehearsalAttendanceForEvent(
+  calendarEventId: string
+): Promise<GetRehearsalAttendanceForEventResult> {
+  const supabase = await getServerClient()
+  const admin = await getAdminUser()
+  if (!admin) return { success: false, error: 'Unauthorized' }
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.rehearsals) return { success: false, error: 'Feature not enabled' }
+
+  const { data: event, error: eventError } = await supabase
+    .from('calendar_events')
+    .select('id, rehearsal_batch_id')
+    .eq('id', calendarEventId)
+    .single()
+
+  if (eventError || !event) return { success: false, error: 'Event not found.' }
+
+  const roster = await resolveEffectiveRoster(supabase, event.id, event.rehearsal_batch_id)
+  if (roster.length === 0) return { success: true, attendance: [] }
+
+  const rosterIds = roster.map((r) => r.id)
+
+  const { data: attendanceRows } = await supabase
+    .from('rehearsal_attendance')
+    .select('admin_user_id, status, source, checked_in_at')
+    .eq('calendar_event_id', calendarEventId)
+    .in('admin_user_id', rosterIds)
+
+  const attendanceMap = new Map((attendanceRows ?? []).map((row) => [row.admin_user_id, row]))
+
+  const attendance: RehearsalAttendanceEntry[] = roster.map((member) => {
+    const row = attendanceMap.get(member.id)
+    return {
+      adminUserId: member.id,
+      name: member.full_name,
+      role: member.role,
+      status: row?.status ?? null,
+      source: row?.source ?? null,
+      checkedInAt: row?.checked_in_at ?? null,
+    }
+  })
+
+  return { success: true, attendance }
+}
+
+export type MarkAllRehearsalAttendedResult = { success: boolean; markedCount: number; error?: string }
+
+export async function markAllRehearsalAttended(calendarEventId: string): Promise<MarkAllRehearsalAttendedResult> {
+  const supabase = await getServerClient()
+  const admin = await getAdminUser()
+  if (!admin) return { success: false, markedCount: 0, error: 'Unauthorized' }
+  const flags = await getFeatureFlags(supabase)
+  if (!flags.rehearsals) return { success: false, markedCount: 0, error: 'Feature not enabled' }
+  if (!EDITOR_TIER_ROLES.includes(admin.role)) return { success: false, markedCount: 0, error: 'Unauthorized' }
+
+  const { data: event, error: eventError } = await supabase
+    .from('calendar_events')
+    .select('id, rehearsal_batch_id')
+    .eq('id', calendarEventId)
+    .single()
+
+  if (eventError || !event) return { success: false, markedCount: 0, error: 'Event not found.' }
+
+  const roster = await resolveEffectiveRoster(supabase, event.id, event.rehearsal_batch_id)
+  if (roster.length === 0) return { success: true, markedCount: 0 }
+
+  const { error } = await supabase.from('rehearsal_attendance').upsert(
+    roster.map((member) => ({
+      calendar_event_id: calendarEventId,
+      admin_user_id: member.id,
+      status: 'showed' as const,
+      source: 'manual' as const,
+      marked_by: admin.id,
+    })),
+    { onConflict: 'calendar_event_id,admin_user_id' }
+  )
+
+  if (error) return { success: false, markedCount: 0, error: error.message }
+
+  revalidatePath(`/crew/rehearsals/${event.rehearsal_batch_id}`)
+  return { success: true, markedCount: roster.length }
 }

@@ -137,6 +137,17 @@ const ALL_SECTIONS: TocSection[] = [
   { id: 'callboard', label: 'The Volunteer Call Board', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
   { id: 'opportunities', label: 'Standing Opportunities', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
   { id: 'getting-help', label: 'Getting Help', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+  {
+    id: 'rehearsals',
+    label: 'Rehearsals',
+    roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
+    children: [
+      { id: 'rehearsals-schedules', label: 'Understanding Schedules', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'rehearsals-assignments', label: 'Managing Assignments', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'rehearsals-attendance', label: 'Recording Attendance', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'rehearsals-checkin', label: 'The Check-In QR Code', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+    ],
+  },
 ]
 
 function flattenSections(sections: TocSection[]): TocSection[] {
@@ -1144,6 +1155,72 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
               <Tip>
                 {`Most questions can be answered by exploring the page in question. Nothing in Production Crew can be accidentally broken beyond repair, and nothing is permanently deleted (only archived).`}
               </Tip>
+            </section>
+          )}
+
+          {show('getting-help') && <Divider />}
+
+          {/* ───────── Rehearsals ───────── */}
+          {show('rehearsals') && (
+            <section id="rehearsals">
+              <h2 className={h2Classes}>{`Rehearsals`}</h2>
+              <p className={pClasses}>
+                {`Rehearsal Management lets you schedule rehearsal dates, assign your team, and track who showed up.`}
+              </p>
+
+              {show('rehearsals-schedules') && (
+                <>
+                  <h3 id="rehearsals-schedules" className={h3Classes}>{`Understanding Schedules`}</h3>
+                  <p className={pClasses}>
+                    {`A rehearsal schedule is a named batch of dates for one production. Create one using the "New Schedule" button on the Rehearsals page.`}
+                  </p>
+                  <p className={pClasses}>{`Dates go through the same approval queue as other calendar events.`}</p>
+                  <p className={pClasses}>{`Production users see only the schedules they are assigned to.`}</p>
+                </>
+              )}
+
+              {show('rehearsals-assignments') && (
+                <>
+                  <h3 id="rehearsals-assignments" className={h3Classes}>{`Managing Assignments`}</h3>
+                  <p className={pClasses}>
+                    {`Every schedule has a default roster — the people expected at every date. Use the Roster tab to add or remove people from the default roster.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Individual dates can override the default. Exclude someone from one date, or add someone for one date only. Use the Dates tab for per-date changes.`}
+                  </p>
+                  <Tip>
+                    {`Overrides affect only the specific date. The default roster stays the same. For example: your lighting designer is only needed the final two weeks. Add them to just those dates using the Dates tab.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('rehearsals-attendance') && (
+                <>
+                  <h3 id="rehearsals-attendance" className={h3Classes}>{`Recording Attendance`}</h3>
+                  <p className={pClasses}>
+                    {`Open any date on the Attendance tab to mark who showed up. Three options: Showed, No-Show, or Excused.`}
+                  </p>
+                  <p className={pClasses}>{`Editors and above can mark anyone. Production users can mark their own attendance.`}</p>
+                  <p className={pClasses}>
+                    {`Use "Mark All Present" to mark the full roster as showed in one step. You can change a mark at any time.`}
+                  </p>
+                </>
+              )}
+
+              {show('rehearsals-checkin') && (
+                <>
+                  <h3 id="rehearsals-checkin" className={h3Classes}>{`The Check-In QR Code`}</h3>
+                  <p className={pClasses}>
+                    {`Each rehearsal date has a QR code on the Dates tab. Team members scan it on their phone to check themselves in. No login required.`}
+                  </p>
+                  <p className={pClasses}>{`They select their name from a list and tap Check In. Their attendance is recorded automatically.`}</p>
+                  <Tip>
+                    {`The QR links to a public page. Share it with your team, but treat it like a door code. `}
+                    {`Don't`}
+                    {` post it publicly.`}
+                  </Tip>
+                </>
+              )}
             </section>
           )}
         </div>
