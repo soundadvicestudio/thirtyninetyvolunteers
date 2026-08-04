@@ -1040,7 +1040,7 @@ Role-filtered single-page help guide. The page reads the current admin's role an
 Page structure: Server Component shell at `app/crew/(app)/help/page.tsx` passes role and `calendarEditor` to `HelpContent` component. `HelpContent.tsx` contains: `TocSection` type, `ALL_SECTIONS` registry, `filterSections()` + `isSectionVisible()` + `flattenSections()` helpers, Tip/Warning callout components, role-aware `TocList`, and all section JSX. Note: ALL_SECTIONS is a pure TOC/role registry — section content lives in guarded JSX blocks in the component return body.
 
 Role visibility:
-- Super Admin: all 13 sections
+- Super Admin: all 14 sections
 - Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access). All non-Settings ALL_SECTIONS entries now include `owner_admin` — fixed in HELP.2e (47 entries updated).
 - Editor: all sections except Settings
 - Viewer: all sections except Settings and Communication; no edit-only subsections
