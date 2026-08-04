@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.4
-### Created: July 2026 | Last Updated: July 2026 — v4.4 (ADMIN.40–42 complete — OpportunityForm cascade fix, globals.css opacity-variant gap closed across all components/ui/ primitives; Phase 21 architecture fully designed and locked — assignment model, schema, 4-prompt structure; new opacity-variant pattern rule; Phase 21 next pre-launch)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.5
+### Created: July 2026 | Last Updated: August 2026 — v4.5 (Phase 21 — Rehearsal Management System complete: 21.A audit through 21.3 attendance/QR/help; Migration 031 applied; new schema (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance, calendar_events.check_in_token); feature_rehearsals flag; public /rehearsal-checkin/[token] route; HelpContent 14th section; R37 added (admin_users.id = auth.uid() for RLS); Phase 17 Launch is next)
 
 ---
 
@@ -11,7 +11,7 @@
 **Built and maintained by:** Jonathan Sturcken (YLC member) — sole point of contact for questions, updates, and future development.
 
 **Two user-facing surfaces:**
-- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`)
+- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`) · Rehearsal self check-in (`/rehearsal-checkin/[token]`)
 - **Private (Production Crew):** Full admin backend for Super Admins, Editors, and Viewers
 
 **Supabase project:** `thirtyninetyvolunteers` (ID: `nutvjkplbtobcmymqtzx`, org: `thirtybyninety`)
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** ADMIN.40–42 complete. Dark mode cascade fully closed — all known gaps resolved including OpportunityForm.tsx and globals.css opacity-variant rules across all components/ui/ primitives. Phase 21 (Rehearsal Management) architecture designed and locked — ready for build. Phase 17 (Launch) follows Phase 21. Phase CAST planned post-launch.
+**Current phase:** Phase 21 (Rehearsal Management System) complete — all four prompts shipped (21.A audit, 21.1 schema + server actions, 21.2 schedule list/roster/dates UI, 21.3 attendance/QR check-in/help). Migration 031 applied. Phase 17 (Launch) is next. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -39,7 +39,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
-| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), and `/crew/help`. |
+| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, and `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules). |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can create and manage Editor, Viewer, Production, and Owner Admin accounts. Owner Admin can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
@@ -197,7 +197,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
 | Production | `/crew/calendar`, `/crew/media`, and `/crew/help` only | Calendar submission only | No | Calendar-only role. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Sidebar shows Calendar, Media Library, and Help only. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library (`/crew/media`) access confirmed ADMIN.30. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
-| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). |
 
 **`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor, Viewer, or Owner Admin account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this; `owner_admin` CAN have `calendar_editor = true` — CHECK constraint updated in Migration 023). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
@@ -209,6 +209,8 @@ Mid Gray:             #555555  --color-mid-gray
 **`is_active` gating on the Google OAuth path (fixed ADMIN.38):** The callback's `admin_users` lookup originally selected only the columns needed to establish identity, omitting `is_active` — a deactivated admin could complete Google OAuth and reach `/crew/dashboard` despite being deactivated everywhere else. Fixed: the SELECT was widened to include `is_active`; when `is_active === false`, the callback calls `supabase.auth.signOut()` on the session client BEFORE redirecting to `?error=not_authorized` — a bare redirect without sign-out would leave a live Supabase Auth session in the browser. This matches the sign-out-before-redirect pattern the email/password path already used via `getAdminUser()`.
 
 **Proxy/Middleware (CAL.2, renamed ADMIN.28):** Route protection is handled by `proxy.ts` at the repo root (renamed from `middleware.ts` to `proxy.ts` in ADMIN.28 — Next.js 16 convention). Production-role users are restricted — any `/crew/*` route other than `/crew/calendar`, `/crew/calendar/*`, and `/crew/help` redirects to `/crew/calendar` (`/crew/help` exception added HELP.2a). Owner Admin is permitted on all `/crew/*` routes EXCEPT `/crew/settings/setup` (hard-redirect to `/crew/dashboard`). Self-registered accounts are held in `pending_registrations` with status = 'pending' until a Super Admin approves and assigns a role. Super Admins receive an email notification on each new registration request. Feature flag route guards (SETUP.1): `proxy.ts` matcher extended to include public routes `/calendar` and `/checkin/:path*`. When a flagged feature is off, proxy blocks: `/crew/calendar` and `/crew/calendar/*` (`feature_calendar`); `/crew/tools/checkin` (`feature_checkin`); `/crew/communication` (`feature_blast`); `/calendar` (`feature_calendar`); `/checkin/*` (`feature_checkin`). Flag fetch is conditional — only fires when the request path matches one of the five guarded paths. Uses `getAdminClient()` and `getFeatureFlags()`.
+
+**Phase 21 proxy.ts additions (21.2 + 21.3):** Four changes were made to `proxy.ts` across Phase 21: (1) `needsFlagCheck` extended to cover `/crew/rehearsals` (21.2) and `/rehearsal-checkin/` paths (21.3 — required a separate condition; the `/crew/rehearsals` addition did not cover it). (2) Production-role restriction exception: `!pathname.startsWith('/crew/rehearsals')` added to the Production allowlist alongside `/crew/calendar`, `/crew/help`, and `/crew/media`. Production users may access the Rehearsals route tree; per-schedule filtering happens at the data layer. (3) Crew-route flag block for `/crew/rehearsals` added after the calendar/checkin/blast blocks — redirects to `/crew/dashboard` when `flags.rehearsals` is false. (4) `/rehearsal-checkin/:path*` added to the matcher array (21.3, before the public flag block was written — SETUP.1 F1 discipline); public flag block redirects to `/` when `flags.rehearsals` is false and pathname starts with `/rehearsal-checkin/`.
 
 ---
 
@@ -936,6 +938,69 @@ Clicking Edit on a recurring event in the day panel opens the scope picker first
 
 **ADMIN.25 — Default Hours Fallback Update:** `getLocationHoursBucket()` in `lib/actions/attendance.ts` (and the parallel auto-fill in `ShowForm.tsx`) was updated to check `locations.default_hours` (Migration 020 — numeric, nullable) as the primary source before falling back to the `app_settings` name→bucket map. This means per-location default hours can be set directly on the `locations` record. The three existing `app_settings` keys (`default_hours_mainstage`, `default_hours_studio_x`, `default_hours_one_off`) remain as fallbacks when `locations.default_hours` is null. Per-location `default_hours` UI built in CAL.8 (`/crew/settings/locations`).
 
+**Rehearsal Management (`/crew/rehearsals`, Phase 21 — complete):**
+Gated behind `feature_rehearsals` flag (R34 compliant). Visible to all roles when flag is on. Production users see only schedules they are assigned to.
+
+**Sidebar nav link:** ClipboardList icon. Label: "Rehearsals". Positioned after Calendar. HelpTooltip → `#rehearsals`. Data-driven via NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist — three-part atomic edit (Audit E, 21.A confirmed pattern).
+
+**Schedule list (`/crew/rehearsals`):** Server Component. Columns: Title | Date range | Assignee count | Next rehearsal date | Status | View link. Note: no "Show" column — `rehearsal_batches` has no `show_id` FK; the batch title serves as the production identifier (Brief column list corrected from original spec). Active / All filter (client-side toggle, default Active). "New Schedule" button surfaces `CalendarBulkRehearsalForm` as the primary entry point for SA/OA/Editor/Production — confirmed self-contained and reusable outside CalendarShell (21.2 Task A). Viewer sees no "New Schedule" button. HelpTooltip on page header → `#rehearsals`.
+
+**Schedule detail (`/crew/rehearsals/[id]`):** Server Component shell + Client Component tabs. Three tabs: Roster | Dates | Attendance. Production access guard: redirect to `/crew/rehearsals` if Production user is not in `rehearsal_schedule_assignments` for this batch.
+
+*Roster tab:*
+- List of schedule-level assignees: name, role badge, email
+- "Add user" search (SA/OA/Editor only): filters Production admin users client-side, calls `assignUserToSchedule()`
+- "Remove" per assignee (SA/OA/Editor): calls `removeUserFromSchedule()`
+- Per-assignee override count: displays "Per-date overrides: [N]" (read-only in Roster tab — full override UI is in Dates tab)
+
+*Dates tab:*
+- All `calendar_events` in batch, ordered by start_time ASC
+- Each row: date/time via `formatCT()` (start_time is timestamptz — NOT formatWallClockCT()), location, roster count, attendance count / total, status badge
+- Expandable per-date: calls `getEffectiveRoster(eventId)` via useTransition on first expand; caches in Map<eventId, roster> so re-expand does not re-fetch
+- Override controls (SA/OA/Editor only): "Exclude from this date" → `addDateOverride(eventId, userId, 'exclude')`; "Add to this date" (non-assignees) → `addDateOverride(eventId, userId, 'include')`; "Remove from this date" → `removeDateOverride()`
+- QR code per date: PNG via `generateQR()` from `lib/qr.ts` (Level H, R6). Links to `/rehearsal-checkin/[check_in_token]`. White container regardless of theme (scanability — same rule as show check-in QRs from Phase 14). Pre-generated server-side in the shell page and passed as prop to avoid async calls inside the Client Component.
+- Attendance column: stub "—" in 21.2, populated in 21.3
+
+*Attendance tab:*
+- Per-date sections ordered by start_time ASC
+- X of Y attended summary per section header
+- Expand per date: calls `getRehearsalAttendanceForEvent(eventId)` — returns ALL effective roster members (not only those with records); status = null for unmarked
+- SA/OA/Editor: mark buttons for any roster member (Showed / No-Show / Excused) via `markRehearsalAttendance()` (UPSERT)
+- Production: mark buttons for own row only (adminId match)
+- Viewer: status badges only, no buttons
+- "Mark All Present" (SA/OA/Editor, two-step inline confirm): calls `markAllRehearsalAttended()` — single batch upsert, not a loop of individual calls
+- Self Check-In source badge on rows where `source = 'checkin'` (matches Phase 14.2 volunteer attendance pattern)
+- HelpTooltip on Roster header → `#rehearsals-assignments`; Dates header → `#rehearsals-assignments`; Attendance header → `#rehearsals-attendance`
+
+**Public check-in (`/rehearsal-checkin/[token]`):**
+Server Component + Client Component. No Supabase Auth session required. `getAdminClient()` only (public route invariant, Process §7). File-level `// PUBLIC ROUTE` header comment. Light mode only (no dark: classes — ADMIN.6). `noindex` metadata. Branded header (org logo — matches all other public routes). Five UI states:
+
+1. *Invalid token* — "Invalid or expired check-in link. Contact your stage manager." (rendered server-side)
+2. *Valid, awaiting check-in* — rehearsal title, date, time, location; dropdown of effective roster names (self-reported identity, not email/phone lookup — key difference from Phase 14 volunteer check-in); "Check In" button disabled until name selected
+3. *Success* — "You're checked in to [title] on [date]." + `formatCT(checkedInAt, 'h:mm a')`
+4. *Already checked in* — "You already checked in at [time]." (reassuring, not an error)
+5. *Not on roster* — "Your name is not on the roster for this rehearsal. Contact your stage manager."
+
+Attendance record created with `source = 'checkin'`. Self Check-In badge appears on the Attendance tab for that person.
+
+**Key new files (Phase 21):**
+
+Server actions:
+- `lib/actions/rehearsals.ts` — PUBLIC ROUTE file: `getRehearsalCheckInData()`, `checkInToRehearsal()` — `getAdminClient()` only. Note: Brief's original single-file spec was corrected — Process §7 public-route invariant requires the split into two files.
+- `lib/actions/rehearsals-admin.ts` — authenticated actions: `getRehearsalSchedules()`, `getRehearsalScheduleDetail()`, `getEffectiveRoster()`, `getRehearsalAttendanceForEvent()`, `assignUserToSchedule()`, `removeUserFromSchedule()`, `addDateOverride()`, `removeDateOverride()`, `markRehearsalAttendance()`, `markAllRehearsalAttended()`
+
+Utilities and types:
+- `lib/utils/rehearsal-roster.ts` — effective-roster set-math utility (schedule assignees MINUS excludes PLUS includes); accepts supabase client as parameter (established CAL.3 pattern); shared between public and admin action files
+- `types/rehearsal.ts` — all Phase 21 types including `RehearsalEventSummary` base type (includes `location_name` — join added in 21.3 Q1 when public check-in page needed it; moved to shared base so both public and admin paths benefit)
+
+Pages and components:
+- `app/crew/(app)/rehearsals/page.tsx` — schedule list
+- `app/crew/(app)/rehearsals/[id]/page.tsx` — detail shell
+- `components/crew/rehearsals/RehearsalsListClient.tsx`
+- `components/crew/rehearsals/RehearsalDetailTabs.tsx`
+- `app/rehearsal-checkin/[token]/page.tsx` — public check-in
+- `components/rehearsal-checkin/RehearsalCheckInClient.tsx`
+
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
 (Viewers see a locked message). Stub replaced entirely.
@@ -979,13 +1044,13 @@ Role visibility:
 - Owner Admin: same as Super Admin (Settings section visible — owner_admin gets Settings access). All non-Settings ALL_SECTIONS entries now include `owner_admin` — fixed in HELP.2e (47 entries updated).
 - Editor: all sections except Settings
 - Viewer: all sections except Settings and Communication; no edit-only subsections
-- Production: Master Calendar, Media Library, and Getting Help only
+- Production: Master Calendar, Media Library, Getting Help, and Rehearsals
 
-All 13 sections (in order): Dashboard · Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · Master Calendar · Communication · Check-In System · Media Library · The Volunteer Call Board · Standing Opportunities · Getting Help
+All 14 sections (in order): Dashboard · Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · Master Calendar · Communication · Check-In System · Media Library · The Volunteer Call Board · Standing Opportunities · Rehearsals · Getting Help
 
-Sections and anchors: 13 h2 sections, ~46 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`.
+Sections and anchors: 14 h2 sections, ~46 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`. Phase 21 anchors: `rehearsals`, `rehearsals-schedules`, `rehearsals-assignments`, `rehearsals-attendance`, `rehearsals-checkin`.
 
-HelpTooltip placements: 32 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`.
+HelpTooltip placements: 37 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`. Phase 21 (5): `Sidebar.tsx` → `rehearsals` (nav link); `rehearsals/page.tsx` → `rehearsals` (list header); `RehearsalDetailTabs.tsx` → `rehearsals-assignments` (Roster tab), `rehearsals-assignments` (Dates tab), `rehearsals-attendance` (Attendance tab).
 
 Production sidebar: Help link added (HELP.2b). Media Library link also visible to Production (ADMIN.30 confirmed — Production has `/crew/media` sidebar access).
 
@@ -1088,13 +1153,14 @@ Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 s
 
 Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 6 — Feature Flags: Three toggles, one per flag. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation.
+Section 6 — Feature Flags: Four toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals` alongside existing paths.
 
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
 | Calendar & Space Management | `feature_calendar` | `'true'` | `/crew/calendar/*`, public `/calendar`, `syncShowDateToCalendar()`, calendar links in emails, .ics links on Call Board |
 | Check-In System | `feature_checkin` | `'true'` | `/crew/tools/checkin`, public `/checkin/*`, check-in action guards |
 | Email Blast Composer | `feature_blast` | `'true'` | `/crew/communication`, blast action guards |
+| Rehearsal Management | `feature_rehearsals` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/rehearsals/*`, `/rehearsal-checkin/*`, `createRehearsalBatch()` flag guard, Rehearsals sidebar link |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -1464,7 +1530,30 @@ Creates `qr_codes` table for shared QR code history. Indexes on `created_at DESC
 needed (advisory only — never filtered). RLS unchanged (volunteers table RLS already covers
 all write paths).
 
-**Next migration:** None shipped since 030. ADMIN.35–39c (dark mode cascade defect audit and sweep) was CSS/UI only — no schema changes. Phase 21 (Rehearsal Management) is expected to introduce the next migration, scope not yet finalized.
+**Migration 031 status:** Applied — `031_rehearsal_management.sql` (Phase 21):
+- Added `check_in_token uuid DEFAULT gen_random_uuid()` to
+  `calendar_events`. Nullable. Partial UNIQUE index
+  `idx_calendar_events_check_in_token WHERE check_in_token
+  IS NOT NULL`. Existing rows receive NULL.
+- Created `rehearsal_schedule_assignments` table: schedule-
+  level assignment of Production admin users to rehearsal
+  batches. RLS: is_editor() full; Viewer SELECT; Production
+  SELECT own rows (admin_user_id = auth.uid()).
+- Created `rehearsal_date_assignments` table: per-date
+  overrides (include/exclude) for specific users on specific
+  calendar events. Same RLS pattern.
+- Created `rehearsal_attendance` table: attendance records
+  for rehearsals, linked to calendar_events + admin_users.
+  RLS: is_editor() full; Viewer SELECT; Production SELECT +
+  INSERT own rows. Clean separation from volunteer attendance
+  table.
+- Seeded `feature_rehearsals` into `app_settings` (value
+  `''` — evaluates as enabled via `!== 'false'` logic).
+
+**Next migration:** None pending. Migration 031 (Phase 21 —
+rehearsal management schema) was the most recent. Future
+migrations will be introduced for Phase CAST or other
+post-launch phases.
 
 Historical note: the email_log_recipients volunteer_id
 index (`idx_email_log_recipients_volunteer_id`) was
@@ -1729,7 +1818,17 @@ created_at       timestamptz NOT NULL DEFAULT now()
 
 ### admin_users
 ```sql
-id               uuid PRIMARY KEY  -- matches Supabase Auth UUID
+id               uuid PRIMARY KEY
+-- IMPORTANT: This IS the Supabase Auth UUID — there is
+-- no separate auth_user_id column. admin_users.id equals
+-- auth.uid() in every RLS policy context. Any RLS policy
+-- that needs to self-scope to the calling admin must use
+-- admin_user_id = auth.uid() directly (for FK columns
+-- referencing admin_users.id) or id = auth.uid() (for
+-- the admin_users table itself). Confirmed in 21.1 F1:
+-- the 21.1 prompt draft used a non-existent auth_user_id
+-- column in migration RLS policies; corrected to
+-- admin_user_id = auth.uid() before applying.
 name             text NOT NULL
 email            text NOT NULL UNIQUE
 role             text NOT NULL CHECK (role IN (
@@ -1914,6 +2013,8 @@ updated_at       timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_calendar_events_recurrence_group
 --   (idx_calendar_events_recurrence_group_id on
 --   calendar_events.recurrence_group_id — Migration 022)
+-- INDEX: idx_calendar_events_check_in_token
+--   (partial, WHERE check_in_token IS NOT NULL, Migration 031)
 -- NOTE: recurrence_group_id added Migration 022
 --   (CAL.10a). Nullable, ON DELETE SET NULL. When set:
 --   this event is one occurrence in a recurring series.
@@ -1934,6 +2035,96 @@ updated_at       timestamptz NOT NULL DEFAULT now()
 -- RLS: authenticated SELECT all; authenticated INSERT;
 --   super_admin UPDATE/DELETE.
 -- Migration 017 (017_calendar_schema.sql)
+
+check_in_token uuid DEFAULT gen_random_uuid()
+-- Nullable. Added Migration 031 (031_rehearsal_management.sql).
+-- Powers /rehearsal-checkin/[token] public route.
+-- Partial UNIQUE index: idx_calendar_events_check_in_token
+-- WHERE check_in_token IS NOT NULL.
+-- Existing rows receive NULL (correct — only new rehearsal
+-- events that need QR check-in receive tokens).
+-- Parallel to show_dates.check_in_token (Phase 14).
+```
+
+### rehearsal_schedule_assignments
+```sql
+id                 uuid PRIMARY KEY DEFAULT gen_random_uuid()
+rehearsal_batch_id uuid NOT NULL REFERENCES rehearsal_batches(id)
+                   ON DELETE CASCADE
+admin_user_id      uuid NOT NULL REFERENCES admin_users(id)
+                   ON DELETE CASCADE
+assigned_at        timestamptz NOT NULL DEFAULT now()
+assigned_by        uuid REFERENCES admin_users(id)
+-- UNIQUE (rehearsal_batch_id, admin_user_id)
+-- INDEX: idx_rsa_batch (rehearsal_batch_id)
+-- INDEX: idx_rsa_user (admin_user_id)
+-- INDEX: idx_rsa_assigned_by (assigned_by)
+-- RLS: SA/OA/Editor — full access (is_editor());
+--      Viewer — SELECT only (role = 'viewer');
+--      Production — SELECT own rows only
+--      (admin_user_id = auth.uid() — direct UUID match,
+--       no join needed; admin_users.id IS the Auth UUID)
+-- Migration 031 (031_rehearsal_management.sql)
+```
+
+### rehearsal_date_assignments
+```sql
+id                uuid PRIMARY KEY DEFAULT gen_random_uuid()
+calendar_event_id uuid NOT NULL REFERENCES calendar_events(id)
+                  ON DELETE CASCADE
+admin_user_id     uuid NOT NULL REFERENCES admin_users(id)
+                  ON DELETE CASCADE
+override_type     text NOT NULL CHECK (override_type IN
+                  ('include', 'exclude'))
+created_at        timestamptz NOT NULL DEFAULT now()
+created_by        uuid REFERENCES admin_users(id)
+-- UNIQUE (calendar_event_id, admin_user_id)
+-- INDEX: idx_rda_event (calendar_event_id)
+-- INDEX: idx_rda_user (admin_user_id)
+-- INDEX: idx_rda_created_by (created_by)
+-- RLS: SA/OA/Editor — full access (is_editor());
+--      Viewer — SELECT only;
+--      Production — SELECT own rows only
+--      (admin_user_id = auth.uid())
+-- override_type: 'include' adds a non-schedule-assignee to
+--   a specific date; 'exclude' removes a schedule-assignee
+--   from a specific date.
+-- Migration 031 (031_rehearsal_management.sql)
+```
+
+### rehearsal_attendance
+```sql
+id                uuid PRIMARY KEY DEFAULT gen_random_uuid()
+calendar_event_id uuid NOT NULL REFERENCES calendar_events(id)
+                  ON DELETE CASCADE
+admin_user_id     uuid NOT NULL REFERENCES admin_users(id)
+                  ON DELETE CASCADE
+status            text NOT NULL CHECK (status IN
+                  ('showed', 'no-show', 'excused'))
+source            text NOT NULL CHECK (source IN
+                  ('checkin', 'manual'))
+checked_in_at     timestamptz
+marked_by         uuid REFERENCES admin_users(id)
+created_at        timestamptz NOT NULL DEFAULT now()
+-- UNIQUE (calendar_event_id, admin_user_id)
+-- INDEX: idx_rattend_event (calendar_event_id)
+-- INDEX: idx_rattend_user (admin_user_id)
+-- INDEX: idx_rattend_marked_by (marked_by)
+-- RLS: SA/OA/Editor — full access (is_editor());
+--      Viewer — SELECT only;
+--      Production — SELECT own rows only (SELECT) +
+--        INSERT own rows only (INSERT) for manual marking
+--        on own dates (admin_user_id = auth.uid()).
+--        QR self-check-in uses getAdminClient() (bypasses
+--        RLS) — Production INSERT RLS is belt-and-suspenders
+--        for the manual marking path.
+-- source 'checkin' = QR self check-in via
+--   /rehearsal-checkin/[token]; 'manual' = admin-marked.
+-- checked_in_at: set on checkin source; null for manual.
+-- Clean separation from the volunteer attendance table
+--   (which tracks show attendances for volunteers, not
+--   rehearsal attendances for admin/production users).
+-- Migration 031 (031_rehearsal_management.sql)
 ```
 
 ### calendar_event_contacts
@@ -2336,6 +2527,17 @@ were looking for."). Total active SETUP keys: 17.
 Setup Panel page (setup/page.tsx) fetches 18 keys
 total (17 SETUP keys + default_reply_to from
 General Defaults).
+
+**`feature_rehearsals` key added in Migration 031 (Phase 21):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_rehearsals', '') ON CONFLICT (key) DO NOTHING`.
+Value `''` evaluates as enabled (`!== 'false'`). Added to
+`FeatureFlags` type and `getFeatureFlags()` in
+`lib/feature-flags.ts`. Setup Panel Section 6 has a fourth
+toggle row for this flag. `saveFeatureFlags()` revalidates
+`/crew/rehearsals` alongside existing routes.
+Total active SETUP keys: 18. Setup Panel fetches 19 keys
+total (18 SETUP keys + default_reply_to).
 
 Runtime-added key (not seeded in Migration 001):
 ```
@@ -3375,7 +3577,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete (THEME.A through THEME.3b-4). Phase 19 (Communication Preferences) complete — 19.1–19.3. ADMIN.35–38 complete. Migration 030 applied. Dark mode cascade defect fully closed (ADMIN.39-AUDIT + ADMIN.39a–c, 54 files; one residual — ADMIN.40). Phase 21 (Rehearsal Management) is next pre-launch phase. Phase 17 (Launch) follows.*
+*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete — all four prompts shipped (21.A/21.1/21.2/21.3). Migration 031 applied. Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -4303,324 +4505,95 @@ subsumed — this general preference field serves that purpose.
 ~~**Automated thank-you email after a show**~~ —
 ✓ Built in Alpha (30BN-12.4). See §8 Show Management.
 
-### Phase 21 — Rehearsal Management System (pre-launch, after Phase 19 ✓)
-
-**Architecture decisions locked (July 2026 planning session):**
-
-**Who is assigned:** Admin Production role users only (directors, stage managers, production staff with Production-role backend accounts). Cast members are NOT in scope for Phase 21 — they are the Phase CAST data model. Phase 21 infrastructure is designed to be extended by Phase CAST.
-
-**Assignment model:** Two-tier — schedule-level default assignment (user attends all dates in the batch) plus per-date override capability (include or exclude specific users from specific dates). The "effective roster" for any given date = schedule-level assignees MINUS exclude overrides PLUS include overrides.
-
-**Attendance model:** New `rehearsal_attendance` table linked to `calendar_events` + `admin_users`. Clean separation from the volunteer `attendance` table.
-
-**Check-in:** QR-based, same model as Phase 14. Requires `calendar_events.check_in_token` column. Public route: `/rehearsal-checkin/[token]`.
-
-**Feature flag:** `feature_rehearsals` (R34 compliant — entire `/crew/rehearsals` route tree gated behind this flag from initial build).
-
-**New schema (next migrations after 030):**
-- `rehearsal_schedule_assignments` — `rehearsal_batch_id → admin_user_id`. Schedule-level assignment.
-- `rehearsal_date_assignments` — `calendar_event_id → admin_user_id`, with `override_type` ('include' | 'exclude'). Per-date overrides.
-- `rehearsal_attendance` — `calendar_event_id → admin_user_id`, `status` ('showed'|'no-show'|'excused'), `source` ('checkin'|'manual'), `checked_in_at` timestamptz.
-- `calendar_events.check_in_token` — nullable uuid, default `gen_random_uuid()`.
-- `feature_rehearsals` app_settings key seeded.
-- RLS on all new tables. Indexes on all FK columns.
-
-**Existing infrastructure reused:**
-- `rehearsal_batches` + `calendar_events` — already exist
-- `CalendarBulkRehearsalForm.tsx` — surfaced as primary entry point from Rehearsals tab (no rebuild)
-- Pending approval queue — unchanged; batches still flow through it for location + SA/OA approval
-- `generateQR()` from `lib/qr.ts` — reused for rehearsal check-in QR codes
-- Phase 14 check-in public route pattern — new parallel route mirrors it
-
-**Production role submission:** Production users can submit new rehearsal schedules via CalendarBulkRehearsalForm. `createRehearsalBatch()` guard must allow Production. Confirm in 21.A audit — relax if currently blocked.
-
-**4-prompt structure:**
-
-**21.A (audit, Phase A only — no code):** Read-only investigation of live codebase. Confirm Production guard on `createRehearsalBatch()`, read Phase 14 check-in pattern, read `generateQR()` signature, confirm `rehearsal_batches` + `calendar_events` current schema, read Sidebar.tsx for flag insertion point, confirm `feature_rehearsals` flag status. Produce structured findings report before any schema is written.
-
-**21.1 (schema + server actions):** Migrations for all 4 new tables/columns. New `lib/actions/rehearsals.ts`: `getRehearsalSchedules()` (role-filtered), `getRehearsalScheduleDetail()`, `assignUserToSchedule()`, `removeUserFromSchedule()`, `addDateOverride()`, `removeDateOverride()`, `getEffectiveRoster()`, `markRehearsalAttendance()`, `getRehearsalCheckInData()` (public, getAdminClient()), `checkInToRehearsal()`. Production guard fix in `createRehearsalBatch()` if needed.
-
-**21.2 (list + schedule management UI):** `/crew/rehearsals` route + sidebar nav link (feature_rehearsals flag, all roles). Role-filtered schedule list (SA/OA/Editor/Viewer: all; Production: assigned only). CalendarBulkRehearsalForm surfaced as New Schedule entry point. Schedule detail page with Roster + Dates tabs. User assignment UI (search/add Production users at schedule or date level).
-
-**21.3 (attendance + QR check-in + help):** Attendance tab on schedule detail. Manual attendance marking (SA/OA/Editor + Production for own dates). QR check-in public route `app/rehearsal-checkin/[token]/page.tsx` (public, getAdminClient(), no auth required). QR display on date rows. proxy.ts: `/rehearsal-checkin/` excluded from admin guard. HelpContent.tsx Rehearsals section. Deferred Verifications v18 Phase 21 items.
-
-**Prerequisites:** ADMIN.32 ✓, ADMIN.33 ✓ (confirmed v4.3). Phase 19 ✓ complete.
-
-### Phase 21 — Full Implementation Detail
-
-#### Schema design
-
-**`rehearsal_schedule_assignments`**
-```sql
-id                 uuid PRIMARY KEY DEFAULT gen_random_uuid()
-rehearsal_batch_id uuid NOT NULL REFERENCES rehearsal_batches(id)
-                   ON DELETE CASCADE
-admin_user_id      uuid NOT NULL REFERENCES admin_users(id)
-                   ON DELETE CASCADE
-assigned_at        timestamptz NOT NULL DEFAULT now()
-assigned_by        uuid REFERENCES admin_users(id)
-UNIQUE (rehearsal_batch_id, admin_user_id)
--- INDEX: idx_rsa_batch, idx_rsa_user
--- RLS: SA/OA/Editor full; Viewer SELECT only;
---      Production SELECT own rows only
-```
-
-**`rehearsal_date_assignments`**
-```sql
-id                 uuid PRIMARY KEY DEFAULT gen_random_uuid()
-calendar_event_id  uuid NOT NULL REFERENCES calendar_events(id)
-                   ON DELETE CASCADE
-admin_user_id      uuid NOT NULL REFERENCES admin_users(id)
-                   ON DELETE CASCADE
-override_type      text NOT NULL CHECK (override_type IN
-                   ('include', 'exclude'))
-created_at         timestamptz NOT NULL DEFAULT now()
-created_by         uuid REFERENCES admin_users(id)
-UNIQUE (calendar_event_id, admin_user_id)
--- INDEX: idx_rda_event, idx_rda_user
--- RLS: SA/OA/Editor full; Viewer SELECT only;
---      Production SELECT own rows only
-```
-
-**`rehearsal_attendance`**
-```sql
-id                 uuid PRIMARY KEY DEFAULT gen_random_uuid()
-calendar_event_id  uuid NOT NULL REFERENCES calendar_events(id)
-                   ON DELETE CASCADE
-admin_user_id      uuid NOT NULL REFERENCES admin_users(id)
-                   ON DELETE CASCADE
-status             text NOT NULL CHECK (status IN
-                   ('showed', 'no-show', 'excused'))
-source             text NOT NULL CHECK (source IN
-                   ('checkin', 'manual'))
-checked_in_at      timestamptz
-marked_by          uuid REFERENCES admin_users(id)
-created_at         timestamptz NOT NULL DEFAULT now()
-UNIQUE (calendar_event_id, admin_user_id)
--- INDEX: idx_rattend_event, idx_rattend_user
--- RLS: SA/OA/Editor full; Viewer SELECT only;
---      Production SELECT/INSERT own rows only
-```
-
-**`calendar_events` column addition**
-```sql
-check_in_token   uuid DEFAULT gen_random_uuid()
--- Nullable. Added via ALTER TABLE in migration.
--- Powers /rehearsal-checkin/[token] public route.
--- Parallel to show_dates.check_in_token (Phase 14).
-```
-
-**`feature_rehearsals` app_settings key**
-Seeded in migration as empty string ''. Read via `getFeatureFlags()` in `lib/feature-flags.ts`. Added to `FeatureFlags` type. Gates the entire `/crew/rehearsals` route tree and sidebar link.
-
-**Effective roster derivation**
-For any `calendar_event_id`, the effective roster is:
-```
-schedule_assignees (from rehearsal_schedule_assignments
-  WHERE rehearsal_batch_id = this event's batch)
-MINUS
-exclude_overrides (from rehearsal_date_assignments
-  WHERE calendar_event_id = this event
-  AND override_type = 'exclude')
-PLUS
-include_overrides (from rehearsal_date_assignments
-  WHERE calendar_event_id = this event
-  AND override_type = 'include')
-```
-Implemented in `getEffectiveRoster(calendarEventId)` server action. May also be a Supabase RPC if query complexity warrants — decision for 21.A findings report.
-
-#### Server actions — `lib/actions/rehearsals.ts` (new)
-
-All use `getServerClient()` + `getAdminUser()` except `getRehearsalCheckInData()` and `checkInToRehearsal()` which use `getAdminClient()` (public check-in route — no Supabase Auth session).
-
-```typescript
-// Role-filtered schedule list
-getRehearsalSchedules(role: string, adminUserId: string)
-// SA/OA/Editor/Viewer → all batches
-// Production → only assigned batches
-// Joins: rehearsal_batches → rehearsal_schedule_assignments
-//        → calendar_events (next date)
-
-// Full schedule detail
-getRehearsalScheduleDetail(batchId: string)
-// batch + all calendar_events + schedule assignees
-// + per-event override counts + attendance summary
-
-// Effective roster for a specific date
-getEffectiveRoster(calendarEventId: string)
-// schedule assignees MINUS excludes PLUS includes
-// with admin_user name/email/role
-
-// Schedule-level assignment
-assignUserToSchedule(batchId: string, adminUserId: string)
-// INSERT rehearsal_schedule_assignments
-// revalidatePath(`/crew/rehearsals/${batchId}`)
-// Guard: SA/OA/Editor only
-
-removeUserFromSchedule(batchId: string, adminUserId: string)
-// DELETE rehearsal_schedule_assignments
-// Guard: SA/OA/Editor only
-
-// Per-date overrides
-addDateOverride(
-  calendarEventId: string,
-  adminUserId: string,
-  overrideType: 'include' | 'exclude'
-)
-// INSERT rehearsal_date_assignments
-// revalidatePath(`/crew/rehearsals/${batchId}`)
-// Guard: SA/OA/Editor only
-
-removeDateOverride(calendarEventId: string, adminUserId: string)
-// DELETE rehearsal_date_assignments
-// Guard: SA/OA/Editor only
-
-// Manual attendance
-markRehearsalAttendance(
-  calendarEventId: string,
-  adminUserId: string,
-  status: 'showed' | 'no-show' | 'excused'
-)
-// UPSERT rehearsal_attendance (source: 'manual')
-// revalidatePath(`/crew/rehearsals/${batchId}`)
-// Guard: SA/OA/Editor full; Production own dates only
-
-// Public check-in — getAdminClient(), no auth session
-getRehearsalCheckInData(token: string)
-// calendar_events WHERE check_in_token = token
-// + batch title + effective roster
-// Returns null if token not found
-
-checkInToRehearsal(token: string, adminUserId: string)
-// Validates token + user in effective roster
-// UPSERT rehearsal_attendance (source: 'checkin',
-//   checked_in_at: now())
-// Returns: success | already-checked-in | not-on-roster
-```
-
-**`lib/actions/calendar.ts` guard check:** `createRehearsalBatch()` must allow Production role. If currently blocked: add 'production' to the guard allowlist. Confirm current state in 21.A audit.
-
-#### `/crew/rehearsals` route tree
-
-```
-app/crew/(app)/rehearsals/
-  page.tsx            ← Schedule list (Server Component)
-  [id]/
-    page.tsx          ← Schedule detail (Server Component)
-                        Tabs: Roster | Dates | Attendance
-app/rehearsal-checkin/
-  [token]/
-    page.tsx          ← Public check-in (Server Component,
-                        getAdminClient(), no auth required)
-```
-
-**Sidebar nav link** (`components/crew/Sidebar.tsx`):
-- Icon: CalendarDays or equivalent — confirm in 21.2
-- Label: "Rehearsals"
-- Positioned after Calendar link
-- Gated behind `feature_rehearsals` flag
-- Visible to ALL roles (SA/OA/Editor/Viewer/Production)
-- HelpTooltip linking to `/crew/help#rehearsals`
-
-**proxy.ts:** `/rehearsal-checkin/` must be added to the public-route exclusion list (excluded from admin auth guard). Add to the matcher BEFORE any guard logic is written — SETUP.1 F1 failure mode (guard on unmatched path silently never fires).
-
-**Production page guard** (in `/crew/rehearsals/[id]/page.tsx`): Production users who access a schedule they are not assigned to → redirect to `/crew/rehearsals` with a "not assigned" message.
-
-#### Schedule list — `/crew/rehearsals`
-
-Server Component. Fetches via `getRehearsalSchedules()`.
-
-**Row columns:** Title | Show | Date range | Assigned user count | Next rehearsal date | Status (pending / approved / cancelled) | View link
-
-**"New Schedule" button:** surfaces `CalendarBulkRehearsalForm` as primary entry point. Visible to SA/OA/Editor/Production. Reuses existing component — no rebuild.
-
-**Filter:** Active / All toggle. Default: Active (batches with at least one future `calendar_event`).
-
-#### Schedule detail — `/crew/rehearsals/[id]`
-
-Server Component shell. Three tabs as Client Component.
-
-**Roster tab:**
-- List of schedule-level assignees: name, role, email
-- "Add user" search/select → `admin_users WHERE role = 'production'` → `assignUserToSchedule()`
-- Per-assignee: Remove → `removeUserFromSchedule()`
-- Per-assignee: "Override dates" → expands per-date override UI for that specific user
-
-**Dates tab:**
-- All `calendar_events` in batch: date, time, location (once approved), effective roster count, attendance count / total
-- Expandable per-date: effective roster with attendance status and override controls
-- Override controls (SA/OA/Editor only):
-  - Schedule assignee present: "Exclude from this date" → `addDateOverride(eventId, userId, 'exclude')`
-  - Non-assignee: "Add to this date" → `addDateOverride(eventId, userId, 'include')`
-  - Remove override: `removeDateOverride()`
-- QR code per date: PNG download via `generateQR()` from `lib/qr.ts`. Links to `/rehearsal-checkin/[check_in_token]`.
-
-**Attendance tab:**
-- Per-date section: effective roster with status badges
-- Mark attendance (SA/OA/Editor): any user → showed / no-show / excused
-- Mark own attendance (Production): own rows only
-- Quick-mark all present button (SA/OA/Editor)
-- Summary: X of Y attended per date
-
-#### Public check-in — `/rehearsal-checkin/[token]`
-
-Five UI states:
-
-1. **Invalid token** — "Invalid or expired check-in link. Contact your stage manager."
-
-2. **Valid — awaiting check-in** — Shows rehearsal title, date, time, location. Dropdown of effective roster names. "Check In" button.
-
-3. **Success** — "You're checked in to [title] on [date]." Timestamp shown.
-
-4. **Already checked in** — "You already checked in at [time]."
-
-5. **Not on roster** — "Your name is not on the roster for this rehearsal. Contact your stage manager."
-
-No Supabase Auth session required. Identity is self-reported from the effective roster dropdown. `checkInToRehearsal()` uses `getAdminClient()`.
-
-#### Help system — HelpContent.tsx additions
-
-New h2 section: **Rehearsals** (anchor: `#rehearsals`)
-
-h3 subsections:
-- `#rehearsals-schedules` — Understanding Schedules
-- `#rehearsals-assignments` — Managing Assignments (schedule-level vs per-date overrides, effective roster concept)
-- `#rehearsals-attendance` — Recording Attendance (three status options, manual vs QR)
-- `#rehearsals-checkin` — The Check-In QR Code (displaying QR, Production user self-check-in flow)
-
-HelpTooltip placements: sidebar Rehearsals link, schedule list page header, each tab header.
-
-#### 21.A audit — specific read targets (7 items)
-
-Read these files and answer these specific questions before writing any code:
-
-**1. `lib/actions/calendar.ts` → `createRehearsalBatch()`:** Is Production role currently blocked? Report the exact guard condition. What change (if any) is needed?
-
-**2. Phase 14 check-in public route (`app/checkin/[token]/page.tsx` and related files):** Read the complete implementation. Confirm: how `check_in_token` is used for lookup; how identity is determined; how `getAdminClient()` is used; how `proxy.ts` excludes the route. This is the exact pattern the rehearsal check-in route must mirror.
-
-**3. `lib/qr.ts` → `generateQR()`:** Report the exact function signature, parameters, and return type. Confirm Level H error correction (R6).
-
-**4. Live DB schema — run these queries:**
-```sql
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'rehearsal_batches'
-ORDER BY ordinal_position;
-
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'calendar_events'
-ORDER BY ordinal_position;
-```
-Confirm `calendar_events` does NOT already have `check_in_token`. Report both full column lists.
-
-**5. `components/crew/Sidebar.tsx`:** Report the exact JSX structure of any existing feature-flagged nav link (Calendar or Check-In). This is the model for the `feature_rehearsals` link.
-
-**6. `lib/feature-flags.ts`:** Is `feature_rehearsals` already in `FeatureFlags` type and `getFeatureFlags()`? Yes → no schema change needed for the flag. No → add to both in 21.1.
-
-**7. `proxy.ts`:** Report the current matcher array and the public-route exclusion list. Confirm `/rehearsal-checkin/` is NOT already present. Report exactly where to add it.
-
-Deliver a structured findings report. No code in 21.A.
+### Phase 21 — Rehearsal Management System ✓ Complete
+
+**Architecture (confirmed via 21.A audit + build):**
+- Production admin users only (directors, stage managers).
+  Cast members are Phase CAST scope.
+- Two-tier assignment model: schedule-level default + per-date
+  overrides (include/exclude). Effective roster =
+  schedule assignees MINUS excludes PLUS includes.
+- `createRehearsalBatch()` confirmed already allows Production
+  (no guard change needed — 21.A finding).
+- `feature_rehearsals` flag confirmed absent from codebase
+  and DB before 21.1 (all three locations required addition).
+- Sidebar is data-driven (NAV_ITEMS + FLAG_GATED_HREFS +
+  Production allowlist) — three-part atomic edit required.
+  Missing the Production allowlist addition silently hides
+  the link from Production even with the other two correct
+  (same failure shape as SETUP.1 F1 — confirmed 21.A Audit E).
+
+**30BN-21.A ✓** Read-only audit. Seven read targets confirmed.
+Key findings: `createRehearsalBatch()` has no role guard
+(Production already allowed); `calendar_events.check_in_token`
+absent (Migration 031 must add it); Sidebar is data-driven
+with three-part atomic edit requirement; `feature_rehearsals`
+absent from FeatureFlags type, getFeatureFlags(), and
+app_settings; proxy.ts matcher/Production/flag blocks all
+identified with exact insertion points. No code.
+
+**30BN-21.1 ✓** Migration 031 applied (calendar_events
+.check_in_token, rehearsal_schedule_assignments,
+rehearsal_date_assignments, rehearsal_attendance, feature_
+rehearsals seed). `lib/feature-flags.ts` updated (rehearsals:
+boolean added). `lib/actions/rehearsals.ts` (new — PUBLIC
+ROUTE: getRehearsalCheckInData, checkInToRehearsal) +
+`lib/actions/rehearsals-admin.ts` (new — 8 authenticated
+actions). `lib/utils/rehearsal-roster.ts` (new — shared
+effective-roster set-math, client-parameterized). `types/
+rehearsal.ts` (new). `lib/actions/calendar.ts`:
+createRehearsalBatch() flag guard changed from flags.calendar
+→ flags.rehearsals. Setup Panel Section 6: 4th toggle for
+feature_rehearsals. Note: Brief's original single-file spec
+for rehearsals.ts was corrected — Process §7 public-route
+invariant requires two files. Key finding: admin_users.id IS
+the Supabase Auth UUID (no auth_user_id column) — RLS
+Production self-scoping policies use `admin_user_id =
+auth.uid()` directly (corrected from erroneous join before
+migration was applied). 10 files.
+
+**30BN-21.2 ✓** proxy.ts: needsFlagCheck extended for
+/crew/rehearsals, Production exception added, crew-route
+flag block added. Sidebar.tsx: 4-part edit (NAV_ITEMS
+ClipboardList entry, FLAG_GATED_HREFS entry, Production
+allowlist entry, HelpTooltip → #rehearsals). layout.tsx:
+confirmed unchanged (full flags object already flows to
+Sidebar). `app/crew/(app)/rehearsals/page.tsx` (new —
+schedule list, Active/All filter, New Schedule via
+CalendarBulkRehearsalForm — confirmed self-contained).
+`app/crew/(app)/rehearsals/[id]/page.tsx` (new — detail
+shell, Production guard). `components/crew/rehearsals/
+RehearsalsListClient.tsx` (new). `components/crew/rehearsals/
+RehearsalDetailTabs.tsx` (new — Roster + Dates + Attendance
+stub). lib/actions/rehearsals-admin.ts extended: rosterCount,
+location_name join, per-assignee overrideCount, check_in_token,
+4-state status derivation (needed once UI requirements surfaced
+— Q3 21.2). 9 files.
+
+**30BN-21.3 ✓** proxy.ts: /rehearsal-checkin/:path* added to
+matcher (before public flag block was written — SETUP.1 F1
+discipline); needsFlagCheck extended for /rehearsal-checkin/
+(separate condition required — not covered by 21.2 addition);
+public flag block added. lib/actions/rehearsals-admin.ts:
+`getRehearsalAttendanceForEvent()` (returns ALL effective
+roster members, not just those with attendance records —
+status: null for unmarked) + `markAllRehearsalAttended()`
+(single batch upsert, SA/OA/Editor only). Attendance tab
+stub fully replaced in RehearsalDetailTabs.tsx (lazy-load
+via useTransition + Map cache, role-gated marking, two-step
+inline "Mark All Present" confirm, Self Check-In badge).
+`app/rehearsal-checkin/[token]/page.tsx` (new — public,
+getAdminClient() only, five UI states, noindex, branded
+header) + `components/rehearsal-checkin/RehearsalCheckInClient
+.tsx` (new — roster dropdown identity, not email/phone).
+`components/crew/help/HelpContent.tsx`: Rehearsals section
+added (14th ALL_SECTIONS entry, 4 subsections, all roles).
+`app/crew/(app)/rehearsals/page.tsx`: HelpTooltip on page
+header added (missed in 21.2). 30BN_DEFERRED_VERIFICATIONS_v2
+.md: v18, 55 Phase 21 items added. Note: location_name join
+added to getRehearsalCheckInData() (Q1 — public page needed
+it; moved to shared RehearsalEventSummary base type).
+10 files modified + 2 created.
 
 ### Phase CAST — Cast Member Portal (named future phase, post-Phase 21)
 
@@ -4782,7 +4755,7 @@ After Phase THEME ships, all components that reference brand-driven colors (`bg-
 
 ### R34 — All Non-Core Features Must Be Built Flag-Ready
 
-Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (feature_calendar), Check-In (feature_checkin), Email Blast (feature_blast). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
+Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
 
 ### R35 — Never Pair Hand-Authored @layer utilities Classes With Native Tailwind dark: Utilities on the Same Property
 
@@ -4826,6 +4799,19 @@ Native Tailwind utility classes (bg-gray-50, etc.) DO auto-generate these combin
 Failure mode: a class with no matching rule produces zero CSS output — the element renders as if the class is not present, or silently falls back to a sibling class that produces the wrong color or opacity. No build error, no lint error. Confirmed failure in button.tsx: `focus-visible:ring-brand-primary/50` was present in every button variant but produced no focus ring color (ACCESSIBILITY impact) until ADMIN.42 added the explicit rule.
 
 Correct approach: whenever adding a brand utility class to a component with an opacity suffix or stacked pseudo-class/variant prefix, check globals.css immediately and author the missing rule if it does not exist. See §10 grep check and §11 checklist item in Process for enforcement.
+
+### R37 — admin_users.id Is the Supabase Auth UUID — No auth_user_id Column
+
+`admin_users.id` is the Supabase Auth UUID directly. There is no separate `auth_user_id` column on `admin_users`. When writing RLS policies that need to self-scope to the calling authenticated admin:
+
+- For FK columns referencing `admin_users.id` (e.g. `rehearsal_schedule_assignments.admin_user_id`): use `admin_user_id = auth.uid()` directly.
+- For the `admin_users` table itself: use `id = auth.uid()`.
+
+Never construct a subquery joining through a non-existent `auth_user_id` column — it will cause a migration error (`column "auth_user_id" does not exist`).
+
+The existing RLS helper functions (`is_editor()`, `is_super_admin()`, `is_super_admin_or_owner_admin()`, `is_admin()`) all verify role via `EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid() AND role IN (...))` — this pattern is correct and consistent with R37.
+
+Confirmed failure mode: the 21.1 prompt draft used `auth_user_id = auth.uid()` in Migration 031 RLS policies for Production self-scoping. Task A schema verification confirmed the column does not exist. Corrected to `admin_user_id = auth.uid()` before applying. Migration applied successfully with the correction.
 
 ---
 
@@ -4885,3 +4871,4 @@ logged)*
 *v4.2 (July 2026 — Phase 19 complete + ADMIN.35–38: reconstructed retroactively during the DOC.53 session — this update was logged as shipped in 30BN_PROCESS_v1.md's §13 prompt history but was never actually committed to this file; the live Brief remained at v4.1 until this session closed the gap. §1 header + current phase updated (Phase 19 + ADMIN.35–38 complete); §7 two new patterns added: Google OAuth registration path (ADMIN.36 — routes through the same Request Access approval flow as email/password self-registration, dual-client pattern in auth/callback/route.ts) and is_active gating on the Google OAuth path (ADMIN.38 — sign out before redirect on inactive account, matching the existing email/password pattern); §8 five "Phase 19 — pending" markers updated to built (signup form, /update, Call Board card, volunteer list, volunteer profile); §8 /update field note extended with the updateVolunteerInfo()/updateVolunteer() two-file update pattern (19.2); §8 Volunteer Profile field note extended with the zod <select> pattern (z.string().optional(), not z.enum() — empty string from an unselected <select> fails enum validation silently; corrected 19.1→19.3); §9 Migration 030 marked applied, volunteers.communication_preference column def uncommented, next-migration pointer updated; §11 header updated; §11 prompt log: ADMIN.35-AUDIT + ADMIN.35 + ADMIN.36 + ADMIN.37 + ADMIN.38 + 19.1 + 19.2 + 19.3 added; §11 Phase 19 section rewritten from planned spec to complete build summary; DOC.50 logged)*
 *v4.3 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header + current phase updated (ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete; dark mode cascade defect closed across 54 files; Phase 21 next); §8 Volunteer Profile notes spec: Editors confirmed append-only for notes (editNote/deleteNote guards stay SA+OA only — RLS + design intent re-confirmed ADMIN.39-AUDIT F4, July 2026); stale pre-ADMIN.33 wording also corrected here (Owner Admin included alongside Super Admin for edit/delete); §8 Light/Dark Mode: dark mode cascade defect resolution documented (root cause, fix pattern, 54 files, special cases, light mode visual impact, ADMIN.40 residual); §13 R35 added (never pair hand-authored @layer utilities class with native Tailwind dark: utility on same property — two correct approaches documented); §11 prompt log ADMIN.39-AUDIT + ADMIN.39a–c + DOC.51 + DOC.52 + DOC.53 added; §11 Phase 21 pre-requisite bullets corrected from forward-looking language to ✓ Complete (ADMIN.32/33 — stale since v4.0, whose own history entry had claimed this was already fixed); §11 ADMIN.40 carry-forward noted (OpportunityForm.tsx:99,115 — not in original audit scope, pre-Phase-17); DOC.53 logged)*
 *v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
+*v4.5 (August 2026 — Phase 21 complete: §1 header + current phase updated (Phase 21 complete, Phase 17 next); §1 public surfaces: /rehearsal-checkin/[token] added; §2 Production row: /crew/rehearsals added (flag-gated, assigned-only); §7 proxy.ts section: Phase 21 additions documented (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /rehearsal-checkin/[token] added; §8 Help System: 13 → 14 sections, 32 → 37 HelpTooltips, Phase 21 anchors added, Rehearsals visible to Production; §8 Setup Panel Section 6: 4th flag toggle (feature_rehearsals); §8 new Rehearsal Management section (full spec: schedule list, detail, roster/dates/attendance tabs, public check-in, key files, two-file server action split confirmed); §9 calendar_events.check_in_token added; §9 three new table blocks (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance); §9 Migration 031 status block; §9 next migration pointer updated (no pending migrations); §9 feature_rehearsals seed documented + SETUP key count 17 → 18, fetch count 18 → 19; §9 admin_users.id RLS note expanded; §11 header updated (Phase 21 complete, Phase 17 next); §11 Phase 21 section replaced (forward-looking spec → completed 4-prompt build summary with 21.A–21.3 each described, key findings documented); §13 R34 flag list: feature_rehearsals added; §13 R37 added (admin_users.id = auth.uid(), no auth_user_id column — RLS authoring rule); DOC.56 logged)*
