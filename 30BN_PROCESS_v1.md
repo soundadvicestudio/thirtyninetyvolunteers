@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.2
-### Created: July 2026 | Last Updated: July 2026 — v4.2 (ADMIN.39-AUDIT + ADMIN.39a–c — dark mode cascade defect fully closed; §14 editNote/deleteNote contradiction corrected (Editors confirmed append-only); R35 added to §14; governing hover rule + static neutral substitution table + dark text fix pattern + two-part dark target correction + has-[:checked]: scope rule added to §7; R35 grep added to §10; two new §11 checklist items; §13 phase tracker cascade sweep marked complete + ADMIN.40 carry-forward; stale Phase 14/15 pending stubs removed; prompt log completed through DOC.53)
+## 30BN_PROCESS_v1.md — v4.3
+### Created: July 2026 | Last Updated: July 2026 — v4.3 (ADMIN.40–42 + Phase 21 architecture locked; R36 added (opacity-variant rules must be explicitly authored); new §10 grep check for opacity-variant gaps; new §11 checklist item; phase tracker + prompt log updated through ADMIN.42 + DOC.55)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -372,6 +372,37 @@ The ADMIN.39-AUDIT's per-line prescriptions contained synthesis errors where pro
 2. Opacity suffix not noted in audit: audit prescribed bare bg-gray-50 but live code had /30 or /50 suffix. → "Always preserve /NN" rule resolves this.
 3. Element type mismatch: audit described a hover state as a base class or vice versa.
 In all cases the governing rules took precedence over per-file audit prescriptions. This is now the authoritative build discipline for any future dark mode sweep work — direct file reads resolve conflicts, not audit table values.
+
+**Hand-authored @layer utilities opacity-variant gap (R36 — established ADMIN.41/ADMIN.42-AUDIT/ADMIN.42):**
+In Tailwind v4, native utility classes auto-generate opacity-suffix variants (`/NN`) and pseudo-class-stacked combinations via the JIT engine. Hand-authored classes in the `@layer utilities` block do NOT. Each specific combination requires its own explicitly authored rule.
+
+This is a distinct bug class from R35 (which concerns cascade ordering between hand-authored and native classes). R36 concerns missing rules that produce silent CSS failures — no build error, no lint error. The element renders as if the class is not present, or falls back silently to a sibling class.
+
+```
+WRONG assumption: bg-brand-primary exists in globals.css,
+therefore hover:bg-brand-primary/80 also works.
+→ hover:bg-brand-primary/80 produces zero CSS output
+  because no .hover\:bg-brand-primary\/80:hover rule
+  exists.
+
+CORRECT: check globals.css for the exact combination.
+If absent, author the rule following the existing
+pattern:
+.hover\:bg-brand-primary\/80:hover {
+  background-color: color-mix(in srgb,
+    var(--brand-primary) 80%, transparent);
+}
+```
+
+**Confirmed impact in ADMIN.42-AUDIT:**
+12 missing rules found across all `components/ui/` files (button.tsx, dialog.tsx, alert-dialog.tsx). Three had ACCESSIBILITY impact — keyboard focus rings on button variants and dialog close buttons produced no brand color. All closed in ADMIN.42.
+
+**When this applies:**
+- Adding a brand utility class to any component with an opacity suffix: `/10`, `/20`, `/30`, `/40`, `/50`, `/60`, `/70`, `/80`, `/90`
+- Adding a brand utility class with a stacked variant: `hover:/NN`, `focus-visible:/NN`, `dark:/NN`, `dark:hover:/NN`, `dark:focus-visible:/NN`, `aria-invalid:/NN`, etc.
+- Adding any of the above to `components/ui/` shadcn primitives (which are used throughout the app and affect all surfaces)
+
+**Enforcement:** See §10 grep check and §11 checklist item.
 
 **Content-Disposition headers must use fixed filenames (established ADMIN.26):**
 HTTP `Content-Disposition: attachment; filename="..."` headers must never interpolate
@@ -1063,6 +1094,28 @@ grep -rn "bg-brand-primary-light" \
 # is a new R35 violation — fix before committing.
 ```
 
+```bash
+# After any edit to components/ui/ files or any new
+# brand utility class added to @layer utilities: confirm
+# all opacity-suffix and stacked-variant combinations
+# used in components/ui/ have matching globals.css rules
+# (R36):
+grep -rn "brand-" components/ui/ --include="*.tsx" \
+  | grep -E "\/[0-9]|hover:|focus-visible:|dark:|aria-"
+# For each hit, verify a matching rule exists in
+# app/globals.css. Check by grepping for the escaped
+# class name:
+grep -n "brand-primary\/80\|ring-brand-primary\/50" \
+  app/globals.css
+# Any class with no matching globals.css rule is an
+# R36 violation — author the rule before committing.
+# Pattern: .selector-escaped-class-name:pseudo-class {
+#   property: color-mix(in srgb, var(--brand-token) NN%,
+#   transparent); }
+# Note: ADMIN.42 closed all known gaps as of July 2026.
+# This check is a regression guard for future edits.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -1403,6 +1456,18 @@ Run before every Vercel deployment:
   all in the same edit — never leave a partial fix on
   a single element. (ADMIN.39b — VolunteerProfileForm
   .tsx:359)
+□ Any brand utility class added to a component with an
+  opacity suffix (/NN) or a stacked pseudo-class/variant
+  prefix (hover:, focus-visible:, dark:, aria-*, or any
+  combination): confirm a matching hand-authored rule
+  exists in app/globals.css before committing (R36).
+  Native Tailwind classes auto-generate these; hand-
+  authored @layer utilities classes do not. Missing rules
+  produce silent visual failures — no build error, no
+  lint warning. Check via: grep -n "[escaped-class-name]"
+  app/globals.css. Author the rule if absent, following
+  the color-mix() pattern of existing rules in that
+  family's section. (ADMIN.42 pattern)
 ```
 
 ---
@@ -2483,6 +2548,22 @@ Dark Mode Cascade Defect Sweep — ✓ Complete (ADMIN.39-AUDIT + ADMIN.39a–c)
     Commit 5b9aa6d.
   - Residual: OpportunityForm.tsx:99,115 → ADMIN.40
 
+globals.css opacity-variant gap — ✓ Complete (ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42):
+  - ADMIN.41: initial discovery + 2 rules authored
+    (dark:bg-brand-primary-light/30, dark:hover:/50)
+  - ADMIN.42-AUDIT: exhaustive audit of all 3
+    components/ui/ files. 29 brand references. 12 MISSING.
+    0 WRONG. 3 ACCESSIBILITY gaps.
+  - ADMIN.42: 12 rules added across 3 families.
+    Accessibility gaps closed. R36 established.
+  - components/ui/ primitive layer now fully covered.
+
+Phase 21 — architecture locked, build ready:
+  See Brief §11 Phase 21 for the complete spec. Prompt
+  structure: 21.A (audit) → 21.1 (schema + actions) →
+  21.2 (list + management) → 21.3 (attendance + QR +
+  help). Pre-launch. Begins next build session.
+
 ADMIN.40 (pre-Phase-17, not blocking launch):
   `components/crew/opportunities/OpportunityForm.tsx:99,115`
   — `has-[:checked]:bg-brand-primary-light dark:has-
@@ -2748,6 +2829,28 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
 30BN-DOC.53  ✓ Brief Update v4.3 (reconstructed missing
              v4.2 content + dark mode cascade closure,
              ADMIN.37-39c, R35, ADMIN.40 carry-forward)
+30BN-ADMIN.40 ✓ OpportunityForm.tsx has-[:checked]:
+             cascade fix. Single-part (dark target
+             correct). has-[:checked]:bg-brand-primary-
+             light → bg-white. 1 file. Commit 1da6b04.
+30BN-ADMIN.41 ✓ globals.css: dark:bg-brand-primary-
+             light/30 + dark:hover:/50 rules authored.
+             First R36 instance discovered. Commit
+             b050736.
+30BN-ADMIN.42-AUDIT ✓ Full components/ui/ audit.
+             3 files, 29 brand refs, 12 MISSING, 0
+             WRONG. 3 ACCESSIBILITY gaps (focus rings).
+             Complete matrix + exact CSS. No re-
+             investigation needed.
+30BN-ADMIN.42 ✓ 12 globals.css rules added. 3 passes
+             (primary 2, primary-mid 1, accent 9).
+             Accessibility gaps closed. Zero component
+             changes. R36 established. globals.css only.
+30BN-DOC.54  ✓ Process v4.2 — ADMIN.39a–c patterns,
+             R35 formal rule, cascade sweep complete,
+             Editor append-only confirmed, prompt log
+             completed.
+30BN-DOC.55  ✓ Brief v4.4 + Process v4.3 (this prompt)
 ```
 
 ---
@@ -3307,3 +3410,4 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.0 (July 2026 — Phase THEME complete: §2 header updated (THEME complete + Phase 19/21 pre-launch + DOC.47/DOC.48 logged); §14 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight added; email client constraint note added — string interpolation not CSS custom properties); §14 new pattern: lightenHex() from lib/utils/color.ts for server-side hex tint computation (email templates + PDF exports; do not use color-mix() in email or @react-pdf/renderer contexts); §14 new pattern: @react-pdf/renderer createStyles() factory pattern (StyleSheet.create() at module scope ignores props — confirmed failure mode THEME.4; factory function called inside component body is required); §14 R33 enforcement note added (post-THEME web UI code must use @layer utilities classes — bg-brand-primary etc. — never static token names); §10 two new grep checks (brand static Tailwind classes must be zero; brand hex in email templates outside resolveEmailSettings() fallbacks must be zero); §11 email send function checklist item updated (brand color params added); §11 payload builder checklist item updated (brand params added); §11 three new checklist items (post-THEME UI code uses utility classes, PDF factory pattern, email brand hex grep); §13 Phase THEME marked complete (THEME.A/1/2a–2d/3/3b-4 all ✓ with commit hashes); §13 Phase 19 status updated (pre-launch, 3-prompt structure confirmed); §13 Phase 21 updated (pre-launch); §13 prompt log: DOC.43b-FIX through DOC.48 + THEME.A through THEME.3b-4 added (14 new entries); DOC.48 logged)*
 *v4.1 (July 2026 — Phase 19 complete + ADMIN.35–38: §1 header updated (v4.1, Phase 19 + ADMIN.35–38 summary); §7 three new patterns added: Google OAuth callback dual-client pattern (getAdminClient() for pending_registrations ops — newly-OAuth'd user fails session-client RLS; ADMIN.36/38), is_active sign-out pattern (signOut() before redirect on inactive Google auth — ADMIN.38), updateVolunteerInfo() public-route identity (app/update/actions.ts is the /update submit action, distinct from updateVolunteer() in lib/actions/volunteers.ts — any new profile field must update both — 19.2); §7 revalidatePath via .select() pattern added (deleteNote/editNote — retrieve parent ID in single operation to avoid pre-delete SELECT — ADMIN.37); §11 three new checklist items: /update two-file field update pattern (19.2), z.string().optional() for <select> fields (enum rejects '' silently — 19.1/19.3), role guard allowlist pattern for volunteer mutations (Production must be explicitly blocked — ADMIN.37/38); §13 Phase 19 marked complete (19.1–19.3 ✓); §13 prompt log ADMIN.35-AUDIT + ADMIN.35–38 + 19.1–19.3 + DOC.50–51 added; §14 dark mode cascade defect note added (hand-authored @layer utilities compile after Tailwind auto-generated — bg-brand-primary-light overrides dark:bg-dark-bg; ADMIN.35-AUDIT root cause; ADMIN.39 sweep pending); §14 editNote()/deleteNote() role guard gap noted (should allow Editor — deferred to ADMIN.39); DOC.51 logged)*
 *v4.2 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header updated (v4.2); §14 editNote/deleteNote contradiction corrected — "needs correction to include Editor" replaced with "Editors confirmed append-only, guard correct as-is, migration required if ever revisited"; §7 ADMIN.39a–c pattern set added (governing hover rule, static neutral substitution table, dark:text-brand-primary-mid text fix pattern, two-part dark target correction pattern, has-[:checked]: variant scope rule, read-before-edit discipline note); §10 R35 grep check added; §11 R35 pairing checklist item added; §11 has-[:checked]: scope checklist item added; §13 stale Phase 14/15 pending stubs removed; §13 dark mode cascade sweep marked complete (ADMIN.39-AUDIT + 39a/39b/39c ✓); §13 ADMIN.40 carry-forward added; §13 prompt log completed (ADMIN.39-AUDIT, ADMIN.39a–c, DOC.51–53 all added); §14 R35 formal rule added (three correct options: native+native, hand-authored+hand-authored in correct order, hand-authored dark: text variant); DOC.54 logged)*
+*v4.3 (July 2026 — ADMIN.40–42 + Phase 21 lock: §1 header updated (v4.3); §7 R36 opacity-variant gap pattern added (hand-authored @layer utilities do not auto-generate /NN or stacked-variant rules; each combination requires explicit authoring; silent failure mode; 3 accessibility gaps confirmed in ADMIN.42-AUDIT; all closed ADMIN.42); §10 R36 grep check added; §11 R36 checklist item added; §13 phase tracker: globals.css opacity-variant gap marked complete (ADMIN.41/42), Phase 21 architecture noted as locked and build-ready; §13 prompt log ADMIN.40 + ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42 + DOC.54 + DOC.55 added; DOC.55 logged)*
