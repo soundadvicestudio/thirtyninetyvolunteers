@@ -303,14 +303,20 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   const calendar = formData.get('feature_calendar') as string | null
   const checkin = formData.get('feature_checkin') as string | null
   const blast = formData.get('feature_blast') as string | null
+  const rehearsals = formData.get('feature_rehearsals') as string | null
 
-  if (!isValidFlagValue(calendar) || !isValidFlagValue(checkin) || !isValidFlagValue(blast)) {
+  if (
+    !isValidFlagValue(calendar) ||
+    !isValidFlagValue(checkin) ||
+    !isValidFlagValue(blast) ||
+    !isValidFlagValue(rehearsals)
+  ) {
     return { error: 'Invalid flag value.' }
   }
 
   const supabase = await getServerClient()
 
-  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast']
+  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals']
   const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
   const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
 
@@ -319,6 +325,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       { key: 'feature_calendar', value: calendar, updated_by: admin.id },
       { key: 'feature_checkin', value: checkin, updated_by: admin.id },
       { key: 'feature_blast', value: blast, updated_by: admin.id },
+      { key: 'feature_rehearsals', value: rehearsals, updated_by: admin.id },
     ],
     { onConflict: 'key' }
   )
@@ -334,6 +341,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   revalidatePath('/')
   revalidatePath('/shows')
   revalidatePath('/calendar')
+  revalidatePath('/crew/rehearsals')
 
   await logAction(
     admin.id,
@@ -344,8 +352,9 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_calendar: previousMap.get('feature_calendar') ?? '',
       feature_checkin: previousMap.get('feature_checkin') ?? '',
       feature_blast: previousMap.get('feature_blast') ?? '',
+      feature_rehearsals: previousMap.get('feature_rehearsals') ?? '',
     },
-    { feature_calendar: calendar, feature_checkin: checkin, feature_blast: blast }
+    { feature_calendar: calendar, feature_checkin: checkin, feature_blast: blast, feature_rehearsals: rehearsals }
   )
 
   return { success: true }

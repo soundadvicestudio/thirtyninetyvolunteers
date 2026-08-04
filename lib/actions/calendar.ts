@@ -221,7 +221,7 @@ export async function createRehearsalBatch(formData: RehearsalBatchFormData): Pr
   const supabase = await getServerClient()
 
   const flags = await getFeatureFlags(supabase)
-  if (!flags.calendar) {
+  if (!flags.rehearsals) {
     return { success: false, error: 'Feature not enabled.' }
   }
 

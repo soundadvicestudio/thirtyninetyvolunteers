@@ -30,6 +30,7 @@ export type SetupPanelInitialValues = {
   feature_calendar: string
   feature_checkin: string
   feature_blast: string
+  feature_rehearsals: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -324,6 +325,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [calendarEnabled, setCalendarEnabled] = useState(initialValues.feature_calendar === 'true')
   const [checkinEnabled, setCheckinEnabled] = useState(initialValues.feature_checkin === 'true')
   const [blastEnabled, setBlastEnabled] = useState(initialValues.feature_blast === 'true')
+  const [rehearsalsEnabled, setRehearsalsEnabled] = useState(initialValues.feature_rehearsals === 'true')
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -333,6 +335,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_calendar', calendarEnabled ? 'true' : 'false')
     fd.append('feature_checkin', checkinEnabled ? 'true' : 'false')
     fd.append('feature_blast', blastEnabled ? 'true' : 'false')
+    fd.append('feature_rehearsals', rehearsalsEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -370,6 +373,12 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         description="Enables the email blast composer under Communication. When off, the Communication page is hidden."
         enabled={blastEnabled}
         onToggle={() => setBlastEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Rehearsal Management"
+        description="Enables the Rehearsals section and the public rehearsal check-in page. When off, /crew/rehearsals and the rehearsal check-in route are inaccessible."
+        enabled={rehearsalsEnabled}
+        onToggle={() => setRehearsalsEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button
