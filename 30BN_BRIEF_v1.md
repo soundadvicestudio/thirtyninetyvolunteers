@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.3
-### Created: July 2026 | Last Updated: July 2026 — v4.3 (Dark mode cascade defect fully closed — ADMIN.39-AUDIT + ADMIN.39a–c; ADMIN.37 revalidatePath sweep + role guards; ADMIN.38 is_active + email log + role guards; Editors confirmed append-only for notes; new R35 @layer utilities dark mode pairing rule; ADMIN.40 carry-forward; Phase 21 next. Folded in this session: the v4.2 update (Phase 19 complete — 19.1–19.3; ADMIN.35–38; Google OAuth registration path; is_active Google path fix; revalidatePath + role guard sweep; communication_preference fully wired; dark mode main content fix; zod &lt;select&gt; pattern; update form action clarification) had been logged as shipped but was never actually applied to this file — reconstructed and applied here alongside v4.3. See v4.2/v4.3 version history entries below.)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.4
+### Created: July 2026 | Last Updated: July 2026 — v4.4 (ADMIN.40–42 complete — OpportunityForm cascade fix, globals.css opacity-variant gap closed across all components/ui/ primitives; Phase 21 architecture fully designed and locked — assignment model, schema, 4-prompt structure; new opacity-variant pattern rule; Phase 21 next pre-launch)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete. Dark mode cascade defect fully closed across 54 files (one residual: ADMIN.40 — OpportunityForm.tsx). Phase 21 (Rehearsal Management) is next pre-launch phase. Phase 17 (Launch) follows Phase 21. Phase CAST planned post-launch.
+**Current phase:** ADMIN.40–42 complete. Dark mode cascade fully closed — all known gaps resolved including OpportunityForm.tsx and globals.css opacity-variant rules across all components/ui/ primitives. Phase 21 (Rehearsal Management) architecture designed and locked — ready for build. Phase 17 (Launch) follows Phase 21. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -405,7 +405,20 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 
   Light mode visual impact: uniform subtle brand tint removal across all admin card headers, table headers, badges, and button hover states. `bg-brand-primary-light` was an 8% brand/92% white blend; replacements are pure neutrals (`bg-gray-50`, `bg-white`, `bg-gray-100`). The shift is uniform and intentional — tradeoff accepted in ADMIN.35 and applied consistently throughout ADMIN.39a–c.
 
-  One residual instance: `components/crew/opportunities/OpportunityForm.tsx:99,115` — `has-[:checked]:bg-brand-primary-light dark:has-[:checked]:bg-dark-surface/50`. Not in the original ADMIN.39-AUDIT inventory. Requires its own investigation (element type, dark-mode intent, correct fix value). Logged as ADMIN.40 — not a launch blocker but should close before Phase 17.
+  **ADMIN.40 (complete):** `OpportunityForm.tsx:99,115` — two `has-[:checked]:` radio-card elements (claim-type selector). Single-part fix: `has-[:checked]:bg-brand-primary-light` → `has-[:checked]:bg-white`. Dark target `dark:has-[:checked]:bg-dark-surface/50` confirmed correct (card sits over `dark:bg-dark-bg` canvas — not a self-match). Commit 1da6b04.
+
+  **globals.css opacity-variant gap — closed ADMIN.41/42:** A separate bug class from R35 was discovered in `components/ui/button.tsx` during ADMIN.40's F7 sweep: hand-authored `@layer utilities` classes do NOT auto-generate opacity-suffix variants (`/NN`) or pseudo-class-stacked combinations (`hover:/NN`, `focus-visible:/NN`, `dark:hover:/NN`). Each combination requires its own explicitly authored rule in globals.css. Missing rules produce silent CSS failures — zero visual effect, or silent fallback to a sibling class.
+
+  ADMIN.41 closed the immediate gap: `dark:bg-brand-primary-light/30` and `dark:hover:bg-brand-primary-light/50` rules authored. Commit b050736.
+
+  ADMIN.42-AUDIT conducted a full exhaustive audit of all 3 `components/ui/` files (button.tsx, dialog.tsx, alert-dialog.tsx — 29 brand utility class references, zero WRONG items). Confirmed 12 MISSING rules across 3 families: brand-primary (2), brand-primary-mid (1), brand-accent (9). Three had ACCESSIBILITY impact (keyboard focus rings producing no color):
+  - `focus-visible:ring-brand-primary/50` — ALL button variants + dialog close button
+  - `focus-visible:ring-brand-accent/20` — destructive button
+  - `dark:focus-visible:ring-brand-accent/40` — dark mode
+
+  ADMIN.42 closed all 12 gaps in a single globals.css pass. Three insertion points: after brand-primary opacity block, after brand-primary-mid opacity block, after brand-accent opacity block. Zero component files changed. Zero regressions (pure additions). Commit 2a34f44.
+
+  The `components/ui/` primitive layer is now fully covered. See R36 in §13 for the standing rule.
 
   **New standing rule (R35):** See §13. Never pair a hand-authored `@layer utilities` class with a native Tailwind dark: utility on the same CSS property. Use native Tailwind pairs on both sides, or use hand-authored pairs on both sides in the correct order within the `@layer utilities` block.
 - **PWA / Add to Home Screen:** Admin users (all roles) can add Production Crew to their device home screen. Admin-only scope (`/crew/`). Offline support via network-first service worker (serves cached content when offline, refreshes on open when connected). App icon: blue X on navy background. `start_url`: `/crew/dashboard`.
@@ -3937,6 +3950,39 @@ Phase 15 — Document & Media System ✓ Complete
                Phase 19 verification items)
   30BN-DOC.53  ✓ Brief Update v4.3 (this prompt — folds in
                the reconstructed v4.2 content above)
+  30BN-ADMIN.40 ✓ OpportunityForm.tsx has-[:checked]:
+               cascade fix. Two radio-card elements
+               (claim-type selector). Single-part:
+               has-[:checked]:bg-brand-primary-light →
+               bg-white. Dark target dark-surface/50
+               confirmed correct (canvas parent, not
+               self-match). 1 file. Commit 1da6b04.
+  30BN-ADMIN.41 ✓ globals.css: authored missing
+               dark:bg-brand-primary-light/30 +
+               dark:hover:bg-brand-primary-light/50
+               rules. First discovery of the opacity-
+               variant gap class. globals.css only.
+               Commit b050736.
+  30BN-ADMIN.42-AUDIT ✓ Exhaustive audit of all 3
+               components/ui/ files (button.tsx,
+               dialog.tsx, alert-dialog.tsx). 29 brand
+               utility class references. 12 MISSING
+               rules across 3 families. 0 WRONG. Three
+               ACCESSIBILITY gaps (focus rings). Full
+               matrix + exact CSS + insertion points
+               specified — no re-investigation needed.
+  30BN-ADMIN.42 ✓ 12 missing globals.css rules added.
+               3 passes: brand-primary (2), brand-
+               primary-mid (1), brand-accent (9).
+               Accessibility gaps closed (focus rings
+               now rendering correctly on all button
+               variants + dialog close). globals.css
+               only. Zero component changes. Zero
+               regressions. R36 established.
+  30BN-DOC.54  ✓ Process Update v4.2 (ADMIN.39a–c
+               patterns, R35 formal rule, Editor
+               append-only confirmed, cascade sweep
+               complete, prompt log completed)
 
 **SETUP.1** ✓ — Feature flag infrastructure.
 `lib/feature-flags.ts`: `getFeatureFlags()` + `FeatureFlags`
@@ -4257,47 +4303,48 @@ subsumed — this general preference field serves that purpose.
 ~~**Automated thank-you email after a show**~~ —
 ✓ Built in Alpha (30BN-12.4). See §8 Show Management.
 
-### Phase 21 — Rehearsal Management System — next pre-launch phase
+### Phase 21 — Rehearsal Management System (pre-launch, after Phase 19 ✓)
 
-Master rehearsal schedule management surface, distinct from the Master Calendar (which handles space booking and conflict resolution). Phase 21 is about who is called, what is assigned, and tracking attendance.
+**Architecture decisions locked (July 2026 planning session):**
 
-Access model:
-- Production role: sees only rehearsal schedules they are personally assigned to. Can submit new rehearsal schedules (bulk entry, same form as CAL.5b). Can add individual rehearsal calls within their assigned schedules.
-- Viewers: see all schedules, read-only
-- Editors: see all, can manage
-- Owner Admin + Super Admin: see all, full control
+**Who is assigned:** Admin Production role users only (directors, stage managers, production staff with Production-role backend accounts). Cast members are NOT in scope for Phase 21 — they are the Phase CAST data model. Phase 21 infrastructure is designed to be extended by Phase CAST.
 
-Calendar integration: Rehearsal schedule submissions through the Rehearsals tab follow the identical flow as CAL.5b — they create `rehearsal_batches` and `calendar_events` rows, enter the pending approval queue, and require Owner Admin or Super Admin location assignment and approval. The Rehearsals tab is the management surface; the Calendar is the booking surface. Both remain in sync.
+**Assignment model:** Two-tier — schedule-level default assignment (user attends all dates in the batch) plus per-date override capability (include or exclude specific users from specific dates). The "effective roster" for any given date = schedule-level assignees MINUS exclude overrides PLUS include overrides.
 
-Core feature set:
-- `/crew/rehearsals` sidebar nav link (all roles; Production sees filtered view)
-- Master rehearsal schedule list with role-filtered visibility
-- Rehearsal schedule CRUD — CalendarBulkRehearsalForm surfaced here as primary entry point
-- Admin user assignment to schedules (individual or by role group)
-- Individual rehearsal call management within a schedule — specific calls with per-call user assignment
-- Rehearsal attendance tracking using existing check-in infrastructure (Phase 14 model applied to rehearsals)
-- Feature flag: `feature_rehearsals` (default `'true'`, gates sidebar link + routes per R34)
+**Attendance model:** New `rehearsal_attendance` table linked to `calendar_events` + `admin_users`. Clean separation from the volunteer `attendance` table.
 
-Pre-Phase 21 required:
-- ADMIN.32 ✓ Complete — Owner Admin comprehensive permission audit (read-only sweep confirming all operational contexts pass owner_admin through correctly)
-- ADMIN.33 ✓ Complete — Production role permission audit + OA permissions sweep + OpenCall OS branding sweep
+**Check-in:** QR-based, same model as Phase 14. Requires `calendar_events.check_in_token` column. Public route: `/rehearsal-checkin/[token]`.
 
-Phase 21 prerequisites met.
+**Feature flag:** `feature_rehearsals` (R34 compliant — entire `/crew/rehearsals` route tree gated behind this flag from initial build).
 
-**ADMIN.40 (pre-Phase-17, not blocking launch):**
-`components/crew/opportunities/OpportunityForm.tsx:99,115`
-— two `has-[:checked]:bg-brand-primary-light dark:has-
-[:checked]:bg-dark-surface/50` instances. Not in the
-original ADMIN.39-AUDIT inventory (the file was not
-surfaced in the B1–B5 grep pass). Discovered during
-ADMIN.39c F7 final sweep. Requires investigation before
-fix: element type (opportunity-type radio buttons or
-similar), dark-mode intent, whether the dark: target
-itself is also wrong (dark-surface/50 at low opacity may
-match the container background — same near-zero contrast
-pattern as the zebra stripe fixes). Short audit + one-line
-fix expected. Target: before Phase 17 launch, after
-Phase 21.
+**New schema (next migrations after 030):**
+- `rehearsal_schedule_assignments` — `rehearsal_batch_id → admin_user_id`. Schedule-level assignment.
+- `rehearsal_date_assignments` — `calendar_event_id → admin_user_id`, with `override_type` ('include' | 'exclude'). Per-date overrides.
+- `rehearsal_attendance` — `calendar_event_id → admin_user_id`, `status` ('showed'|'no-show'|'excused'), `source` ('checkin'|'manual'), `checked_in_at` timestamptz.
+- `calendar_events.check_in_token` — nullable uuid, default `gen_random_uuid()`.
+- `feature_rehearsals` app_settings key seeded.
+- RLS on all new tables. Indexes on all FK columns.
+
+**Existing infrastructure reused:**
+- `rehearsal_batches` + `calendar_events` — already exist
+- `CalendarBulkRehearsalForm.tsx` — surfaced as primary entry point from Rehearsals tab (no rebuild)
+- Pending approval queue — unchanged; batches still flow through it for location + SA/OA approval
+- `generateQR()` from `lib/qr.ts` — reused for rehearsal check-in QR codes
+- Phase 14 check-in public route pattern — new parallel route mirrors it
+
+**Production role submission:** Production users can submit new rehearsal schedules via CalendarBulkRehearsalForm. `createRehearsalBatch()` guard must allow Production. Confirm in 21.A audit — relax if currently blocked.
+
+**4-prompt structure:**
+
+**21.A (audit, Phase A only — no code):** Read-only investigation of live codebase. Confirm Production guard on `createRehearsalBatch()`, read Phase 14 check-in pattern, read `generateQR()` signature, confirm `rehearsal_batches` + `calendar_events` current schema, read Sidebar.tsx for flag insertion point, confirm `feature_rehearsals` flag status. Produce structured findings report before any schema is written.
+
+**21.1 (schema + server actions):** Migrations for all 4 new tables/columns. New `lib/actions/rehearsals.ts`: `getRehearsalSchedules()` (role-filtered), `getRehearsalScheduleDetail()`, `assignUserToSchedule()`, `removeUserFromSchedule()`, `addDateOverride()`, `removeDateOverride()`, `getEffectiveRoster()`, `markRehearsalAttendance()`, `getRehearsalCheckInData()` (public, getAdminClient()), `checkInToRehearsal()`. Production guard fix in `createRehearsalBatch()` if needed.
+
+**21.2 (list + schedule management UI):** `/crew/rehearsals` route + sidebar nav link (feature_rehearsals flag, all roles). Role-filtered schedule list (SA/OA/Editor/Viewer: all; Production: assigned only). CalendarBulkRehearsalForm surfaced as New Schedule entry point. Schedule detail page with Roster + Dates tabs. User assignment UI (search/add Production users at schedule or date level).
+
+**21.3 (attendance + QR check-in + help):** Attendance tab on schedule detail. Manual attendance marking (SA/OA/Editor + Production for own dates). QR check-in public route `app/rehearsal-checkin/[token]/page.tsx` (public, getAdminClient(), no auth required). QR display on date rows. proxy.ts: `/rehearsal-checkin/` excluded from admin guard. HelpContent.tsx Rehearsals section. Deferred Verifications v18 Phase 21 items.
+
+**Prerequisites:** ADMIN.32 ✓, ADMIN.33 ✓ (confirmed v4.3). Phase 19 ✓ complete.
 
 ### Phase CAST — Cast Member Portal (named future phase, post-Phase 21)
 
@@ -4485,6 +4532,25 @@ dark: class is specified.)
 
 This defect was confirmed empirically via live PostCSS compilation in ADMIN.35-AUDIT and fully resolved across 54 files in ADMIN.39a–c. ADMIN.40 covers the one remaining instance not in the original audit scope.
 
+### R36 — Hand-Authored @layer utilities Classes Do NOT Auto-Generate Opacity-Suffix or Pseudo-Class-Stacked Variant Rules
+
+In Tailwind v4 with hand-authored `@layer utilities` classes, each specific combination must be explicitly authored as its own rule. This is distinct from R35 (which is about cascade ordering between hand-authored and native classes) — R36 is about missing rules that produce silent CSS failures.
+
+Examples of combinations that require explicit rules:
+```
+bg-brand-primary/80          → needs: .bg-brand-primary\/80
+hover:bg-brand-primary/80    → needs: .hover\:bg-brand-primary\/80:hover
+dark:bg-brand-accent/20      → needs: .dark\:bg-brand-accent\/20:where(...)
+focus-visible:ring-brand-primary/50 → needs explicit :focus-visible rule
+dark:hover:bg-brand-accent/30 → needs both :where() and :hover chained
+```
+
+Native Tailwind utility classes (bg-gray-50, etc.) DO auto-generate these combinations via the JIT engine. Only hand-authored `@layer utilities` brand classes are affected.
+
+Failure mode: a class with no matching rule produces zero CSS output — the element renders as if the class is not present, or silently falls back to a sibling class that produces the wrong color or opacity. No build error, no lint error. Confirmed failure in button.tsx: `focus-visible:ring-brand-primary/50` was present in every button variant but produced no focus ring color (ACCESSIBILITY impact) until ADMIN.42 added the explicit rule.
+
+Correct approach: whenever adding a brand utility class to a component with an opacity suffix or stacked pseudo-class/variant prefix, check globals.css immediately and author the missing rule if it does not exist. See §10 grep check and §11 checklist item in Process for enforcement.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -4542,3 +4608,4 @@ logged)*
 *v4.1 (July 2026 — Phase THEME complete: §1 header + current phase updated (THEME complete, Phase 19 + 21 pre-launch); §3 color.ts utility added to tech stack; PDF export brand color architecture noted (@react-pdf/renderer createStyles factory — THEME.4); §6 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight via lightenHex); buildEmailHtml() brand color params documented; email client brand color approach note (string interpolation, not var()); buildCtaButton() dynamic color call sites noted; §8 signup form Phase 19 preference field noted; /update Phase 19 field noted; Call Board volunteer card Phase 19 preference badge + inline update noted; Volunteer Profile Phase 19 editable preference noted (confirmed editable in admin); Volunteer List Phase 19 display-only noted; PDF export createStyles factory architecture documented; Platform Setup Section 2 "Phase THEME must ship" language replaced with completed status; §9 volunteers table communication_preference column Phase 19 note added; Migration 030 context note added; §11 Beta Build header updated; Phase THEME section replaced (all 4 "pending" entries → completed summaries: THEME.A/1/2a–2d/3/3b/4); Phase 17 stub replaced with full 7-sub-phase spec (17.1–17.7); Phase 19 spec updated (prompt structure 19.1/19.2/19.3, admin editable confirmed, CSV export noted, PDF decision noted); Phase 21 moved from post-launch to pre-launch; §11 prompt log: DOC.44 note expanded, DOC.44-FIX + DOC.45 + DOC.46 + DOC.46-FIX + THEME.A + THEME.1 + THEME.2a–2d + THEME.3 + THEME.3b-4 + DOC.47 all added; DOC.47 logged)*
 *v4.2 (July 2026 — Phase 19 complete + ADMIN.35–38: reconstructed retroactively during the DOC.53 session — this update was logged as shipped in 30BN_PROCESS_v1.md's §13 prompt history but was never actually committed to this file; the live Brief remained at v4.1 until this session closed the gap. §1 header + current phase updated (Phase 19 + ADMIN.35–38 complete); §7 two new patterns added: Google OAuth registration path (ADMIN.36 — routes through the same Request Access approval flow as email/password self-registration, dual-client pattern in auth/callback/route.ts) and is_active gating on the Google OAuth path (ADMIN.38 — sign out before redirect on inactive account, matching the existing email/password pattern); §8 five "Phase 19 — pending" markers updated to built (signup form, /update, Call Board card, volunteer list, volunteer profile); §8 /update field note extended with the updateVolunteerInfo()/updateVolunteer() two-file update pattern (19.2); §8 Volunteer Profile field note extended with the zod <select> pattern (z.string().optional(), not z.enum() — empty string from an unselected <select> fails enum validation silently; corrected 19.1→19.3); §9 Migration 030 marked applied, volunteers.communication_preference column def uncommented, next-migration pointer updated; §11 header updated; §11 prompt log: ADMIN.35-AUDIT + ADMIN.35 + ADMIN.36 + ADMIN.37 + ADMIN.38 + 19.1 + 19.2 + 19.3 added; §11 Phase 19 section rewritten from planned spec to complete build summary; DOC.50 logged)*
 *v4.3 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header + current phase updated (ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete; dark mode cascade defect closed across 54 files; Phase 21 next); §8 Volunteer Profile notes spec: Editors confirmed append-only for notes (editNote/deleteNote guards stay SA+OA only — RLS + design intent re-confirmed ADMIN.39-AUDIT F4, July 2026); stale pre-ADMIN.33 wording also corrected here (Owner Admin included alongside Super Admin for edit/delete); §8 Light/Dark Mode: dark mode cascade defect resolution documented (root cause, fix pattern, 54 files, special cases, light mode visual impact, ADMIN.40 residual); §13 R35 added (never pair hand-authored @layer utilities class with native Tailwind dark: utility on same property — two correct approaches documented); §11 prompt log ADMIN.39-AUDIT + ADMIN.39a–c + DOC.51 + DOC.52 + DOC.53 added; §11 Phase 21 pre-requisite bullets corrected from forward-looking language to ✓ Complete (ADMIN.32/33 — stale since v4.0, whose own history entry had claimed this was already fixed); §11 ADMIN.40 carry-forward noted (OpportunityForm.tsx:99,115 — not in original audit scope, pre-Phase-17); DOC.53 logged)*
+*v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
