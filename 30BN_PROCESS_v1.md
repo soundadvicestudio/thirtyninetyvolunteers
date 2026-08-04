@@ -2564,33 +2564,8 @@ Phase 21 — architecture locked, build ready:
   21.2 (list + management) → 21.3 (attendance + QR +
   help). Pre-launch. Begins next build session.
 
-ADMIN.40 (pre-Phase-17, not blocking launch):
-  `components/crew/opportunities/OpportunityForm.tsx:99,115`
-  — `has-[:checked]:bg-brand-primary-light dark:has-
-  [:checked]:bg-dark-surface/50`. Not in original
-  ADMIN.39-AUDIT inventory. Discovered during ADMIN.39c
-  F7 final sweep. Requires short investigation before fix
-  (element type, dark-mode intent, whether dark: target
-  is also wrong — dark-surface/50 at low opacity likely
-  matches container, same pattern as zebra stripe fixes).
-  Target: before Phase 17, after Phase 21.
-
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
-Phase 21 — Rehearsal Management System
-  (planned, pre-launch) — /crew/rehearsals sidebar
-  tab; role-filtered visibility (Production sees only
-  assigned schedules); bulk rehearsal submission
-  (surfacing CalendarBulkRehearsalForm as primary
-  entry point); admin user assignment to schedules;
-  individual rehearsal call management; rehearsal
-  attendance tracking (Phase 14 check-in model).
-  feature_rehearsals flag (R34). Calendar integration
-  preserved (submissions → same pending queue flow).
-  Owner Admin approval authority in pending queue.
-  Pre-requisites: ADMIN.32 ✓ (Owner Admin permission
-  audit — complete) + ADMIN.33 ✓ (role audit and
-  sweep — complete). Phase 21 prerequisites met.
 Phase CAST — Cast Member Portal (named future phase,
   post-Phase 21) — cast member entity (separate from
   admin_users), cast frontend login, rehearsal schedule
