@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.3
-### Created: July 2026 | Last Updated: July 2026 — v4.3 (ADMIN.40–42 + Phase 21 architecture locked; R36 added (opacity-variant rules must be explicitly authored); new §10 grep check for opacity-variant gaps; new §11 checklist item; phase tracker + prompt log updated through ADMIN.42 + DOC.55)
+## 30BN_PROCESS_v1.md — v4.4
+### Created: July 2026 | Last Updated: August 2026 — v4.4 (Phase 21 complete — 21.A through 21.3; R37 cross-reference added (admin_users.id = auth.uid() for RLS — no auth_user_id column); three new §7 patterns (admin_users.id RLS, Sidebar three-part atomic edit, effective-roster-first attendance); feature_rehearsals added to flag list; §10 two grep updates; §11 three new checklist items; §13 Phase 21 completed; §14 R34 + public-route invariant + R37 updates)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -279,8 +279,9 @@ route handlers — no session cookie exists to read.
 **Public-route action file invariant (established 14.1):**
 Files that serve public token-gated routes (no Supabase Auth session) must use
 `getAdminClient()` exclusively. The canonical examples are `lib/actions/checkin.ts`
-(public check-in page) and `lib/actions/consent.ts` (public consent upload page).
-Both files carry a header comment documenting this invariant:
+(public check-in page), `lib/actions/consent.ts` (public consent upload page), and
+`lib/actions/rehearsals.ts` (public rehearsal self check-in — added Phase 21). All
+three carry the // PUBLIC ROUTE header comment.
 
 ```typescript
 // PUBLIC ROUTE — getAdminClient() only, never getServerClient()
@@ -292,8 +293,10 @@ separate `*-admin.ts` sibling file that uses `getServerClient()`. The two files 
 never be merged.
 
 Pattern: `lib/actions/checkin.ts` (public, `getAdminClient()`) +
-`lib/actions/checkin-admin.ts` (authenticated, `getServerClient()`). This split was
-established in Phase 14 and confirmed again in Phase 15.2.
+`lib/actions/checkin-admin.ts` (authenticated, `getServerClient()`). Extended in Phase 21:
+`lib/actions/rehearsals.ts` (public, `getAdminClient()`) +
+`lib/actions/rehearsals-admin.ts` (authenticated, `getServerClient()`). This split pattern is
+established in Phase 14, confirmed in Phase 15.2, and confirmed again in Phase 21.
 
 **`createUser()` auth.admin exception (confirmed ADMIN.26):**
 `lib/actions/users.ts` `createUser()` must keep `getAdminClient()` for the two Supabase Auth Admin
@@ -465,7 +468,7 @@ Sidebar conditionally renders links based on flags passed as props from the crew
 
 The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Active feature flags (three only — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`. `feature_opportunities`, `feature_hours_milestones`, `feature_documents` were deleted in Migration 026 — those are core features.
+Active feature flags (four — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
 
 Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
 
@@ -546,6 +549,63 @@ if (!error && deletedNote) {
 ```
 
 This pattern avoids a separate pre-delete SELECT query and retrieves the parent ID in a single operation. Confirmed in ADMIN.37: `editNote()` and `deleteNote()` both required this pattern when `revalidatePath()` was added — the functions had only `noteId` as a parameter and no other way to obtain `volunteer_id`.
+
+**`admin_users.id` is the Supabase Auth UUID — no `auth_user_id` column (established 21.1 F1 / R37):**
+When writing RLS policies that self-scope to the calling admin user, use `admin_user_id = auth.uid()` directly for FK columns referencing `admin_users.id`. Do not join through a non-existent `auth_user_id` column.
+
+The `admin_users` table has no `auth_user_id` column. The `id` column IS the Supabase Auth UUID — they are the same value. All existing RLS helper functions (`is_editor()`, `is_super_admin()`, `is_super_admin_or_owner_admin()`, `is_admin()`) verify role via:
+`EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid() AND role IN (...))` — this pattern is correct and consistent.
+
+For FK columns referencing `admin_users.id` (e.g. `rehearsal_schedule_assignments.admin_user_id`):
+```sql
+-- WRONG — auth_user_id column does not exist
+CREATE POLICY "production_select_own" ON table
+  FOR SELECT TO authenticated
+  USING (
+    admin_user_id IN (
+      SELECT id FROM admin_users
+      WHERE auth_user_id = auth.uid()  -- column does not exist
+    )
+  );
+
+-- CORRECT — admin_users.id IS auth.uid()
+CREATE POLICY "production_select_own" ON table
+  FOR SELECT TO authenticated
+  USING (admin_user_id = auth.uid());
+```
+
+Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.uid()` in RLS policies for Production self-scoping. Schema verification (R2) before applying confirmed the column does not exist. Corrected to `admin_user_id = auth.uid()` before the migration was run.
+
+Cross-reference: Brief §13 R37 (new rule in v4.5).
+
+**Sidebar data-driven three-part atomic edit (established 21.A Audit E / 21.2):**
+The crew sidebar is data-driven via three locations in `components/crew/Sidebar.tsx`:
+1. `NAV_ITEMS` — the nav item object (icon, label, href)
+2. `FLAG_GATED_HREFS` — the set of hrefs gated by feature flags
+3. Production role allowlist — the set of hrefs accessible to the Production role (not just SA/OA/Editor/Viewer)
+
+All three must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
+- Missing NAV_ITEMS: the link does not appear at all for any role
+- Missing FLAG_GATED_HREFS: the link appears even when the flag is off, bypassing the feature gate entirely
+- Missing the Production allowlist: the link appears for all roles EXCEPT Production, even when the spec requires Production access — no error, no warning, just invisibility for that role
+
+Confirmed in 21.2: the four-part sidebar edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + HelpTooltip on the nav link element) was performed atomically. The Production allowlist addition is the most commonly missed of the four because it is not part of the visual link definition — it is a separate allow-set in a different part of the component.
+
+This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all three locations before making any edit, confirm all three are updated in the same commit.
+
+**`getRehearsalAttendanceForEvent()` — effective-roster-first pattern (established 21.3):**
+Any server action or data function that returns per-person attendance status for a rehearsal event must compute the effective roster first, then LEFT JOIN attendance records onto it. Never query `rehearsal_attendance` alone to produce a roster — that table only contains rows for people who have already been marked, so roster members with no attendance record yet would be silently absent from the result.
+
+Correct pattern:
+1. Compute effective roster: schedule assignees MINUS exclude overrides PLUS include overrides (same set-math as `getEffectiveRoster()` via `rehearsal-roster.ts`).
+2. Query `rehearsal_attendance` WHERE `calendar_event_id = eventId` AND `admin_user_id IN (rosterIds)` — build a Map<adminUserId, row>.
+3. For each roster member: look up in the Map. If found, use the attendance row's status and checked_in_at. If absent, return `status: null, checkedInAt: null`.
+
+This ensures all effective roster members are returned, including those not yet marked. The Attendance tab depends on this: "X of Y attended" requires knowing Y (roster size), which is not derivable from the attendance table alone.
+
+Failure mode: querying only `rehearsal_attendance` returns only people with attendance records. The UI shows no entries for unmarked roster members — they silently disappear from the Attendance tab. The quality gate in 21.3 explicitly checks: "getRehearsalAttendanceForEvent() — computes effective roster first, then maps attendance rows onto it."
+
+Apply this pattern to any new attendance-summary function in the rehearsal system. Do not replicate the simpler `SELECT * FROM rehearsal_attendance WHERE event_id = X` shortcut — it produces an incomplete result by design.
 
 **`detectLinkType()` independence — recognized DRY exception (established 15.3/15.4):**
 Three independent implementations of `detectLinkType()` (and related helpers
@@ -938,10 +998,12 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 
 ```bash
 # Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
-# Only three active flags remain after Migration 026:
-#   feature_calendar, feature_checkin, feature_blast
-# (feature_opportunities, feature_hours_milestones, feature_documents deleted — core features)
-grep -rn "feature_calendar\|feature_checkin\|feature_blast" \
+# Active flags after Migration 031 (Phase 21):
+#   feature_calendar, feature_checkin, feature_blast,
+#   feature_rehearsals
+# (feature_opportunities, feature_hours_milestones,
+#  feature_documents deleted — core features)
+grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
@@ -992,10 +1054,13 @@ grep -rn "\.storage\.from(" \
 # (public-route invariant — established 14.1 / 15.2)
 grep -n "getServerClient" \
   lib/actions/checkin.ts \
-  lib/actions/consent.ts
-# Must return zero results. These files are public-route
-# only — getAdminClient() throughout. Any hit is a
-# security violation.
+  lib/actions/consent.ts \
+  lib/actions/rehearsals.ts
+# Must return zero results for all three files. These are
+# public-route files — getAdminClient() only, per the
+# public-route action file invariant (§7 + §14). Any hit
+# is a security violation.
+# lib/actions/rehearsals.ts added Phase 21 (21.1).
 ```
 
 ```bash
@@ -1468,6 +1533,32 @@ Run before every Vercel deployment:
   app/globals.css. Author the rule if absent, following
   the color-mix() pattern of existing rules in that
   family's section. (ADMIN.42 pattern)
+□ Any new server action or data function that returns
+  attendance status for rehearsal events: confirm it computes
+  the effective roster first, then LEFT JOINs rehearsal_
+  attendance onto it. Never query rehearsal_attendance alone
+  to build a per-person result — it only contains rows for
+  people already marked, so unmarked roster members would
+  silently disappear. Return status: null for roster members
+  with no attendance record yet. (21.3 — getRehearsalAttendance
+  ForEvent() correctness pattern; §7 pattern note)
+□ Any new bulk attendance mark operation (e.g., "mark all
+  present" for a rehearsal or event): use a single batch
+  .upsert([...array...]) call, not a loop of individual
+  markAttendance() calls. Supabase's JS client supports
+  array upsert natively. A per-person loop achieves the same
+  result but is needlessly slow and not atomic.
+  (21.3 — markAllRehearsalAttended() pattern)
+□ Any prompt that adds items to 30BN_DEFERRED_VERIFICATIONS_
+  v2.md: confirm items are manual owner browser-verification
+  steps only. DB-confirmable schema items (table existence,
+  column types, index presence, RLS policy names, migration
+  status, app_settings row presence) belong in build reports
+  via live Supabase queries — NOT in the Deferred Verifications
+  document. The document header is explicit on this boundary.
+  Items already confirmed via live DB queries in a build
+  report must not be duplicated into the verification doc.
+  (21.3 Q2 — confirmed scope boundary)
 ```
 
 ---
@@ -2558,11 +2649,70 @@ globals.css opacity-variant gap — ✓ Complete (ADMIN.41 + ADMIN.42-AUDIT + AD
     Accessibility gaps closed. R36 established.
   - components/ui/ primitive layer now fully covered.
 
-Phase 21 — architecture locked, build ready:
-  See Brief §11 Phase 21 for the complete spec. Prompt
-  structure: 21.A (audit) → 21.1 (schema + actions) →
-  21.2 (list + management) → 21.3 (attendance + QR +
-  help). Pre-launch. Begins next build session.
+Phase 21 — Rehearsal Management System ✓ Complete
+  30BN-21.A  ✓ Read-only audit (7 read targets). Key
+               findings: createRehearsalBatch() already
+               allows Production (no change needed);
+               calendar_events.check_in_token absent
+               (Migration 031 must add); feature_rehearsals
+               absent from all three locations; Sidebar
+               confirmed data-driven (NAV_ITEMS +
+               FLAG_GATED_HREFS + Production allowlist —
+               three-part atomic edit required); proxy.ts
+               matcher/Production exception/flag block
+               insertion points identified.
+  30BN-21.1  ✓ Migration 031 (calendar_events.check_in_
+               token, rehearsal_schedule_assignments,
+               rehearsal_date_assignments, rehearsal_
+               attendance, feature_rehearsals seed).
+               lib/feature-flags.ts: rehearsals boolean
+               added. lib/actions/rehearsals.ts (NEW —
+               PUBLIC ROUTE: getRehearsalCheckInData,
+               checkInToRehearsal). lib/actions/rehearsals-
+               admin.ts (NEW — 8 authenticated actions).
+               lib/utils/rehearsal-roster.ts (NEW — shared
+               effective-roster set-math). types/rehearsal.ts
+               (NEW). calendar.ts: createRehearsalBatch()
+               flag guard changed calendar → rehearsals.
+               Setup Panel Section 6: 4th toggle.
+               Critical finding (F1): admin_users.id IS the
+               Supabase Auth UUID — no auth_user_id column.
+               Production RLS self-scoping corrected to
+               admin_user_id = auth.uid() (R37). 10 files.
+  30BN-21.2  ✓ proxy.ts: needsFlagCheck + Production
+               exception + crew flag block for /crew/
+               rehearsals. Sidebar.tsx: 4-part atomic edit
+               (NAV_ITEMS + FLAG_GATED_HREFS + Production
+               allowlist + HelpTooltip). layout.tsx:
+               confirmed unchanged. schedule list page
+               (page.tsx + RehearsalsListClient.tsx) +
+               schedule detail shell + Roster/Dates tabs
+               (RehearsalDetailTabs.tsx + [id]/page.tsx).
+               lib/actions/rehearsals-admin.ts extended:
+               rosterCount, location_name join, per-assignee
+               overrideCount, check_in_token, 4-state status
+               (Q3 — UI requirements surfaced schema gaps).
+               9 files.
+  30BN-21.3  ✓ proxy.ts: /rehearsal-checkin/:path* added
+               to matcher (before flag block — SETUP.1 F1
+               discipline); needsFlagCheck extended for
+               /rehearsal-checkin/ (separate condition —
+               not covered by 21.2 addition); public flag
+               block added. rehearsals-admin.ts: getRehearsalAttendanceForEvent() (effective-roster-first,
+               status: null for unmarked) + markAllRehearsal
+               Attended() (single array upsert, SA/OA/Editor
+               only). Attendance tab: stub replaced (lazy-
+               load via useTransition + Map, role-gated
+               marking, two-step inline confirm, Self Check-
+               In badge). Public check-in route (page.tsx +
+               RehearsalCheckInClient.tsx — roster dropdown
+               identity, not email/phone; light mode; noindex;
+               branded header). HelpContent.tsx: Rehearsals
+               as 14th ALL_SECTIONS entry (4 subsections,
+               all roles). rehearsals/page.tsx: HelpTooltip
+               on page header (missed in 21.2). Deferred
+               Verifications v18: 55 Phase 21 items added.
+               10 files modified + 2 created.
 
 Phase 20 — Automated thank-you email after a show
   ✓ Built in Alpha (30BN-12.4). See Phase 12 above.
@@ -2826,6 +2976,17 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
              Editor append-only confirmed, prompt log
              completed.
 30BN-DOC.55  ✓ Brief v4.4 + Process v4.3 (this prompt)
+30BN-21.A    ✓ (see Phase 21 above)
+30BN-21.1    ✓ (see Phase 21 above)
+30BN-21.2    ✓ (see Phase 21 above)
+30BN-21.3    ✓ (see Phase 21 above)
+30BN-DOC.56  ✓ Brief Update v4.5 (Phase 21 complete:
+               §1, §2, §7, §8 Rehearsal Management section,
+               §9 three new table blocks + Migration 031 +
+               calendar_events.check_in_token + feature_
+               rehearsals seed, §11 Phase 21 completed
+               summary, §13 R34 update + R37 new rule)
+30BN-DOC.57  ✓ Process Update v4.4 (this prompt)
 ```
 
 ---
@@ -3113,8 +3274,9 @@ Files serving public token-gated routes (no Supabase Auth session) use
 // PUBLIC ROUTE — getAdminClient() only, never getServerClient()
 ```
 
-This applies to: `lib/actions/checkin.ts`, `lib/actions/consent.ts`, and any future
-file serving a public route with no session. The comment is not decorative — it is
+This applies to: `lib/actions/checkin.ts` (Phase 14), `lib/actions/consent.ts` (Phase 15.2),
+`lib/actions/rehearsals.ts` (Phase 21), and any future file serving a public route with no
+session. The comment is not decorative — it is
 an architectural invariant that prevents future contributors from adding
 `getServerClient()` calls without recognizing the context.
 
@@ -3122,6 +3284,11 @@ When a domain needs both public-route actions and authenticated admin-session ac
 split them into separate files:
 - `lib/actions/[domain].ts` — public route, `getAdminClient()` only
 - `lib/actions/[domain]-admin.ts` — authenticated session, `getServerClient()`
+
+Phase 21 confirmed this pattern for the rehearsal domain: `lib/actions/rehearsals.ts`
+(public, `getAdminClient()` only) and `lib/actions/rehearsals-admin.ts` (authenticated,
+`getServerClient()`). The Brief's original single-file spec for rehearsals was corrected
+before build — the Process §7 invariant requires the split regardless of spec wording.
 
 Never merge the two patterns into one file. This is the same principle as the
 iCalendar routes (CAL.7) — token-authenticated public routes use `getAdminClient()`
@@ -3308,8 +3475,14 @@ requires: (1) feature_X seeded in migration; (2) getFeatureFlags() updated; (3) 
 route block; (4) sidebar conditional; (5) public route 404 when off; (6) action-level early
 return. Core features (volunteer management, show/slot management, user management, forms,
 media library, hours, opportunities, Call Board) are never flagged. Current flagged features:
-feature_calendar, feature_checkin, feature_blast. Enforced from SETUP.4 onward.
+`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals` (Phase 21). Enforced from SETUP.4 onward.
 See §11 checklist for the required verification item.
+
+### R37 — admin_users.id = auth.uid() for RLS Policies (cross-reference)
+
+Documented in Brief §13 R37 (added v4.5). Referenced here for R-number continuity. Core rule: `admin_users.id` is the Supabase Auth UUID — there is no separate `auth_user_id` column. RLS policies that self-scope to the calling admin must use `admin_user_id = auth.uid()` directly for FK columns referencing `admin_users.id`, or `id = auth.uid()` for the `admin_users` table itself. Never reference a non-existent `auth_user_id` column.
+
+Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.uid()` in Production self-scoping RLS policies. Schema verification (R2) confirmed the column does not exist. Corrected to `admin_user_id = auth.uid()` before applying. See §7 for the full pattern note and code examples.
 
 **Dark mode cascade defect — architectural note (ADMIN.35-AUDIT):**
 In Tailwind v4 with `@tailwindcss/postcss`, hand-authored `@layer utilities` rules compile AFTER Tailwind's auto-generated utilities in the PostCSS output. This means: if a hand-authored class (e.g. `bg-brand-primary-light`) and a Tailwind dark-variant class (e.g. `dark:bg-dark-bg`) appear on the same element, the hand-authored class wins in dark mode due to source order — even though the dark variant is active. Both have equal specificity (0,0,1,0); last-in-cascade wins.
@@ -3386,3 +3559,4 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.1 (July 2026 — Phase 19 complete + ADMIN.35–38: §1 header updated (v4.1, Phase 19 + ADMIN.35–38 summary); §7 three new patterns added: Google OAuth callback dual-client pattern (getAdminClient() for pending_registrations ops — newly-OAuth'd user fails session-client RLS; ADMIN.36/38), is_active sign-out pattern (signOut() before redirect on inactive Google auth — ADMIN.38), updateVolunteerInfo() public-route identity (app/update/actions.ts is the /update submit action, distinct from updateVolunteer() in lib/actions/volunteers.ts — any new profile field must update both — 19.2); §7 revalidatePath via .select() pattern added (deleteNote/editNote — retrieve parent ID in single operation to avoid pre-delete SELECT — ADMIN.37); §11 three new checklist items: /update two-file field update pattern (19.2), z.string().optional() for <select> fields (enum rejects '' silently — 19.1/19.3), role guard allowlist pattern for volunteer mutations (Production must be explicitly blocked — ADMIN.37/38); §13 Phase 19 marked complete (19.1–19.3 ✓); §13 prompt log ADMIN.35-AUDIT + ADMIN.35–38 + 19.1–19.3 + DOC.50–51 added; §14 dark mode cascade defect note added (hand-authored @layer utilities compile after Tailwind auto-generated — bg-brand-primary-light overrides dark:bg-dark-bg; ADMIN.35-AUDIT root cause; ADMIN.39 sweep pending); §14 editNote()/deleteNote() role guard gap noted (should allow Editor — deferred to ADMIN.39); DOC.51 logged)*
 *v4.2 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header updated (v4.2); §14 editNote/deleteNote contradiction corrected — "needs correction to include Editor" replaced with "Editors confirmed append-only, guard correct as-is, migration required if ever revisited"; §7 ADMIN.39a–c pattern set added (governing hover rule, static neutral substitution table, dark:text-brand-primary-mid text fix pattern, two-part dark target correction pattern, has-[:checked]: variant scope rule, read-before-edit discipline note); §10 R35 grep check added; §11 R35 pairing checklist item added; §11 has-[:checked]: scope checklist item added; §13 stale Phase 14/15 pending stubs removed; §13 dark mode cascade sweep marked complete (ADMIN.39-AUDIT + 39a/39b/39c ✓); §13 ADMIN.40 carry-forward added; §13 prompt log completed (ADMIN.39-AUDIT, ADMIN.39a–c, DOC.51–53 all added); §14 R35 formal rule added (three correct options: native+native, hand-authored+hand-authored in correct order, hand-authored dark: text variant); DOC.54 logged)*
 *v4.3 (July 2026 — ADMIN.40–42 + Phase 21 lock: §1 header updated (v4.3); §7 R36 opacity-variant gap pattern added (hand-authored @layer utilities do not auto-generate /NN or stacked-variant rules; each combination requires explicit authoring; silent failure mode; 3 accessibility gaps confirmed in ADMIN.42-AUDIT; all closed ADMIN.42); §10 R36 grep check added; §11 R36 checklist item added; §13 phase tracker: globals.css opacity-variant gap marked complete (ADMIN.41/42), Phase 21 architecture noted as locked and build-ready; §13 prompt log ADMIN.40 + ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42 + DOC.54 + DOC.55 added; DOC.55 logged)*
+*v4.4 (August 2026 — Phase 21 complete: §1 header updated (v4.4); §7 feature flag list updated (three → four active flags; feature_rehearsals added — Phase 21 / Migration 031); §7 public-route invariant updated (lib/actions/rehearsals.ts added as third canonical example; split pattern confirmed for rehearsal domain); §7 three new patterns added: admin_users.id = auth.uid() for RLS policies (no auth_user_id column — confirmed failure mode 21.1 F1; cross-references R37), Sidebar data-driven three-part atomic edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist — silent failure mode confirmed 21.2), getRehearsalAttendanceForEvent() effective-roster-first pattern (must return ALL roster members with status: null for unmarked — not just rehearsal_attendance rows); §10 two grep updates: feature flags grep updated (four flags), getServerClient public-route check updated (add rehearsals.ts); §11 three new checklist items: effective-roster-first attendance queries, batch attendance single upsert, Deferred Verifications scope boundary (manual browser-only, not DB-confirmable items); §13 Phase 21 marked complete (21.A/21.1/21.2/21.3 all ✓ with summaries); §13 prompt log: 21.A + 21.1 + 21.2 + 21.3 + DOC.56 + DOC.57 added; §14 R34 updated (feature_rehearsals added to flagged features list); §14 public-route invariant updated (rehearsals.ts added, Brief single-file spec correction noted); §14 R37 cross-reference added (admin_users.id = auth.uid() — no auth_user_id column); DOC.57 logged)*
