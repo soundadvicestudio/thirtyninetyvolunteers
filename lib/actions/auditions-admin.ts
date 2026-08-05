@@ -7,7 +7,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminUser, type AdminUser } from '@/lib/auth'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
-import { sendBatchEmails } from '@/lib/email'
+import { sendBatchEmails, sendAuditionStatusEmail } from '@/lib/email'
 import { syncAuditionToCalendar } from '@/lib/actions/calendar-sync'
 import { substituteMergeTags, type MergeTagValues } from '@/lib/utils/merge-tags'
 import { formatWallClockCT } from '@/lib/utils/date'
@@ -561,9 +561,26 @@ export async function updateAuditionSignupStatus(
       return { success: false, error: 'Failed to update status.' }
     }
 
-    // TODO AUDITIONS.4b: if notification_emails_enabled && a template exists
-    // for this status, call sendAuditionStatusEmail(signupId, status)
-    // non-blocking. Implemented when email functions are built in 4b.
+    // Non-blocking status notification email — fires only when
+    // notifications are enabled for this audition and a template exists
+    // for this status. sendAuditionStatusEmail() handles the "template
+    // exists" check internally; only the notification_emails_enabled gate
+    // and the callback/cast/not_cast status-type check happen here.
+    if (status === 'callback' || status === 'cast' || status === 'not_cast') {
+      const { data: auditionRow } = await supabase
+        .from('auditions')
+        .select('notification_emails_enabled')
+        .eq('id', signup.audition_id)
+        .single()
+
+      if (auditionRow?.notification_emails_enabled) {
+        sendAuditionStatusEmail({
+          signupId,
+          auditionId: signup.audition_id,
+          status,
+        }).catch((err) => console.error('Status email error:', err))
+      }
+    }
 
     revalidatePath(`/crew/auditions/${signup.audition_id}`)
     return { success: true }

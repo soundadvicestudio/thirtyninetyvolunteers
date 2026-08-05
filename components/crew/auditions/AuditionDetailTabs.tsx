@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TiptapLink from '@tiptap/extension-link'
@@ -1938,10 +1939,16 @@ export default function AuditionDetailTabs({
           Overview
         </button>
         <button type="button" onClick={() => handleTabClick('signups')} className={tabClasses('signups')}>
-          Signups
+          <span className="inline-flex items-center gap-1.5">
+            Signups
+            <HelpTooltip anchor="auditions-signups" label="Signups" />
+          </span>
         </button>
         <button type="button" onClick={() => handleTabClick('materials')} className={tabClasses('materials')}>
-          Materials
+          <span className="inline-flex items-center gap-1.5">
+            Materials
+            <HelpTooltip anchor="auditions-materials" label="Materials" />
+          </span>
         </button>
         <button type="button" onClick={() => handleTabClick('communication')} className={tabClasses('communication')}>
           Communication

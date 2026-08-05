@@ -10,6 +10,12 @@ import { format } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/utils/phone'
+import { formatWallClockCT } from '@/lib/utils/date'
+import {
+  sendAuditionSignupConfirmation,
+  sendAuditionConsentFormRequestEmail,
+  sendAuditionCancellationEmail,
+} from '@/lib/email'
 import type {
   AuditionPublicData,
   AuditionUploadData,
@@ -18,6 +24,18 @@ import type {
   AuditionMaterialType,
   AuditionType,
 } from '@/types/audition'
+
+// time_start/time_end are `time without time zone` columns — raw strings
+// like "19:00:00". Local formatter, matching the identical helper in
+// AuditionSignupClient.tsx / AuditionCheckInClient.tsx (sanctioned small-
+// pure-helper duplication — Process §14 DRY exception precedent).
+function formatAuditionTime(t: string | null): string | null {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
 
 // ─── B1: getAuditionPublicData ─────────────────────────────────
 
@@ -153,7 +171,9 @@ export async function submitAuditionSignup(
 
     const { data: audition } = await supabase
       .from('auditions')
-      .select('id, type, status')
+      .select(
+        'id, title, type, status, date_start, time_start, material_headshot, material_resume, material_sheet_music, material_mp3, material_video, locations!auditions_location_id_fkey ( name )'
+      )
       .eq('id', data.auditionId)
       .eq('status', 'published')
       .maybeSingle()
@@ -161,6 +181,12 @@ export async function submitAuditionSignup(
     if (!audition) {
       return { success: false, error: 'This audition is not available for signups.' }
     }
+
+    // Supabase normalizes to-one FK joins as either an object or a
+    // single-element array depending on relation inference — same
+    // normalization pattern used throughout this file (getAuditionUploadData,
+    // confirmAuditionMaterialUpload, getAuditionMaterialUploadUrl).
+    const location = Array.isArray(audition.locations) ? audition.locations[0] : audition.locations
 
     if (audition.type === 'timed_slots' && !data.slotId) {
       return { success: false, error: 'Please select a time slot.' }
@@ -259,13 +285,16 @@ export async function submitAuditionSignup(
               ? `${process.env.NEXT_PUBLIC_SITE_URL}/documents/${activeDoc.access_token}`
               : null
 
-            // TODO AUDITIONS.4b: sendAuditionConsentFormRequestEmail({
-            //   to: data.email, name: data.name,
-            //   uploadToken: submission.upload_token,
-            //   activeFormUrl, documentTypeName: docType.name,
-            //   auditionSignupId: signup.id,
-            // })
-            void activeFormUrl
+            // Non-blocking consent email — never throws.
+            sendAuditionConsentFormRequestEmail({
+              to: data.email,
+              name: data.name,
+              auditionTitle: audition.title,
+              uploadToken: submission.upload_token,
+              activeFormUrl,
+              documentTypeName: docType.name,
+              auditionSignupId: signup.id,
+            }).catch((err) => console.error('Consent email error:', err))
           }
         }
       } catch (consentError) {
@@ -273,13 +302,26 @@ export async function submitAuditionSignup(
       }
     }
 
-    // TODO AUDITIONS.4b: sendAuditionSignupConfirmation({
-    //   to: data.email, name: data.name,
-    //   auditionTitle: audition.title,
-    //   cancelToken: signup.cancel_token,
-    //   uploadToken: signup.upload_token,
-    //   slotTime: slot?.start_time || null,
-    // })
+    // Non-blocking — never throws.
+    sendAuditionSignupConfirmation({
+      to: data.email,
+      name: data.name,
+      auditionTitle: audition.title,
+      auditionDate: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+      auditionTime: formatAuditionTime(audition.time_start),
+      locationName: location?.name ?? null,
+      cancelToken: signup.cancel_token,
+      uploadToken: signup.upload_token,
+      hasMaterials: [
+        audition.material_headshot,
+        audition.material_resume,
+        audition.material_sheet_music,
+        audition.material_mp3,
+        audition.material_video,
+      ].some(Boolean),
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? '',
+      auditionId: audition.id,
+    }).catch((err) => console.error('Confirmation email error:', err))
 
     return { success: true, signupId: signup.id, uploadToken: signup.upload_token }
   } catch (err) {
@@ -298,7 +340,7 @@ export async function cancelAuditionSignup(
 
     const { data: signup } = await supabase
       .from('audition_signups')
-      .select('id, status')
+      .select('id, status, name, email, audition_id')
       .eq('cancel_token', cancelToken)
       .maybeSingle()
 
@@ -318,6 +360,21 @@ export async function cancelAuditionSignup(
     if (updateError) {
       console.error('cancelAuditionSignup update error:', updateError)
       return { success: false, error: 'Something went wrong. Please try again.' }
+    }
+
+    // Non-blocking cancellation confirmation — fetch audition title for the email.
+    const { data: cancelAudition } = await supabase
+      .from('auditions')
+      .select('title')
+      .eq('id', signup.audition_id)
+      .single()
+
+    if (cancelAudition) {
+      sendAuditionCancellationEmail({
+        to: signup.email,
+        name: signup.name,
+        auditionTitle: cancelAudition.title,
+      }).catch((err) => console.error('Cancellation email error:', err))
     }
 
     return { success: true }

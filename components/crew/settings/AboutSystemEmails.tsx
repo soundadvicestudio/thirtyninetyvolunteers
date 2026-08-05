@@ -73,6 +73,31 @@ const TRIGGERS: TriggerEntry[] = [
     recipient: 'The volunteer.',
     spam: 'UNIQUE constraint on milestone_log(volunteer_id, milestone_hours) prevents duplicate milestone awards; 23505 errors caught gracefully.',
   },
+  {
+    name: 'Audition Signup Confirmation',
+    fires: 'Fires when someone submits the public audition signup form.',
+    recipient: 'The auditioner.',
+    spam: 'Only fires on successful insert; duplicate signups for the same audition are blocked with a friendly message, not a new email.',
+  },
+  {
+    name: 'Audition Consent Form Request',
+    fires: 'Fires when an under-18 auditioner signs up.',
+    recipient: "The auditioner's guardian email (or the auditioner if no guardian email).",
+    spam: 'Only fires once per signup, immediately after the audition_signups insert succeeds.',
+  },
+  {
+    name: 'Audition Status Notification',
+    fires:
+      "Fires when an admin changes an auditioner's status to Callback, Cast, or Not Cast, and email notifications are enabled for that audition, and a template is configured for that status.",
+    recipient: 'The auditioner.',
+    spam: 'Silently skipped when no template is configured for the status; each status change fires at most one email.',
+  },
+  {
+    name: 'Audition Cancellation',
+    fires: "Fires when an auditioner uses their cancellation link to withdraw.",
+    recipient: 'The auditioner.',
+    spam: 'Requires a valid cancel_token; already-withdrawn signups are idempotent and send no further email.',
+  },
 ]
 
 export default function AboutSystemEmails() {

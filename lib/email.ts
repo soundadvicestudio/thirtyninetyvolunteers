@@ -2,6 +2,9 @@ import 'server-only'
 import { Resend } from 'resend'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { lightenHex } from '@/lib/utils/color'
+import { substituteMergeTags, type MergeTagValues } from '@/lib/utils/merge-tags'
+import { formatWallClockCT } from '@/lib/utils/date'
+import type { AuditionEmailStatusType } from '@/types/audition'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -1672,4 +1675,351 @@ async function logEmailSent({
   } catch {
     // Silently swallow — log failure must never block email delivery.
   }
+}
+
+// ─── Audition signup confirmation email (Phase AUDITIONS) ────────
+
+type AuditionSignupConfirmationParams = {
+  to: string
+  name: string
+  auditionTitle: string
+  auditionDate: string
+  auditionTime: string | null
+  locationName: string | null
+  cancelToken: string
+  uploadToken: string
+  hasMaterials: boolean
+  siteUrl: string
+  auditionId: string
+}
+
+export async function sendAuditionSignupConfirmation({
+  to,
+  name,
+  auditionTitle,
+  auditionDate,
+  auditionTime,
+  locationName,
+  cancelToken,
+  uploadToken,
+  hasMaterials,
+  siteUrl,
+  auditionId,
+}: AuditionSignupConfirmationParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
+  const safeName = escapeHtml(name)
+  const safeTitle = escapeHtml(auditionTitle)
+  const cancelUrl = `${siteUrl}/auditions/cancel/${cancelToken}`
+  const uploadUrl = `${siteUrl}/auditions/upload/${uploadToken}`
+  const detailsUrl = `${siteUrl}/auditions/${auditionId}`
+
+  const scheduleBlockHtml =
+    auditionDate || auditionTime || locationName
+      ? `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+          <tr>
+            <td bgcolor="#F5F5F5" style="background-color:#F5F5F5;border-radius:8px;padding:16px 20px;">
+              ${auditionDate ? `<p style="margin:0 0 4px;color:#1A1A1A;font-size:14px;">Date: ${escapeHtml(auditionDate)}</p>` : ''}
+              ${auditionTime ? `<p style="margin:0 0 4px;color:#1A1A1A;font-size:14px;">Time: ${escapeHtml(auditionTime)}</p>` : ''}
+              ${locationName ? `<p style="margin:0;color:#1A1A1A;font-size:14px;">Location: ${escapeHtml(locationName)}</p>` : ''}
+            </td>
+          </tr>
+        </table>
+      `
+      : ''
+
+  const uploadSectionHtml = hasMaterials
+    ? `
+      <p style="margin:0 0 8px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        Need to submit materials?
+      </p>
+      <p style="margin:0 0 20px;font-size:14px;">
+        <a href="${uploadUrl}" style="color:${emailSettings.brandPrimary};">${uploadUrl}</a>
+      </p>
+    `
+    : ''
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You're signed up to audition for <strong>${safeTitle}</strong>.
+    </p>
+    ${scheduleBlockHtml}
+    ${buildCtaButton('View Audition Details', detailsUrl, emailSettings.brandAccent)}
+    ${uploadSectionHtml}
+    <p style="margin:24px 0 0;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Need to cancel?
+    </p>
+    <p style="margin:0;font-size:14px;">
+      <a href="${cancelUrl}" style="color:${emailSettings.brandPrimary};">${cancelUrl}</a>
+    </p>
+  `
+
+  const subject = `Audition signup confirmed — ${auditionTitle}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: `You're signed up to audition for ${auditionTitle}.`,
+    body,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await resend.emails.send({
+    from: emailSettings.from,
+    replyTo: emailSettings.orgContactEmail,
+    to,
+    subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: `You're signed up to audition for ${auditionTitle}.`,
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:audition_signup_confirmation',
+    sentBy: null,
+    recipients: [{ email: to }],
+  })
+}
+
+// ─── Audition consent form request email (Phase AUDITIONS) ──────
+
+type AuditionConsentFormRequestEmailParams = {
+  to: string
+  name: string
+  auditionTitle: string
+  uploadToken: string
+  activeFormUrl: string | null
+  documentTypeName: string
+  auditionSignupId: string
+}
+
+export async function sendAuditionConsentFormRequestEmail({
+  to,
+  name,
+  auditionTitle,
+  uploadToken,
+  activeFormUrl,
+  documentTypeName,
+}: AuditionConsentFormRequestEmailParams): Promise<void> {
+  const uploadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/consent/${uploadToken}`
+  const safeName = escapeHtml(name)
+  const safeTitle = escapeHtml(auditionTitle)
+  const safeDocTypeName = escapeHtml(documentTypeName)
+  const emailSettings = await resolveEmailSettings()
+
+  const downloadSectionHtml = activeFormUrl
+    ? `
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        Please download the ${safeDocTypeName}, have a parent or guardian sign it, then use the button below to
+        upload the signed copy.
+      </p>
+      ${buildCtaButton('Download Consent Form', activeFormUrl, emailSettings.brandPrimary)}
+    `
+    : `
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        Your coordinator will provide you with the consent form. Once you have a signed copy, please use the
+        button below to upload it.
+      </p>
+    `
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Thank you for signing up to audition for <strong>${safeTitle}</strong>. Because you or your auditioner is
+      under 18, a signed ${safeDocTypeName} from a parent or guardian is required.
+    </p>
+    ${downloadSectionHtml}
+    <p style="margin:0 0 24px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Please use the button below to upload your completed form.
+    </p>
+    ${buildCtaButton('Submit Your Consent Form', uploadUrl, emailSettings.brandPrimary)}
+  `
+
+  const subject = `Action needed: consent form for ${auditionTitle}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: `A signed consent form is needed for ${auditionTitle}.`,
+    body,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await resend.emails.send({
+    from: emailSettings.from,
+    to,
+    subject,
+    html,
+  })
+
+  // NOTE: email_log_recipients.volunteer_id is nullable — auditioners are
+  // not volunteers. Traceability to the audition_signup is via
+  // consent_form_submissions.audition_signup_id (Migration 032), not via
+  // this email log entry, which carries no audition FK. Accepted
+  // traceability approach confirmed AUDITIONS.A Audit E.
+  await logEmailSent({
+    subject,
+    bodyPreview: `A signed consent form is needed for ${auditionTitle}.`,
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:audition_consent_form_request',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId: null }],
+  })
+}
+
+// ─── Audition status change notification email (Phase AUDITIONS) ─
+//
+// Unlike every other function in this file, this one fetches all of its
+// own data — the call site (updateAuditionSignupStatus() in
+// lib/actions/auditions-admin.ts) passes only IDs. Deliberate exception
+// to the "dumb function, all data passed in" convention used elsewhere in
+// this file, since the call site does not already have the show/location/
+// template data joined and assembling it there would require restructuring
+// that action for a single non-blocking side effect.
+
+type AuditionStatusEmailParams = {
+  signupId: string
+  auditionId: string
+  status: AuditionEmailStatusType
+}
+
+export async function sendAuditionStatusEmail({ signupId, auditionId, status }: AuditionStatusEmailParams): Promise<void> {
+  const supabase = getAdminClient()
+
+  const { data: template } = await supabase
+    .from('audition_email_templates')
+    .select('subject, body_html')
+    .eq('audition_id', auditionId)
+    .eq('status_type', status)
+    .maybeSingle()
+
+  // Brief §8: "If no template exists for a status, automatic firing is
+  // silently skipped." No error, no throw.
+  if (!template) return
+
+  const { data: signup } = await supabase
+    .from('audition_signups')
+    .select('name, email, cast_role')
+    .eq('id', signupId)
+    .maybeSingle()
+
+  if (!signup) return
+
+  const { data: audition } = await supabase
+    .from('auditions')
+    .select(
+      'title, date_start, time_start, shows!auditions_show_id_fkey ( name ), locations!auditions_location_id_fkey ( name )'
+    )
+    .eq('id', auditionId)
+    .maybeSingle()
+
+  if (!audition) return
+
+  const emailSettings = await resolveEmailSettings()
+
+  // Supabase normalizes to-one FK joins as either an object or a
+  // single-element array depending on relation inference — same
+  // normalization pattern used throughout lib/actions/auditions.ts and
+  // lib/actions/auditions-admin.ts.
+  const show = Array.isArray(audition.shows) ? audition.shows[0] : audition.shows
+  const location = Array.isArray(audition.locations) ? audition.locations[0] : audition.locations
+
+  const values: MergeTagValues = {
+    auditioner_name: signup.name,
+    show_title: show?.name,
+    audition_title: audition.title,
+    audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+    audition_location: location?.name,
+    cast_role: signup.cast_role ?? undefined,
+    org_name: emailSettings.orgName,
+  }
+
+  // The substituted body is TipTap-generated HTML with merge tag values
+  // already escaped internally by substituteMergeTags() — do NOT
+  // escapeHtml() it here, same exception as the blast body (Process §14).
+  const substitutedBody = substituteMergeTags(template.body_html, values)
+
+  const html = buildEmailHtml({
+    subject: template.subject,
+    preheader: template.subject,
+    body: substitutedBody,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  // R8 — single recipient uses resend.emails.send() directly, not batch.
+  await resend.emails.send({
+    from: emailSettings.from,
+    replyTo: emailSettings.orgContactEmail,
+    to: signup.email,
+    subject: template.subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject: template.subject,
+    bodyPreview: template.subject,
+    recipientType: 'transactional',
+    recipientFilter: `trigger:audition_status_${status}`,
+    sentBy: null,
+    recipients: [{ email: signup.email }],
+  })
+}
+
+// ─── Audition cancellation confirmation email (Phase AUDITIONS) ──
+
+type AuditionCancellationEmailParams = {
+  to: string
+  name: string
+  auditionTitle: string
+}
+
+export async function sendAuditionCancellationEmail({
+  to,
+  name,
+  auditionTitle,
+}: AuditionCancellationEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
+  const safeName = escapeHtml(name)
+  const safeTitle = escapeHtml(auditionTitle)
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Your signup to audition for <strong>${safeTitle}</strong> has been cancelled. If this was a mistake, please
+      sign up again at the audition page.
+    </p>
+    <p style="margin:0;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      No further action is needed.
+    </p>
+  `
+
+  const subject = 'Your audition signup has been cancelled'
+  const html = buildEmailHtml({
+    subject,
+    preheader: `Your audition signup for ${auditionTitle} has been cancelled.`,
+    body,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await resend.emails.send({
+    from: emailSettings.from,
+    to,
+    subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: `Your audition signup for ${auditionTitle} has been cancelled.`,
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:audition_cancellation',
+    sentBy: null,
+    recipients: [{ email: to }],
+  })
 }

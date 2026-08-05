@@ -148,6 +148,17 @@ const ALL_SECTIONS: TocSection[] = [
       { id: 'rehearsals-checkin', label: 'The Check-In QR Code', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
     ],
   },
+  {
+    id: 'auditions',
+    label: 'Auditions',
+    roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
+    children: [
+      { id: 'auditions-overview', label: 'Overview', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'auditions-signups', label: 'Managing Signups', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'auditions-materials', label: 'Materials', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+      { id: 'auditions-checkin', label: 'Day-of Check-In', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
+    ],
+  },
 ]
 
 function flattenSections(sections: TocSection[]): TocSection[] {
@@ -1219,6 +1230,76 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                     {`Don't`}
                     {` post it publicly.`}
                   </Tip>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('rehearsals') && <Divider />}
+
+          {/* ───────── Auditions ───────── */}
+          {show('auditions') && (
+            <section id="auditions">
+              <h2 className={h2Classes}>{`Auditions`}</h2>
+              <p className={pClasses}>
+                {`The Auditions system lets you manage open calls and timed-slot auditions. Auditioners sign up on a public page. You review their submissions in the admin panel.`}
+              </p>
+
+              {show('auditions-overview') && (
+                <>
+                  <h3 id="auditions-overview" className={h3Classes}>{`Overview`}</h3>
+                  <p className={pClasses}>
+                    {`Go to Auditions in the sidebar to see all auditions. Click New Audition to create one. Choose Open Call (anyone shows up) or Timed Slots (people pick a specific time).`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Once you publish an audition, a public signup page goes live. Share the link or post it on your website. Auditioners fill out the form and `}
+                    {`you'll`}
+                    {` see them in the Signups tab.`}
+                  </p>
+                </>
+              )}
+
+              {show('auditions-signups') && (
+                <>
+                  <h3 id="auditions-signups" className={h3Classes}>{`Managing Signups`}</h3>
+                  <p className={pClasses}>
+                    {`Open an audition and click the Signups tab. Each row shows an `}
+                    {`auditioner's`}
+                    {` name, contact info, and current status.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Click a row to expand it. You can change the status (Pending, Callback, Cast, Not Cast, or Withdrawn), add private notes, and record which role they were cast in.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`When you mark someone as Cast, a Convert to Volunteer button appears. Click it to add them to your volunteer database automatically.`}
+                  </p>
+                  <Tip>
+                    {`Set up email templates in the Email Templates tab to automatically notify auditioners when their status changes.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('auditions-materials') && (
+                <>
+                  <h3 id="auditions-materials" className={h3Classes}>{`Materials`}</h3>
+                  <p className={pClasses}>
+                    {`When you create an audition, you can enable material uploads: headshots, resumes, sheet music, MP3 files, or video reels. Auditioners upload when they sign up, or later using a link in their confirmation email.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Click the Materials tab on any audition to see everything submitted. Download any file using the link in that row.`}
+                  </p>
+                </>
+              )}
+
+              {show('auditions-checkin') && (
+                <>
+                  <h3 id="auditions-checkin" className={h3Classes}>{`Day-of Check-In`}</h3>
+                  <p className={pClasses}>
+                    {`Each audition has a check-in QR code on the Overview tab. Print it or display it on a screen. Auditioners scan it and select their name to check in — no app required.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`You can also mark attendance manually from the Signups tab. Self check-ins show a badge so you can tell them apart from manual marks.`}
+                  </p>
                 </>
               )}
             </section>

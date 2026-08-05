@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Carry-Forward Verification Checklist
-## Version 18 | July 2026 | Phase 21 Complete
+## Version 19 | August 2026 | Phase AUDITIONS Complete
 
 This document contains ONLY items requiring manual owner
 verification — browser interaction, email inbox checks,
@@ -28,7 +28,10 @@ Phase 19 (communication preferences — 19.2 public forms,
 19.3 Call Board + admin + volunteer list), Phase 21
 (Rehearsal Management System — 21.1 feature flag, 21.2
 sidebar/schedule list/roster/dates, 21.3 attendance/public
-check-in/help).
+check-in/help), Phase AUDITIONS (Audition Management
+System — feature flag, admin list + six-tab detail page,
+Production access, public signup/cancel/upload/check-in
+pages, auditions card, Help System section).
 
 ---
 
@@ -7143,9 +7146,431 @@ unauthenticated session.*
 
 ---
 
-*Total items in this carry-forward list: 885*
-*(830 v17 items + 55 new v18 items)*
-*Prior (v17): 830 items*
+## Phase AUDITIONS — Audition Management System
+
+*Context: Phase AUDITIONS (AUDITIONS.A audit, 1a schema,
+1b server actions, 2a Production access, 2b admin list +
+four-tab detail, 2c Settings + Email Templates tabs, 3a
+public signup, 3b uploads/check-in/cards/calendar sync, 4a
+TipTap merge tag extension, 4b email functions + Help +
+cancel page) added a full audition management system:
+`/crew/auditions` (list + six-tab detail — Overview,
+Signups, Materials, Communication, Email Templates,
+Settings), the public `/auditions/[id]` signup page,
+`/auditions/cancel/[token]`, `/auditions/upload/[token]`,
+`/audition-checkin/[token]`, an auditions card on `/` and
+`/shows`, and a `feature_auditions` flag. Schema/RLS/
+migration items (8 new tables from Migration 032,
+`feature_auditions` app_settings row, `calendar_events.
+source_audition_id`) are NOT listed here — they were
+confirmed directly via live Supabase queries in the
+AUDITIONS.1a/3b/4a build reports per the established
+"Database-state verification in build reports" convention
+(Process §8) and are out of this document's stated scope
+(manual/browser-only items).*
+
+---
+
+### AUDITIONS — Feature Flag
+
+*Prerequisites: Super Admin account (Setup Panel access).*
+
+- [ ] **AUDITIONS-001** — As Super Admin: navigate to
+      /crew/settings/setup → Section 6 (Feature Flags).
+      Turn the Audition Management toggle off. Save.
+      Confirm /crew/auditions redirects to /crew/dashboard
+      and the Auditions Sidebar link disappears. Turn it
+      back on. Confirm both reappear without a hard reload.
+
+- [ ] **AUDITIONS-002** — With the flag off, open a
+      published audition's public URL (/auditions/[id]).
+      Confirm the page returns 404 rather than rendering
+      the signup form.
+
+---
+
+### AUDITIONS — Admin List Page
+
+*Prerequisites: At least two auditions in different
+statuses (one active, one archived). Accounts for Super
+Admin, Viewer, and a Production user assigned to only one
+audition.*
+
+- [ ] **AUDITIONS-003** — Navigate to /crew/auditions.
+      Confirm the list loads with all columns visible:
+      title, linked show (or "Standalone"), type badge,
+      date(s), signup count, status.
+
+- [ ] **AUDITIONS-004** — Toggle between "Active" and
+      "All." Confirm "Active" hides archived auditions and
+      "All" shows them.
+
+- [ ] **AUDITIONS-005** — Click "New Audition." Confirm the
+      modal opens, accepts a title/type/dates, creates the
+      record on submit, and redirects to the new
+      audition's detail page.
+
+- [ ] **AUDITIONS-006** — As Viewer: confirm no "New
+      Audition" button appears on the list page.
+
+- [ ] **AUDITIONS-007** — As a Production user assigned to
+      only one audition (directly or via a linked show):
+      confirm the list shows only that audition, not
+      others.
+
+---
+
+### AUDITIONS — Detail Page: Overview Tab
+
+*Prerequisites: A published audition with
+calendar_visibility = public and a linked show.*
+
+- [ ] **AUDITIONS-008** — Open an audition's detail page.
+      Confirm title, date(s), type, and location all
+      display correctly on the Overview tab.
+
+- [ ] **AUDITIONS-009** — Change status from Draft to
+      Published using the status selector. Confirm it
+      saves and the badge updates without a page reload.
+
+- [ ] **AUDITIONS-010** — With the audition Published,
+      click "Copy" next to the Public URL. Confirm the URL
+      copies to the clipboard and a "Copied!" confirmation
+      shows briefly.
+
+- [ ] **AUDITIONS-011** — Confirm the Check-In QR renders
+      inline as SVG (not a raster image) in a white
+      container regardless of admin theme. Click both
+      "Download PNG" and "Download SVG." Confirm both files
+      download with fixed filenames
+      (audition-checkin-qr.png / .svg) — not interpolated
+      with the audition title.
+
+- [ ] **AUDITIONS-012** — Set calendar_visibility to
+      "Public" and save via the Settings tab. Navigate to
+      /crew/calendar. Confirm a calendar event was created
+      for this audition (event_type = audition).
+
+---
+
+### AUDITIONS — Detail Page: Signups Tab
+
+*Prerequisites: At least one auditioner signed up for this
+audition, including one with status changed to Cast.*
+
+- [ ] **AUDITIONS-013** — Click the Signups tab. Confirm
+      the signups list loads (a brief loading state, then
+      rows) — not fetched until the tab is clicked.
+
+- [ ] **AUDITIONS-014** — Click a signup row to expand it.
+      Confirm notes, the status changer, the cast role
+      field, and (when status = Cast) the Convert to
+      Volunteer button all appear.
+
+- [ ] **AUDITIONS-015** — Change a signup's status. Confirm
+      it saves and the collapsed row's badge updates to
+      match.
+
+- [ ] **AUDITIONS-016** — Add a note on a signup. Confirm
+      it saves and appears in the notes list with author
+      and timestamp.
+
+- [ ] **AUDITIONS-017** — With a signup at status = Cast,
+      click "Convert to Volunteer." Confirm a volunteer
+      record is created and a link to the new profile
+      appears.
+
+- [ ] **AUDITIONS-018** — As Viewer: confirm signup rows
+      show read-only status badges only — no status
+      changer, note input, or Convert button.
+
+---
+
+### AUDITIONS — Detail Page: Materials Tab
+
+*Prerequisites: An audition with at least two material
+types enabled and at least one file submitted for each.*
+
+- [ ] **AUDITIONS-019** — Click the Materials tab. Confirm
+      it lists every submitted file across all signups.
+
+- [ ] **AUDITIONS-020** — Use the type filter (All /
+      Headshot / Resume / etc). Confirm the list narrows
+      correctly for each type.
+
+- [ ] **AUDITIONS-021** — Click "Download" on a material
+      row. Confirm a signed URL is generated and the file
+      opens in a new tab.
+
+---
+
+### AUDITIONS — Detail Page: Communication Tab
+
+*Prerequisites: Editor or Super Admin account. At least
+one signup with a valid email address (a test address you
+control).*
+
+- [ ] **AUDITIONS-022** — Click the Communication tab.
+      Confirm the TipTap composer renders with a toolbar
+      and editable body area.
+
+- [ ] **AUDITIONS-023** — Set the status filter to a
+      specific status (e.g. Cast only). Confirm the
+      recipient count updates to match only signups with
+      that status.
+
+- [ ] **AUDITIONS-024** — Compose a short test message and
+      send to a test address you control. Confirm the
+      email is delivered and matches the composed subject
+      and body.
+
+---
+
+### AUDITIONS — Detail Page: Email Templates Tab
+
+*Prerequisites: Editor or Super Admin account. An audition
+with the notification toggle available to enable.*
+
+- [ ] **AUDITIONS-025** — Toggle "Automatically send emails
+      on status change" on. Confirm it saves (reload the
+      page and confirm the toggle stayed on).
+
+- [ ] **AUDITIONS-026** — On the Callback template section:
+      enter a subject, type a body, and insert at least one
+      merge tag pill from the toolbar. Confirm the pill
+      renders as a styled, non-editable token in the editor
+      (not plain "{{tag}}" text). Click "Save template."
+      Confirm it saves.
+
+- [ ] **AUDITIONS-027** — Click "Preview" on the saved
+      Callback template. Confirm a branded HTML preview
+      renders with sample values substituted in place of
+      the merge tags (e.g. "Alex Sample" in place of
+      {{auditioner_name}}).
+
+- [ ] **AUDITIONS-028** — With notifications enabled and
+      the Callback template saved: change a signup's status
+      to Callback from the Signups tab. Confirm the
+      auditioner receives the configured email at their
+      test address.
+
+---
+
+### AUDITIONS — Detail Page: Settings Tab
+
+*Prerequisites: Editor or Super Admin account. At least one
+existing show and one other audition to link against.*
+
+- [ ] **AUDITIONS-029** — Toggle Type between Open Call and
+      Timed Slots. Confirm the slot duration/total/cap
+      fields show only when Timed Slots is selected.
+
+- [ ] **AUDITIONS-030** — Toggle role selection on. Confirm
+      the Audition Roles section appears; toggle it off and
+      confirm the section hides.
+
+- [ ] **AUDITIONS-031** — With role selection on, add a new
+      role. Confirm it appears in the roles list
+      immediately.
+
+- [ ] **AUDITIONS-032** — Click "Delete" on a role. Confirm
+      it is removed from the list.
+
+- [ ] **AUDITIONS-033** — With at least two roles listed,
+      use the ↑/↓ buttons to reorder them. Confirm the
+      order persists after a page reload.
+
+- [ ] **AUDITIONS-034** — Toggle a material type (e.g.
+      Headshot) on, save, and confirm the public signup
+      page shows the corresponding upload field.
+
+- [ ] **AUDITIONS-035** — Confirm the Show Link selector
+      populates with existing shows and saves correctly
+      when a show is selected.
+
+- [ ] **AUDITIONS-036** — Click "Archive Audition." Confirm
+      an inline two-step confirmation appears before the
+      archive proceeds. Confirm the audition status becomes
+      Archived and it drops out of the Active list filter.
+
+---
+
+### AUDITIONS — Production User Access
+
+*Prerequisites: A standalone audition (no linked show) and
+a Production-role account not currently assigned to it.*
+
+- [ ] **AUDITIONS-037** — From the Settings tab, assign the
+      Production user to the audition. Log in as that user.
+      Confirm they can access the audition detail page.
+
+- [ ] **AUDITIONS-038** — As a different Production user NOT
+      assigned to this audition (and with no show-editor
+      access to a linked show): confirm they cannot access
+      this audition's detail page.
+
+---
+
+### AUDITIONS — Public Signup Page
+
+*Prerequisites: One published Open Call audition and one
+published Timed Slots audition, each with a description set
+and at least one material type and role selection enabled.
+A timed-slots audition with one fully-booked slot.*
+
+- [ ] **AUDITIONS-039** — Open a published audition's public
+      URL. Confirm the signup form renders.
+
+- [ ] **AUDITIONS-040** — Open a Draft or Archived audition's
+      public URL directly. Confirm it returns 404.
+
+- [ ] **AUDITIONS-041** — Confirm the description text
+      (when set on the audition) displays on the public
+      page.
+
+- [ ] **AUDITIONS-042** — Complete and submit the Open Call
+      form. Confirm a success state appears.
+
+- [ ] **AUDITIONS-043** — On the Timed Slots audition,
+      confirm a slot picker renders and that the known
+      fully-booked slot is shown disabled/unselectable.
+
+- [ ] **AUDITIONS-044** — On an audition with role selection
+      enabled, confirm a role dropdown appears on the form.
+
+- [ ] **AUDITIONS-045** — Upload a file for at least one
+      enabled material type during signup. Confirm a
+      progress bar shows during upload and the file
+      registers as submitted.
+
+- [ ] **AUDITIONS-046** — Check the "I am under 18" box.
+      Confirm guardian name/phone fields appear.
+
+- [ ] **AUDITIONS-047** — Submit the same email a second
+      time for the same audition. Confirm a friendly
+      "already signed up" message appears — not a raw
+      error.
+
+- [ ] **AUDITIONS-048** — Confirm the confirmation email is
+      received at the signup email address and contains
+      correct audition details.
+
+---
+
+### AUDITIONS — Public Cancel Page
+
+*Prerequisites: A confirmation email from AUDITIONS-048
+containing a cancellation link.*
+
+- [ ] **AUDITIONS-049** — Click the cancellation link from
+      the confirmation email. Confirm it lands on the
+      /auditions/cancel/[token] page.
+
+- [ ] **AUDITIONS-050** — Confirm a successful cancellation
+      shows a clear confirmation message ("Signup
+      Cancelled").
+
+- [ ] **AUDITIONS-051** — Open the same cancel link a second
+      time, or a made-up token. Confirm an error message
+      appears ("Link Not Valid") — no crash.
+
+---
+
+### AUDITIONS — Late Upload Page
+
+*Prerequisites: A signup on an audition with at least one
+material type enabled but not submitted at signup time.*
+
+- [ ] **AUDITIONS-052** — Open the upload link from the
+      confirmation email (/auditions/upload/[token]).
+      Confirm the page loads with the enabled material
+      types listed.
+
+- [ ] **AUDITIONS-053** — Upload a file for a previously
+      unsubmitted material type. Confirm it succeeds. For a
+      material type already submitted at signup, confirm it
+      shows an "Already submitted" indicator, and confirm
+      re-uploading it is still allowed.
+
+---
+
+### AUDITIONS — Public Check-In
+
+*Prerequisites: A published audition with the check-in QR
+code from the Overview tab (AUDITIONS-011) and at least one
+signed-up auditioner.*
+
+- [ ] **AUDITIONS-054** — Scan the check-in QR code (or open
+      /audition-checkin/[token] directly). Confirm the page
+      loads with no login prompt.
+
+- [ ] **AUDITIONS-055** — Confirm the name dropdown lists
+      every signed-up auditioner for this audition.
+
+- [ ] **AUDITIONS-056** — Select a name and check in.
+      Confirm a success state appears with a checked-in
+      timestamp.
+
+- [ ] **AUDITIONS-057** — Check in again with the same name.
+      Confirm a reassuring "already checked in" message
+      appears showing the original time — not an error.
+
+- [ ] **AUDITIONS-058** — Open an invalid or made-up token
+      URL. Confirm an "Invalid or expired check-in link"
+      message appears — no crash, no roster dropdown.
+
+---
+
+### AUDITIONS — Auditions Card (Landing Page + /shows)
+
+*Prerequisites: Ability to toggle an audition between
+Published and Draft, and to toggle the feature_auditions
+flag.*
+
+- [ ] **AUDITIONS-059** — With at least one published,
+      upcoming audition: confirm the "Upcoming Auditions"
+      card appears on both the landing page (/) and /shows,
+      linking to that audition's public signup page.
+
+- [ ] **AUDITIONS-060** — Set all auditions to Draft or move
+      their dates into the past. Confirm the card disappears
+      entirely from both pages — no empty-state placeholder.
+
+- [ ] **AUDITIONS-061** — With a published upcoming audition
+      present, turn feature_auditions off. Confirm the card
+      disappears from both pages while the flag is off.
+
+---
+
+### AUDITIONS — Help System
+
+*Prerequisites: Accounts for Super Admin, Owner Admin,
+Editor, Viewer, and Production.*
+
+- [ ] **AUDITIONS-062** — Navigate to /crew/help as each of
+      Super Admin, Owner Admin, Editor, Viewer, and
+      Production. Confirm the "Auditions" section is visible
+      for every role, positioned after "Rehearsals" in both
+      the TOC and the page body.
+
+- [ ] **AUDITIONS-063** — Confirm all four subsection
+      anchors work: Overview, Managing Signups, Materials,
+      and Day-of Check-In. Click each in the TOC and confirm
+      it scrolls to the matching anchor.
+
+- [ ] **AUDITIONS-064** — Click the HelpTooltip next to the
+      "Auditions" heading on the /crew/auditions list page.
+      Confirm navigation to /crew/help#auditions.
+
+- [ ] **AUDITIONS-065** — On an audition detail page, click
+      the HelpTooltip next to the Signups tab label. Confirm
+      navigation to /crew/help#auditions-signups.
+
+---
+
+*Total items in this carry-forward list: 950*
+*(885 v18 items + 65 new v19 items)*
+*Prior (v18): 885 items*
 *v18 additions: 55 new items — Phase 21 Rehearsal Management
 System: 21.1 (V1–V5: feature_rehearsals toggle, flag-off
 blocking of /crew/rehearsals and /rehearsal-checkin/,
@@ -7164,6 +7589,40 @@ Schema/RLS/migration verification intentionally excluded —
 already confirmed live via Supabase queries in the 30BN-21.1
 build report; out of this document's manual-verification-only
 scope.*
+*v19 additions: 65 new items — Phase AUDITIONS Audition
+Management System: Feature Flag (001–002: feature_auditions
+toggle blocking, public 404 when off); Admin List Page
+(003–007: columns, Active/All filter, New Audition modal,
+Viewer guard, Production scoping); Overview Tab (008–012:
+title/date/type/location, status change, public URL copy,
+inline SVG QR + fixed-filename downloads, calendar sync);
+Signups Tab (013–018: lazy load, row expand, status change,
+notes, Convert to Volunteer, Viewer read-only); Materials Tab
+(019–021: list, type filter, signed download); Communication
+Tab (022–024: TipTap composer, status filter recipient count,
+test send); Email Templates Tab (025–028: notification
+toggle, merge tag pill insert + save, branded preview with
+sample substitution, live status-change send); Settings Tab
+(029–036: type toggle, role selection toggle, add/delete/
+reorder roles, material toggles, show link, archive two-step
+confirm); Production User Access (037–038: assigned vs.
+unassigned); Public Signup Page (039–048: publish gate,
+description, open call + timed slots submission, role
+dropdown, material upload progress, guardian fields,
+duplicate detection, confirmation email); Public Cancel Page
+(049–051: link, success, invalid/reused token); Late Upload
+Page (052–053: token link, already-submitted indicator +
+re-upload); Public Check-In (054–058: QR scan, roster
+dropdown, success, already-checked-in, invalid token);
+Auditions Card (059–061: appears/hidden/flag-gated on landing
++ /shows); Help System (062–065: role visibility, subsection
+anchors, HelpTooltip on list header and Signups tab).
+Schema/RLS/migration verification intentionally excluded —
+already confirmed live via Supabase queries in the
+AUDITIONS.1a/3b/4a build reports; out of this document's
+manual-verification-only scope.*
+*v19 superseded: none.*
+*v19 updated: none.*
 *v18 superseded: none.*
 *v18 updated: none.*
 *v17 superseded: none.*
@@ -7172,10 +7631,11 @@ registration cleanup note added; Phase 19 no-cleanup note
 added).*
 *Database-verifiable items handled separately in*
 *30BN-DB-VERIFY.4 (not counted here)*
-*Last updated: July 2026 — v18 (Phase 21 complete:
-Rehearsal Management System — feature flag, sidebar/schedule
-list/roster/dates UI, attendance tracking, public QR
-check-in, Help System section.)*
+*Last updated: August 2026 — v19 (Phase AUDITIONS complete:
+Audition Management System — feature flag, admin list +
+six-tab detail page, Production access, public signup/
+cancel/upload/check-in pages, auditions card, Help System
+section.)*
 *DB-VERIFY.4 (July 2026): 5 items removed after live*
 *Supabase confirmation (12.4 V1, ADMIN.21 V1,*
 *CAL.10a V1/V2/V3). CAL.3 V2 annotated with FAIL*
