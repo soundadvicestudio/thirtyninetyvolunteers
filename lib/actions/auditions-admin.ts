@@ -454,11 +454,55 @@ export async function getAuditionSignups(auditionId: string): Promise<AuditionSi
   }
 }
 
+// ─── D: getAuditionMaterialSignedUrl ────────────────────────────
+//
+// Used by the Materials tab to generate signed download URLs. Read-URL
+// generation works on getServerClient() (authenticated admin session) —
+// unlike SETUP.2's getSignedBrandUploadUrl(), which requires getAdminClient()
+// for the Storage Admin API's upload-URL creation specifically.
+
+export async function getAuditionMaterialSignedUrl(
+  materialId: string
+): Promise<{ url: string | null; error?: string }> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { url: null, error: 'Unauthorized' }
+
+    const supabase = await getServerClient()
+
+    const { data: material } = await supabase
+      .from('audition_materials')
+      .select('storage_path, signup_id')
+      .eq('id', materialId)
+      .maybeSingle()
+
+    if (!material) return { url: null, error: 'Not found' }
+
+    const { data: signedData, error: signError } = await supabase.storage
+      .from('media')
+      .createSignedUrl(material.storage_path, 3600)
+
+    if (signError || !signedData) {
+      console.error('getAuditionMaterialSignedUrl storage error:', signError)
+      return { url: null, error: 'Failed to generate download link.' }
+    }
+
+    return { url: signedData.signedUrl }
+  } catch (err) {
+    console.error('getAuditionMaterialSignedUrl unexpected error:', err)
+    return { url: null, error: 'An unexpected error occurred.' }
+  }
+}
+
 // ─── C7: updateAuditionSignupStatus ─────────────────────────────
 
+// SCOPE ADDITION (AUDITIONS.2b): accepts an optional castRole param so the
+// Signups tab's cast-role field can be saved atomically with a status
+// change, rather than adding a 15th server action for a single column.
 export async function updateAuditionSignupStatus(
   signupId: string,
-  status: AuditionSignupStatus
+  status: AuditionSignupStatus,
+  castRole?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const admin = await getAdminUser()
@@ -477,7 +521,12 @@ export async function updateAuditionSignupStatus(
     const access = await assertAuditionAccess(supabase, admin, signup.audition_id)
     if (!access.allowed) return { success: false, error: access.error ?? 'Insufficient permissions' }
 
-    const { error } = await supabase.from('audition_signups').update({ status }).eq('id', signupId)
+    const updatePayload: { status: AuditionSignupStatus; cast_role?: string | null } = { status }
+    if (castRole !== undefined) {
+      updatePayload.cast_role = castRole || null
+    }
+
+    const { error } = await supabase.from('audition_signups').update(updatePayload).eq('id', signupId)
 
     if (error) {
       console.error('updateAuditionSignupStatus update error:', error)

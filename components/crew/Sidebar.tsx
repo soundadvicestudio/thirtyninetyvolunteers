@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   ClipboardList,
+  Mic2,
   Users,
   Theater,
   Briefcase,
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
   { label: 'Calendar', href: '/crew/calendar', icon: CalendarDays },
   { label: 'Rehearsals', href: '/crew/rehearsals', icon: ClipboardList },
+  { label: 'Auditions', href: '/crew/auditions', icon: Mic2 },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
@@ -71,6 +73,7 @@ export default function Sidebar({
     '/crew/tools/checkin': flags.checkin,
     '/crew/communication': flags.blast,
     '/crew/rehearsals': flags.rehearsals,
+    '/crew/auditions': flags.auditions,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -80,7 +83,8 @@ export default function Sidebar({
           item.href === '/crew/calendar' ||
           item.href === '/crew/help' ||
           item.href === '/crew/media' ||
-          item.href === '/crew/rehearsals'
+          item.href === '/crew/rehearsals' ||
+          item.href === '/crew/auditions'
       )
     : flagFilteredNavItems
 
@@ -129,16 +133,19 @@ export default function Sidebar({
           }`
 
           // HelpTooltip renders its own <Link> (<a>) — it cannot nest inside
-          // this item's <Link>, so Rehearsals gets a sibling wrapper instead
-          // of the plain per-item Link every other nav item uses.
-          if (href === '/crew/rehearsals') {
+          // this item's <Link>, so Rehearsals and Auditions get a sibling
+          // wrapper instead of the plain per-item Link every other nav item
+          // uses. Generalized AUDITIONS.2b from the original Rehearsals-only
+          // special case.
+          if (href === '/crew/rehearsals' || href === '/crew/auditions') {
+            const anchor = href === '/crew/rehearsals' ? 'rehearsals' : 'auditions'
             return (
               <div key={href} className="flex items-center gap-1">
                 <Link href={href} className={`flex-1 ${linkClasses}`}>
                   <Icon size={18} />
                   {label}
                 </Link>
-                <HelpTooltip anchor="rehearsals" label="Rehearsals" />
+                <HelpTooltip anchor={anchor} label={label} />
               </div>
             )
           }

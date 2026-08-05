@@ -304,19 +304,21 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   const checkin = formData.get('feature_checkin') as string | null
   const blast = formData.get('feature_blast') as string | null
   const rehearsals = formData.get('feature_rehearsals') as string | null
+  const auditions = formData.get('feature_auditions') as string | null
 
   if (
     !isValidFlagValue(calendar) ||
     !isValidFlagValue(checkin) ||
     !isValidFlagValue(blast) ||
-    !isValidFlagValue(rehearsals)
+    !isValidFlagValue(rehearsals) ||
+    !isValidFlagValue(auditions)
   ) {
     return { error: 'Invalid flag value.' }
   }
 
   const supabase = await getServerClient()
 
-  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals']
+  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions']
   const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
   const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
 
@@ -326,6 +328,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       { key: 'feature_checkin', value: checkin, updated_by: admin.id },
       { key: 'feature_blast', value: blast, updated_by: admin.id },
       { key: 'feature_rehearsals', value: rehearsals, updated_by: admin.id },
+      { key: 'feature_auditions', value: auditions, updated_by: admin.id },
     ],
     { onConflict: 'key' }
   )
@@ -342,6 +345,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   revalidatePath('/shows')
   revalidatePath('/calendar')
   revalidatePath('/crew/rehearsals')
+  revalidatePath('/crew/auditions')
 
   await logAction(
     admin.id,
@@ -353,8 +357,15 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_checkin: previousMap.get('feature_checkin') ?? '',
       feature_blast: previousMap.get('feature_blast') ?? '',
       feature_rehearsals: previousMap.get('feature_rehearsals') ?? '',
+      feature_auditions: previousMap.get('feature_auditions') ?? '',
     },
-    { feature_calendar: calendar, feature_checkin: checkin, feature_blast: blast, feature_rehearsals: rehearsals }
+    {
+      feature_calendar: calendar,
+      feature_checkin: checkin,
+      feature_blast: blast,
+      feature_rehearsals: rehearsals,
+      feature_auditions: auditions,
+    }
   )
 
   return { success: true }
