@@ -49,7 +49,7 @@ export type ShowActionResult =
 
 export async function createShow(payload: ShowSubmitPayload): Promise<ShowActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin || admin.role === 'viewer' || admin.role === 'production') {
     return { error: 'Unauthorized' }
   }
 
@@ -186,6 +186,18 @@ export async function updateShow(
   const value = parsed.data
 
   const supabase = await getServerClient()
+
+  if (admin.role === 'production') {
+    const { data: editor } = await supabase
+      .from('show_editors')
+      .select('id')
+      .eq('show_id', showId)
+      .eq('admin_id', admin.id)
+      .maybeSingle()
+    if (!editor) {
+      return { error: 'You are not assigned to this show.' }
+    }
+  }
 
   const { data: current, error: fetchError } = await supabase
     .from('shows')
@@ -404,7 +416,7 @@ export async function createSeason(formData: {
   endDate: string | null
 }): Promise<CreateSeasonResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin || admin.role === 'viewer' || admin.role === 'production') {
     return { error: 'Unauthorized' }
   }
 
@@ -449,6 +461,18 @@ export async function toggleShowStatus(
 
   const supabase = await getServerClient()
 
+  if (admin.role === 'production') {
+    const { data: editor } = await supabase
+      .from('show_editors')
+      .select('id')
+      .eq('show_id', showId)
+      .eq('admin_id', admin.id)
+      .maybeSingle()
+    if (!editor) {
+      return { error: 'You are not assigned to this show.' }
+    }
+  }
+
   const { data: current, error: fetchError } = await supabase
     .from('shows')
     .select('status')
@@ -489,7 +513,7 @@ export type ShowEditorActionResult = { success: true } | { error: string }
 
 export async function addShowEditor(showId: string, adminId: string): Promise<ShowEditorActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin || admin.role === 'viewer' || admin.role === 'production') {
     return { error: 'Unauthorized' }
   }
 
@@ -516,7 +540,7 @@ export async function removeShowEditor(
   adminId: string
 ): Promise<ShowEditorActionResult> {
   const admin = await getAdminUser()
-  if (!admin || admin.role === 'viewer') {
+  if (!admin || admin.role === 'viewer' || admin.role === 'production') {
     return { error: 'Unauthorized' }
   }
 
@@ -550,6 +574,18 @@ export async function updateShowStatus(
   }
 
   const supabase = await getServerClient()
+
+  if (admin.role === 'production') {
+    const { data: editor } = await supabase
+      .from('show_editors')
+      .select('id')
+      .eq('show_id', showId)
+      .eq('admin_id', admin.id)
+      .maybeSingle()
+    if (!editor) {
+      return { error: 'You are not assigned to this show.' }
+    }
+  }
 
   const { data: current, error: fetchError } = await supabase
     .from('shows')
@@ -610,6 +646,18 @@ export async function sendShowNotifications(showId: string): Promise<SendShowNot
 
   try {
     const supabase = await getServerClient()
+
+    if (admin.role === 'production') {
+      const { data: editor } = await supabase
+        .from('show_editors')
+        .select('id')
+        .eq('show_id', showId)
+        .eq('admin_id', admin.id)
+        .maybeSingle()
+      if (!editor) {
+        return { sent: 0, error: 'You are not assigned to this show.' }
+      }
+    }
 
     // A. Fetch show, verify live.
     const { data: show, error: showError } = await supabase
@@ -777,6 +825,18 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
 
   try {
     const supabase = await getServerClient()
+
+    if (admin.role === 'production') {
+      const { data: editor } = await supabase
+        .from('show_editors')
+        .select('id')
+        .eq('show_id', params.showId)
+        .eq('admin_id', admin.id)
+        .maybeSingle()
+      if (!editor) {
+        return { success: false, sentCount: 0, error: 'You are not assigned to this show.' }
+      }
+    }
 
     // A. Fetch all claimed slot_claims for this show, across all dates —
     // two-step app-side filter (Supabase JS has no literal IN-subquery),

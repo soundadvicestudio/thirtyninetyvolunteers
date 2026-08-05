@@ -100,7 +100,7 @@ const submitAuditionSignupSchema = z
   .object({
     name: z.string().trim().min(1, 'Name is required'),
     email: z.string().trim().toLowerCase().email('Please enter a valid email address'),
-    phone: z.string().optional(),
+    phone: z.string().min(1, 'Phone number is required'),
     auditionId: z.string().uuid(),
     slotId: z.string().uuid().nullable(),
     auditionRoleId: z.string().uuid().nullable().optional(),
@@ -205,7 +205,7 @@ export async function submitAuditionSignup(
         audition_role_id: data.auditionRoleId || null,
         name: data.name,
         email: data.email,
-        phone: data.phone ? normalizePhone(data.phone) : null,
+        phone: normalizePhone(data.phone),
         is_minor: data.isMinor,
         guardian_name: data.isMinor ? data.guardianName || null : null,
         guardian_phone: data.isMinor && data.guardianPhone ? normalizePhone(data.guardianPhone) : null,

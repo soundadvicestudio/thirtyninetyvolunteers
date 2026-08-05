@@ -923,16 +923,9 @@ export async function convertToVolunteer(
       return { success: false, error: 'A volunteer record with this email already exists.' }
     }
 
-    // volunteers.phone is NOT NULL, but audition_signups.phone is nullable
-    // (confirmed AUDITIONS.1b Task A — schema verification). An auditioner
-    // with no phone on file cannot be converted without one.
-    if (!signup.phone) {
-      return {
-        success: false,
-        error: 'This auditioner has no phone number on file. Add one before converting to a volunteer.',
-      }
-    }
-
+    // audition_signups.phone is now NOT NULL (AUDITIONS.2a Task A Inline
+    // Fix 1) — matches volunteers.phone NOT NULL. No absent-phone guard
+    // needed; normalizePhone() handles trimming/formatting.
     const { data: volunteer, error: insertError } = await supabase
       .from('volunteers')
       .insert({

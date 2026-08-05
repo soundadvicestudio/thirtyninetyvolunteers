@@ -38,6 +38,23 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const supabase = await getServerClient()
 
+  // Production access guard (AUDITIONS.2a) — Production users may reach
+  // /crew/shows/[id] via the proxy.ts trailing-slash exception, but that
+  // exception only allows the route tree through; per-show membership is
+  // enforced here. show_editors uses 'admin_id', not 'admin_user_id'
+  // (confirmed AUDITIONS.A Audit G3).
+  if (admin.role === 'production') {
+    const { data: showEditor } = await supabase
+      .from('show_editors')
+      .select('id')
+      .eq('show_id', id)
+      .eq('admin_id', admin.id)
+      .maybeSingle()
+    if (!showEditor) {
+      redirect('/crew/calendar')
+    }
+  }
+
   const { data: showRow } = await supabase
     .from('shows')
     .select(

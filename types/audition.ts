@@ -75,7 +75,7 @@ export type AuditionSignup = {
   audition_role_id: string | null
   name: string
   email: string
-  phone: string | null
+  phone: string
   is_minor: boolean
   guardian_name: string | null
   guardian_phone: string | null

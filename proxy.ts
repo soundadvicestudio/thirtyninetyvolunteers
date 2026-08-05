@@ -46,7 +46,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/crew/rehearsals') ||
     pathname === '/calendar' ||
     pathname.startsWith('/checkin/') ||
-    pathname.startsWith('/rehearsal-checkin/')
+    pathname.startsWith('/rehearsal-checkin/') ||
+    pathname.startsWith('/crew/auditions') ||
+    pathname.startsWith('/auditions/') ||
+    pathname.startsWith('/audition-checkin/')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -62,6 +65,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
   if (pathname.startsWith('/rehearsal-checkin/') && flags && !flags.rehearsals) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  if (
+    (pathname.startsWith('/auditions/') || pathname.startsWith('/audition-checkin/')) &&
+    flags &&
+    !flags.auditions
+  ) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
@@ -103,14 +113,17 @@ export async function proxy(request: NextRequest) {
   }
 
   // Production role: restricted to /crew/calendar, /crew/help, /crew/media,
-  // and /crew/rehearsals. Additive check — runs after all existing logic
-  // and only queries admin_users when a signed-in user is headed somewhere
-  // under /crew that isn't already an allowed path, so it never affects
-  // other roles' existing behavior.
+  // /crew/rehearsals, and /crew/shows/[id] (assigned shows only). Additive
+  // check — runs after all existing logic and only queries admin_users when
+  // a signed-in user is headed somewhere under /crew that isn't already an
+  // allowed path, so it never affects other roles' existing behavior.
   // /crew/media exception added 15.3 (Media Library, all roles) — same
   // pattern as the /crew/help exception added in HELP.2a. /crew/rehearsals
   // exception added 21.2 — per-schedule filtering happens at the data
-  // layer (getRehearsalSchedules()), not here.
+  // layer (getRehearsalSchedules()), not here. /crew/shows/ exception added
+  // AUDITIONS.2a — deliberately scoped with a trailing slash so it matches
+  // /crew/shows/[id] but not /crew/shows (the list page); membership is
+  // enforced by the page-level show_editors guard, not here.
   if (
     user &&
     pathname.startsWith('/crew') &&
@@ -118,7 +131,8 @@ export async function proxy(request: NextRequest) {
     !pathname.startsWith('/crew/calendar') &&
     pathname !== '/crew/help' &&
     pathname !== '/crew/media' &&
-    !pathname.startsWith('/crew/rehearsals')
+    !pathname.startsWith('/crew/rehearsals') &&
+    !pathname.startsWith('/crew/shows/')
   ) {
     const { data: adminUser } = await supabase
       .from('admin_users')
@@ -148,6 +162,9 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith('/crew/rehearsals') && flags && !flags.rehearsals) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
+  if (pathname.startsWith('/crew/auditions') && flags && !flags.auditions) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
 
   return supabaseResponse
 }
@@ -159,5 +176,7 @@ export const config = {
     '/calendar',
     '/checkin/:path*',
     '/rehearsal-checkin/:path*',
+    '/auditions/:path*',
+    '/audition-checkin/:path*',
   ],
 }

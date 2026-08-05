@@ -111,17 +111,14 @@ export async function syncShowDateToCalendar(
 // never appear on the calendar.
 export async function syncAuditionToCalendar(auditionId: string, supabase: SupabaseClient): Promise<void> {
   try {
-    // Flag fetched directly from app_settings — NOT via getFeatureFlags(),
-    // which calls getServerClient() internally and would break this
-    // function's client-as-parameter contract (Process §7). Mirrors the
-    // same direct-fetch approach as the calendar flag check above.
-    const { data: flagRow } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'feature_auditions')
-      .maybeSingle()
-
-    if (flagRow?.value === 'false') return
+    // getFeatureFlags() accepts the client as a parameter (Process §7) — it
+    // never constructs its own, so this is safe to call with whichever
+    // client the caller passed in. Same pattern as syncShowDateToCalendar()
+    // above. (Corrected AUDITIONS.2a — an earlier build comment here
+    // incorrectly claimed getFeatureFlags() calls getServerClient()
+    // internally; it does not.)
+    const flags = await getFeatureFlags(supabase)
+    if (!flags.auditions) return
 
     const { data: auditionRaw } = await supabase
       .from('auditions')
