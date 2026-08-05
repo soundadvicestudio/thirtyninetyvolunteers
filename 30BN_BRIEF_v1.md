@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.6
-### Created: July 2026 | Last Updated: August 2026 — v4.6 (Phase AUDITIONS — Audition Management System specced as pre-launch phase: full schema (8 new tables), 11-prompt structure (AUDITIONS.A/1a/1b/2a/2b/2c/3a/3b/4a/4b + DOC.59), Production show + audition assignment model, feature_auditions flag (5th active flag), TipTap merge tag extension, email notification template system; R38 added; Phase AUDITIONS added to §11; Phase 17 Launch follows Phase AUDITIONS)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.7
+### Created: July 2026 | Last Updated: August 2026 — v4.7 (Phase AUDITIONS complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b); Migration 032 applied; 8 new tables; feature_auditions live; public signup/check-in/upload/cancel pages; admin list + 6-tab detail page; TipTap merge tag extension; 4 email functions; HelpContent 15th section (Auditions); Deferred Verifications v19 (65 items); schema corrections (audition_signups.phone NOT NULL, original_filename, consent_form_submissions.audition_signup_id, calendar_events.source_audition_id); R23 signature corrected; Phase 17 Launch is next)
 
 ---
 
@@ -11,7 +11,7 @@
 **Built and maintained by:** Jonathan Sturcken (YLC member) — sole point of contact for questions, updates, and future development.
 
 **Two user-facing surfaces:**
-- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`) · Rehearsal self check-in (`/rehearsal-checkin/[token]`) · Audition signup (`/auditions/[id]`) · Audition self check-in (`/audition-checkin/[token]`)
+- **Public:** Volunteer signup landing page · per-show slot claiming pages · Volunteer Call Board self-service portal · Public Events Calendar (`/calendar`) · Rehearsal self check-in (`/rehearsal-checkin/[token]`) · Audition signup (`/auditions/[id]`) · Audition self check-in (`/audition-checkin/[token]`) · Audition material upload (`/auditions/upload/[token]`) · Audition signup cancel (`/auditions/cancel/[token]`)
 - **Private (Production Crew):** Full admin backend for Super Admins, Editors, and Viewers
 
 **Supabase project:** `thirtyninetyvolunteers` (ID: `nutvjkplbtobcmymqtzx`, org: `thirtybyninety`)
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase 21 (Rehearsal Management System) complete. Phase AUDITIONS (Audition Management System) is next — fully specced and approved as a pre-launch build in August 2026, comprising 11 prompts (AUDITIONS.A through AUDITIONS.4b + DOC.59). Phase 17 (Launch) follows Phase AUDITIONS. Phase CAST planned post-launch.
+**Current phase:** Phase AUDITIONS (Audition Management System) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Migration 032 applied. Phase 17 (Launch) is next. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -67,7 +67,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Image Config** | next.config.ts images.remotePatterns | Must include *.supabase.co hostname pattern (added ADMIN.33). Required for dynamic logo rendering when org_logo_url points to Supabase Storage. Without this entry, next/image will throw a runtime error on any deployment with a custom uploaded logo. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. Brand colors passed as props via `createStyles()` factory (THEME.4 — see §8 Volunteer List PDF). |
 | **Color Utility** | `lib/utils/color.ts` | `lightenHex(hex, amount)` — pure server-side hex tint computation. Blends a hex color with white at the given percentage. Used by `resolveEmailSettings()` to compute `brandPrimaryLight` (8% tint of `brand_primary`) and by the PDF export route handler for the same derivation. Required because email clients and `@react-pdf/renderer` do not support CSS custom properties or `color-mix()` — tints must be concrete hex strings computed server-side. Established THEME.3b. |
-| **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. Installed 13.3b; extensions added ADMIN.27. |
+| **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. **Custom extension pattern (Phase AUDITIONS.4a):** `MergeTagExtension.ts` in `components/crew/auditions/` — inline/atom Node with `data-merge-tag` attribute round-trip, `insertMergeTag(tag)` command via module augmentation (`declare module '@tiptap/core'`), `.merge-tag-pill` CSS class for visual display. All TipTap editor instances in admin components use `immediatelyRender: false` (SSR/hydration safety — required in Next.js App Router). Installed 13.3b; extensions added ADMIN.27; custom extension added AUDITIONS.4a. |
 | **Image Cropping** | react-easy-crop v6.2.3 | Client-side image crop editor for brand asset uploads in the Setup Panel (BrandImageUploader.tsx). Used for logo (free aspect ratio) and favicon (1:1 square lock). Installed SETUP.2. |
 | **HTML Sanitization** | `sanitize-html` + `@types/sanitize-html` | Server-side sanitization of TipTap HTML output in `sendBlastEmail()` before the email payload is built. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href]` only. HTTP/HTTPS/mailto schemes only. Strips `<script>`, event handlers, and `javascript:` hrefs. Installed 13.4a. |
 | **PWA** | Manual service worker | Admin-only PWA at `/crew` scope. Manifest at `public/manifest.json`, service worker at `public/sw.js` (network-first strategy). Icons generated via Sharp from `public/logo.png`. `start_url`: `/crew/dashboard`. |
@@ -185,6 +185,7 @@ Mid Gray:             #555555  --color-mid-gray
 - CTA buttons built via `buildCtaButton(label, url, color)` helper (internal). Volunteer-facing CTAs link to `/callboard`. Admin-facing CTAs link to `/crew/login` or `/crew/`.
 - All user-supplied values interpolated into HTML email strings must be wrapped in `escapeHtml()` (internal to `lib/email.ts`). Exception: the blast body passed from TipTap is sanitized via `sanitize-html` instead of escaped — escaping would corrupt the HTML structure. See `sendBlastEmail()` in `lib/actions/blast.ts`.
 - All outbound emails (system-triggered and admin-triggered) logged to `email_log` + `email_log_recipients` as of Phase 13.1.
+- **Export status of send functions (confirmed AUDITIONS.4b):** All `send*Email()` functions in `lib/email.ts` ARE exported — only the HTML-building helpers (`buildEmailHtml()`, `buildCtaButton()`, `escapeHtml()`, `logEmailSent()`) are internal. Prior planning assumed send functions were unexported; the live file confirms they are exported. Callers in `lib/actions/auditions.ts` and `lib/actions/auditions-admin.ts` import them directly.
 
 ---
 
@@ -198,7 +199,7 @@ Mid Gray:             #555555  --color-mid-gray
 | Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
 | Production | `/crew/calendar`, `/crew/media`, `/crew/help`, `/crew/rehearsals` (assigned only), `/crew/auditions` (assigned only) | Calendar submission only | No | Directors and Stage Managers. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Full read/write on assigned rehearsal schedules (Phase 21) and assigned auditions and shows (Phase AUDITIONS — AUDITIONS.2a). Assignment is per-resource and independent: show assignment (via show editors) grants access to all auditions linked to that show; direct audition assignment grants access to that audition only. Sidebar shows Calendar, Media Library, Help, Rehearsals, and Auditions. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library confirmed ADMIN.30. Rehearsals added Phase 21. Show + audition access added AUDITIONS.2a. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
-| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]`, `/auditions/[id]`, `/audition-checkin/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). `/auditions/[id]` — public audition signup page (open call and timed-slot modes, role selection, material uploads, is_minor/guardian fields, consent trigger for under-18). `/audition-checkin/[token]` — audition self check-in page (token-gated, no auth required, roster dropdown identity — same pattern as rehearsal check-in). |
+| Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]`, `/auditions/[id]`, `/audition-checkin/[token]`, `/auditions/upload/[token]`, `/auditions/cancel/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). `/auditions/[id]` — public audition signup page (open call and timed-slot modes, role selection, material uploads, is_minor/guardian fields, consent trigger for under-18). `/audition-checkin/[token]` — audition self check-in page (token-gated, no auth required, roster dropdown identity — same pattern as rehearsal check-in). `/auditions/upload/[token]` — late material upload page; upload_token from signup confirmation email; P-DC pattern. `/auditions/cancel/[token]` — audition signup cancellation page; cancel_token from confirmation email; sets status = 'withdrawn'. |
 
 **`calendar_editor` flag:** A boolean column on `admin_users` (default false, added Migration 017). When true on an Editor, Viewer, or Owner Admin account: that user gets direct write access to the calendar (events saved as `approved` immediately, Book Space button visible). When false: all calendar submissions go to the pending approval queue for Super Admin assignment and approval. Cannot be set on `super_admin` or `production` accounts (DB CHECK constraint enforces this; `owner_admin` CAN have `calendar_editor = true` — CHECK constraint updated in Migration 023). **UI toggle built CAL.6** on `/crew/settings/users` (Super Admin only) via `toggleCalendarEditor()` server action in `lib/actions/users.ts`. Logged to `audit_log` as `user.calendar_editor_change`.
 
@@ -1026,7 +1027,7 @@ Gated behind `feature_auditions` flag (R34 compliant). Visible to Super Admin, O
 
 **Audition detail (`/crew/auditions/[id]`):** Server Component shell + Client Component tabs. Six tabs:
 
-*Overview* — title, dates, type, show link (if any), parent audition link (if callback), status toggle (Draft / Published / Closed / Archived), public URL copy button, auditions card preview.
+*Overview* — title, dates, type, show link (if any), parent audition link (if callback), status toggle (Draft / Published / Closed / Archived), public URL copy button, auditions card preview. **Check-in QR display:** SVG inline (via `dangerouslySetInnerHTML`) for display + PNG + SVG download links with fixed filenames (same pattern as show and rehearsal QRs — white container, scanability-safe regardless of dark mode). Shell page generates both `svg` and `pngBase64` via `generateQR()` and passes both as props.
 
 *Signups* — full auditioner roster with expandable rows (same pattern as Rehearsal attendance tab). Collapsed per row: name, email, slot/time, role selected, status badge, material indicators (✓ per type submitted). Expanded per row: private admin notes (append-only, Editor+), cast role assignment field, communication history for this auditioner, status changer, "Convert to Volunteer" button (visible when status = Cast; SA/OA/Editor only — inserts `volunteers` record pre-populated with name/email/phone, logs to audit_log, no automatic Supabase Auth account created). SA/OA/Editor/Production (assigned): full read/write including status changes and notes. Viewer: read-only status badges only.
 
@@ -1034,14 +1035,14 @@ Gated behind `feature_auditions` flag (R34 compliant). Visible to Super Admin, O
 
 *Communication* — ad-hoc bulk email to all signups for this audition, or filtered by status (Callback only / Cast only / Not Cast only / all). TipTap composer (same as blast composer). Separate from the template system — for ad-hoc sends only.
 
-*Email Templates* — three independently configurable email templates, one per status transition: Callback, Cast, and Not Cast. Each template section has a TipTap editor with a merge tag inserter (custom TipTap extension — Phase AUDITIONS.4a), a live preview panel (server action substitutes sample values and renders through `buildEmailHtml()` with real brand colors), and a Save button. Notification emails enabled/disabled toggle at the top of the tab (default off). If no template exists for a status, automatic firing is silently skipped even when the toggle is on — prevents blank emails. Template content stored in `audition_email_templates` table (one row per audition per status type). Supported merge tags: `{{auditioner_name}}`, `{{show_title}}`, `{{audition_title}}`, `{{audition_date}}`, `{{audition_location}}`, `{{role_name}}`, `{{cast_role}}`, `{{org_name}}`. This tab is built as a stub in AUDITIONS.2b and fully implemented in AUDITIONS.2c (after AUDITIONS.4a ships the TipTap extension).
+*Email Templates* — three independently configurable email templates, one per status transition: Callback, Cast, and Not Cast. Each template section has a TipTap editor (`useEditor` with `immediatelyRender: false` — required for SSR/hydration safety, matches BlastComposer.tsx pattern) with a merge tag inserter toolbar (one button per MERGE_TAGS entry calls `editor.commands.insertMergeTag(tag)`), a live preview panel (`previewAuditionEmailTemplate()` server action substitutes sample values and returns branded HTML), and a Save button (`saveAuditionEmailTemplate()`). Notification emails enabled/disabled toggle at the top of the tab (default off) — calls `updateAudition()` with `notification_emails_enabled` field. If no template exists for a status, automatic firing is silently skipped even when the toggle is on — prevents blank emails. Template content stored in `audition_email_templates` table (one row per audition per status type). Supported merge tags: `{{auditioner_name}}`, `{{show_title}}`, `{{audition_title}}`, `{{audition_date}}`, `{{audition_location}}`, `{{role_name}}`, `{{cast_role}}`, `{{org_name}}`. Template content is lazy-loaded when the tab first opens; editor content initialized via `editor.commands.setContent()` after load (not via `useEditor` content prop — async data arrives after mount). Three separate `useEditor()` instances at component top level (React hooks rules — not in a loop).
 
 *Settings* — all audition configuration (type, slot config, role selection list, material toggles, calendar visibility, show link, parent audition link for callbacks, `audition_assignments` roster for Production users, archive/delete actions).
 
 **Public signup page (`/auditions/[id]`):**
-Public Server Component + Client Component. `getAdminClient()` only. Light mode only. `noindex` metadata. Branded header (`resolveOrgIdentity()`). Shows audition title, description, date(s)/time(s), location. Form fields: name (required), email (required), phone (required), age range / is_minor, guardian name + phone (when is_minor = true), role selection (when enabled for this audition — dropdown from `audition_roles`), time slot picker (when timed_slots type — grid of available slots; full slots shown as unavailable/grayed), material uploads (whichever types are enabled — inline P-DC upload, one per type). Duplicate detection by email per audition — friendly message if already registered. On submit: sends `sendAuditionSignupConfirmation()` containing a cancel link (via `cancel_token`) and an upload link (via `upload_token`) for submitting missed materials later. Under-18 auditioners: non-blocking consent trigger — queries `document_types` for `slug = 'cast_consent_form'` and `is_active = true`, inserts `consent_form_submissions` row, sends `sendConsentFormRequestEmail()`. Same pattern as Phase 15.2 volunteer consent; uses the separately-seeded `cast_consent_form` system document type.
+Public Server Component + Client Component. `getAdminClient()` only. Light mode only. `noindex` metadata. Branded header (`resolveOrgIdentity()`). Shows audition title, description, date(s)/time(s), location. Form fields: name (required), email (required), phone (required), age range / is_minor, guardian name + phone (when is_minor = true), role selection (when enabled for this audition — dropdown from `audition_roles`), time slot picker (when timed_slots type — grid of available slots; full slots shown as unavailable/grayed), material uploads (whichever types are enabled — inline P-DC upload, one per type). Duplicate detection by email per audition — friendly message if already registered. On submit: sends `sendAuditionSignupConfirmation()` containing a cancel link (via `cancel_token`) and an upload link (via `upload_token`) for submitting missed materials later. Under-18 auditioners: non-blocking consent trigger — queries `document_types` for `slug = 'cast_consent_form'` and `is_active = true`, inserts `consent_form_submissions` row (with `audition_signup_id` FK set — added in Migration 032), sends `sendAuditionConsentFormRequestEmail()` (audition-specific function, NOT `sendConsentFormRequestEmail()` which is volunteer-specific). Same non-blocking try/catch pattern as Phase 15.2 volunteer consent; uses the separately-seeded `cast_consent_form` system document type.
 
-**Self-cancel:** Via `cancel_token` link in confirmation email. Same pattern as slot claim cancellations.
+**Self-cancel:** Via `cancel_token` link in confirmation email. Links to `/auditions/cancel/[token]` (public Server Component page, built AUDITIONS.4b). Page calls `cancelAuditionSignup(token)`, sets status = 'withdrawn', sends `sendAuditionCancellationEmail()`. Shows success or "link not valid" state. `resolveOrgIdentity()` branded header. `noindex`.
 
 **Late material upload:** Via `upload_token` link. Unique per signup. Routes to `/auditions/upload/[token]` — allows uploading any material type that was enabled for the audition but not submitted at signup. Same P-DC pattern as Phase 15.
 
@@ -1051,27 +1052,32 @@ Public Server Component + Client Component. `getAdminClient()` only. Light mode 
 
 **Calendar integration:** When `calendar_visibility = 'public'`, the audition syncs to `calendar_events` as `event_type = 'audition'`, `status = 'approved'`. Sync follows the same `syncShowDateToCalendar()` pattern extended for auditions. Public `/calendar` shows it when visibility is public. Admin calendar always shows it.
 
-**Email functions (all in `lib/email.ts`):**
-- `sendAuditionSignupConfirmation()` — sent on successful signup. Contains cancel link and upload link.
-- `sendAuditionStatusEmail(signupId, status)` — fires automatically when notification toggle is on and a template exists for the given status. Substitutes merge tags at send time. Called from `updateAuditionSignupStatus()` server action.
-- Cancellation email — sent when auditioner self-cancels via cancel link.
-- All logged to `email_log` / `email_log_recipients`.
+**Email functions (all in `lib/email.ts`, all exported — AUDITIONS.4b):**
+- `sendAuditionSignupConfirmation()` — sent on successful signup. Contains cancel link (`/auditions/cancel/${cancelToken}`), upload link (`/auditions/upload/${uploadToken}`), audition details.
+- `sendAuditionConsentFormRequestEmail()` — sent for under-18 auditioners. Separate from `sendConsentFormRequestEmail()` (volunteer version) — uses audition-specific copy. Same upload CTA (`/consent/[uploadToken]`) and conditional download CTA pattern. trigger: `'audition_consent_form_request'`.
+- `sendAuditionStatusEmail({ signupId, auditionId, status })` — fires when notification toggle is on and a template exists for the given status. Fetches template internally, runs `substituteMergeTags()`, sends single-recipient email. trigger: `'audition_status_${status}'`. Silent skip if no template.
+- `sendAuditionCancellationEmail({ to, name, auditionTitle })` — sent when auditioner cancels via cancel token link. trigger: `'audition_cancellation'`.
+- All logged to `email_log` / `email_log_recipients`. `recipient_type = 'transactional'` for all four.
 
 **Key files (Phase AUDITIONS):**
 Server actions:
-- `lib/actions/auditions.ts` — PUBLIC ROUTE file: `getAuditionPublicData()`, `submitAuditionSignup()`, `cancelAuditionSignup()`, `getAuditionUploadData()`, `confirmAuditionMaterialUpload()`, `getAuditionCheckInData()`, `checkInToAudition()` — `getAdminClient()` only.
-- `lib/actions/auditions-admin.ts` — authenticated: `getAuditionSchedules()`, `getAuditionDetail()`, `createAudition()`, `updateAudition()`, `updateAuditionStatus()`, `updateAuditionSignupStatus()`, `addAuditionNote()`, `assignProductionUser()`, `removeProductionUser()`, `sendAuditionBulkEmail()`, `saveAuditionEmailTemplate()`, `getAuditionEmailTemplate()`, `convertToVolunteer()`.
+- `lib/actions/auditions.ts` — PUBLIC ROUTE file: `getAuditionPublicData()`, `submitAuditionSignup()`, `cancelAuditionSignup()`, `getAuditionUploadData()`, `confirmAuditionMaterialUpload()`, `getAuditionCheckInData()`, `checkInToAudition()`, `getAuditionMaterialUploadUrl()`, `getUpcomingAuditions()` — `getAdminClient()` only.
+- `lib/actions/auditions-admin.ts` — authenticated: `getAuditionList()`, `getAuditionDetail()`, `createAudition()`, `updateAudition()`, `updateAuditionStatus()`, `updateAuditionSignupStatus()`, `addAuditionNote()`, `assignProductionUser()`, `removeProductionUser()`, `sendAuditionBulkEmail()`, `saveAuditionEmailTemplate()`, `getAuditionEmailTemplates()`, `convertToVolunteer()`, `getAuditionMaterialSignedUrl()`, `previewAuditionEmailTemplate()`, `createAuditionRole()`, `deleteAuditionRole()`, `reorderAuditionRoles()`, `getAuditionsSelectData()`.
 Utilities and types:
 - `types/audition.ts` — all Phase AUDITIONS types.
 Pages and components:
-- `app/crew/(app)/auditions/page.tsx` — schedule list.
-- `app/crew/(app)/auditions/[id]/page.tsx` — detail shell + Production access guard.
-- `components/crew/auditions/AuditionsListClient.tsx`
-- `components/crew/auditions/AuditionDetailTabs.tsx` — six tabs.
-- `app/auditions/[id]/page.tsx` — public signup page.
-- `app/auditions/upload/[token]/page.tsx` — late material upload page.
-- `app/audition-checkin/[token]/page.tsx` — public check-in.
-- `components/audition/AuditionSignupClient.tsx`
+- `app/crew/(app)/auditions/page.tsx` — admin list
+- `app/crew/(app)/auditions/[id]/page.tsx` — admin detail shell (passes both svg + pngBase64 from generateQR to tabs)
+- `components/crew/auditions/AuditionsListClient.tsx` — list + creation modal
+- `components/crew/auditions/AuditionDetailTabs.tsx` — six tabs (Overview, Signups, Materials, Communication, Email Templates, Settings — all fully implemented)
+- `components/crew/auditions/MergeTagExtension.ts` — custom TipTap Node extension (inline/atom, data-merge-tag round-trip, insertMergeTag command, module augmentation)
+- `lib/utils/merge-tags.ts` — pure utility: MERGE_TAGS const, MergeTagValues type, substituteMergeTags()
+- `app/auditions/[id]/page.tsx` — public signup page
+- `app/auditions/upload/[token]/page.tsx` — late material upload page
+- `app/auditions/cancel/[token]/page.tsx` — signup cancellation page (AUDITIONS.4b)
+- `app/audition-checkin/[token]/page.tsx` — public check-in
+- `components/audition/AuditionSignupClient.tsx` — full form including slot picker, materials, description display
+- `components/audition/AuditionUploadClient.tsx` — late upload form
 - `components/audition-checkin/AuditionCheckInClient.tsx`
 
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
@@ -1119,13 +1125,13 @@ Role visibility:
 - Viewer: all sections except Settings and Communication; no edit-only subsections
 - Production: Master Calendar, Media Library, Getting Help, and Rehearsals
 
-All 14 sections (in order): Dashboard · Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · Master Calendar · Communication · Check-In System · Media Library · The Volunteer Call Board · Standing Opportunities · Rehearsals · Getting Help
+All 15 sections (in order — confirmed against the live `ALL_SECTIONS` array, AUDITIONS.4b): Dashboard · Your Volunteers · Shows · Attendance and Hours · The Volunteer Signup Form · Settings · Master Calendar · Communication · Check-In System · Media Library · The Volunteer Call Board · Standing Opportunities · Getting Help · Rehearsals · Auditions
 
-Sections and anchors: 14 h2 sections, ~46 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`. Phase 21 anchors: `rehearsals`, `rehearsals-schedules`, `rehearsals-assignments`, `rehearsals-attendance`, `rehearsals-checkin`.
+Sections and anchors: 15 h2 sections, ~50 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`. Phase 21 anchors: `rehearsals`, `rehearsals-schedules`, `rehearsals-assignments`, `rehearsals-attendance`, `rehearsals-checkin`. Phase AUDITIONS anchors: `auditions`, `auditions-overview`, `auditions-signups`, `auditions-materials`, `auditions-checkin`.
 
-HelpTooltip placements: 37 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`. Phase 21 (5): `Sidebar.tsx` → `rehearsals` (nav link); `rehearsals/page.tsx` → `rehearsals` (list header); `RehearsalDetailTabs.tsx` → `rehearsals-assignments` (Roster tab), `rehearsals-assignments` (Dates tab), `rehearsals-attendance` (Attendance tab).
+HelpTooltip placements: 40 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`. Phase 21 (5): `Sidebar.tsx` → `rehearsals` (nav link); `rehearsals/page.tsx` → `rehearsals` (list header); `RehearsalDetailTabs.tsx` → `rehearsals-assignments` (Roster tab), `rehearsals-assignments` (Dates tab), `rehearsals-attendance` (Attendance tab). Phase AUDITIONS (3): `app/crew/(app)/auditions/page.tsx` → `auditions` (list page header — placed in Server Component, not list client); `AuditionDetailTabs.tsx` → `auditions-signups` (Signups tab header); `AuditionDetailTabs.tsx` → `auditions-materials` (Materials tab header). NOTE: the Auditions sidebar nav link HelpTooltip is handled by the generalized Sidebar special-case (both `/crew/rehearsals` and `/crew/auditions` handled in one dynamic block — AUDITIONS.2b).
 
-Production sidebar: Help link added (HELP.2b). Media Library link also visible to Production (ADMIN.30 confirmed — Production has `/crew/media` sidebar access).
+Production sidebar: Help link added (HELP.2b). Media Library link also visible to Production (ADMIN.30 confirmed — Production has `/crew/media` sidebar access). Rehearsals link visible to Production (Phase 21). Auditions link visible to Production (Phase AUDITIONS). HelpContent Auditions section visible to Production role (Phase AUDITIONS — same visibility as Rehearsals).
 
 Settings section (owner decision): Settings is Super Admin + Owner Admin only (`roles: ['super_admin', 'owner_admin']`). The two new Settings subsections added in ADMIN.30 (`document-types`, `consent-forms`) follow the same SA/OA-only guard.
 
@@ -1164,7 +1170,7 @@ displays 8 section cards using the `LinkedCard` /
 Global log of all emails sent by the platform. Three tabs via `?tab=` URL param:
 - All Emails — paginated reverse-chronological log of all `email_log` rows. 25/page, `?page=N`.
 - System Only — same log filtered to `sent_by IS NULL` (system-triggered emails only).
-- About System Emails — static trigger catalog listing all 11 automated email triggers, when each fires, who receives it, and spam protections in place.
+- About System Emails — static trigger catalog listing all 15 automated email triggers, when each fires, who receives it, and spam protections in place. Phase AUDITIONS added 4 audition triggers: audition signup confirmation, audition consent form request, audition status notification, audition cancellation.
 
 Log columns: Date (`formatCT(sent_at)`), Subject, Type (human-readable label), Sent By (admin name or "System"), Recipients (`recipient_count`), Trigger/Filter (`recipient_filter` in monospace badge).
 
@@ -1226,7 +1232,7 @@ Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 s
 
 Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 6 — Feature Flags: Four toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals` alongside existing paths.
+Section 6 — Feature Flags: Five toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals` and `/crew/auditions` alongside existing paths.
 
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
@@ -1624,10 +1630,24 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 032 — `032_audition_management.sql` (Phase AUDITIONS). Pending — not yet applied.
+**Next migration:** 033. No pending migrations.
 
-**Migration 032 status:** Pending — `032_audition_management.sql` (Phase AUDITIONS).
-Creates eight new tables and seeds `feature_auditions` in `app_settings`.
+**Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
+Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
+audition_signup_notes, audition_materials, audition_assignments, audition_email_templates),
+seeded `feature_auditions` in `app_settings`, and ALTERed `calendar_events_event_type_check`
+to include `'audition'`. Additional inline schema fixes applied via Supabase MCP after
+Migration 032: `audition_signups.phone SET NOT NULL` (AUDITIONS.2a), `email_log.recipient_type`
+CHECK updated to include `'audition'` (AUDITIONS.2a), `calendar_events.source_audition_id`
+column + partial unique index added (AUDITIONS.1b), `calendar_events_source_check` updated
+to include `'audition'` (AUDITIONS.1b), `consent_form_submissions.audition_signup_id` column
++ partial index added (AUDITIONS.1a inline section). NOTE (confirmed via live Supabase query,
+DOC.59): none of these five inline fixes are reflected in the committed `032_audition_
+management.sql` file at repo root — the file on disk creates the eight tables and seeds
+`feature_auditions` only. The live database schema is correct; the migration file is a
+historical snapshot that has drifted from it. A fresh database seeded from this repo's
+migration files alone would NOT match production until these five ALTERs are captured in
+a follow-up migration file (e.g. `033_audition_schema_fixes.sql`).
 
 ### auditions
 ```sql
@@ -1702,7 +1722,7 @@ slot_id             uuid REFERENCES audition_slots(id) ON DELETE SET NULL
 audition_role_id    uuid REFERENCES audition_roles(id) ON DELETE SET NULL
 name                text NOT NULL
 email               text NOT NULL
-phone               text
+phone               text NOT NULL
 is_minor            boolean NOT NULL DEFAULT false
 guardian_name       text
 guardian_phone      text
@@ -1722,6 +1742,10 @@ signed_up_at        timestamptz NOT NULL DEFAULT now()
 -- RLS: is_editor() all authenticated operations; anon INSERT (public signup);
 --      anon SELECT WHERE cancel_token matches (for cancel page token validation)
 -- Migration 032 (032_audition_management.sql)
+-- NOTE: phone was NOT NULL in Migration 032 as applied
+--   (AUDITIONS.2a inline fix — ALTER TABLE audition_signups
+--   ALTER COLUMN phone SET NOT NULL). The original spec had
+--   it nullable. Corrected here to match the live schema.
 ```
 
 ### audition_signup_notes
@@ -1739,12 +1763,15 @@ created_at  timestamptz NOT NULL DEFAULT now()
 
 ### audition_materials
 ```sql
-id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
-signup_id       uuid NOT NULL REFERENCES audition_signups(id) ON DELETE CASCADE
-material_type   text NOT NULL
-                CHECK (material_type IN ('headshot','resume','sheet_music','mp3','video'))
-storage_path    text NOT NULL
-uploaded_at     timestamptz NOT NULL DEFAULT now()
+id                uuid PRIMARY KEY DEFAULT gen_random_uuid()
+signup_id         uuid NOT NULL REFERENCES audition_signups(id) ON DELETE CASCADE
+material_type     text NOT NULL
+                  CHECK (material_type IN ('headshot','resume','sheet_music','mp3','video'))
+storage_path      text NOT NULL
+original_filename text
+uploaded_at       timestamptz NOT NULL DEFAULT now()
+-- original_filename: intentional enhancement over Brief spec (AUDITIONS.1a) —
+--   needed for meaningful filename display in admin Materials tab
 -- INDEX: idx_audition_materials_signup_id
 -- RLS: is_editor() SELECT + DELETE; anon INSERT (upload token validated in action)
 -- Migration 032 (032_audition_management.sql)
@@ -2222,10 +2249,18 @@ status           text NOT NULL DEFAULT 'pending' CHECK (
   status IN ('pending','approved','cancelled')
 )
 source           text NOT NULL DEFAULT 'manual' CHECK (
-  source IN ('show','manual')
+  source IN ('show','manual','audition')
 )
+-- 'audition' added inline via Supabase MCP in AUDITIONS.1b.
 source_show_date_id uuid REFERENCES show_dates(id)
   ON DELETE CASCADE
+source_audition_id uuid REFERENCES auditions(id) ON DELETE SET NULL
+-- NULL for all non-audition-sourced events.
+-- UNIQUE partial index: idx_calendar_events_source_audition_id
+--   WHERE source_audition_id IS NOT NULL.
+-- Used as upsert conflict anchor in syncAuditionToCalendar().
+-- Added inline via Supabase MCP in AUDITIONS.1b Task D (not in
+--   Migration 032 SQL file — applied as a separate ALTER).
 rehearsal_batch_id  uuid REFERENCES rehearsal_batches(id)
   ON DELETE SET NULL
 recurrence_group_id uuid REFERENCES recurrence_groups(id)
@@ -2431,7 +2466,13 @@ body_preview     text
 -- before truncation (.replace(/<[^>]+>/g,'').slice(0,150)).
 -- All system-triggered sends populate this field as
 -- of Phase 13.1. Pre-13.1 entries may have null here.
-recipient_type   text NOT NULL CHECK (recipient_type IN ('all','category','individual','transactional'))
+recipient_type   text NOT NULL CHECK (recipient_type IN ('all','category','individual','transactional','audition'))
+-- 'audition' added to CHECK constraint via Supabase MCP in
+--   AUDITIONS.2a. CORRECTION (confirmed against live code,
+--   DOC.59): sendAuditionBulkEmail() in lib/actions/auditions-
+--   admin.ts actually logs recipient_type = 'individual' for
+--   audition bulk sends, not 'audition' — the constraint value
+--   is not currently exercised by any code path.
 recipient_filter text
 reply_to         text
 recipient_count  integer NOT NULL DEFAULT 0
@@ -2581,6 +2622,12 @@ created_at          timestamptz NOT NULL DEFAULT now()
 --   anon SELECT WHERE status = 'pending' (token validation on
 --   public /consent/[token] page uses getAdminClient() — this
 --   policy is a safety net)
+audition_signup_id uuid REFERENCES audition_signups(id) ON DELETE SET NULL
+-- NULL for volunteer consent submissions (uses volunteer_id instead).
+-- Set for auditioner consent submissions — links consent record to
+--   the audition_signups row. Added in Migration 032 (AUDITIONS.1a
+--   inline ALTER after audition_signups table was created).
+-- INDEX: idx_consent_submissions_audition_signup (WHERE NOT NULL)
 -- Upload token is permanent until submitted_file_path is set.
 -- Status 'pending' means awaiting admin review (not "no file yet" —
 --   submitted_file_path IS NOT NULL indicates file received).
@@ -2712,7 +2759,9 @@ submitted_at     timestamptz NOT NULL DEFAULT now()
 (15.2): `consent_submission.file_received`. Public signup (ADMIN.31):
 `volunteer.signup` — first entry in the Volunteers AuditAction group. Public
 self-registration with null admin_id (R25). Logged non-blocking in
-`submitVolunteerForm()`. All types in `lib/audit.ts`, visible in audit log viewer.
+`submitVolunteerForm()`. Phase AUDITIONS (AUDITIONS.1b): `audition.convert_to_volunteer`
+— logged when an admin converts an auditioner signup to a volunteer record via the
+Signups tab Convert to Volunteer action. All types in `lib/audit.ts`, visible in audit log viewer.
 
 **Default `app_settings` seed values:**
 ```
@@ -2765,7 +2814,7 @@ Value `''` evaluates as enabled (`!== 'false'`). Added to
 `FeatureFlags` type and `getFeatureFlags()` in
 `lib/feature-flags.ts`. Setup Panel Section 6 has a fourth
 toggle row for this flag. `saveFeatureFlags()` revalidates
-`/crew/rehearsals` alongside existing routes.
+`/crew/rehearsals` and `/crew/auditions` alongside existing routes.
 Total active SETUP keys: 18. Setup Panel fetches 19 keys
 total (18 SETUP keys + default_reply_to).
 
@@ -2779,6 +2828,15 @@ toggle row for this flag. `saveFeatureFlags()` revalidates
 `/crew/auditions` alongside existing routes.
 Total active SETUP keys: 19. Setup Panel fetches 20 keys
 total (19 SETUP keys + default_reply_to).
+
+**5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
+Every new feature flag requires exactly 5 file changes:
+1. Migration SQL — seed the key in `app_settings`
+2. `lib/feature-flags.ts` — add to FeatureFlags type + getFeatureFlags() fetch + return object
+3. `components/crew/settings/SetupPanel.tsx` — 5th toggle in Section 6
+4. `app/crew/(app)/settings/setup/page.tsx` — companion edit for SetupPanelInitialValues type widening
+5. `lib/actions/setup.ts` — `saveFeatureFlags()` revalidatePath for the new route
+Missing any of the five produces a silent failure (wrong TypeScript types, toggle that doesn't save, stale cache on flag change).
 
 Runtime-added key (not seeded in Migration 001):
 ```
@@ -3818,7 +3876,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete — all four prompts shipped (21.A/21.1/21.2/21.3). Migration 031 applied. Phase AUDITIONS (Audition Management) is next — fully specced August 2026 (11 prompts: AUDITIONS.A/1a/1b/2a/2b/2c/3a/3b/4a/4b + DOC.59). Phase 17 (Launch) follows Phase AUDITIONS.*
+*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete. Phase AUDITIONS (Audition Management) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Migration 032 applied. Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -4632,9 +4690,9 @@ viewable-mime-type files now route to player page instead of direct redirect.
 - Add "Sign in with Google" button to `/crew/login`
 - Confirm redirect URIs for production domain
 
-### Phase AUDITIONS — Audition Management System (pre-launch, next)
+### Phase AUDITIONS — Audition Management System ✓ Complete
 
-**Confirmed as pre-launch build:** Specced in full August 2026 during the Build Pt 14 planning session. All decisions locked. Placed before Phase 17 (Launch) in the build sequence.
+**Confirmed as pre-launch build:** Specced in full August 2026. All 10 build prompts complete.
 
 **Architecture decisions (confirmed):**
 - Auditioners are a separate data entity from volunteers. `audition_signups` table, not `volunteers`. No automatic volunteer record created at signup.
@@ -4670,7 +4728,27 @@ AUDITIONS.3a Public signup page /auditions/[id] (open call + timed slots + role 
 AUDITIONS.3b Material uploads on signup + late upload route /auditions/upload/[token] + auditions card on / and /shows + /audition-checkin/[token] public check-in + calendar sync
 AUDITIONS.4a TipTap merge tag extension (custom TipTap node type, toolbar inserter, live preview server action)
 AUDITIONS.4b All email send functions + bulk communication tab + convert-to-volunteer action + HelpContent 15th section + Deferred Verifications v19 additions
-DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complete)
+DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complete) — this prompt
+
+**30BN-AUDITIONS.A ✓** Read-only audit. Seven read targets confirmed (feature-flags.ts, proxy.ts, Sidebar.tsx, calendar-sync.ts, Phase 15.2 consent trigger, lib/actions/rehearsals.ts check-in pattern, show detail guard). Key findings: feature_auditions absent from all three locations; needsFlagCheck exact insertion points identified; Sidebar three-part atomic edit confirmed; syncAuditionToCalendar() insertion point confirmed; cast_consent_form document type confirmed present; checkInToAudition() takes signupId not adminUserId (auditioners have no Auth identity); show_editors uses admin_id column (not admin_user_id). No code.
+
+**30BN-AUDITIONS.1a ✓** Migration 032 applied (8 new tables: auditions, audition_roles, audition_slots, audition_signups, audition_signup_notes, audition_materials, audition_assignments, audition_email_templates; feature_auditions seeded; calendar_events_event_type_check updated to include 'audition'). `types/audition.ts` created (all Phase AUDITIONS types). `lib/feature-flags.ts` updated (auditions: boolean, 5th flag). `components/crew/settings/SetupPanel.tsx` 5th toggle. `app/crew/(app)/settings/setup/page.tsx` companion edit required (SetupPanelInitialValues type widening). 5 files.
+
+**30BN-AUDITIONS.1b ✓** `lib/actions/auditions.ts` (new — PUBLIC ROUTE: 7 functions). `lib/actions/auditions-admin.ts` (new — 14 authenticated functions + assertAuditionAccess() private helper). `lib/actions/calendar-sync.ts`: syncAuditionToCalendar() added (mirrors syncShowDateToCalendar, source='audition', onConflict: source_audition_id). `lib/audit.ts`: audition.convert_to_volunteer added. Pre-task inline fixes: calendar_events_source_check updated ('audition' added), source_audition_id column + partial unique index added. AUDITIONS.2a F2 later corrected: syncAuditionToCalendar() uses getFeatureFlags(supabase) not inline app_settings fetch (R32). 4 files + 2 inline DB fixes.
+
+**30BN-AUDITIONS.2a ✓** Inline schema fixes: audition_signups.phone SET NOT NULL (requires phone on audition signup form); email_log.recipient_type CHECK updated to include 'audition'. proxy.ts: 5 auditions changes (needsFlagCheck ×3, Production allowlist for /crew/shows/ scoped with trailing slash, crew flag block, public flag block). show detail page: Production access guard added (show_editors.admin_id, redirect to /crew/calendar). lib/actions/shows.ts: 9 mutating actions updated (5 with show_editors membership check for Production, 4 blocking Production entirely). lib/actions/auditions-admin.ts: convertToVolunteer() phone guard removed; lib/actions/auditions.ts: phone required in Zod; types/audition.ts: AuditionSignup.phone: string. calendar-sync.ts: R32 violation corrected (inline app_settings → getFeatureFlags). 7 files + 2 inline DB fixes.
+
+**30BN-AUDITIONS.2b ✓** Sidebar.tsx: 4-part atomic edit (Mic2 icon import, NAV_ITEMS Auditions entry, FLAG_GATED_HREFS, Production allowlist, HelpTooltip generalized to dynamic anchor for both rehearsals and auditions). lib/actions/setup.ts: saveFeatureFlags() revalidatePath adds /crew/auditions. lib/actions/auditions-admin.ts: getAuditionMaterialSignedUrl() added; updateAuditionSignupStatus() extended with castRole parameter. app/crew/(app)/auditions/page.tsx (new — list, auth/flag guards, HelpTooltip). app/crew/(app)/auditions/[id]/page.tsx (new — detail shell, Production guard via assertAuditionAccess, QR pre-generated). components/crew/auditions/AuditionsListClient.tsx (new — Active/All filter, creation modal). components/crew/auditions/AuditionDetailTabs.tsx (new — 6 tabs: Overview, Signups, Materials, Communication implemented; Email Templates and Settings stubbed). 7 files.
+
+**30BN-AUDITIONS.2c ✓** Settings tab full implementation (audition config, role management, Production assignment roster, danger zone). Email Templates tab full implementation (3 useEditor instances with immediatelyRender: false, MergeTagExtension, merge tag toolbar, save/preview per status). QR display corrected (SVG inline + PNG/SVG download links). getAuditionMaterialSignedUrl() access guard added (assertAuditionAccess). description field added to public signup page. New server actions in auditions-admin.ts: createAuditionRole(), deleteAuditionRole(), reorderAuditionRoles(), getAuditionsSelectData(). 4 files.
+
+**30BN-AUDITIONS.3a ✓** app/auditions/[id]/page.tsx (new — public Server Component, white header pattern, generateMetadata noindex, notFound() on null). components/audition/AuditionSignupClient.tsx (new — full state machine: form/submitting/uploading/success/duplicate/slot-full; slot picker for timed_slots; role selection; guardian fields; per-type P-DC material uploads with XHR progress; description field). lib/actions/auditions.ts: getAuditionMaterialUploadUrl() added; submitAuditionSignup() return value extended to include uploadToken. Confirmed: params as Promise<{ id: string }> (Next.js 15 pattern); white header pattern (not navy); formatWallClockCT() takes 3 args (dateStr, timeStr, fmt). 3 files.
+
+**30BN-AUDITIONS.3b ✓** app/auditions/upload/[token]/page.tsx (new). components/audition/AuditionUploadClient.tsx (new). app/audition-checkin/[token]/page.tsx (new — null data renders invalid-token state server-side). components/audition-checkin/AuditionCheckInClient.tsx (new — formatWallClockCT 3-arg, formatTime() local helper for time columns, day-of-week date format 'EEEE, MMMM d, yyyy' on check-in page). lib/actions/auditions.ts: getUpcomingAuditions() added (CT-aware date, inline flag check, show join). lib/actions/auditions-admin.ts: syncAuditionToCalendar() wired non-blocking in updateAudition(); delete + sync in updateAuditionStatus(). app/page.tsx + app/shows/page.tsx: auditions card added (hidden when empty, flags already fetched on both pages). 8 files.
+
+**30BN-AUDITIONS.4a ✓** lib/utils/merge-tags.ts (new — pure utility: MergeTagValues, MERGE_TAGS const array, MergeTag type, substituteMergeTags() with local escapeHtml). components/crew/auditions/MergeTagExtension.ts (new — TipTap Node extension: inline/atom, data-merge-tag round-trip, insertMergeTag command, module augmentation for Commands<ReturnType>). app/globals.css: .merge-tag-pill rule added (CSS custom properties for brand colors per R33). lib/actions/auditions-admin.ts: previewAuditionEmailTemplate() appended. Key findings: formatWallClockCT() takes 3 args (not 2 — confirmed F1); FK join array-normalization pattern (Array.isArray(x) ? x[0] : x) used instead of 'as any' cast. 4 files.
+
+**30BN-AUDITIONS.4b ✓** lib/email.ts: 4 new email functions added (sendAuditionSignupConfirmation, sendAuditionConsentFormRequestEmail, sendAuditionStatusEmail, sendAuditionCancellationEmail — all exported, confirmed F1). lib/actions/auditions.ts: 3 TODO stubs replaced (consent email, confirmation email, cancellation email); formatAuditionTime() local helper added. lib/actions/auditions-admin.ts: status notification stub replaced. app/auditions/cancel/[token]/page.tsx (new — cancel page). components/crew/help/HelpContent.tsx: Auditions section added (15th ALL_SECTIONS entry, 4 subsections: auditions-overview, auditions-signups, auditions-materials, auditions-checkin, all roles including Production). HelpTooltip: 3 new placements (auditions list page header in Server Component, Signups tab, Materials tab). components/crew/settings/AboutSystemEmails.tsx: 4 new audition trigger entries (trigger count 11 → 15). 30BN_DEFERRED_VERIFICATIONS_v2.md: v19 (65 Phase AUDITIONS items added). Key findings: all lib/email.ts send functions are exported (F1); CORRECTION (DOC.59): Auditions is the actual last ALL_SECTIONS entry in the live HelpContent.tsx file — Getting Help precedes Rehearsals and Auditions in array order (not the reverse, as an earlier build log entry claimed). 9 files modified + 1 new.
 
 
 ### Phase 17 — Launch
@@ -4979,7 +5057,23 @@ Migration `.sql` files live at repo root alongside `001_core_schema.sql`. There 
 Claude Code does not have Vercel CLI access and cannot confirm deploy status independently. Build reports confirm the git push succeeded and note that Vercel auto-deploy will trigger. Owner confirms deploy independently via the Vercel dashboard. Claude Code must not flag absence of deploy confirmation as a build concern or a Flag item.
 
 ### R23 — formatWallClockCT() for Date-Only Columns
-`formatCT()` parses bare `date` column values (`'YYYY-MM-DD'`) as UTC on Vercel (UTC runtime), shifting displayed dates by hours for Central Time users. Use `formatWallClockCT()` from `lib/utils/date.ts` for any value sourced from a `date` column or manually constructed date+time string. Use `formatCT()` only for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info and parse correctly. Established ADMIN.9. See also the grep check in Process §10.
+`formatCT()` parses bare `date` column values (`'YYYY-MM-DD'`) as UTC on Vercel (UTC runtime), shifting displayed dates by hours for Central Time users. Use `formatWallClockCT()` from `lib/utils/date.ts` for any value sourced from a `date` column or manually constructed date+time string. Use `formatCT()` only for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info and parse correctly.
+
+**Confirmed function signature (AUDITIONS.3a F1, AUDITIONS.3b F2, AUDITIONS.4a F1 — recurring failure mode):**
+`formatWallClockCT(dateStr: string, timeStr: string | null, fmt: string): string`
+Three arguments: the date string, an optional time string (null if no time), and the format string. Wrong: `formatWallClockCT(date_start, 'MMMM d, yyyy')` (2 args — silently passes format as timeStr). Correct: `formatWallClockCT(date_start, null, 'MMMM d, yyyy')`.
+
+`time without time zone` columns (e.g. `auditions.time_start`) are raw strings like `'19:00:00'`. Do NOT use `formatCT()` or `formatWallClockCT()` on these — they are not ISO date strings. Use a local `formatTime()` helper:
+```typescript
+function formatTime(t: string | null): string | null {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+```
+Established ADMIN.9. Signature correction confirmed AUDITIONS.3a/3b/4a. See also the grep check in Process §10.
 
 ### R24 — Nested useFieldArray Requires Its Own Sub-Component
 React's rules of hooks prohibit calling `useFieldArray` inside a render loop over a parent field array. Any form with arrays-of-arrays (e.g. dates each containing their own roles list) must place the nested `useFieldArray` in its own named sub-component. Pattern: parent maps over date fields and renders `<DateRow key={...} index={...} control={...} />` where `DateRow` owns the nested `useFieldArray`. Confirmed in ADMIN.11. Applying this pattern after the fact is a major refactor; design forms with this requirement in mind from the start.
@@ -5167,3 +5261,4 @@ logged)*
 *v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
 *v4.5 (August 2026 — Phase 21 complete: §1 header + current phase updated (Phase 21 complete, Phase 17 next); §1 public surfaces: /rehearsal-checkin/[token] added; §2 Production row: /crew/rehearsals added (flag-gated, assigned-only); §7 proxy.ts section: Phase 21 additions documented (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /rehearsal-checkin/[token] added; §8 Help System: 13 → 14 sections, 32 → 37 HelpTooltips, Phase 21 anchors added, Rehearsals visible to Production; §8 Setup Panel Section 6: 4th flag toggle (feature_rehearsals); §8 new Rehearsal Management section (full spec: schedule list, detail, roster/dates/attendance tabs, public check-in, key files, two-file server action split confirmed); §9 calendar_events.check_in_token added; §9 three new table blocks (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance); §9 Migration 031 status block; §9 next migration pointer updated (no pending migrations); §9 feature_rehearsals seed documented + SETUP key count 17 → 18, fetch count 18 → 19; §9 admin_users.id RLS note expanded; §11 header updated (Phase 21 complete, Phase 17 next); §11 Phase 21 section replaced (forward-looking spec → completed 4-prompt build summary with 21.A–21.3 each described, key findings documented); §13 R34 flag list: feature_rehearsals added; §13 R37 added (admin_users.id = auth.uid(), no auth_user_id column — RLS authoring rule); DOC.56 logged)*
 *v4.6 (August 2026 — Phase AUDITIONS specced as pre-launch build: §1 header + current phase updated (Phase AUDITIONS next, Phase 17 follows); §1 public surfaces: /auditions/[id] + /audition-checkin/[token] added; §2 Production row expanded (assigned shows + assigned auditions, two independent paths); §2 Auditioner terminology row added; §7 roles table Production row updated (shows + auditions access, assignment model); §7 proxy.ts: Phase AUDITIONS proxy additions block added (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /auditions/[id] + /audition-checkin/[token] added; §8 new Audition Management section (full spec: list, six-tab detail, public signup, check-in, email templates, email functions, key files, calendar integration, Production assignment model); §8 Show Listing + Landing Page: Upcoming Auditions card noted; §8 Setup Panel Section 6: 5th flag toggle (feature_auditions); §9 feature_auditions seed block + SETUP key count 18→19 + fetch count 19→20; §9 Migration 032 pending status block; §9 eight new table schema blocks (auditions, audition_roles, audition_slots, audition_signups, audition_signup_notes, audition_materials, audition_assignments, audition_email_templates); §11 header updated (Phase AUDITIONS next, Phase 17 follows); §11 Phase AUDITIONS forward-spec section added (11-prompt structure, all architectural decisions); §11 Phase 17.1 flag count updated (three → five); §13 R34 flag list: feature_auditions added; §13 R38 added (TipTap merge tag extension pattern — mergeTag node type, toolbar inserter, substitution at send time, live preview server action, escapeHtml on substituted values); DOC.58 logged)*
+*v4.7 (August 2026 — Phase AUDITIONS complete: §1 header + current phase updated (Phase AUDITIONS complete, Phase 17 next); §1 public surfaces: /auditions/upload/[token] + /auditions/cancel/[token] added; §3 TipTap custom extension pattern (MergeTagExtension) + immediatelyRender: false noted; §3 feature flag 5-file pattern noted; §6 email send function export status corrected (all exported); §7 Public row: 2 new routes added; §8 Audition Management email functions: all 4 named with triggers; §8 public signup: consent email function corrected (sendAuditionConsentFormRequestEmail not sendConsentFormRequestEmail); §8 self-cancel: cancel page described; §8 key files: complete final list; §8 Overview tab: QR display pattern noted; §8 Email Templates tab: useEditor details (immediatelyRender, 3 instances, async content init); §8 Help System: 14 → 15 sections (Auditions added — corrected to its true position before Getting Help per the live ALL_SECTIONS array, not after as originally drafted); 37 → 40 HelpTooltips; Production sidebar: Auditions + HelpContent visibility noted; Setup Panel Section 6: 5 toggles; §8 About System Emails: 11 → 15 triggers; §9 audition_signups.phone: NOT NULL corrected; §9 audition_materials: original_filename column added; §9 consent_form_submissions: audition_signup_id FK column added; §9 calendar_events: source_audition_id FK column added; source CHECK updated to include 'audition'; §9 email_log: recipient_type CHECK note updated (includes 'audition') — corrected to note the value is not yet exercised by any code path; §9 Migration 032: Pending → Applied (full inline fix inventory; migration-file/live-DB drift flagged); §9 next migration: 033; §9 AuditAction: audition.convert_to_volunteer added; §9 saveFeatureFlags revalidatePath: /crew/auditions added; §11 header updated (Phase AUDITIONS complete, Phase 17 next); §11 Phase AUDITIONS: forward spec → completed summary with all 10 prompt build logs (includes a correction to the AUDITIONS.4b log's Help System section-order claim); §13 R23: formatWallClockCT() signature corrected to 3 args (dateStr, timeStr|null, fmt); formatTime() local helper pattern documented for time without timezone columns; DOC.59 logged. NOTE (Q-item, DOC.59): the original prompt's Edit 5 referenced a separate "§7 public routes table" with a per-route row for /audition-checkin/[token] — no such table exists in this document; its intended content was already covered by the existing §7 Public role-access row, updated in this same pass.)*
