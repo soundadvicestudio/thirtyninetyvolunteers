@@ -6,6 +6,8 @@
 // No Supabase Auth session available on these routes.
 
 import { z } from 'zod'
+import { format } from 'date-fns'
+import { toZonedTime } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/utils/phone'
 import type {
@@ -14,6 +16,7 @@ import type {
   AuditionCheckInData,
   AuditionCheckInResult,
   AuditionMaterialType,
+  AuditionType,
 } from '@/types/audition'
 
 // ─── B1: getAuditionPublicData ─────────────────────────────────
@@ -582,5 +585,62 @@ export async function getAuditionMaterialUploadUrl(
   } catch (err) {
     console.error('getAuditionMaterialUploadUrl unexpected error:', err)
     return { signedUrl: null, path: null, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── B9: getUpcomingAuditions ──────────────────────────────────
+//
+// Powers the auditions card on / and /shows. Inline app_settings flag
+// read is correct here — this is a public-route file (getAdminClient()
+// only) and cannot use getFeatureFlags(), which is written for
+// getServerClient() authenticated contexts. Same pattern as
+// syncAuditionToCalendar() (lib/actions/calendar-sync.ts).
+
+export type UpcomingAudition = {
+  id: string
+  title: string
+  date_start: string
+  date_end: string | null
+  type: AuditionType
+  show_title: string | null
+}
+
+export async function getUpcomingAuditions(): Promise<UpcomingAudition[]> {
+  try {
+    const supabase = getAdminClient()
+
+    const { data: flagRow } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'feature_auditions')
+      .single()
+    const flagEnabled = flagRow?.value !== 'false'
+    if (!flagEnabled) return []
+
+    const todayCT = format(toZonedTime(new Date(), 'America/Chicago'), 'yyyy-MM-dd')
+
+    const { data: auditions, error } = await supabase
+      .from('auditions')
+      .select('id, title, date_start, date_end, type, shows!auditions_show_id_fkey ( name )')
+      .eq('status', 'published')
+      .gte('date_start', todayCT)
+      .order('date_start', { ascending: true })
+
+    if (error || !auditions) return []
+
+    return auditions.map((a) => {
+      const show = Array.isArray(a.shows) ? a.shows[0] : a.shows
+      return {
+        id: a.id,
+        title: a.title,
+        date_start: a.date_start,
+        date_end: a.date_end,
+        type: a.type,
+        show_title: show?.name ?? null,
+      }
+    })
+  } catch (err) {
+    console.error('getUpcomingAuditions error:', err)
+    return []
   }
 }

@@ -5,7 +5,9 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getUpcomingAuditions } from '@/lib/actions/auditions'
 import type { PublicShow } from '@/types/show-public'
+import type { UpcomingAudition } from '@/lib/actions/auditions'
 
 function dateRangeLabel(show: PublicShow): string | null {
   if (show.dates.length === 0) return null
@@ -68,10 +70,36 @@ function ShowCard({ show }: { show: PublicShow }) {
   )
 }
 
+function UpcomingAuditionsCard({ auditions }: { auditions: UpcomingAudition[] }) {
+  return (
+    <div className="mb-6 rounded-lg border border-divider bg-white p-5">
+      <h2 className="text-lg font-semibold text-dark mb-3">Upcoming Auditions</h2>
+      <ul className="space-y-3">
+        {auditions.map((a) => (
+          <li key={a.id} className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium text-dark">{a.title}</p>
+              {a.show_title && <p className="text-sm text-mid-gray">{a.show_title}</p>}
+              <p className="text-sm text-mid-gray">
+                {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy')}
+                {a.date_end && a.date_end !== a.date_start && ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy')}`}
+              </p>
+            </div>
+            <Link href={`/auditions/${a.id}`} className="shrink-0 text-sm font-medium text-brand-accent hover:underline">
+              {'Sign up →'}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default async function ShowsListingPage() {
   const shows = await getPublicShows()
   const flags = await getFeatureFlags(getAdminClient())
   const org = await resolveOrgIdentity()
+  const upcomingAuditions = await getUpcomingAuditions()
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -98,6 +126,8 @@ export default async function ShowsListingPage() {
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
+          {upcomingAuditions.length > 0 && <UpcomingAuditionsCard auditions={upcomingAuditions} />}
+
           {shows.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-dark text-lg font-semibold mb-2">

@@ -1,6 +1,8 @@
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getUpcomingAuditions } from '@/lib/actions/auditions'
+import { formatWallClockCT } from '@/lib/utils/date'
 import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
@@ -9,12 +11,12 @@ import VolunteerForm from '@/components/VolunteerForm'
 export default async function HomePage() {
   // Public page — no Supabase Auth session exists, so the admin client is
   // required here (never the cookie-based session client). One client
-  // instance for every DB read on this page; resolveOrgIdentity() is the
-  // one exception — it's a self-contained helper that constructs its own
-  // admin client internally.
+  // instance for every DB read on this page; resolveOrgIdentity() and
+  // getUpcomingAuditions() are the exceptions — both are self-contained
+  // helpers that construct their own admin client internally.
   const supabase = getAdminClient()
   const flags = await getFeatureFlags(supabase)
-  const org = await resolveOrgIdentity()
+  const [org, upcomingAuditions] = await Promise.all([resolveOrgIdentity(), getUpcomingAuditions()])
 
   // Banner settings
   const [{ data: bannerActive }, { data: bannerText }] = await Promise.all([
@@ -104,6 +106,31 @@ export default async function HomePage() {
           </h3>
           {org.org_tagline && (
             <p className="text-mid-gray text-sm text-center mb-6">{org.org_tagline}</p>
+          )}
+
+          {upcomingAuditions.length > 0 && (
+            <div className="mb-6 rounded-lg border border-divider bg-white p-5">
+              <h2 className="text-lg font-semibold text-dark mb-3">Upcoming Auditions</h2>
+              <ul className="space-y-3">
+                {upcomingAuditions.map((a) => (
+                  <li key={a.id} className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-dark">{a.title}</p>
+                      {a.show_title && <p className="text-sm text-mid-gray">{a.show_title}</p>}
+                      <p className="text-sm text-mid-gray">
+                        {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy')}
+                        {a.date_end &&
+                          a.date_end !== a.date_start &&
+                          ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy')}`}
+                      </p>
+                    </div>
+                    <Link href={`/auditions/${a.id}`} className="shrink-0 text-sm font-medium text-brand-accent hover:underline">
+                      {'Sign up →'}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-4 mb-6">

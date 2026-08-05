@@ -8,6 +8,7 @@ import { getAdminUser, type AdminUser } from '@/lib/auth'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import { sendBatchEmails } from '@/lib/email'
+import { syncAuditionToCalendar } from '@/lib/actions/calendar-sync'
 import type {
   Audition,
   AuditionAssignment,
@@ -353,6 +354,11 @@ export async function updateAudition(
       return { success: false, error: 'Failed to update audition.' }
     }
 
+    // Non-blocking: sync audition to calendar if published and
+    // calendar_visibility = 'public'. syncAuditionToCalendar() checks the
+    // flag and visibility internally — safe to call unconditionally.
+    syncAuditionToCalendar(auditionId, supabase).catch((err) => console.error('Calendar sync error:', err))
+
     revalidatePath('/crew/auditions')
     revalidatePath(`/crew/auditions/${auditionId}`)
     return { success: true }
@@ -388,6 +394,14 @@ export async function updateAuditionStatus(
     if (error) {
       console.error('updateAuditionStatus update error:', error)
       return { success: false, error: 'Failed to update status.' }
+    }
+
+    if (['draft', 'closed', 'archived'].includes(status)) {
+      // Remove from calendar when no longer published.
+      await supabase.from('calendar_events').delete().eq('source_audition_id', auditionId)
+    } else if (status === 'published') {
+      // Sync to calendar when published. Non-blocking — see updateAudition().
+      syncAuditionToCalendar(auditionId, supabase).catch((err) => console.error('Calendar sync error:', err))
     }
 
     revalidatePath('/crew/auditions')
