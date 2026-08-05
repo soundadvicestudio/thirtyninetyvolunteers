@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TiptapLink from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
+import { MergeTagExtension } from '@/components/crew/auditions/MergeTagExtension'
+import { MERGE_TAGS } from '@/lib/utils/merge-tags'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import {
+  updateAudition,
   updateAuditionStatus,
   getAuditionSignups,
   updateAuditionSignupStatus,
@@ -15,6 +19,15 @@ import {
   convertToVolunteer,
   getAuditionMaterialSignedUrl,
   sendAuditionBulkEmail,
+  assignProductionUser,
+  removeProductionUser,
+  createAuditionRole,
+  deleteAuditionRole,
+  reorderAuditionRoles,
+  getAuditionsSelectData,
+  saveAuditionEmailTemplate,
+  getAuditionEmailTemplates,
+  previewAuditionEmailTemplate,
 } from '@/lib/actions/auditions-admin'
 import type {
   AuditionDetailData,
@@ -22,6 +35,10 @@ import type {
   AuditionSignupStatus,
   AuditionMaterialType,
   AuditionStatus,
+  AuditionType,
+  AuditionCalendarVisibility,
+  AuditionRole,
+  AuditionEmailStatusType,
 } from '@/types/audition'
 import type { AdminRole } from '@/types/admin'
 
@@ -34,6 +51,13 @@ const MATERIAL_TYPES: { type: AuditionMaterialType; label: string }[] = [
   { type: 'mp3', label: 'MP3' },
   { type: 'video', label: 'Video' },
 ]
+
+const EMAIL_STATUS_TYPES: AuditionEmailStatusType[] = ['callback', 'cast', 'not_cast']
+const STATUS_LABELS: Record<AuditionEmailStatusType, string> = {
+  callback: 'Callback',
+  cast: 'Cast',
+  not_cast: 'Not Cast',
+}
 
 function auditionTypeLabel(type: string): string {
   return type === 'timed_slots' ? 'Timed Slots' : 'Open Call'
@@ -78,15 +102,19 @@ function auditionStatusBadge(status: AuditionStatus) {
 const inputClasses =
   'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
+const linkClasses = 'text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer'
+
 // ─── Tab 1: Overview ─────────────────────────────────────────────
 
 function OverviewTab({
   detail,
   adminRole,
+  checkInQrSvg,
   checkInQrPng,
 }: {
   detail: AuditionDetailData
   adminRole: AdminRole
+  checkInQrSvg: string
   checkInQrPng: string
 }) {
   const [status, setStatus] = useState<AuditionStatus>(detail.audition.status)
@@ -240,21 +268,30 @@ function OverviewTab({
             Check-In QR
           </p>
           {/* White container regardless of theme — QR scanability requirement,
-              same rule as rehearsal/show check-in QRs. */}
-          <div className="inline-flex flex-col items-center gap-2 bg-white p-4 rounded">
-            {/* eslint-disable-next-line @next/next/no-img-element -- base64 data URI, next/image cannot optimize it */}
-            <img
-              src={`data:image/png;base64,${checkInQrPng}`}
-              alt="Audition check-in QR"
-              className="w-[120px] h-[120px]"
+              same rule as rehearsal/show check-in QRs. SVG inline for display,
+              PNG + SVG download links — matches established ShowDetail /
+              RehearsalDetailTabs QR pattern. */}
+          <div className="inline-flex flex-col items-start gap-2">
+            <div
+              className="bg-white p-3 rounded inline-block [&_svg]:w-[120px] [&_svg]:h-[120px]"
+              dangerouslySetInnerHTML={{ __html: checkInQrSvg }}
             />
-            <a
-              href={`data:image/png;base64,${checkInQrPng}`}
-              download="audition-checkin-qr.png"
-              className="text-xs font-semibold text-brand-primary hover:underline"
-            >
-              Download PNG
-            </a>
+            <div className="flex gap-3 text-xs font-semibold">
+              <a
+                href={`data:image/png;base64,${checkInQrPng}`}
+                download="audition-checkin-qr.png"
+                className={linkClasses}
+              >
+                Download PNG
+              </a>
+              <a
+                href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(checkInQrSvg)}`}
+                download="audition-checkin-qr.svg"
+                className={linkClasses}
+              >
+                Download SVG
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -931,18 +968,755 @@ function CommunicationTab({
   )
 }
 
-// ─── Tab 5 & 6: Email Templates + Settings (stubs — AUDITIONS.2c) ─
+// ─── Tab 5: Settings ─────────────────────────────────────────────
 
-function EmailTemplatesStub() {
+type MaterialToggles = {
+  headshot: boolean
+  resume: boolean
+  sheet_music: boolean
+  mp3: boolean
+  video: boolean
+}
+
+function SettingsTab({
+  detail,
+  adminRole,
+  selectData,
+  settingsLoaded,
+  settType,
+  setSettType,
+  settSlotDuration,
+  setSettSlotDuration,
+  settSlotsTotal,
+  setSettSlotsTotal,
+  settSlotCap,
+  setSettSlotCap,
+  settRoleSelection,
+  setSettRoleSelection,
+  settMaterials,
+  setSettMaterials,
+  settCalendarVisibility,
+  setSettCalendarVisibility,
+  settShowId,
+  setSettShowId,
+  settParentAuditionId,
+  setSettParentAuditionId,
+  settSaving,
+  setSettSaving,
+  settSaveError,
+  setSettSaveError,
+  settSaveSuccess,
+  setSettSaveSuccess,
+  roles,
+  setRoles,
+  newRoleName,
+  setNewRoleName,
+  addingRole,
+  setAddingRole,
+  assignments,
+  setAssignments,
+  assignSearch,
+  setAssignSearch,
+  assigning,
+  setAssigning,
+}: {
+  detail: AuditionDetailData
+  adminRole: AdminRole
+  selectData: { shows: { id: string; name: string }[]; otherAuditions: { id: string; title: string }[] } | null
+  settingsLoaded: boolean
+  settType: AuditionType
+  setSettType: (v: AuditionType) => void
+  settSlotDuration: number
+  setSettSlotDuration: (v: number) => void
+  settSlotsTotal: number
+  setSettSlotsTotal: (v: number) => void
+  settSlotCap: number
+  setSettSlotCap: (v: number) => void
+  settRoleSelection: boolean
+  setSettRoleSelection: (v: boolean) => void
+  settMaterials: MaterialToggles
+  setSettMaterials: React.Dispatch<React.SetStateAction<MaterialToggles>>
+  settCalendarVisibility: AuditionCalendarVisibility
+  setSettCalendarVisibility: (v: AuditionCalendarVisibility) => void
+  settShowId: string | null
+  setSettShowId: (v: string | null) => void
+  settParentAuditionId: string | null
+  setSettParentAuditionId: (v: string | null) => void
+  settSaving: boolean
+  setSettSaving: (v: boolean) => void
+  settSaveError: string | null
+  setSettSaveError: (v: string | null) => void
+  settSaveSuccess: boolean
+  setSettSaveSuccess: (v: boolean) => void
+  roles: AuditionRole[]
+  setRoles: React.Dispatch<React.SetStateAction<AuditionRole[]>>
+  newRoleName: string
+  setNewRoleName: (v: string) => void
+  addingRole: boolean
+  setAddingRole: (v: boolean) => void
+  assignments: AuditionDetailData['assignments']
+  setAssignments: React.Dispatch<React.SetStateAction<AuditionDetailData['assignments']>>
+  assignSearch: string
+  setAssignSearch: (v: string) => void
+  assigning: boolean
+  setAssigning: (v: boolean) => void
+}) {
+  const router = useRouter()
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [confirmingArchive, setConfirmingArchive] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+
+  const canEdit = adminRole !== 'viewer'
+  const canManage = EDITOR_TIER_ROLES.includes(adminRole)
+
+  async function handleSaveSettings() {
+    setSettSaving(true)
+    setSettSaveError(null)
+    const result = await updateAudition(detail.audition.id, {
+      type: settType,
+      slotDurationMinutes: settSlotDuration || null,
+      slotsTotal: settSlotsTotal || null,
+      slotCap: settSlotCap,
+      roleSelectionEnabled: settRoleSelection,
+      materialHeadshot: settMaterials.headshot,
+      materialResume: settMaterials.resume,
+      materialSheetMusic: settMaterials.sheet_music,
+      materialMp3: settMaterials.mp3,
+      materialVideo: settMaterials.video,
+      calendarVisibility: settCalendarVisibility,
+      showId: settShowId || null,
+      parentAuditionId: settParentAuditionId || null,
+    })
+    setSettSaving(false)
+    if (result.success) {
+      setSettSaveSuccess(true)
+      setTimeout(() => setSettSaveSuccess(false), 3000)
+    } else {
+      setSettSaveError(result.error ?? 'Something went wrong.')
+    }
+  }
+
+  async function handleMoveRole(index: number, direction: 'up' | 'down') {
+    const swapIndex = direction === 'up' ? index - 1 : index + 1
+    if (swapIndex < 0 || swapIndex >= roles.length) return
+    const reordered = [...roles]
+    ;[reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]]
+    const result = await reorderAuditionRoles(
+      detail.audition.id,
+      reordered.map((r) => r.id)
+    )
+    if (result.success) {
+      setRoles(reordered)
+    }
+  }
+
+  async function handleAddRole() {
+    if (!newRoleName.trim() || addingRole) return
+    setAddingRole(true)
+    const result = await createAuditionRole(detail.audition.id, newRoleName)
+    setAddingRole(false)
+    if (result.success && result.role) {
+      setRoles((prev) => [...prev, result.role as AuditionRole])
+      setNewRoleName('')
+    }
+  }
+
+  async function handleDeleteRole(roleId: string) {
+    const result = await deleteAuditionRole(roleId)
+    if (result.success) {
+      setRoles((prev) => prev.filter((r) => r.id !== roleId))
+    }
+  }
+
+  async function handleAddAssignment() {
+    const adminUserId = assignSearch.trim()
+    if (!adminUserId || assigning) return
+    setAssigning(true)
+    setAssignError(null)
+    const result = await assignProductionUser(detail.audition.id, adminUserId)
+    setAssigning(false)
+    if (result.success) {
+      setAssignSearch('')
+      router.refresh()
+    } else {
+      setAssignError(result.error ?? 'Failed to assign user.')
+    }
+  }
+
+  async function handleRemoveAssignment(adminUserId: string) {
+    const result = await removeProductionUser(detail.audition.id, adminUserId)
+    if (result.success) {
+      setAssignments((prev) => prev.filter((a) => a.admin_user_id !== adminUserId))
+    }
+  }
+
+  async function handleArchive() {
+    setArchiving(true)
+    const result = await updateAuditionStatus(detail.audition.id, 'archived')
+    setArchiving(false)
+    if (result.success) {
+      setConfirmingArchive(false)
+      router.refresh()
+    }
+  }
+
   return (
-    <div className="p-6 text-mid-gray text-sm">
-      Email templates will be available once the template editor is configured.
+    <div className="p-4 space-y-8">
+      {/* Section 1 — Audition Configuration */}
+      <div>
+        <h3 className="font-semibold text-dark dark:text-dark-text mb-3">Audition Configuration</h3>
+        <div className="space-y-4 max-w-lg">
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Type</label>
+            <select
+              value={settType}
+              disabled={!canEdit}
+              onChange={(e) => setSettType(e.target.value as AuditionType)}
+              className={inputClasses}
+            >
+              <option value="open_call">Open Call</option>
+              <option value="timed_slots">Timed Slots</option>
+            </select>
+          </div>
+
+          {settType === 'timed_slots' && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+                  Slot duration (min)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={settSlotDuration}
+                  disabled={!canEdit}
+                  onChange={(e) => setSettSlotDuration(Number(e.target.value))}
+                  className={inputClasses}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+                  Total slots
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={settSlotsTotal}
+                  disabled={!canEdit}
+                  onChange={(e) => setSettSlotsTotal(Number(e.target.value))}
+                  className={inputClasses}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+                  Cap per slot
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={settSlotCap}
+                  disabled={!canEdit}
+                  onChange={(e) => setSettSlotCap(Number(e.target.value))}
+                  className={inputClasses}
+                />
+              </div>
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settRoleSelection}
+              disabled={!canEdit}
+              onChange={(e) => setSettRoleSelection(e.target.checked)}
+            />
+            <span className="text-sm text-dark dark:text-dark-text">Enable role/character selection</span>
+          </label>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+              Material uploads
+            </label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {MATERIAL_TYPES.map((m) => (
+                <label key={m.type} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settMaterials[m.type]}
+                    disabled={!canEdit}
+                    onChange={(e) => setSettMaterials((prev) => ({ ...prev, [m.type]: e.target.checked }))}
+                  />
+                  <span className="text-sm text-dark dark:text-dark-text">{m.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+              Calendar visibility
+            </label>
+            <select
+              value={settCalendarVisibility}
+              disabled={!canEdit}
+              onChange={(e) => setSettCalendarVisibility(e.target.value as AuditionCalendarVisibility)}
+              className={inputClasses}
+            >
+              <option value="admin_only">Admin only</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Show link</label>
+            {!settingsLoaded ? (
+              <select disabled className={inputClasses}>
+                <option>Loading…</option>
+              </select>
+            ) : (
+              <select
+                value={settShowId ?? ''}
+                disabled={!canEdit}
+                onChange={(e) => setSettShowId(e.target.value || null)}
+                className={inputClasses}
+              >
+                <option value="">Standalone (no show)</option>
+                {selectData?.shows.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+              Parent audition (callback for)
+            </label>
+            {!settingsLoaded ? (
+              <select disabled className={inputClasses}>
+                <option>Loading…</option>
+              </select>
+            ) : (
+              <select
+                value={settParentAuditionId ?? ''}
+                disabled={!canEdit}
+                onChange={(e) => setSettParentAuditionId(e.target.value || null)}
+                className={inputClasses}
+              >
+                <option value="">None</option>
+                {selectData?.otherAuditions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {canEdit && (
+            <div>
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={settSaving}
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-semibold hover:bg-brand-primary-mid transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {settSaving ? 'Saving…' : settSaveSuccess ? '✓ Saved' : 'Save Audition Settings'}
+              </button>
+              {settSaveError && <p className="text-red-500 text-sm mt-1">{settSaveError}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Section 2 — Role / Character List */}
+      {settRoleSelection && (
+        <div>
+          <h3 className="font-semibold text-dark dark:text-dark-text mb-1">Audition Roles</h3>
+          <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
+            Auditioners will choose from these roles when signing up.
+          </p>
+
+          {roles.length === 0 ? (
+            <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">No roles added yet.</p>
+          ) : (
+            <ul className="space-y-1.5 mb-3 max-w-md">
+              {roles.map((role, index) => (
+                <li
+                  key={role.id}
+                  className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-dark-bg rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm text-dark dark:text-dark-text">{role.name}</span>
+                  {canEdit && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveRole(index, 'up')}
+                        disabled={index === 0}
+                        className="text-xs text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text disabled:opacity-30 cursor-pointer"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveRole(index, 'down')}
+                        disabled={index === roles.length - 1}
+                        className="text-xs text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text disabled:opacity-30 cursor-pointer"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRole(role.id)}
+                        className="text-xs font-semibold text-red-600 hover:underline cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {canEdit && (
+            <div className="flex items-center gap-2 max-w-md">
+              <input
+                type="text"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="New role name…"
+                className={inputClasses}
+              />
+              <button
+                type="button"
+                onClick={handleAddRole}
+                disabled={!newRoleName.trim() || addingRole}
+                className="px-3 py-2 bg-brand-primary text-white rounded-lg text-sm font-semibold hover:bg-brand-primary-mid transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              >
+                Add Role
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Section 3 — Production User Assignments */}
+      {canManage && (
+        <div>
+          <h3 className="font-semibold text-dark dark:text-dark-text mb-1">Production Access</h3>
+          <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
+            Production users assigned here have full read/write access to this audition.
+          </p>
+
+          {assignments.length === 0 ? (
+            <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">No Production users assigned.</p>
+          ) : (
+            <ul className="space-y-1.5 mb-3 max-w-md">
+              {assignments.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-dark-bg rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm text-dark dark:text-dark-text">
+                    {a.admin.full_name}{' '}
+                    <span className="text-xs text-mid-gray dark:text-dark-muted">({a.admin.role})</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAssignment(a.admin_user_id)}
+                    className="text-xs font-semibold text-red-600 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex items-center gap-2 max-w-md">
+            <input
+              type="text"
+              value={assignSearch}
+              onChange={(e) => setAssignSearch(e.target.value)}
+              placeholder="Admin user ID"
+              className={inputClasses}
+            />
+            <button
+              type="button"
+              onClick={handleAddAssignment}
+              disabled={!assignSearch.trim() || assigning}
+              className="px-3 py-2 bg-brand-primary text-white rounded-lg text-sm font-semibold hover:bg-brand-primary-mid transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            >
+              Add
+            </button>
+          </div>
+          {assignError && <p className="text-red-500 text-sm mt-1">{assignError}</p>}
+        </div>
+      )}
+
+      {/* Section 4 — Danger Zone */}
+      {canManage && detail.audition.status !== 'archived' && (
+        <div>
+          <h3 className="font-semibold text-red-600 mb-3">Danger Zone</h3>
+          {confirmingArchive ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-dark dark:text-dark-text">Archive this audition?</span>
+              <button
+                type="button"
+                onClick={handleArchive}
+                disabled={archiving}
+                className="text-sm font-semibold text-white bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {archiving ? 'Archiving…' : 'Confirm Archive'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingArchive(false)}
+                className="text-sm font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingArchive(true)}
+              className="text-sm font-semibold text-red-600 hover:underline cursor-pointer"
+            >
+              Archive Audition
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function SettingsStub() {
-  return <div className="p-6 text-mid-gray text-sm">Audition settings will be available here.</div>
+// ─── Tab 6: Email Templates ──────────────────────────────────────
+
+function EmailTemplatesTab({
+  detail,
+  adminRole,
+  notifEnabled,
+  setNotifEnabled,
+  notifSaving,
+  setNotifSaving,
+  templateSubjects,
+  setTemplateSubjects,
+  templateSaving,
+  setTemplateSaving,
+  templateSaveSuccess,
+  setTemplateSaveSuccess,
+  templateErrors,
+  setTemplateErrors,
+  previewing,
+  setPreviewing,
+  previewHtml,
+  setPreviewHtml,
+  editorsByStatus,
+}: {
+  detail: AuditionDetailData
+  adminRole: AdminRole
+  notifEnabled: boolean
+  setNotifEnabled: (v: boolean) => void
+  notifSaving: boolean
+  setNotifSaving: (v: boolean) => void
+  templateSubjects: Record<AuditionEmailStatusType, string>
+  setTemplateSubjects: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, string>>>
+  templateSaving: Record<AuditionEmailStatusType, boolean>
+  setTemplateSaving: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, boolean>>>
+  templateSaveSuccess: Record<AuditionEmailStatusType, boolean>
+  setTemplateSaveSuccess: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, boolean>>>
+  templateErrors: Record<AuditionEmailStatusType, string | null>
+  setTemplateErrors: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, string | null>>>
+  previewing: Record<AuditionEmailStatusType, boolean>
+  setPreviewing: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, boolean>>>
+  previewHtml: Record<AuditionEmailStatusType, string | null>
+  setPreviewHtml: React.Dispatch<React.SetStateAction<Record<AuditionEmailStatusType, string | null>>>
+  editorsByStatus: Record<AuditionEmailStatusType, Editor | null>
+}) {
+  return (
+    <div className="p-4">
+      <h3 className="font-semibold text-dark dark:text-dark-text mb-1">Email Templates</h3>
+      <p className="text-sm text-mid-gray dark:text-dark-muted mb-4">
+        Configure automatic emails sent when an {"auditioner's"} status changes.
+      </p>
+
+      <div className="flex items-center gap-3 mb-2">
+        <input
+          type="checkbox"
+          id="notif-enabled"
+          checked={notifEnabled}
+          disabled={notifSaving || adminRole === 'viewer'}
+          onChange={async (e) => {
+            const val = e.target.checked
+            setNotifEnabled(val)
+            setNotifSaving(true)
+            await updateAudition(detail.audition.id, { notificationEmailsEnabled: val })
+            setNotifSaving(false)
+          }}
+        />
+        <label htmlFor="notif-enabled" className="font-medium text-dark dark:text-dark-text">
+          Automatically send emails on status change
+        </label>
+      </div>
+      {notifEnabled && (
+        <p className="text-sm text-amber-700 mb-6 bg-amber-50 border border-amber-200 rounded p-3">
+          {"When enabled, changing an auditioner's status will automatically send the configured template for that status. If no template is saved for a status, no email will be sent."}
+        </p>
+      )}
+
+      {EMAIL_STATUS_TYPES.map((statusType) => {
+        const editor = editorsByStatus[statusType]
+        const label = STATUS_LABELS[statusType]
+
+        return (
+          <div key={statusType} className="mb-8 border border-divider dark:border-dark-border rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-dark-bg px-4 py-3 border-b border-divider dark:border-dark-border">
+              <h4 className="font-medium text-dark dark:text-dark-text">{label} Email</h4>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-dark dark:text-dark-text mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={templateSubjects[statusType]}
+                  onChange={(e) =>
+                    setTemplateSubjects((prev) => ({ ...prev, [statusType]: e.target.value }))
+                  }
+                  placeholder={`${label} email subject…`}
+                  className={inputClasses}
+                  disabled={adminRole === 'viewer'}
+                />
+              </div>
+
+              {adminRole !== 'viewer' && (
+                <div>
+                  <p className="text-xs text-mid-gray dark:text-dark-muted mb-1">Insert merge tag:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {MERGE_TAGS.map(({ tag, label: tagLabel }) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (editor) {
+                            editor.commands.insertMergeTag(tag)
+                            editor.commands.focus()
+                          }
+                        }}
+                        disabled={!editor}
+                        className="text-xs px-2 py-1 rounded border border-divider dark:border-dark-border bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-border text-mid-gray dark:text-dark-muted disabled:opacity-50 cursor-pointer"
+                      >
+                        {tagLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="border border-divider dark:border-dark-border rounded">
+                {editor ? (
+                  <EditorContent
+                    editor={editor}
+                    className="min-h-[120px] px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[100px] [&_.ProseMirror_p]:mb-3 [&_.merge-tag-pill]:mx-0.5"
+                  />
+                ) : (
+                  <div className="p-3 text-mid-gray dark:text-dark-muted text-sm">Loading editor…</div>
+                )}
+              </div>
+
+              {adminRole !== 'viewer' && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={templateSaving[statusType]}
+                    onClick={async () => {
+                      if (!editor) return
+                      setTemplateSaving((prev) => ({ ...prev, [statusType]: true }))
+                      setTemplateErrors((prev) => ({ ...prev, [statusType]: null }))
+                      const result = await saveAuditionEmailTemplate({
+                        auditionId: detail.audition.id,
+                        statusType,
+                        subject: templateSubjects[statusType],
+                        bodyHtml: editor.getHTML(),
+                      })
+                      setTemplateSaving((prev) => ({ ...prev, [statusType]: false }))
+                      if (result.success) {
+                        setTemplateSaveSuccess((prev) => ({ ...prev, [statusType]: true }))
+                        setTimeout(
+                          () => setTemplateSaveSuccess((prev) => ({ ...prev, [statusType]: false })),
+                          2000
+                        )
+                      } else {
+                        setTemplateErrors((prev) => ({ ...prev, [statusType]: result.error ?? 'Save failed' }))
+                      }
+                    }}
+                    className="px-3 py-2 text-sm rounded bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {templateSaving[statusType]
+                      ? 'Saving...'
+                      : templateSaveSuccess[statusType]
+                        ? '✓ Saved'
+                        : 'Save template'}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={previewing[statusType] || !editor}
+                    onClick={async () => {
+                      if (!editor) return
+                      setPreviewing((prev) => ({ ...prev, [statusType]: true }))
+                      const result = await previewAuditionEmailTemplate(
+                        detail.audition.id,
+                        templateSubjects[statusType],
+                        editor.getHTML()
+                      )
+                      setPreviewing((prev) => ({ ...prev, [statusType]: false }))
+                      if (result.previewHtml) {
+                        setPreviewHtml((prev) => ({ ...prev, [statusType]: result.previewHtml }))
+                      }
+                    }}
+                    className="px-3 py-2 text-sm rounded border border-divider dark:border-dark-border text-mid-gray dark:text-dark-muted hover:bg-gray-50 dark:hover:bg-dark-border transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {previewing[statusType] ? 'Loading...' : 'Preview'}
+                  </button>
+                </div>
+              )}
+
+              {templateErrors[statusType] && <p className="text-sm text-red-600">{templateErrors[statusType]}</p>}
+
+              {previewHtml[statusType] && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-mid-gray dark:text-dark-muted">
+                      Email Preview (sample data)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewHtml((prev) => ({ ...prev, [statusType]: null }))}
+                      className="text-xs text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="border border-divider dark:border-dark-border rounded overflow-hidden text-sm">
+                    {/* dangerouslySetInnerHTML is safe here: content is from
+                        previewAuditionEmailTemplate() server action, which builds
+                        HTML from our own template system with escaped user values. */}
+                    <div dangerouslySetInnerHTML={{ __html: previewHtml[statusType]! }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 // ─── Main export ─────────────────────────────────────────────────
@@ -952,16 +1726,135 @@ type TabKey = 'overview' | 'signups' | 'materials' | 'communication' | 'template
 export default function AuditionDetailTabs({
   detail,
   adminRole,
+  checkInQrSvg,
   checkInQrPng,
 }: {
   detail: AuditionDetailData
   adminRole: AdminRole
   adminId: string
+  checkInQrSvg: string
   checkInQrPng: string
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [signups, setSignups] = useState<AuditionSignupWithDetails[] | null>(null)
   const [signupsLoading, setSignupsLoading] = useState(false)
+
+  // Settings tab — data
+  const [selectData, setSelectData] = useState<{
+    shows: { id: string; name: string }[]
+    otherAuditions: { id: string; title: string }[]
+  } | null>(null)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+
+  // Settings tab — form fields (initialized from detail)
+  const [settType, setSettType] = useState<AuditionType>(detail.audition.type)
+  const [settSlotDuration, setSettSlotDuration] = useState(detail.audition.slot_duration_minutes ?? 30)
+  const [settSlotsTotal, setSettSlotsTotal] = useState(detail.audition.slots_total ?? 1)
+  const [settSlotCap, setSettSlotCap] = useState(detail.audition.slot_cap)
+  const [settRoleSelection, setSettRoleSelection] = useState(detail.audition.role_selection_enabled)
+  const [settMaterials, setSettMaterials] = useState<MaterialToggles>({
+    headshot: detail.audition.material_headshot,
+    resume: detail.audition.material_resume,
+    sheet_music: detail.audition.material_sheet_music,
+    mp3: detail.audition.material_mp3,
+    video: detail.audition.material_video,
+  })
+  const [settCalendarVisibility, setSettCalendarVisibility] = useState<AuditionCalendarVisibility>(
+    detail.audition.calendar_visibility
+  )
+  const [settShowId, setSettShowId] = useState<string | null>(detail.audition.show_id)
+  const [settParentAuditionId, setSettParentAuditionId] = useState<string | null>(detail.audition.parent_audition_id)
+  const [settSaving, setSettSaving] = useState(false)
+  const [settSaveError, setSettSaveError] = useState<string | null>(null)
+  const [settSaveSuccess, setSettSaveSuccess] = useState(false)
+
+  // Roles management state
+  const [roles, setRoles] = useState<AuditionRole[]>(detail.roles)
+  const [newRoleName, setNewRoleName] = useState('')
+  const [addingRole, setAddingRole] = useState(false)
+
+  // Production assignments state
+  const [assignments, setAssignments] = useState(detail.assignments)
+  const [assignSearch, setAssignSearch] = useState('')
+  const [assigning, setAssigning] = useState(false)
+
+  // Email Templates tab state
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
+  const [notifEnabled, setNotifEnabled] = useState(detail.audition.notification_emails_enabled)
+  const [notifSaving, setNotifSaving] = useState(false)
+  const [templateSubjects, setTemplateSubjects] = useState<Record<AuditionEmailStatusType, string>>({
+    callback: '',
+    cast: '',
+    not_cast: '',
+  })
+  const [templateSaving, setTemplateSaving] = useState<Record<AuditionEmailStatusType, boolean>>({
+    callback: false,
+    cast: false,
+    not_cast: false,
+  })
+  const [templateSaveSuccess, setTemplateSaveSuccess] = useState<Record<AuditionEmailStatusType, boolean>>({
+    callback: false,
+    cast: false,
+    not_cast: false,
+  })
+  const [templateErrors, setTemplateErrors] = useState<Record<AuditionEmailStatusType, string | null>>({
+    callback: null,
+    cast: null,
+    not_cast: null,
+  })
+  const [previewing, setPreviewing] = useState<Record<AuditionEmailStatusType, boolean>>({
+    callback: false,
+    cast: false,
+    not_cast: false,
+  })
+  const [previewHtml, setPreviewHtml] = useState<Record<AuditionEmailStatusType, string | null>>({
+    callback: null,
+    cast: null,
+    not_cast: null,
+  })
+
+  // Three TipTap instances — hooks, must live at component top level, not
+  // inside a conditional. immediatelyRender: false required for Next.js
+  // App Router (same requirement as CommunicationTab's editor above and
+  // BlastComposer.tsx).
+  const callbackEditor = useEditor({
+    extensions: [StarterKit, MergeTagExtension],
+    content: '',
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm min-h-[120px] p-3 focus:outline-none',
+      },
+    },
+  })
+
+  const castEditor = useEditor({
+    extensions: [StarterKit, MergeTagExtension],
+    content: '',
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm min-h-[120px] p-3 focus:outline-none',
+      },
+    },
+  })
+
+  const notCastEditor = useEditor({
+    extensions: [StarterKit, MergeTagExtension],
+    content: '',
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm min-h-[120px] p-3 focus:outline-none',
+      },
+    },
+  })
+
+  const editorsByStatus: Record<AuditionEmailStatusType, Editor | null> = {
+    callback: callbackEditor,
+    cast: castEditor,
+    not_cast: notCastEditor,
+  }
 
   const enabledMaterialTypes: AuditionMaterialType[] = []
   if (detail.audition.material_headshot) enabledMaterialTypes.push('headshot')
@@ -978,6 +1871,42 @@ export default function AuditionDetailTabs({
     })
   }, [detail.audition.id])
 
+  async function loadSettingsData() {
+    if (settingsLoaded) return
+    const data = await getAuditionsSelectData(detail.audition.id)
+    setSelectData(data)
+    setSettingsLoaded(true)
+  }
+
+  async function loadTemplates() {
+    if (templatesLoaded) return
+    const data = await getAuditionEmailTemplates(detail.audition.id)
+    setTemplatesLoaded(true)
+
+    // Sync fetched content into the editors + subject fields here, in the
+    // same async handler that triggered the fetch — not in a reactive
+    // useEffect keyed on fetched data, which the react-hooks/set-state-
+    // in-effect rule flags as a cascading-render anti-pattern. loadTemplates()
+    // only ever runs once (guarded above), so there is nothing to "keep in
+    // sync" across renders — this is a one-time initialization, not an
+    // ongoing subscription.
+    const cb = data.find((t) => t.status_type === 'callback')
+    if (cb) {
+      callbackEditor?.commands.setContent(cb.body_html || '')
+      setTemplateSubjects((prev) => ({ ...prev, callback: cb.subject || '' }))
+    }
+    const cast = data.find((t) => t.status_type === 'cast')
+    if (cast) {
+      castEditor?.commands.setContent(cast.body_html || '')
+      setTemplateSubjects((prev) => ({ ...prev, cast: cast.subject || '' }))
+    }
+    const nc = data.find((t) => t.status_type === 'not_cast')
+    if (nc) {
+      notCastEditor?.commands.setContent(nc.body_html || '')
+      setTemplateSubjects((prev) => ({ ...prev, not_cast: nc.subject || '' }))
+    }
+  }
+
   // Materials and Communication tabs reuse the Signups tab's fetch — shared
   // state lifted here rather than re-fetching per tab. Fetch is triggered
   // from the tab click itself (not a reactive effect) — same pattern as
@@ -986,6 +1915,12 @@ export default function AuditionDetailTabs({
     setActiveTab(tab)
     if ((tab === 'signups' || tab === 'materials' || tab === 'communication') && signups === null && !signupsLoading) {
       loadSignups()
+    }
+    if (tab === 'settings' && !settingsLoaded) {
+      loadSettingsData()
+    }
+    if (tab === 'templates' && !templatesLoaded) {
+      loadTemplates()
     }
   }
 
@@ -1022,7 +1957,7 @@ export default function AuditionDetailTabs({
       <div>
         {activeTab === 'overview' && (
           <div className="p-4">
-            <OverviewTab detail={detail} adminRole={adminRole} checkInQrPng={checkInQrPng} />
+            <OverviewTab detail={detail} adminRole={adminRole} checkInQrSvg={checkInQrSvg} checkInQrPng={checkInQrPng} />
           </div>
         )}
         {activeTab === 'signups' && (
@@ -1053,8 +1988,73 @@ export default function AuditionDetailTabs({
             />
           </div>
         )}
-        {activeTab === 'templates' && <EmailTemplatesStub />}
-        {activeTab === 'settings' && <SettingsStub />}
+        {activeTab === 'templates' && (
+          <EmailTemplatesTab
+            detail={detail}
+            adminRole={adminRole}
+            notifEnabled={notifEnabled}
+            setNotifEnabled={setNotifEnabled}
+            notifSaving={notifSaving}
+            setNotifSaving={setNotifSaving}
+            templateSubjects={templateSubjects}
+            setTemplateSubjects={setTemplateSubjects}
+            templateSaving={templateSaving}
+            setTemplateSaving={setTemplateSaving}
+            templateSaveSuccess={templateSaveSuccess}
+            setTemplateSaveSuccess={setTemplateSaveSuccess}
+            templateErrors={templateErrors}
+            setTemplateErrors={setTemplateErrors}
+            previewing={previewing}
+            setPreviewing={setPreviewing}
+            previewHtml={previewHtml}
+            setPreviewHtml={setPreviewHtml}
+            editorsByStatus={editorsByStatus}
+          />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsTab
+            detail={detail}
+            adminRole={adminRole}
+            selectData={selectData}
+            settingsLoaded={settingsLoaded}
+            settType={settType}
+            setSettType={setSettType}
+            settSlotDuration={settSlotDuration}
+            setSettSlotDuration={setSettSlotDuration}
+            settSlotsTotal={settSlotsTotal}
+            setSettSlotsTotal={setSettSlotsTotal}
+            settSlotCap={settSlotCap}
+            setSettSlotCap={setSettSlotCap}
+            settRoleSelection={settRoleSelection}
+            setSettRoleSelection={setSettRoleSelection}
+            settMaterials={settMaterials}
+            setSettMaterials={setSettMaterials}
+            settCalendarVisibility={settCalendarVisibility}
+            setSettCalendarVisibility={setSettCalendarVisibility}
+            settShowId={settShowId}
+            setSettShowId={setSettShowId}
+            settParentAuditionId={settParentAuditionId}
+            setSettParentAuditionId={setSettParentAuditionId}
+            settSaving={settSaving}
+            setSettSaving={setSettSaving}
+            settSaveError={settSaveError}
+            setSettSaveError={setSettSaveError}
+            settSaveSuccess={settSaveSuccess}
+            setSettSaveSuccess={setSettSaveSuccess}
+            roles={roles}
+            setRoles={setRoles}
+            newRoleName={newRoleName}
+            setNewRoleName={setNewRoleName}
+            addingRole={addingRole}
+            setAddingRole={setAddingRole}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            assignSearch={assignSearch}
+            setAssignSearch={setAssignSearch}
+            assigning={assigning}
+            setAssigning={setAssigning}
+          />
+        )}
       </div>
     </div>
   )

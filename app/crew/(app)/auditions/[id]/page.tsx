@@ -29,14 +29,22 @@ export default async function AuditionDetailPage({ params }: { params: Promise<{
 
   // Pre-generated server-side (Level H, R6) — white container regardless of
   // theme, same scanability rule as rehearsal/show check-in QRs.
-  const qr = await generateQR(`${process.env.NEXT_PUBLIC_SITE_URL}/audition-checkin/${detail.audition.check_in_token}`)
+  const { svg: checkInQrSvg, pngBase64: checkInQrPng } = await generateQR(
+    `${process.env.NEXT_PUBLIC_SITE_URL}/audition-checkin/${detail.audition.check_in_token}`
+  )
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-dark dark:text-dark-text">{detail.audition.title}</h1>
       </div>
-      <AuditionDetailTabs detail={detail} adminRole={admin.role} adminId={admin.id} checkInQrPng={qr.pngBase64} />
+      <AuditionDetailTabs
+        detail={detail}
+        adminRole={admin.role}
+        adminId={admin.id}
+        checkInQrSvg={checkInQrSvg}
+        checkInQrPng={checkInQrPng}
+      />
     </div>
   )
 }

@@ -313,6 +313,9 @@ export default function AuditionSignupClient({ data, orgName }: { data: Audition
         <span className="inline-block text-xs font-semibold uppercase tracking-wide rounded-full px-3 py-1 mt-2 bg-brand-primary-light text-brand-primary">
           {data.audition.type === 'timed_slots' ? 'Timed Slots' : 'Open Call'}
         </span>
+        {data.audition.description && (
+          <p className="text-mid-gray mt-2 text-sm leading-relaxed">{data.audition.description}</p>
+        )}
       </div>
 
       {data.audition.type === 'timed_slots' && (

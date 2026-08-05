@@ -19,6 +19,7 @@ import type {
   AuditionEmailTemplate,
   AuditionDetailData,
   AuditionListItem,
+  AuditionRole,
   AuditionSignup,
   AuditionSignupStatus,
   AuditionSignupWithDetails,
@@ -493,6 +494,17 @@ export async function getAuditionMaterialSignedUrl(
       .maybeSingle()
 
     if (!material) return { url: null, error: 'Not found' }
+
+    const { data: signup } = await supabase
+      .from('audition_signups')
+      .select('audition_id')
+      .eq('id', material.signup_id)
+      .single()
+
+    if (!signup) return { url: null, error: 'Not found' }
+
+    const access = await assertAuditionAccess(supabase, admin, signup.audition_id)
+    if (!access.allowed) return { url: null, error: access.error }
 
     const { data: signedData, error: signError } = await supabase.storage
       .from('media')
@@ -1125,5 +1137,161 @@ export async function previewAuditionEmailTemplate(
   } catch (err) {
     console.error('previewAuditionEmailTemplate error:', err)
     return { previewHtml: null, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── F1: createAuditionRole ──────────────────────────────────────
+
+export async function createAuditionRole(
+  auditionId: string,
+  name: string
+): Promise<{ success: boolean; role?: AuditionRole; error?: string }> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { success: false, error: 'Unauthorized' }
+
+    const supabase = await getServerClient()
+
+    const access = await assertAuditionAccess(supabase, admin, auditionId)
+    if (!access.allowed) return { success: false, error: access.error ?? 'Insufficient permissions' }
+
+    const trimmed = name.trim()
+    if (!trimmed) return { success: false, error: 'Role name is required.' }
+
+    const { data: existing } = await supabase
+      .from('audition_roles')
+      .select('sort_order')
+      .eq('audition_id', auditionId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+    const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1
+
+    const { data: role, error } = await supabase
+      .from('audition_roles')
+      .insert({ audition_id: auditionId, name: trimmed, sort_order: nextOrder })
+      .select()
+      .single()
+
+    if (error || !role) {
+      console.error('createAuditionRole insert error:', error)
+      return { success: false, error: 'Failed to add role.' }
+    }
+
+    revalidatePath(`/crew/auditions/${auditionId}`)
+    return { success: true, role: role as unknown as AuditionRole }
+  } catch (err) {
+    console.error('createAuditionRole unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── F2: deleteAuditionRole ───────────────────────────────────────
+
+export async function deleteAuditionRole(roleId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { success: false, error: 'Unauthorized' }
+
+    const supabase = await getServerClient()
+
+    const { data: role } = await supabase.from('audition_roles').select('audition_id').eq('id', roleId).single()
+
+    if (!role) return { success: false, error: 'Role not found.' }
+
+    const access = await assertAuditionAccess(supabase, admin, role.audition_id)
+    if (!access.allowed) return { success: false, error: access.error ?? 'Insufficient permissions' }
+
+    const { error } = await supabase.from('audition_roles').delete().eq('id', roleId)
+
+    if (error) {
+      console.error('deleteAuditionRole delete error:', error)
+      return { success: false, error: 'Failed to delete role.' }
+    }
+
+    revalidatePath(`/crew/auditions/${role.audition_id}`)
+    return { success: true }
+  } catch (err) {
+    console.error('deleteAuditionRole unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── F3: reorderAuditionRoles ─────────────────────────────────────
+//
+// Takes the full new order (client swaps two adjacent roles locally, then
+// sends the entire ordered id list) and rewrites every row's sort_order.
+// Uses parallel individual UPDATEs rather than upsert() — matches the
+// established reorder pattern confirmed in lib/actions/documents.ts's
+// reorderDocumentType() (sequential/parallel .update() calls, never
+// upsert, no reorder feature in this codebase uses upsert for this).
+
+export async function reorderAuditionRoles(
+  auditionId: string,
+  orderedRoleIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { success: false, error: 'Unauthorized' }
+
+    const supabase = await getServerClient()
+
+    const access = await assertAuditionAccess(supabase, admin, auditionId)
+    if (!access.allowed) return { success: false, error: access.error ?? 'Insufficient permissions' }
+
+    const results = await Promise.all(
+      orderedRoleIds.map((id, index) =>
+        supabase.from('audition_roles').update({ sort_order: index }).eq('id', id).eq('audition_id', auditionId)
+      )
+    )
+
+    const failed = results.find((r) => r.error)
+    if (failed) {
+      console.error('reorderAuditionRoles update error:', failed.error)
+      return { success: false, error: 'Failed to reorder roles.' }
+    }
+
+    revalidatePath(`/crew/auditions/${auditionId}`)
+    return { success: true }
+  } catch (err) {
+    console.error('reorderAuditionRoles unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── F4: getAuditionsSelectData ───────────────────────────────────
+//
+// Read-only selector data for the Settings tab's show-link and
+// parent-audition dropdowns. Non-sensitive (id/name pairs only) — no
+// assertAuditionAccess() needed, but still requires an authenticated
+// admin session.
+
+export async function getAuditionsSelectData(auditionId: string): Promise<{
+  shows: { id: string; name: string }[]
+  otherAuditions: { id: string; title: string }[]
+}> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { shows: [], otherAuditions: [] }
+
+    const supabase = await getServerClient()
+
+    const [{ data: shows }, { data: otherAuditions }] = await Promise.all([
+      supabase
+        .from('shows')
+        .select('id, name')
+        .in('status', ['draft', 'live', 'past'])
+        .order('name', { ascending: true }),
+      supabase
+        .from('auditions')
+        .select('id, title')
+        .neq('id', auditionId)
+        .neq('status', 'archived')
+        .order('title', { ascending: true }),
+    ])
+
+    return { shows: shows ?? [], otherAuditions: otherAuditions ?? [] }
+  } catch (err) {
+    console.error('getAuditionsSelectData error:', err)
+    return { shows: [], otherAuditions: [] }
   }
 }
