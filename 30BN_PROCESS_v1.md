@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.5
-### Created: July 2026 | Last Updated: August 2026 — v4.5 (Phase AUDITIONS specced as pre-launch build, companion to Brief DOC.58: §7 audition Production assignment pattern added (two independent paths — show assignment vs. direct audition assignment); §10 feature flags grep updated (feature_auditions, 5th active flag); §11 new checklist item (stub tabs for not-yet-built dependencies — Email Templates tab pattern); §13 Phase AUDITIONS 11-prompt pending block added; DOC.58 + DOC.59 logged)
+## 30BN_PROCESS_v1.md — v4.6
+### Created: July 2026 | Last Updated: August 2026 — v4.6 (Phase AUDITIONS complete, companion to Brief DOC.59: §7 patterns added/updated (formatWallClockCT 3-arg signature + formatTime helper; 5-file flag addition pattern; inline public-route flag check for single-flag lookups; immediatelyRender: false for TipTap in App Router; async TipTap content via setContent(); lib/actions/auditions.ts as 4th canonical public route; show_editors.admin_id naming; Supabase FK join Array.isArray normalization; audition-materials storage path namespace; migration/DB drift pattern); §8 XHR: 2 audition upload components added (3→5 sanctioned); §10 greps: auditions.ts added to public-route check, XHR list + setup/page.tsx to flag exclusions updated; §11 six new checklist items; §13 Phase AUDITIONS: pending → ✓ Complete (10 prompts); §14 R23 updated (3-arg signature), R38 cross-reference added, feature flag list updated (5 flags), public-route list updated (4th file), XHR list updated (5 files); DOC.60 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -279,9 +279,10 @@ route handlers — no session cookie exists to read.
 **Public-route action file invariant (established 14.1):**
 Files that serve public token-gated routes (no Supabase Auth session) must use
 `getAdminClient()` exclusively. The canonical examples are `lib/actions/checkin.ts`
-(public check-in page), `lib/actions/consent.ts` (public consent upload page), and
-`lib/actions/rehearsals.ts` (public rehearsal self check-in — added Phase 21). All
-three carry the // PUBLIC ROUTE header comment.
+(public check-in page), `lib/actions/consent.ts` (public consent upload page),
+`lib/actions/rehearsals.ts` (public rehearsal self check-in — added Phase 21), and
+`lib/actions/auditions.ts` (public audition signup, upload, check-in, and cancel
+flows — added Phase AUDITIONS). All four carry the // PUBLIC ROUTE header comment.
 
 ```typescript
 // PUBLIC ROUTE — getAdminClient() only, never getServerClient()
@@ -295,8 +296,10 @@ never be merged.
 Pattern: `lib/actions/checkin.ts` (public, `getAdminClient()`) +
 `lib/actions/checkin-admin.ts` (authenticated, `getServerClient()`). Extended in Phase 21:
 `lib/actions/rehearsals.ts` (public, `getAdminClient()`) +
-`lib/actions/rehearsals-admin.ts` (authenticated, `getServerClient()`). This split pattern is
-established in Phase 14, confirmed in Phase 15.2, and confirmed again in Phase 21.
+`lib/actions/rehearsals-admin.ts` (authenticated, `getServerClient()`). Extended in Phase AUDITIONS:
+`lib/actions/auditions.ts` (public, `getAdminClient()`) +
+`lib/actions/auditions-admin.ts` (authenticated, `getServerClient()`). This split pattern is
+established in Phase 14, confirmed in Phase 15.2, confirmed in Phase 21, and confirmed in Phase AUDITIONS.
 
 **`createUser()` auth.admin exception (confirmed ADMIN.26):**
 `lib/actions/users.ts` `createUser()` must keep `getAdminClient()` for the two Supabase Auth Admin
@@ -436,8 +439,13 @@ Actions or route handlers. The two-step flow:
 
 2. Client PUTs the file directly to `signedUrl` using `XMLHttpRequest` (not `fetch`)
    when upload progress tracking is needed. `XHR.upload.onprogress` is the only
-   browser-native way to report file upload progress — this is the one sanctioned
-   use of XHR in this project and must include a comment explaining the deviation.
+   browser-native way to report file upload progress. XHR must include a comment
+   explaining the deviation (see §8 XHR section for the required comment text).
+   **Body format:** Use `FormData` with `cacheControl: '3600'` and the file appended
+   under an empty field name (`''`) — NOT a raw file body with an explicit
+   `Content-Type` header. Confirmed correct pattern across all five sanctioned XHR
+   locations. AUDITIONS.3a F1 caught a prompt spec that described raw file body;
+   the build correctly used FormData instead.
 
 3. Client calls a confirmation server action with the `path`. The action records the
    storage path in the DB.
@@ -448,6 +456,8 @@ Two sanctioned storage buckets exist in this project:
 - `consent-forms/[volunteer_id]/[submission_id]/` — consent form uploads
 - `library/[folder_id]/[document_id]/` — media library files
 - `attachments/[type]/[record_id]/[document_id]/` — show/rehearsal/audition attachments
+- `audition-materials/[signup_id]/[type]-[uuid].[ext]` — audition material uploads
+  (headshot, resume, sheet_music, mp3, video — Phase AUDITIONS)
 
 `brand` (public) — brand asset files uploaded via the Setup Panel. Direct URL access without auth. Namespaced paths:
 - `brand/logo/[uuid].png` — org logo uploads
@@ -468,9 +478,31 @@ Sidebar conditionally renders links based on flags passed as props from the crew
 
 The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Active feature flags (four — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
+Active feature flags (five — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
 
 Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
+
+**`getFeatureFlags()` is client-agnostic — pass whichever client the caller constructed (corrected AUDITIONS.2a):** `getFeatureFlags(supabase: SupabaseClient)` in `lib/feature-flags.ts` accepts the Supabase client as a parameter and never constructs its own — it does NOT require `getServerClient()`. Public-route and cron contexts pass `getAdminClient()`; authenticated contexts pass `getServerClient()`. `syncAuditionToCalendar()` (`lib/actions/calendar-sync.ts`) calls `getFeatureFlags(supabase)` with whichever client its caller passed in — same pattern as `syncShowDateToCalendar()`. An earlier build comment in that file incorrectly claimed `getFeatureFlags()` calls `getServerClient()` internally; this was corrected in AUDITIONS.2a and the corrected reasoning is preserved as a comment at the call site. Do not reintroduce that misconception.
+
+**Inline single-key `app_settings` read as a lightweight alternative for public routes (established Phase AUDITIONS):** `getUpcomingAuditions()` in `lib/actions/auditions.ts` (a public-route file) reads `feature_auditions` via a direct single-key `app_settings` query rather than calling `getFeatureFlags(getAdminClient())`. This is a legitimate minor-efficiency choice when a public route needs exactly one flag — `getFeatureFlags()` fetches all five keys in one query, which is unnecessary overhead for a single-flag check. It is NOT because `getFeatureFlags()` is unusable from a public-route context (it is usable — see above). Either approach is acceptable for a public route: call `getFeatureFlags(getAdminClient())` (simplest, consistent with the rest of the codebase) or inline a single-key query when only one flag is needed and the extra columns are wasteful.
+```typescript
+const supabase = getAdminClient()
+const { data: flagRow } = await supabase
+  .from('app_settings')
+  .select('value')
+  .eq('key', 'feature_auditions')
+  .single()
+if (flagRow?.value === 'false') return []
+```
+NOTE (DOC.60, corrected from an earlier draft of this prompt): the comment above `getUpcomingAuditions()` in the live file still describes this as "the same pattern as `syncAuditionToCalendar()`" — that comment is now stale, since `syncAuditionToCalendar()` was corrected in AUDITIONS.2a to call `getFeatureFlags()` instead of inlining the fetch. The two functions no longer follow the same pattern. This is a Q-item for a future prompt to reconcile (update the stale comment or make both functions consistent) — not corrected here, since this prompt is documentation-only.
+
+**5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
+Every new feature flag requires exactly 5 file changes. Missing any one produces a silent failure — wrong TypeScript types, a toggle that doesn't save, or stale cache on flag change:
+1. Migration SQL — seed the key in `app_settings` with `ON CONFLICT DO NOTHING`
+2. `lib/feature-flags.ts` — add to `FeatureFlags` type, `getFeatureFlags()` fetch array, and return object
+3. `components/crew/settings/SetupPanel.tsx` — new toggle in Section 6
+4. `app/crew/(app)/settings/setup/page.tsx` — companion edit for `SetupPanelInitialValues` type widening (this type propagates from `lib/feature-flags.ts` — the tsc error surfaces here and only here when step 2 is applied without step 4)
+5. `lib/actions/setup.ts` — add `revalidatePath('/crew/[new-route]')` inside `saveFeatureFlags()`
 
 Enforced from SETUP.1 onward. See R32 in Brief §13 and §10 grep check.
 
@@ -603,6 +635,100 @@ Production-role users gain access to auditions through two independent mechanism
 Both paths are independent. A Production user with show assignment does NOT automatically get access to standalone auditions from that show's creative team. A Production user with direct audition assignment does NOT automatically get access to the show that audition is later linked to.
 
 Access enforcement: `lib/actions/auditions-admin.ts` checks (1) whether the caller has show_editors membership for any show linked to the requested audition, OR (2) whether the caller has a row in `audition_assignments` for the requested audition. Either is sufficient. This check is in addition to the standard `is_editor()` guard — Production users who pass neither check are rejected with an auth error.
+
+**`formatWallClockCT()` — confirmed 3-argument signature (established AUDITIONS.3a F1 / R23 correction):**
+The actual function signature is `formatWallClockCT(dateStr, timeStr, fmt)` — three arguments. The second argument is `timeStr: string | null` (NOT the format string). This was a recurring failure across three Phase AUDITIONS prompts, each writing `formatWallClockCT(date, 'MMMM d, yyyy')` (2 args), which silently passed the format string as `timeStr`.
+
+Correct usage:
+```typescript
+// date column only (no time)
+formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy')
+// date + time columns
+formatWallClockCT(audition.date_start, audition.time_start, 'MMMM d, yyyy h:mm a')
+```
+
+Wrong: `formatWallClockCT(date_start, 'MMMM d, yyyy')` — format string passed as timeStr. Produces incorrect output silently. Confirmed in live `lib/utils/date.ts`.
+
+**`time without time zone` columns — local `formatTime()` helper, NOT date utilities (established AUDITIONS.3a/3b/4a):**
+Columns like `auditions.time_start`, `auditions.time_end` are stored as bare `'HH:MM:SS'` strings. They are NOT ISO date strings. Never pass them to `formatCT()`, `formatWallClockCT()`, or any date-fns utility — doing so produces incorrect output or a runtime error. Use a local helper defined in each component or action that needs it:
+```typescript
+function formatTime(t: string | null): string | null {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+```
+Do not extract this to a shared utility — callers have different return type needs and the function is 5 lines. Define locally wherever needed. Established AUDITIONS.3a/3b/4a.
+
+**TipTap `useEditor()` — `immediatelyRender: false` required in Next.js App Router (established AUDITIONS.2c F2):**
+All TipTap editor instances in admin crew components must pass `immediatelyRender: false` to `useEditor()`. Without this option, Next.js App Router produces an SSR/hydration mismatch — the server renders an empty editor shell while the client initializes the full editor DOM — causing a React hydration error.
+
+```typescript
+// WRONG — SSR/hydration mismatch in App Router
+const editor = useEditor({
+  extensions: [StarterKit],
+  content: '',
+})
+
+// CORRECT — always pass immediatelyRender: false
+const editor = useEditor({
+  extensions: [StarterKit],
+  content: '',
+  immediatelyRender: false,
+})
+```
+
+This is a Next.js App Router constraint, not a TipTap default. Confirmed in `BlastComposer.tsx` and all three Email Templates tab editors. All future TipTap editor instances must include this option.
+
+**TipTap async content initialization — `setContent()` not `useEffect` state dependency (established AUDITIONS.2c F7):**
+When a TipTap editor receives content loaded asynchronously (after mount), do NOT initialize via the `useEditor()` content prop (it only applies at initialization — async data arrives after mount) and do NOT use a `useEffect` with state dependency (triggers the `react-hooks/set-state-in-effect` lint rule enforced in this project).
+
+Correct pattern — call `editor.commands.setContent(html)` directly inside the async load function at the moment data arrives:
+```typescript
+// In the tab-load handler (called once when tab first opens):
+async function loadTemplates() {
+  if (templatesLoaded) return
+  const data = await getAuditionEmailTemplates(auditionId)
+  if (data.callbackTemplate && callbackEditor) {
+    callbackEditor.commands.setContent(
+      data.callbackTemplate.body_html || '')
+  }
+  setTemplatesLoaded(true)
+}
+```
+This avoids both the stale-content problem and the lint violation. Established AUDITIONS.2c Email Templates tab.
+
+**`show_editors.admin_id` — column name differs from newer conventions (confirmed AUDITIONS.A Audit G3):**
+The `show_editors` table uses `admin_id` as the FK column referencing `admin_users.id`. This differs from newer tables: `rehearsal_schedule_assignments.admin_user_id` and `audition_assignments.admin_user_id` both use `admin_user_id`. Any Production access check against `show_editors` must use `admin_id`, not `admin_user_id`. Always verify with R2 (schema check) before writing membership queries — writing `.eq('admin_user_id', admin.id)` on `show_editors` silently returns zero results, not an error.
+
+**Supabase to-one FK join return type normalization (established AUDITIONS.4a F2):**
+Supabase's JS client is inconsistent about whether a to-one FK join returns an object or a single-element array, depending on the join type and query syntax. Using `as any` to bypass the type mismatch is a regression — it removes compile-time safety without solving the underlying issue. The established idiom in this codebase:
+```typescript
+// WRONG — bypasses type safety
+const showName = (row.shows as any)?.name
+
+// CORRECT — handles both object and array return shapes
+const showName = (Array.isArray(row.shows)
+  ? row.shows[0]
+  : row.shows)?.name
+```
+This pattern is used throughout `lib/actions/auditions-admin.ts` and other action files that use FK joins with `!table_fk_column` Supabase join syntax. Confirmed correct in AUDITIONS.4a F2.
+
+**Migration file / live DB drift — document inline fixes in a follow-up migration (established Phase AUDITIONS):**
+When inline schema fixes are applied via Supabase MCP during a build (bypassing a named `.sql` migration file), they create drift between the committed migration files and the live database. A fresh Supabase project seeded from the repo's `.sql` files alone would NOT match production.
+
+Five inline fixes were applied during Phase AUDITIONS without a corresponding migration file:
+1. `audition_signups.phone SET NOT NULL` (AUDITIONS.2a)
+2. `calendar_events.source_audition_id` column + partial unique index (AUDITIONS.1b)
+3. `calendar_events_source_check` updated to include `'audition'` (AUDITIONS.1b)
+4. `consent_form_submissions.audition_signup_id` column + index (AUDITIONS.1a)
+5. `email_log.recipient_type` CHECK updated to include `'audition'` (AUDITIONS.2a)
+
+Required resolution: `033_audition_schema_fixes.sql` must be written and applied before Phase 17. See §11 checklist for the pre-Phase-17 reminder.
+
+Rule going forward: whenever an inline schema fix is applied via Supabase MCP rather than a named migration file, flag it explicitly in the build report Flags section, add a Q-item tracking the follow-up migration debt, and update the Brief §9 migration status block to reflect the inline fix. Inline fixes are acceptable during active builds; the debt must be cleared before the next phase launch.
 
 **`getRehearsalAttendanceForEvent()` — effective-roster-first pattern (established 21.3):**
 Any server action or data function that returns per-person attendance status for a rehearsal event must compute the effective roster first, then LEFT JOIN attendance records onto it. Never query `rehearsal_attendance` alone to produce a roster — that table only contains rows for people who have already been marked, so roster members with no attendance record yet would be silently absent from the result.
@@ -764,12 +890,17 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
-**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2):**
-The project's default HTTP pattern is `fetch()`. There are three sanctioned deviations,
+**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS):**
+The project's default HTTP pattern is `fetch()`. There are five sanctioned deviations,
 all in file upload components with progress tracking:
 - `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
 - `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
 - `components/crew/settings/BrandImageUploader.tsx` — brand asset upload / logo + favicon (SETUP.2)
+- `components/audition/AuditionSignupClient.tsx` — inline material upload at audition signup (Phase AUDITIONS)
+- `components/audition/AuditionUploadClient.tsx` — late material upload via upload_token link (Phase AUDITIONS)
+
+Body format for all five: FormData with `cacheControl: '3600'` and file appended under
+empty field name `''` — not a raw file body with explicit Content-Type header.
 
 `fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
 is the only browser-native way to report real-time upload progress to the user. Any
@@ -1019,10 +1150,15 @@ grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
   | grep -v "setup.ts" \
-  | grep -v "SetupPanel.tsx"
-# SetupPanel.tsx uses these key strings as FormData keys in the
-# toggle UI — sanctioned. All other hits = R32 violation.
-# Must return zero results.
+  | grep -v "SetupPanel.tsx" \
+  | grep -v "setup/page.tsx"
+# Sanctioned uses of flag key strings:
+#   feature-flags.ts — type definition + getFeatureFlags()
+#   setup.ts — saveFeatureFlags() upsert key strings
+#   SetupPanel.tsx — toggle UI FormData keys
+#   setup/page.tsx — SETUP_KEYS array + SetupPanelInitialValues
+#                    type (AUDITIONS.1a F2 — 5-file flag pattern)
+# All other hits = R32 violation. Must return zero results.
 ```
 
 ```bash
@@ -1066,24 +1202,30 @@ grep -rn "\.storage\.from(" \
 grep -n "getServerClient" \
   lib/actions/checkin.ts \
   lib/actions/consent.ts \
-  lib/actions/rehearsals.ts
-# Must return zero results for all three files. These are
+  lib/actions/rehearsals.ts \
+  lib/actions/auditions.ts
+# Must return zero results for all four files. These are
 # public-route files — getAdminClient() only, per the
 # public-route action file invariant (§7 + §14). Any hit
 # is a security violation.
 # lib/actions/rehearsals.ts added Phase 21 (21.1).
+# lib/actions/auditions.ts added Phase AUDITIONS.
 ```
 
 ```bash
 # Confirm XHR usage is intentional (established 15.2/15.3/SETUP.2)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Sanctioned XHR locations (upload progress tracking — three total):
+# Sanctioned XHR locations (upload progress tracking — five total):
 #   - components/consent/ConsentUploadForm.tsx (15.2)
 #   - components/crew/media/MediaLibrary.tsx (15.3)
 #   - components/crew/settings/BrandImageUploader.tsx (SETUP.2)
-# All three use XHR because fetch() does not support upload
-# progress events. All must include the deviation comment.
-# Any hit outside these three files requires review.
+#   - components/audition/AuditionSignupClient.tsx (Phase AUDITIONS)
+#   - components/audition/AuditionUploadClient.tsx (Phase AUDITIONS)
+# All five use XHR because fetch() does not support upload progress
+# events. All must include the deviation comment. Body format:
+# FormData with cacheControl + file under '' field name (not raw
+# file body with Content-Type header).
+# Any hit outside these five files requires review.
 ```
 
 ```bash
@@ -1214,7 +1356,18 @@ Run before every Vercel deployment:
 □ Q-items noted
 □ Brief updated if schema or decisions changed (batch with owner approval)
 □ Step tracker declared at session start — single persistent tracker, not re-emitted after individual steps (R27)
-□ Any new date display: confirm formatWallClockCT() used for bare date columns (show_date, start_date, end_date), formatCT() for timestamptz columns (created_at, updated_at, claimed_at, etc.) (R23)
+□ Any new date display: confirm formatWallClockCT() used for
+  bare date columns (show_date, start_date, end_date),
+  formatCT() for timestamptz columns (created_at, updated_at,
+  claimed_at, etc.) (R23). CONFIRMED SIGNATURE (3 args):
+  formatWallClockCT(dateStr, timeStr | null, fmt).
+  Wrong: formatWallClockCT(date, 'MMMM d, yyyy') — silently
+  passes format string as timeStr. Correct:
+  formatWallClockCT(date, null, 'MMMM d, yyyy').
+  time without timezone columns ('HH:MM:SS' strings) must
+  use a local formatTime() helper — never pass to formatCT()
+  or formatWallClockCT(). See §7 for the helper pattern.
+  (AUDITIONS.3a F1 — recurring failure mode, confirmed ×3)
 □ Any code touching volunteer_roles: confirm query joins through show_dates — no direct show_id reference (column removed in Migration 006) (R26)
 □ All new /crew/* pages placed under app/crew/(app)/ — not app/crew/ directly (R20)
 □ Any new shadcn component installed: check globals.css for var() injection (R17), check for tailwind.config.ts (R7), rebrand all semantic color classes (R15)
@@ -1570,6 +1723,24 @@ Run before every Vercel deployment:
   non-existent component — it will throw a build error. Never
   skip the stub — a missing tab in the UI is confusing and
   hard to retrofit cleanly. Established AUDITIONS.2b/2c.
+□ Any new TipTap editor instance in a Next.js App Router
+  admin component: pass `immediatelyRender: false` to
+  `useEditor()`. Without this option, the editor produces
+  an SSR/hydration mismatch — the server renders an empty
+  shell while the client initializes the full editor DOM,
+  causing a React hydration error. Required in BlastComposer
+  .tsx and all three Email Templates tab editors.
+  Pattern: useEditor({ extensions: [...], content: '',
+  immediatelyRender: false })
+  (AUDITIONS.2c F2)
+□ Any TipTap editor that receives content loaded
+  asynchronously (after mount): do NOT pass initial content
+  via the useEditor() content option (only applies at init).
+  Do NOT use a useEffect with state dependency (triggers
+  react-hooks/set-state-in-effect lint rule enforced here).
+  Correct: call editor.commands.setContent(html) directly
+  inside the async load function when data arrives.
+  (AUDITIONS.2c F7)
 □ Any prompt that adds items to 30BN_DEFERRED_VERIFICATIONS_
   v2.md: confirm items are manual owner browser-verification
   steps only. DB-confirmable schema items (table existence,
@@ -1580,6 +1751,41 @@ Run before every Vercel deployment:
   Items already confirmed via live DB queries in a build
   report must not be duplicated into the verification doc.
   (21.3 Q2 — confirmed scope boundary)
+□ Any edit to HelpContent.tsx ALL_SECTIONS array or section
+  positions: read the live file to confirm current order —
+  never rely solely on Brief documentation. The live section
+  order has drifted from Brief documentation before
+  (AUDITIONS.4b F4: Getting Help precedes Rehearsals and
+  Auditions in the live file, not follows as the Brief had
+  stated). Verify with:
+    grep -n "id:.*'" components/crew/help/HelpContent.tsx
+  before inserting any new section to confirm the correct
+  position.
+□ Any new public page that handles a not-found case: use
+  `notFound()` from 'next/navigation' (triggers the custom
+  app/not-found.tsx). Do NOT create a local <Unavailable>
+  or <NotFound> component — these create inconsistency. Some
+  older pages used an inline component; notFound() is the
+  correct pattern for all new pages. (AUDITIONS.3a F4)
+□ PRE-PHASE-17 REQUIRED: Write and apply
+  033_audition_schema_fixes.sql before Phase 17 begins.
+  Five inline schema fixes applied via Supabase MCP during
+  Phase AUDITIONS have no corresponding migration file:
+  (1) audition_signups.phone NOT NULL; (2) calendar_events
+  .source_audition_id + partial index; (3) calendar_events_
+  source_check + 'audition'; (4) consent_form_submissions
+  .audition_signup_id + index; (5) email_log.recipient_type
+  CHECK + 'audition'. A fresh environment seeded from
+  committed .sql files alone does not match production
+  without this follow-up migration. See §7 migration/DB
+  drift pattern. (Phase AUDITIONS Q3 from DOC.59)
+□ Any inline schema fix applied via Supabase MCP during a
+  build (bypassing a named .sql migration file): flag it in
+  the build report Flags section AND add a Q-item noting
+  that a follow-up migration must be written before the next
+  phase launch. Do not apply inline fixes silently — they
+  create migration/DB drift. See §7 migration/DB drift
+  pattern. (Phase AUDITIONS — established from Q3 DOC.59)
 ```
 
 ---
@@ -2617,6 +2823,16 @@ Phase 15 — Document & Media System ✓ Complete
   30BN-DOC.45 ✓ Process Update v3.9 (this prompt).
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
+PRE-PHASE-17 ACTION REQUIRED:
+  Write + apply 033_audition_schema_fixes.sql: captures
+  5 inline schema fixes applied via Supabase MCP during
+  Phase AUDITIONS (audition_signups.phone NOT NULL,
+  calendar_events.source_audition_id + index, source_check
+  + 'audition', consent_form_submissions.audition_signup_id
+  + index, email_log.recipient_type + 'audition'). Required
+  before Phase 17.4 (seed data cleanup) or any fresh
+  environment seeding. See §7 migration/DB drift pattern
+  and §11 checklist. (Phase AUDITIONS Q3 from DOC.59)
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -3015,18 +3231,104 @@ ADMIN.34 ✓ QR history + payload cleanup + metadata
                prompt structure; Production assignment model;
                R38 TipTap merge tag extension pattern)
 
-Phase AUDITIONS — Audition Management System (pre-launch, next)
-  AUDITIONS.A   Pending — read-only audit
-  AUDITIONS.1a  Pending — Migration 032 + schema + types
-  AUDITIONS.1b  Pending — server actions
-  AUDITIONS.2a  Pending — Production show access (ADMIN-style)
-  AUDITIONS.2b  Pending — admin UI list + detail tabs 1–4
-  AUDITIONS.2c  Pending — Settings + Email Templates tab
-  AUDITIONS.3a  Pending — public signup page
-  AUDITIONS.3b  Pending — uploads + check-in + cards
-  AUDITIONS.4a  Pending — TipTap merge tag extension
-  AUDITIONS.4b  Pending — emails + polish + help + Deferred
-  DOC.59        Pending — Brief v4.7 + Process v4.5
+Phase AUDITIONS — Audition Management System ✓ Complete
+  AUDITIONS.A  ✓ Read-only audit. Seven targets confirmed
+               (feature-flags.ts, proxy.ts, Sidebar.tsx,
+               calendar-sync.ts, Phase 15.2 consent trigger,
+               lib/actions/rehearsals.ts check-in pattern,
+               show detail guard). Key findings: formatWallClockCT
+               takes 3 args; checkInToAudition takes signupId
+               not adminUserId; show_editors uses admin_id not
+               admin_user_id.
+  AUDITIONS.1a ✓ Migration 032 applied (8 tables + feature_
+               auditions seeded + calendar_events_event_type_check
+               + 'audition'). types/audition.ts (new). lib/
+               feature-flags.ts (5th flag). SetupPanel.tsx (5th
+               toggle). setup/page.tsx (companion type fix — F2:
+               5-file pattern confirmed). 5 files.
+  AUDITIONS.1b ✓ lib/actions/auditions.ts (new — PUBLIC ROUTE:
+               7 functions + getAuditionMaterialUploadUrl +
+               getUpcomingAuditions). lib/actions/auditions-admin
+               .ts (new — 14 functions + assertAuditionAccess()
+               private helper). calendar-sync.ts: syncAudition
+               ToCalendar() added. lib/audit.ts: audition.convert
+               _to_volunteer added. Inline DB fixes: source_check
+               + 'audition', source_audition_id column. R32 fix:
+               getFeatureFlags(supabase) not inline fetch
+               (AUDITIONS.2a F2). 4 files + 2 inline DB fixes.
+  AUDITIONS.2a ✓ Inline schema fixes: audition_signups.phone NOT
+               NULL; email_log.recipient_type + 'audition'. proxy
+               .ts: 5 changes (needsFlagCheck ×3 incl. /auditions/
+               public route; Production allowlist /crew/shows/
+               scoped with trailing slash; crew flag block; public
+               flag block). show detail page: Production show_
+               editors.admin_id membership guard. lib/actions/
+               shows.ts: 9 mutating actions (5 membership-check,
+               4 full-block). convertToVolunteer() phone guard
+               removed. Zod phone required. AuditionSignup.phone
+               type fix. calendar-sync R32 fix. 7 files + 2
+               inline fixes.
+  AUDITIONS.2b ✓ Sidebar.tsx: 4-part atomic edit (Mic2 import,
+               NAV_ITEMS, FLAG_GATED_HREFS, Production allowlist,
+               HelpTooltip generalized to dynamic anchor). setup
+               .ts: saveFeatureFlags revalidatePath. auditions-
+               admin.ts: signed URL + castRole param. List page
+               (page.tsx + AuditionsListClient.tsx). Detail shell
+               ([id]/page.tsx). AuditionDetailTabs.tsx: 6 tabs —
+               4 implemented, 2 stubbed. 7 files.
+  AUDITIONS.2c ✓ Settings tab full (config, roles CRUD, Production
+               assignments, archive). Email Templates tab full
+               (3 useEditor instances + immediatelyRender: false,
+               MergeTagExtension, merge tag toolbar, save/preview
+               per status, async setContent() in load handler).
+               QR corrected (SVG inline + downloads). Access guard
+               on signed URL. Description field on signup page.
+               4 new server actions. 4 files.
+  AUDITIONS.3a ✓ app/auditions/[id]/page.tsx (new — white header
+               pattern; noindex; notFound() on null; params
+               Promise-awaited). AuditionSignupClient.tsx (new —
+               slot picker; guardian fields; role selection; P-DC
+               material uploads with XHR + FormData body; full
+               state machine; formatAuditionTime local helper).
+               auditions.ts: getAuditionMaterialUploadUrl + extend
+               ed submitAuditionSignup return (includes uploadToken).
+               Key findings: formatWallClockCT 3-arg (F1);
+               white header; FormData not raw body. 3 files.
+  AUDITIONS.3b ✓ Upload + cancel pages (new). Check-in page (new
+               — server-side invalid-token render; day-of-week
+               date format). AuditionUploadClient.tsx (new).
+               AuditionCheckInClient.tsx (new). getUpcomingAuditions
+               () added (CT-aware date; inline flag check).
+               Calendar sync wired (non-blocking updateAudition;
+               delete+sync updateAuditionStatus). Auditions card
+               on app/page.tsx + shows/page.tsx. 8 files.
+  AUDITIONS.4a ✓ lib/utils/merge-tags.ts (new — pure utility;
+               MERGE_TAGS const; substituteMergeTags() with local
+               escapeHtml). MergeTagExtension.ts (new — TipTap
+               Node, inline/atom, data-merge-tag round-trip,
+               insertMergeTag command, module augmentation).
+               globals.css: .merge-tag-pill rule. auditions-admin
+               .ts: previewAuditionEmailTemplate(). Key findings:
+               formatWallClockCT 3-arg (F1); FK join Array.isArray
+               normalization not 'as any' (F2). 4 files.
+  AUDITIONS.4b ✓ lib/email.ts: 4 new functions exported (F1:
+               all send functions are exported — confirmed live).
+               auditions.ts: 3 stubs replaced + formatAuditionTime
+               helper. auditions-admin.ts: status notification
+               stub replaced. Cancel page (new). HelpContent.tsx:
+               Auditions as 15th section — live order is Getting
+               Help → Rehearsals → Auditions (F4: an earlier Brief
+               draft had the wrong order; corrected in Brief
+               DOC.59). AuditionDetailTabs.tsx: 3 HelpTooltip
+               placements. AboutSystemEmails.tsx: 4 new triggers
+               (11→15). Deferred Verifications v19: 65 items.
+               9 files + 1 new.
+  30BN-DOC.59  ✓ Brief Update v4.7 (35 edits — Phase AUDITIONS
+               complete; all §1/§3/§6/§7/§8/§9/§11/§13 updated;
+               R23 3-arg signature; 5-file flag pattern; schema
+               corrections; Migration 032 applied; HelpContent
+               order corrected)
+  30BN-DOC.60  ✓ Process Update v4.6 (this prompt)
 30BN-DOC.59  ✓ Process Update v4.5 (this prompt — Phase
                AUDITIONS: §7 audition assignment pattern;
                §10 feature_auditions grep; §11 stub tab
@@ -3079,7 +3381,13 @@ Documented in Brief §13 R21. Referenced here for continuity. No `supabase/migra
 Documented in Brief §13 R22. Referenced here because it directly governs session conduct: Claude Code must not include "confirm Vercel deploy" as a step in its own build process or flag its absence in build reports. Owner confirms deploy independently.
 
 ### R23 — formatWallClockCT() for Date-Only Columns (cross-reference)
-Documented in Brief §13 R23. Referenced here for R-number continuity. Core rule: use formatWallClockCT() for bare date column values and constructed date+time strings; use formatCT() only for full timestamptz values. See grep check in §10.
+Documented in Brief §13 R23. Referenced here for R-number continuity. Core rule: use `formatWallClockCT()` for bare date column values and constructed date+time strings; use `formatCT()` only for full timestamptz values. See grep check in §10.
+
+**Confirmed 3-argument signature (AUDITIONS.3a/3b/4a — recurring failure mode, caught ×3):**
+`formatWallClockCT(dateStr: string, timeStr: string | null, fmt: string): string`
+The second arg is `timeStr` (nullable), NOT the format string. Wrong: `formatWallClockCT(date, 'MMMM d, yyyy')`. Correct: `formatWallClockCT(date, null, 'MMMM d, yyyy')`. Confirmed in live `lib/utils/date.ts`.
+
+`time without time zone` columns (e.g. `auditions.time_start` — stored as `'HH:MM:SS'` strings) are NOT ISO date strings — never pass to `formatCT()` or `formatWallClockCT()`. Use a local `formatTime()` helper instead. See §7 for the helper definition and §11 checklist.
 
 ### R24 — Nested useFieldArray Requires Its Own Sub-Component (cross-reference)
 Documented in Brief §13 R24. Referenced here for R-number continuity. Core rule: nested field arrays in react-hook-form must live in their own named component — not inline in a render loop over a parent field array.
@@ -3319,8 +3627,8 @@ Files serving public token-gated routes (no Supabase Auth session) use
 ```
 
 This applies to: `lib/actions/checkin.ts` (Phase 14), `lib/actions/consent.ts` (Phase 15.2),
-`lib/actions/rehearsals.ts` (Phase 21), and any future file serving a public route with no
-session. The comment is not decorative — it is
+`lib/actions/rehearsals.ts` (Phase 21), `lib/actions/auditions.ts` (Phase AUDITIONS), and any
+future file serving a public route with no session. The comment is not decorative — it is
 an architectural invariant that prevents future contributors from adding
 `getServerClient()` calls without recognizing the context.
 
@@ -3519,7 +3827,7 @@ requires: (1) feature_X seeded in migration; (2) getFeatureFlags() updated; (3) 
 route block; (4) sidebar conditional; (5) public route 404 when off; (6) action-level early
 return. Core features (volunteer management, show/slot management, user management, forms,
 media library, hours, opportunities, Call Board) are never flagged. Current flagged features:
-`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals` (Phase 21). Enforced from SETUP.4 onward.
+`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals` (Phase 21), `feature_auditions` (Phase AUDITIONS). Enforced from SETUP.4 onward.
 See §11 checklist for the required verification item.
 
 ### R37 — admin_users.id = auth.uid() for RLS Policies (cross-reference)
@@ -3527,6 +3835,12 @@ See §11 checklist for the required verification item.
 Documented in Brief §13 R37 (added v4.5). Referenced here for R-number continuity. Core rule: `admin_users.id` is the Supabase Auth UUID — there is no separate `auth_user_id` column. RLS policies that self-scope to the calling admin must use `admin_user_id = auth.uid()` directly for FK columns referencing `admin_users.id`, or `id = auth.uid()` for the `admin_users` table itself. Never reference a non-existent `auth_user_id` column.
 
 Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.uid()` in Production self-scoping RLS policies. Schema verification (R2) confirmed the column does not exist. Corrected to `admin_user_id = auth.uid()` before applying. See §7 for the full pattern note and code examples.
+
+### R38 — TipTap Merge Tag Extension Pattern (cross-reference)
+Documented in Brief §13 R38. Referenced here for R-number continuity. Core rule: merge tag tokens (`{{tag_name}}`) in TipTap email template editors use a custom `Node` extension (`MergeTagExtension.ts`) with `inline: true`, `atom: true`, `data-merge-tag` attribute round-trip, and an `insertMergeTag(tag)` command registered via TypeScript module augmentation (`declare module '@tiptap/core'`). Substitution at send time via `substituteMergeTags()` from `lib/utils/merge-tags.ts`. Preview via `previewAuditionEmailTemplate()` server action. `escapeHtml()` applied inside `substituteMergeTags()` to all substituted values — TipTap HTML body itself is NOT escaped (same exception as blast body, R31). All TipTap editor instances in App Router require `immediatelyRender: false` (see §7 and §11). Established AUDITIONS.4a.
+
+### Migration / Live DB Drift — Follow-Up Migration Required
+When inline schema fixes are applied via Supabase MCP during a build (bypassing a named .sql migration file), they create drift between committed migration files and the live database. This is documented as a confirmed failure mode from Phase AUDITIONS (5 inline fixes applied without a follow-up file). Full pattern in §7. Quick rule: every inline fix must be flagged in the build report, Q-itemmed for follow-up, and captured in a named migration file before the next phase launch. The Brief §9 migration status block must be updated to reflect inline fixes. Established Phase AUDITIONS.
 
 **Dark mode cascade defect — architectural note (ADMIN.35-AUDIT):**
 In Tailwind v4 with `@tailwindcss/postcss`, hand-authored `@layer utilities` rules compile AFTER Tailwind's auto-generated utilities in the PostCSS output. This means: if a hand-authored class (e.g. `bg-brand-primary-light`) and a Tailwind dark-variant class (e.g. `dark:bg-dark-bg`) appear on the same element, the hand-authored class wins in dark mode due to source order — even though the dark variant is active. Both have equal specificity (0,0,1,0); last-in-cascade wins.
@@ -3604,3 +3918,5 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.2 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header updated (v4.2); §14 editNote/deleteNote contradiction corrected — "needs correction to include Editor" replaced with "Editors confirmed append-only, guard correct as-is, migration required if ever revisited"; §7 ADMIN.39a–c pattern set added (governing hover rule, static neutral substitution table, dark:text-brand-primary-mid text fix pattern, two-part dark target correction pattern, has-[:checked]: variant scope rule, read-before-edit discipline note); §10 R35 grep check added; §11 R35 pairing checklist item added; §11 has-[:checked]: scope checklist item added; §13 stale Phase 14/15 pending stubs removed; §13 dark mode cascade sweep marked complete (ADMIN.39-AUDIT + 39a/39b/39c ✓); §13 ADMIN.40 carry-forward added; §13 prompt log completed (ADMIN.39-AUDIT, ADMIN.39a–c, DOC.51–53 all added); §14 R35 formal rule added (three correct options: native+native, hand-authored+hand-authored in correct order, hand-authored dark: text variant); DOC.54 logged)*
 *v4.3 (July 2026 — ADMIN.40–42 + Phase 21 lock: §1 header updated (v4.3); §7 R36 opacity-variant gap pattern added (hand-authored @layer utilities do not auto-generate /NN or stacked-variant rules; each combination requires explicit authoring; silent failure mode; 3 accessibility gaps confirmed in ADMIN.42-AUDIT; all closed ADMIN.42); §10 R36 grep check added; §11 R36 checklist item added; §13 phase tracker: globals.css opacity-variant gap marked complete (ADMIN.41/42), Phase 21 architecture noted as locked and build-ready; §13 prompt log ADMIN.40 + ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42 + DOC.54 + DOC.55 added; DOC.55 logged)*
 *v4.4 (August 2026 — Phase 21 complete: §1 header updated (v4.4); §7 feature flag list updated (three → four active flags; feature_rehearsals added — Phase 21 / Migration 031); §7 public-route invariant updated (lib/actions/rehearsals.ts added as third canonical example; split pattern confirmed for rehearsal domain); §7 three new patterns added: admin_users.id = auth.uid() for RLS policies (no auth_user_id column — confirmed failure mode 21.1 F1; cross-references R37), Sidebar data-driven three-part atomic edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist — silent failure mode confirmed 21.2), getRehearsalAttendanceForEvent() effective-roster-first pattern (must return ALL roster members with status: null for unmarked — not just rehearsal_attendance rows); §10 two grep updates: feature flags grep updated (four flags), getServerClient public-route check updated (add rehearsals.ts); §11 three new checklist items: effective-roster-first attendance queries, batch attendance single upsert, Deferred Verifications scope boundary (manual browser-only, not DB-confirmable items); §13 Phase 21 marked complete (21.A/21.1/21.2/21.3 all ✓ with summaries); §13 prompt log: 21.A + 21.1 + 21.2 + 21.3 + DOC.56 + DOC.57 added; §14 R34 updated (feature_rehearsals added to flagged features list); §14 public-route invariant updated (rehearsals.ts added, Brief single-file spec correction noted); §14 R37 cross-reference added (admin_users.id = auth.uid() — no auth_user_id column); DOC.57 logged)*
+*v4.5 (August 2026 — Phase AUDITIONS specced as pre-launch build, companion to Brief DOC.58: reconstructed retroactively during the DOC.60 session — the header was bumped to v4.5 by the real DOC.59 prompt, but no corresponding version-history entry was ever appended to this file; the history section jumped straight from v4.4 to what is now v4.6 below. §7 audition Production assignment pattern added (two independent paths — show assignment vs. direct audition assignment); §10 feature flags grep updated (feature_auditions, 5th active flag); §11 new checklist item (stub tabs for not-yet-built dependencies — Email Templates tab pattern); §13 Phase AUDITIONS 11-prompt pending block added; DOC.58 + DOC.59 logged)*
+*v4.6 (August 2026 — Phase AUDITIONS complete: §1 header updated (v4.6, Phase AUDITIONS complete); §7 public-route invariant: lib/actions/auditions.ts added as 4th canonical file; §7 split pattern extended (Phase AUDITIONS domain); §7 P-DC storage: audition-materials/ path namespace added; §7 feature flags: 4→5 active flags; getFeatureFlags() client-agnostic behavior clarified (does not require getServerClient() — corrects a misconception an earlier draft of this prompt would have introduced); inline single-key app_settings read documented as a lightweight alternative for public routes (not a necessity); 5-file flag addition pattern (setup/page.tsx type companion); §7 formatWallClockCT 3-arg signature + formatTime() helper pattern added (recurring failure mode ×3); §7 TipTap immediatelyRender: false + async setContent() patterns; §7 show_editors.admin_id naming note; §7 Supabase FK join Array.isArray normalization pattern; §7 XHR P-DC body format (FormData, not raw); §7 migration/DB drift pattern (inline fix tracking + follow-up migration requirement); §8 XHR: 3→5 sanctioned files (2 audition components added); §8 FormData body format note; §10 getServerClient grep: 4th public-route file (auditions.ts); §10 XHR grep: 5 files + FormData note; §10 feature flags grep: setup/page.tsx added to exclusions; §11 R23 checklist item: 3-arg signature + formatTime() helper; §11 two new TipTap items (immediatelyRender, async setContent); §11 HelpContent live-file discipline item; §11 notFound() consistency item; §11 PRE-PHASE-17 migration debt item (033 required); §11 inline schema fix flag item; §13 Phase AUDITIONS: pending → ✓ Complete (10 prompts, full build summaries — including a correction to the AUDITIONS.4b entry's HelpContent section-order claim); Phase 17 tracker: PRE-PHASE-17 note added (033 migration); DOC.59 ✓ + DOC.60 ✓ logged; §14 R23: 3-arg signature + formatTime() pattern; §14 R34: feature_auditions (5th flag); §14 public-route canonical files: auditions.ts (4th); §14 R38 cross-reference added (TipTap merge tag extension, immediatelyRender, escapeHtml in substituteMergeTags); §14 migration/DB drift rule added; missing v4.5 version-history entry reconstructed (see above); DOC.60 logged)*
