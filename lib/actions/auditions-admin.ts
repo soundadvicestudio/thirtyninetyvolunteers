@@ -9,6 +9,8 @@ import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import { sendBatchEmails } from '@/lib/email'
 import { syncAuditionToCalendar } from '@/lib/actions/calendar-sync'
+import { substituteMergeTags, type MergeTagValues } from '@/lib/utils/merge-tags'
+import { formatWallClockCT } from '@/lib/utils/date'
 import type {
   Audition,
   AuditionAssignment,
@@ -1020,5 +1022,108 @@ export async function convertToVolunteer(
   } catch (err) {
     console.error('convertToVolunteer unexpected error:', err)
     return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── E: previewAuditionEmailTemplate ────────────────────────────
+//
+// Read-only. Renders a preview-only HTML wrapper (not the full email
+// client compatibility layer used by buildAuditionBulkEmailHtml() /
+// the AUDITIONS.4b send functions) with sample merge tag values
+// substituted in, so an admin can see brand colors and layout before
+// saving a template.
+
+// Local copy of escapeHtml — same duplication rationale as the
+// sendAuditionBulkEmail() escapeHtml() above and lib/utils/merge-tags.ts's
+// own local copy. Kept separate (not reused) since this one only ever
+// escapes short trusted-shape strings (a hex color, a subject line) for
+// inline style/text interpolation — a different call site than either.
+function escapeHtmlInline(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+export async function previewAuditionEmailTemplate(
+  auditionId: string,
+  subject: string,
+  bodyHtml: string
+): Promise<{ previewHtml: string | null; error?: string }> {
+  try {
+    const admin = await getAdminUser()
+    if (!admin) return { previewHtml: null, error: 'Unauthorized' }
+
+    const supabase = await getServerClient()
+
+    const access = await assertAuditionAccess(supabase, admin, auditionId)
+    if (!access.allowed) return { previewHtml: null, error: access.error ?? 'Insufficient permissions' }
+
+    const { data: audition } = await supabase
+      .from('auditions')
+      .select(
+        'id, title, date_start, time_start, shows!auditions_show_id_fkey ( name ), locations!auditions_location_id_fkey ( name )'
+      )
+      .eq('id', auditionId)
+      .single()
+
+    if (!audition) return { previewHtml: null, error: 'Audition not found' }
+
+    // resolveEmailSettings() is internal to lib/email.ts (not exported) —
+    // same inline app_settings fetch pattern as sendAuditionBulkEmail().
+    const { data: settingsData } = await supabase
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['org_name', 'brand_primary', 'brand_accent', 'email_from_name'])
+    const settingsMap = Object.fromEntries(
+      (settingsData ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
+    )
+    const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
+    const brandPrimary = settingsMap['brand_primary'] || '#293994'
+
+    // Supabase normalizes to-one FK joins as either an object or a
+    // single-element array depending on relation inference — same
+    // normalization pattern used throughout this file and auditions.ts
+    // (getAuditionList, getAuditionDetail, getUpcomingAuditions).
+    const show = Array.isArray(audition.shows) ? audition.shows[0] : audition.shows
+    const location = Array.isArray(audition.locations) ? audition.locations[0] : audition.locations
+
+    const sampleValues: MergeTagValues = {
+      auditioner_name: 'Alex Sample',
+      show_title: show?.name ?? 'Sample Show',
+      audition_title: audition.title,
+      audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+      audition_location: location?.name ?? 'Main Theater',
+      role_name: 'Sample Role',
+      cast_role: 'Sample Role',
+      org_name: orgName,
+    }
+
+    const substitutedBody = substituteMergeTags(bodyHtml, sampleValues)
+
+    const safeBrandPrimary = escapeHtmlInline(brandPrimary)
+    const safeSubject = escapeHtmlInline(subject || '(No subject)')
+
+    const previewHtml = `
+      <div style="font-family: 'Open Sans', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <div style="background: ${safeBrandPrimary}; padding: 16px 24px;">
+          <p style="color: white; font-size: 14px; font-weight: 600; margin: 0;">
+            ${safeSubject}
+          </p>
+        </div>
+        <div style="padding: 24px; background: white; line-height: 1.6; color: #1a1a1a;">
+          ${substitutedBody}
+        </div>
+        <div style="padding: 16px 24px; background: #f5f5f5; font-size: 12px; color: #555;">
+          <em>Preview only — sample data shown</em>
+        </div>
+      </div>
+    `
+
+    return { previewHtml }
+  } catch (err) {
+    console.error('previewAuditionEmailTemplate error:', err)
+    return { previewHtml: null, error: 'An unexpected error occurred.' }
   }
 }

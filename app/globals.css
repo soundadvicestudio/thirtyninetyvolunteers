@@ -158,4 +158,24 @@ body {
   .text-brand-accent-light    { color: var(--brand-accent-light); }
   .hover\:bg-brand-accent-light:hover { background-color: var(--brand-accent-light); }
 
+  /* Merge tag pill — TipTap editor visual indicator for {{tag}} tokens
+     in email template composer. R33: uses CSS custom properties for
+     brand colors. Not a Tailwind utility class — no variant generation
+     needed (R36 does not apply to this selector). */
+  .merge-tag-pill {
+    display: inline-block;
+    background-color: var(--brand-primary-light);
+    color: var(--brand-primary);
+    border: 1px solid var(--brand-primary);
+    border-radius: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    white-space: nowrap;
+    user-select: none;
+    cursor: default;
+    vertical-align: baseline;
+    line-height: 1.4;
+  }
+
 }
