@@ -132,6 +132,7 @@ export type SubmitAuditionSignupInput = z.input<typeof submitAuditionSignupSchem
 export type SubmitAuditionSignupResult = {
   success: boolean
   signupId?: string
+  uploadToken?: string
   error?: string
 }
 
@@ -277,7 +278,7 @@ export async function submitAuditionSignup(
     //   slotTime: slot?.start_time || null,
     // })
 
-    return { success: true, signupId: signup.id }
+    return { success: true, signupId: signup.id, uploadToken: signup.upload_token }
   } catch (err) {
     console.error('submitAuditionSignup unexpected error:', err)
     return { success: false, error: 'An unexpected error occurred. Please try again.' }
@@ -516,5 +517,70 @@ export async function checkInToAudition(
   } catch (err) {
     console.error('checkInToAudition unexpected error:', err)
     return { result: 'error' }
+  }
+}
+
+// ─── B8: getAuditionMaterialUploadUrl ──────────────────────────
+
+function getExtension(filename: string): string {
+  const parts = filename.split('.')
+  return parts.length > 1 ? parts[parts.length - 1] : 'bin'
+}
+
+export async function getAuditionMaterialUploadUrl(
+  uploadToken: string,
+  materialType: AuditionMaterialType,
+  filename: string
+): Promise<{
+  signedUrl: string | null
+  path: string | null
+  error?: string
+}> {
+  try {
+    const supabase = getAdminClient()
+
+    const { data: signup } = await supabase
+      .from('audition_signups')
+      .select(
+        'id, audition:auditions(material_headshot, material_resume, material_sheet_music, material_mp3, material_video)'
+      )
+      .eq('upload_token', uploadToken)
+      .maybeSingle()
+
+    if (!signup) {
+      return { signedUrl: null, path: null, error: 'Invalid upload link.' }
+    }
+
+    const audition = Array.isArray(signup.audition) ? signup.audition[0] : signup.audition
+    if (!audition) {
+      return { signedUrl: null, path: null, error: 'Invalid upload link.' }
+    }
+
+    const enabledMap: Record<AuditionMaterialType, boolean> = {
+      headshot: audition.material_headshot,
+      resume: audition.material_resume,
+      sheet_music: audition.material_sheet_music,
+      mp3: audition.material_mp3,
+      video: audition.material_video,
+    }
+
+    if (!enabledMap[materialType]) {
+      return { signedUrl: null, path: null, error: 'This material type is not enabled for this audition.' }
+    }
+
+    // crypto.randomUUID() is a Node.js global — no import needed.
+    const path = `audition-materials/${signup.id}/${materialType}-${crypto.randomUUID()}.${getExtension(filename)}`
+
+    const { data: signed, error: signError } = await supabase.storage.from('media').createSignedUploadUrl(path)
+
+    if (signError || !signed) {
+      console.error('getAuditionMaterialUploadUrl storage error:', signError)
+      return { signedUrl: null, path: null, error: 'Failed to prepare upload. Please try again.' }
+    }
+
+    return { signedUrl: signed.signedUrl, path }
+  } catch (err) {
+    console.error('getAuditionMaterialUploadUrl unexpected error:', err)
+    return { signedUrl: null, path: null, error: 'An unexpected error occurred.' }
   }
 }
