@@ -31,6 +31,7 @@ export type SetupPanelInitialValues = {
   feature_checkin: string
   feature_blast: string
   feature_rehearsals: string
+  feature_auditions: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -326,6 +327,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [checkinEnabled, setCheckinEnabled] = useState(initialValues.feature_checkin === 'true')
   const [blastEnabled, setBlastEnabled] = useState(initialValues.feature_blast === 'true')
   const [rehearsalsEnabled, setRehearsalsEnabled] = useState(initialValues.feature_rehearsals === 'true')
+  const [auditionsEnabled, setAuditionsEnabled] = useState(initialValues.feature_auditions === 'true')
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -336,6 +338,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_checkin', checkinEnabled ? 'true' : 'false')
     fd.append('feature_blast', blastEnabled ? 'true' : 'false')
     fd.append('feature_rehearsals', rehearsalsEnabled ? 'true' : 'false')
+    fd.append('feature_auditions', auditionsEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -379,6 +382,12 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         description="Enables the Rehearsals section and the public rehearsal check-in page. When off, /crew/rehearsals and the rehearsal check-in route are inaccessible."
         enabled={rehearsalsEnabled}
         onToggle={() => setRehearsalsEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Audition Management"
+        description="Enables the Auditions section, the public audition signup page, and the audition check-in page. When off, /crew/auditions and the audition public routes are inaccessible."
+        enabled={auditionsEnabled}
+        onToggle={() => setAuditionsEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button
