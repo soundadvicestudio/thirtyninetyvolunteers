@@ -5,6 +5,16 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 
 const CT = 'America/Chicago'
 
+type AuditionRow = {
+  id: string
+  title: string
+  date_start: string
+  time_start: string | null
+  time_end: string | null
+  location_id: string | null
+  calendar_visibility: 'admin_only' | 'public'
+}
+
 type ShowDateWithShowRow = {
   id: string
   show_date: string
@@ -91,5 +101,83 @@ export async function syncShowDateToCalendar(
     )
   } catch (err) {
     console.error('syncShowDateToCalendar error:', err)
+  }
+}
+
+// Keeps calendar_events in sync with auditions whenever an audition is
+// created or updated (AUDITIONS.1b). Fire-and-forget: errors are logged,
+// never thrown — a calendar sync failure must never break an audition save.
+// Only syncs when calendar_visibility = 'public'; admin_only auditions
+// never appear on the calendar.
+export async function syncAuditionToCalendar(auditionId: string, supabase: SupabaseClient): Promise<void> {
+  try {
+    // Flag fetched directly from app_settings — NOT via getFeatureFlags(),
+    // which calls getServerClient() internally and would break this
+    // function's client-as-parameter contract (Process §7). Mirrors the
+    // same direct-fetch approach as the calendar flag check above.
+    const { data: flagRow } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'feature_auditions')
+      .maybeSingle()
+
+    if (flagRow?.value === 'false') return
+
+    const { data: auditionRaw } = await supabase
+      .from('auditions')
+      .select('id, title, date_start, time_start, time_end, location_id, calendar_visibility')
+      .eq('id', auditionId)
+      .maybeSingle()
+
+    if (!auditionRaw) {
+      console.error(`syncAuditionToCalendar: audition ${auditionId} not found`)
+      return
+    }
+
+    const audition = auditionRaw as unknown as AuditionRow
+
+    if (audition.calendar_visibility !== 'public') return
+
+    // date_start is a bare date and time_start is a time-without-timezone —
+    // both are Central Time wall-clock values with no offset attached.
+    // fromZonedTime() anchors them to CT (DST-safe) before converting to
+    // UTC for storage — same pattern as syncShowDateToCalendar() above.
+    const wallClock = `${audition.date_start} ${audition.time_start ?? '19:00'}`
+    const startTime = fromZonedTime(wallClock, CT)
+
+    const FALLBACK_DURATION_MS = 3 * 60 * 60 * 1000
+    let endTime: Date
+    if (audition.time_end) {
+      endTime = fromZonedTime(`${audition.date_start} ${audition.time_end}`, CT)
+      if (endTime.getTime() <= startTime.getTime()) {
+        console.warn(
+          `audition ${auditionId}: time_end is not after time_start — using 3hr fallback`
+        )
+        endTime = new Date(startTime.getTime() + FALLBACK_DURATION_MS)
+      }
+    } else {
+      endTime = new Date(startTime.getTime() + FALLBACK_DURATION_MS)
+    }
+
+    await supabase.from('calendar_events').upsert(
+      {
+        title: audition.title,
+        event_type: 'audition',
+        location_id: audition.location_id,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        status: 'approved',
+        source: 'audition',
+        source_audition_id: auditionId,
+        submitted_by: null,
+        approved_by: null,
+      },
+      {
+        onConflict: 'source_audition_id',
+        ignoreDuplicates: false,
+      }
+    )
+  } catch (err) {
+    console.error('syncAuditionToCalendar error:', err)
   }
 }

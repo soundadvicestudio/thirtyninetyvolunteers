@@ -98,6 +98,9 @@ export type AuditAction =
   | 'media_folder.update'
   | 'media_folder.delete'
 
+  // Auditions
+  | 'audition.convert_to_volunteer'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,
