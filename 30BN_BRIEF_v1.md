@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.8
-### Created: July 2026 | Last Updated: August 2026 — v4.8 (DOC.61 correction: R32 clarified — getFeatureFlags(supabase) accepts any Supabase client as a parameter and never constructs its own; client-agnostic behavior documented; false getServerClient() association removed)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v4.9
+### Created: July 2026 | Last Updated: August 2026 — v4.9 (DOC.63: Phase INVENTORY + Phase FORUMS added as pre-launch builds — full forward specs in §8, §9, §11; inventory_manager boolean on admin_users; 2 new feature flags (feature_inventory, feature_forums); 12 new schema tables; §2 terminology, §8 Setup Panel, §13 R34 updated)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase AUDITIONS (Audition Management System) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Migration 032 applied. Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase AUDITIONS (Audition Management System) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Migration 032 applied. Pre-Phase-17 required: 033_audition_schema_fixes.sql. Phase INVENTORY (Inventory Management System) and Phase FORUMS (Internal Discussion Forums) confirmed as pre-launch builds. Phase 17 (Launch) follows. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -42,6 +42,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules), and `/crew/auditions` (Audition Management — Phase AUDITIONS, feature_auditions flag; full read/write on assigned auditions and shows). Assignment is independent per resource: Production users are granted access to a show explicitly (via show editors assignment) OR to a standalone audition directly (via audition assignments). Both paths are independent. Show assignment grants access to all auditions linked to that show via show_id. Audition assignment grants access to that specific audition only. |
 | **Auditioner** | A person who signs up to audition for a show or production. Auditioners are NOT volunteers — they are a separate data entity stored in `audition_signups`, not in the `volunteers` table. Signing up to audition does not create a volunteer record. A "convert to volunteer" admin action (Phase AUDITIONS, status = Cast) can optionally create a linked volunteer record after casting. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
+| **Inventory Manager** | A boolean flag (`inventory_manager`) on admin_users. When true on an Editor account: full write access to inventory (create/edit/deactivate items, manage categories/locations, create checkouts). SA and OA have full inventory write access always regardless of this flag. Viewer and Production roles have no inventory access at all. Toggle managed by SA/OA on the User Management page (same pattern as `calendar_editor`). Added Phase INVENTORY (Migration 034). |
 | **Owner Admin** | New role between Super Admin and Editor (introduced for OpenCall OS client deployments). Full operational access identical to Super Admin in all areas EXCEPT the Setup Panel (`/crew/settings/setup`), which is Super Admin only. Owner Admin can create and manage Editor, Viewer, Production, and Owner Admin accounts. Owner Admin can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. In every client deployment, the theater's own staff hold Owner Admin accounts; Jonathan holds the Super Admin account permanently. |
 | **OpenCall OS** | The commercial product built on this codebase template. Each client organization gets their own self-contained deployment configured via the Setup Panel. No code changes required between client deployments — all customization is data-driven through `app_settings`. |
 | **Setup Panel** | Super Admin-only configuration panel at `/crew/settings/setup`. Allows Jonathan to brand and configure each OpenCall OS client deployment without code changes: org identity, brand colors, logo, email configuration, feature flags, and instance label. Owner Admins are hard-blocked from this route. |
@@ -1080,6 +1081,123 @@ Pages and components:
 - `components/audition/AuditionUploadClient.tsx` — late upload form
 - `components/audition-checkin/AuditionCheckInClient.tsx`
 
+**Inventory Management (`/crew/inventory`, Phase INVENTORY — pre-launch):**
+Gated behind `feature_inventory` flag (R34 compliant). Visible to SA, OA, Editor (read-only unless `inventory_manager = true`), and Viewer (read-only). Production role has no access. No public-facing surface — admin backend only.
+
+**Access model:**
+- SA and OA: full read/write always (no flag needed).
+- Editor with `inventory_manager = true`: full read/write — create/edit/deactivate items, manage categories and locations, create and return checkouts.
+- Editor without `inventory_manager`: read-only (view items, view checkout history; no private notes).
+- Viewer: read-only (same as Editor without flag — no private notes).
+- Production: no access (not in Production allowlist; no proxy exception for this route).
+- `inventory_manager` boolean on `admin_users` (NOT NULL DEFAULT false). Toggle managed by SA/OA on User Management page via `toggleInventoryManager()` in `lib/actions/users.ts` (same pattern as `toggleCalendarEditor()`). Logged as `user.inventory_manager_change` in `audit_log`. DB CHECK constraint: `inventory_manager = false` when role is `'production'` or `'viewer'` (enforced at DB level).
+
+**Item records:**
+Each item has: auto-generated human-readable ID with category prefix (e.g. `COST-0042`, `PROP-0017` — prefix defined per category, 2–6 uppercase chars, zero-padded 4-digit counter), name, category (FK → `inventory_categories`), description, condition (enum: `excellent` / `good` / `fair` / `poor`), one or more storage locations (from managed `inventory_locations` list OR freeform text — both available per item, stored in `inventory_item_locations`), optional photo attachments (multiple, P-DC pattern, `media` bucket under `inventory/[item_id]/[uuid].[ext]`), active/inactive status, created/updated timestamps.
+
+**Private notes:** Append-only entries on each item. Visible to SA, OA, and Editor only — Viewers cannot see them. Same append-only pattern as volunteer notes (no UPDATE/DELETE RLS). Author name + timestamp on each note. Stored in `inventory_notes` table.
+
+**ID generation:** Server-side utility function `generateItemNumber(categoryId, supabase)` queries the category prefix, counts existing items in that category, and returns `PREFIX-NNNN`. Called at item creation. Prefix is unique per category (UNIQUE constraint on `inventory_categories.prefix`).
+
+**Categories and locations:**
+- `inventory_categories` — admin-managed list (SA/OA/inventory_manager): name, prefix (2–6 uppercase chars, UNIQUE), sort_order, is_active. Managed at `/crew/settings/inventory` (SA/OA/inventory_manager — settings-level page).
+- `inventory_locations` — admin-managed list (SA/OA/inventory_manager): name, sort_order, is_active. Same settings page. Items can reference managed locations OR a freeform text location — both coexist per item via `inventory_item_locations` table.
+
+**Checkout system:**
+Only SA, OA, and `inventory_manager` Editors can create checkouts. A single checkout transaction covers multiple items. Each checkout records: one or more items (via `inventory_checkout_items` join table), checkout target (one of three types — `show`: FK to `shows` table; `user`: FK to `admin_users`; `custom`: freeform name + contact info), optional expected return date (date column — after which the item shows as Overdue in the UI, visual flag only, no email notification), checkout notes (SA/OA/Editor only — not visible to Viewers), return notes (same visibility), checked-out-by (the admin who logged it), checkout date. Return is logged per checkout (not per item individually). `returned_at` timestamptz is set on the `inventory_checkouts` row.
+
+Overdue detection: computed at query time — `expected_return_date < CURRENT_DATE AND returned_at IS NULL`. No cron needed. The "Overdue" availability filter applies this WHERE clause.
+
+**QR tags and print export:**
+Each item has a QR code generated via `generateQR()` from `lib/qr.ts` (Level H, R6). QR links to `/crew/inventory/[id]` (the item detail page — admin-authenticated, requires login). Tags display: item name, category name, human-readable item ID, and the QR code. Print export: admins mass-select items on the list page via checkboxes, click "Print Tags" → server-side route handler at `/api/inventory/tags` generates a multi-tag PDF via `@react-pdf/renderer` using the `createStyles()` factory pattern (R33/THEME.4 — brand colors passed as props, not module-scope). Fixed filename: `inventory-tags.pdf`.
+
+**Item list and filters:**
+Default view: active items only (toggle to show inactive). Filters: Category, Availability (All / Available / Checked Out / Overdue), Condition, Storage Location. Keyword search on name and description. Checkbox multi-select for tag printing.
+
+**Deactivation and deletion:**
+Deactivating an item (retiring it) removes it from the default list view. Items with unreturned checkouts cannot be deactivated until those are returned (action returns an error). When deactivating, system prompts: keep as inactive record OR delete permanently. Permanent delete cascades via FK (photos, notes, checkout items, checkout history all deleted). Hard delete is exposed only after deactivation.
+
+**Prompt structure (6 prompts):**
+- INVENTORY.A — Read-only audit (no code): audit `admin_users` schema, `lib/feature-flags.ts`, `proxy.ts`, `Sidebar.tsx`, `lib/actions/setup.ts`, `setup/page.tsx`, `HelpContent.tsx` live section order.
+- INVENTORY.1 — Migration 034 (all 9 inventory tables + `inventory_manager` column on `admin_users`) + 5-file flag pattern (`feature_inventory`) + `inventory_manager` toggle on User Management page + proxy.ts (matcher + flag block, no Production exception) + Sidebar 4-part atomic edit.
+- INVENTORY.2 — Settings page `/crew/settings/inventory` (category management + location management, SA/OA/inventory_manager) + item list page `/crew/inventory` (Server Component shell + Client Component list, creation modal, item number auto-generation) + `lib/actions/inventory-settings.ts` + `lib/actions/inventory.ts`.
+- INVENTORY.3 — Item detail page `/crew/inventory/[id]`: photo gallery (P-DC multi-upload, 6th sanctioned XHR file, `InventoryPhotoUploader.tsx`, `inventory/[item_id]/[uuid].[ext]` path), private notes section (SA/OA/Editor only, append-only), item edit form, deactivation flow (checkout guard + confirm prompt + permanent delete option).
+- INVENTORY.4 — Checkout system: checkout creation modal (multi-item selector, target type segmented control — Show / User / Custom, expected return date, checkout notes), checkout history on item detail (timeline with return status, overdue flag), active checkouts panel on list page, return action. `lib/actions/inventory-checkouts.ts`.
+- INVENTORY.5 — QR code display on item detail + printable tag PDF export (multi-select on list page → `/api/inventory/tags` route handler, `@react-pdf/renderer` `createStyles()` factory, fixed filename `inventory-tags.pdf`) + HelpContent new section.
+
+**Key files (Phase INVENTORY — pending build):**
+- `lib/actions/inventory-settings.ts` — category + location CRUD (SA/OA/inventory_manager)
+- `lib/actions/inventory.ts` — item CRUD, item number generation, photo signed URLs, deactivation
+- `lib/actions/inventory-checkouts.ts` — checkout creation, return, history queries
+- `app/crew/(app)/inventory/page.tsx` — item list page
+- `app/crew/(app)/inventory/[id]/page.tsx` — item detail page
+- `app/crew/(app)/settings/inventory/page.tsx` — categories + locations management
+- `app/api/inventory/tags/route.ts` — PDF tag export route handler
+- `components/crew/inventory/InventoryListClient.tsx` — list + creation modal
+- `components/crew/inventory/InventoryDetailTabs.tsx` — detail tabs (Overview, Photos, Notes, Checkouts)
+- `components/crew/inventory/InventoryPhotoUploader.tsx` — P-DC multi-upload (6th sanctioned XHR file)
+- `components/crew/inventory/CheckoutModal.tsx` — multi-item checkout creation
+
+**Internal Forums (`/crew/forums`, Phase FORUMS — pre-launch):**
+Gated behind `feature_forums` flag (R34 compliant). Admin backend only — no public-facing surface. SA and OA see all forums always. All other roles (Editor, Viewer, Production) see only forums they have been explicitly granted access to. Access is checked at query time — the forum list is filtered server-side, never client-side hidden.
+
+**Forum structure (jcink-style, full depth):**
+Forum Index → Categories (organizational headers, not postable) → Forums → Threads → Posts (replies). SA/OA create and manage categories and forums from a dedicated management interface at `/crew/forums/manage`.
+
+**Access grants (per forum — three types, any combination):**
+- Role grant: all users of a given role (e.g. "all Editors"). Any user with that role sees the forum automatically.
+- Group grant: all members of a named user group. Groups are managed separately at `/crew/settings/groups`.
+- Individual grant: a specific admin user by name.
+A user sees a forum if they match ANY grant. SA/OA see everything regardless of grants. Access grants are managed per-forum by SA/OA from the forum management interface.
+
+**User groups (`/crew/settings/groups`, SA/OA only):**
+Named groups (e.g. "Young Leadership Council," "Theater Executives," "Spring 2026 Team") with admin user membership. Users can belong to multiple groups. Groups feed into forum access grants and have no other platform function. Settings hub card added for Groups.
+
+**Moderation:**
+SA and OA have full moderation capabilities across all forums: edit posts, delete posts (soft delete — body replaced with "[Post deleted]", row preserved for thread structure), lock threads (no new replies), pin threads (appear at top of thread list), move threads between forums. SA/OA can appoint per-forum moderators from `forum_moderators` table — moderators have the same capabilities within their assigned forum only.
+
+**Threads and posts:**
+Anyone with forum access can create threads and post replies. Thread creation: prefix selector (admin-managed per-forum list, e.g. [ANNOUNCEMENT], [DISCUSSION], [QUESTION]), title, opening post body. Post body: full rich TipTap editor (`immediatelyRender: false`) with StarterKit + `extension-link` + `extension-underline` extensions. Toolbar: Bold, Italic, Underline, H1, H2, H3, Bullet List, Ordered List, Blockquote, Link, Horizontal Rule. Post HTML stored in `forum_posts.body_html`, sanitized via `sanitize-html` at save time (same R31 pattern as blast — broader allowlist since posts are admin-to-admin, not outbound email). Displayed via `dangerouslySetInnerHTML` with sanitized HTML.
+
+**File attachments on posts:** P-DC pattern (7th sanctioned XHR file — `ForumPostComposer.tsx`). Multiple attachments per post. Storage path: `forums/[post_id]/[uuid].[ext]` in `media` bucket. Temp-key pattern: attachments uploaded before post creation using a temp identifier, confirmed and re-pathed at post creation time to avoid orphaned storage objects.
+
+**Thread subscriptions and notifications:**
+Users manually subscribe to threads (no auto-subscribe on post). When subscribed, user receives an email notification (`sendForumNotificationEmail()` in `lib/email.ts`) on each new reply to that thread. Non-blocking send (try/catch, errors swallowed). Logged to `email_log`. Users can unsubscribe from any thread. Subscribe/unsubscribe toggle visible on thread view.
+
+**Unread tracking:**
+`forum_post_reads` table tracks per-user read state (one row per user per post once read). When a user opens a thread, all posts in that thread are batch-upserted as read for that user. Forum index and thread list show unread indicators (bold text or badge) on forums/threads containing unread posts. Unread count computed at render time from `forum_post_reads` — no denormalized counter column.
+
+**Thread sort:** Pinned threads first (is_pinned DESC), then by updated_at DESC (last reply bumps thread to top).
+
+**Post editing:** Users can edit their own posts indefinitely (no time window). Moderators and SA/OA can edit any post. `edited_at` timestamptz set on edit, displayed in UI as "(edited)".
+
+**Soft deletes:** `forum_posts.is_deleted = true` hides the body (shows "[Post deleted]") but preserves the row. Thread reply counts remain accurate. Only moderators, SA, and OA can delete posts (own posts can also be deleted by the author — sets is_deleted).
+
+**Prompt structure (6 prompts):**
+- FORUMS.A — Read-only audit (no code): audit `lib/feature-flags.ts`, `proxy.ts` (matcher + Production exception needed — Production has forums access), `Sidebar.tsx` (4-part atomic edit, Production allowlist entry required), `lib/actions/setup.ts`, `setup/page.tsx`, `HelpContent.tsx` live section order. Also audit existing TipTap extension list in `BlastComposer.tsx` and `AuditionDetailTabs.tsx` to confirm installed extensions.
+- FORUMS.1 — Migration 035 (12 forum tables) + 5-file flag pattern (`feature_forums`) + proxy.ts (matcher + Production exception + flag block) + Sidebar 4-part atomic edit (Production allowlist included) + User Groups settings page `/crew/settings/groups` (SA/OA only: create/rename/delete groups, add/remove members with name search) + Settings hub Groups card. `lib/actions/forum-groups.ts`.
+- FORUMS.2 — Forum management interface `/crew/forums/manage` (SA/OA only): category CRUD (add/rename/reorder/delete), forum CRUD within categories (add/rename/describe/reorder/archive), per-forum access grants UI (all three grant types), per-forum moderator assignment, per-forum thread prefix management. `lib/actions/forum-admin.ts`.
+- FORUMS.3 — Forum index `/crew/forums` (filtered by access at query time, unread indicators, per-forum last-post info) + thread list page `/crew/forums/[forumId]` (pinned first, then by last activity, unread per thread, mark-all-read action) + read tracking (batch upsert to `forum_post_reads` on thread open). `lib/actions/forums.ts` + `lib/data/forums.ts`.
+- FORUMS.4 — Thread view `/crew/forums/[forumId]/[threadId]` (posts chronological, rendered HTML, edit/delete controls, subscribe/unsubscribe toggle, mark-read on view) + post composer (TipTap `immediatelyRender: false`, full toolbar, file attachments via P-DC XHR, `ForumPostComposer.tsx`). `lib/actions/forum-posts.ts`.
+- FORUMS.5 — Thread creation modal (prefix selector, title, opening post, attachments) + moderation actions (lock/unlock, pin/unpin, move thread) + post editing (inline TipTap editor replaces body, sets edited_at) + soft delete action + subscription email notification (`sendForumNotificationEmail()` in `lib/email.ts`). `lib/actions/forum-moderation.ts`.
+
+**Key files (Phase FORUMS — pending build):**
+- `lib/actions/forum-groups.ts` — user group CRUD + membership management
+- `lib/actions/forum-admin.ts` — category/forum/prefix/grant/moderator management (SA/OA)
+- `lib/actions/forums.ts` — forum index + thread list queries (access-filtered)
+- `lib/data/forums.ts` — data layer (canAccessForum(), isForumModerator(), unread counts)
+- `lib/actions/forum-posts.ts` — post creation, editing, soft delete, attachment confirmation
+- `lib/actions/forum-moderation.ts` — lock, pin, move, subscription notifications
+- `app/crew/(app)/forums/page.tsx` — forum index
+- `app/crew/(app)/forums/manage/page.tsx` — forum management (SA/OA)
+- `app/crew/(app)/forums/[forumId]/page.tsx` — thread list
+- `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` — thread view
+- `app/crew/(app)/settings/groups/page.tsx` — user groups management
+- `components/crew/forums/ForumPostComposer.tsx` — TipTap post editor with attachments (7th sanctioned XHR file)
+- `components/crew/forums/ForumIndexClient.tsx`
+- `components/crew/forums/ThreadListClient.tsx`
+- `components/crew/forums/ThreadViewClient.tsx`
+
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
 (Viewers see a locked message). Stub replaced entirely.
@@ -1232,7 +1350,7 @@ Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 s
 
 Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 6 — Feature Flags: Five toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals` and `/crew/auditions` alongside existing paths.
+Section 6 — Feature Flags: Seven toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, and `/crew/forums` alongside existing paths.
 
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
@@ -1241,6 +1359,8 @@ Section 6 — Feature Flags: Five toggles, one per flag, one Save button. Each f
 | Email Blast Composer | `feature_blast` | `'true'` | `/crew/communication`, blast action guards |
 | Rehearsal Management | `feature_rehearsals` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/rehearsals/*`, `/rehearsal-checkin/*`, `createRehearsalBatch()` flag guard, Rehearsals sidebar link |
 | Audition Management | `feature_auditions` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/auditions/*`, `/auditions/*`, `/audition-checkin/*`, all audition server action guards, Auditions sidebar link |
+| Inventory Management | `feature_inventory` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/inventory/*`, all inventory server action guards, Inventory sidebar link |
+| Internal Forums | `feature_forums` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/forums/*`, all forum server action guards, Forums sidebar link |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -1630,7 +1750,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 033. No pending migrations.
+**Next migration:** 033 (required pre-Phase-17 — `033_audition_schema_fixes.sql`, not yet written or applied). After 033: 034 (`034_inventory_management.sql` — Phase INVENTORY), then 035 (`035_forums.sql` — Phase FORUMS).
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -2100,36 +2220,48 @@ role             text NOT NULL CHECK (role IN (
 -- accounts. Cannot create or deactivate super_admin
 -- accounts. Permissions expanded in ADMIN.33.
 is_active        boolean NOT NULL DEFAULT true
-calendar_editor  boolean NOT NULL DEFAULT false
+calendar_editor boolean NOT NULL DEFAULT false
+inventory_manager boolean NOT NULL DEFAULT false
 calendar_subscription_token uuid NOT NULL
-  DEFAULT gen_random_uuid()
-last_login               timestamptz
-activity_cleared_at      timestamptz
-created_at               timestamptz NOT NULL DEFAULT now()
+DEFAULT gen_random_uuid()
+last_login timestamptz
+activity_cleared_at timestamptz
+created_at timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_admin_users_email
 -- NOTE: activity_cleared_at added in Migration 007.
 -- Null = never cleared; all feed events treated
 -- as new until first clear.
 -- NOTE: 'production' added to role CHECK in Migration
---   017 (CAL.2). Production accounts have calendar-only
---   access — see §7 roles table.
+-- 017 (CAL.2). Production accounts have calendar-only
+-- access — see §7 roles table.
 -- NOTE: calendar_editor boolean added in Migration 017
---   (CAL.2). Default false. When true on an editor,
---   viewer, or owner_admin account: direct write access
---   to calendar (events approved immediately). DB CHECK
---   constraint enforces calendar_editor = false on
---   super_admin and production accounts. owner_admin
---   CAN have calendar_editor = true (CHECK constraint
---   updated in Migration 023 / SETUP.0). UI toggle built
---   CAL.6 on /crew/settings/users (Super Admin only) via
---   toggleCalendarEditor() in lib/actions/users.ts.
---   Logged as user.calendar_editor_change in audit_log.
+-- (CAL.2). Default false. When true on an editor,
+-- viewer, or owner_admin account: direct write access
+-- to calendar (events approved immediately). DB CHECK
+-- constraint enforces calendar_editor = false on
+-- super_admin and production accounts. owner_admin
+-- CAN have calendar_editor = true (CHECK constraint
+-- updated in Migration 023 / SETUP.0). UI toggle built
+-- CAL.6 on /crew/settings/users (Super Admin only) via
+-- toggleCalendarEditor() in lib/actions/users.ts.
+-- Logged as user.calendar_editor_change in audit_log.
+-- NOTE: inventory_manager boolean added in Migration 034
+-- (Phase INVENTORY). Default false. When true on an
+-- editor account: full write access to inventory
+-- (create/edit/deactivate items, manage categories
+-- and locations, create checkouts). SA and OA have
+-- full inventory write access always. DB CHECK
+-- constraint enforces inventory_manager = false on
+-- production and viewer accounts. UI toggle managed
+-- by SA/OA on /crew/settings/users via
+-- toggleInventoryManager() in lib/actions/users.ts.
+-- Logged as user.inventory_manager_change in audit_log.
 -- NOTE: calendar_subscription_token added Migration 021
---   (CAL.7). uuid NOT NULL DEFAULT gen_random_uuid().
---   UNIQUE index idx_admin_users_calendar_token.
---   Used by /api/calendar/feed.ics to authenticate
---   calendar app subscriptions without a session cookie.
---   Rotate via rotateCalendarToken() server action.
+-- (CAL.7). uuid NOT NULL DEFAULT gen_random_uuid().
+-- UNIQUE index idx_admin_users_calendar_token.
+-- Used by /api/calendar/feed.ics to authenticate
+-- calendar app subscriptions without a session cookie.
+-- Rotate via rotateCalendarToken() server action.
 ```
 
 ### forms
@@ -2828,6 +2960,28 @@ toggle row for this flag. `saveFeatureFlags()` revalidates
 `/crew/auditions` alongside existing routes.
 Total active SETUP keys: 19. Setup Panel fetches 20 keys
 total (19 SETUP keys + default_reply_to).
+
+**`feature_inventory` key added in Migration 034 (Phase INVENTORY):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_inventory', '') ON CONFLICT (key) DO NOTHING`.
+Value `''` evaluates as enabled (`!== 'false'`). Added to
+`FeatureFlags` type and `getFeatureFlags()` in
+`lib/feature-flags.ts`. Setup Panel Section 6 has a sixth
+toggle row for this flag. `saveFeatureFlags()` revalidates
+`/crew/inventory` alongside existing routes.
+Total active SETUP keys: 20. Setup Panel fetches 21 keys
+total (20 SETUP keys + default_reply_to).
+
+**`feature_forums` key added in Migration 035 (Phase FORUMS):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_forums', '') ON CONFLICT (key) DO NOTHING`.
+Value `''` evaluates as enabled (`!== 'false'`). Added to
+`FeatureFlags` type and `getFeatureFlags()` in
+`lib/feature-flags.ts`. Setup Panel Section 6 has a seventh
+toggle row for this flag. `saveFeatureFlags()` revalidates
+`/crew/forums` alongside existing routes.
+Total active SETUP keys: 21. Setup Panel fetches 22 keys
+total (21 SETUP keys + default_reply_to).
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
 Every new feature flag requires exactly 5 file changes:
@@ -4762,7 +4916,7 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
 - Run through all 8 Setup Panel sections and populate with
   production 30BN values (org identity, brand colors, logo,
   favicon, email config, feature flags, instance label, 404 page)
-- Confirm all five feature flags enabled for launch (`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`)
+- Confirm all seven feature flags enabled for launch (`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`)
 - Work through Deferred Verifications document (v15, 774 items)
 
 **17.2 — Domain & DNS**
@@ -4955,7 +5109,15 @@ added to getRehearsalCheckInData() (Q1 — public page needed
 it; moved to shared RehearsalEventSummary base type).
 10 files modified + 2 created.
 
-### Phase CAST — Cast Member Portal (named future phase, post-Phase 21)
+### Phase INVENTORY — Inventory Management System (pre-launch)
+
+Full forward spec in §8 (Inventory Management section) and §9 (admin_users + app_settings + schema tables). Prompt structure: INVENTORY.A (audit) → INVENTORY.1 (migration + flag + user management toggle + sidebar) → INVENTORY.2 (settings page + item list) → INVENTORY.3 (item detail + photos + notes) → INVENTORY.4 (checkout system) → INVENTORY.5 (QR tags + PDF export + HelpContent). Migration: 034. Feature flag: `feature_inventory`. New `inventory_manager` boolean on `admin_users`. 9 new tables: `inventory_categories`, `inventory_locations`, `inventory_items`, `inventory_item_locations`, `inventory_photos`, `inventory_notes`, `inventory_checkouts`, `inventory_checkout_items`. 6th sanctioned XHR file: `InventoryPhotoUploader.tsx`. New route at `/api/inventory/tags` (PDF tag export).
+
+### Phase FORUMS — Internal Discussion Forums (pre-launch)
+
+Full forward spec in §8 (Internal Forums section) and §9 (app_settings + schema tables). Prompt structure: FORUMS.A (audit) → FORUMS.1 (migration + flag + user groups settings + sidebar with Production allowlist) → FORUMS.2 (forum management interface — SA/OA) → FORUMS.3 (forum index + thread list + read tracking) → FORUMS.4 (thread view + post composer + attachments) → FORUMS.5 (thread creation + moderation actions + subscription emails). Migration: 035. Feature flag: `feature_forums`. Production role has access (Production allowlist entry in proxy.ts and Sidebar required). 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. 7th sanctioned XHR file: `ForumPostComposer.tsx`. New `sendForumNotificationEmail()` in `lib/email.ts`. New Settings hub card for Groups (`/crew/settings/groups`).
+
+### Phase CAST — Cast Member Portal (post-launch)
 
 Grows from Phase 21 infrastructure. Not yet fully specced. Key planned features:
 - Cast member entity (separate from admin_users, own Supabase Auth accounts, own frontend login)
@@ -5131,7 +5293,7 @@ After Phase THEME ships, all components that reference brand-driven colors (`bg-
 
 ### R34 — All Non-Core Features Must Be Built Flag-Ready
 
-Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21), Audition Management (`feature_auditions` — Phase AUDITIONS). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
+Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21), Audition Management (`feature_auditions` — Phase AUDITIONS), Inventory Management (`feature_inventory` — Phase INVENTORY), Internal Forums (`feature_forums` — Phase FORUMS). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
 
 ### R35 — Never Pair Hand-Authored @layer utilities Classes With Native Tailwind dark: Utilities on the Same Property
 
@@ -5261,6 +5423,8 @@ logged)*
 *v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
 *v4.5 (August 2026 — Phase 21 complete: §1 header + current phase updated (Phase 21 complete, Phase 17 next); §1 public surfaces: /rehearsal-checkin/[token] added; §2 Production row: /crew/rehearsals added (flag-gated, assigned-only); §7 proxy.ts section: Phase 21 additions documented (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /rehearsal-checkin/[token] added; §8 Help System: 13 → 14 sections, 32 → 37 HelpTooltips, Phase 21 anchors added, Rehearsals visible to Production; §8 Setup Panel Section 6: 4th flag toggle (feature_rehearsals); §8 new Rehearsal Management section (full spec: schedule list, detail, roster/dates/attendance tabs, public check-in, key files, two-file server action split confirmed); §9 calendar_events.check_in_token added; §9 three new table blocks (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance); §9 Migration 031 status block; §9 next migration pointer updated (no pending migrations); §9 feature_rehearsals seed documented + SETUP key count 17 → 18, fetch count 18 → 19; §9 admin_users.id RLS note expanded; §11 header updated (Phase 21 complete, Phase 17 next); §11 Phase 21 section replaced (forward-looking spec → completed 4-prompt build summary with 21.A–21.3 each described, key findings documented); §13 R34 flag list: feature_rehearsals added; §13 R37 added (admin_users.id = auth.uid(), no auth_user_id column — RLS authoring rule); DOC.56 logged)*
 *v4.6 (August 2026 — Phase AUDITIONS specced as pre-launch build: §1 header + current phase updated (Phase AUDITIONS next, Phase 17 follows); §1 public surfaces: /auditions/[id] + /audition-checkin/[token] added; §2 Production row expanded (assigned shows + assigned auditions, two independent paths); §2 Auditioner terminology row added; §7 roles table Production row updated (shows + auditions access, assignment model); §7 proxy.ts: Phase AUDITIONS proxy additions block added (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /auditions/[id] + /audition-checkin/[token] added; §8 new Audition Management section (full spec: list, six-tab detail, public signup, check-in, email templates, email functions, key files, calendar integration, Production assignment model); §8 Show Listing + Landing Page: Upcoming Auditions card noted; §8 Setup Panel Section 6: 5th flag toggle (feature_auditions); §9 feature_auditions seed block + SETUP key count 18→19 + fetch count 19→20; §9 Migration 032 pending status block; §9 eight new table schema blocks (auditions, audition_roles, audition_slots, audition_signups, audition_signup_notes, audition_materials, audition_assignments, audition_email_templates); §11 header updated (Phase AUDITIONS next, Phase 17 follows); §11 Phase AUDITIONS forward-spec section added (11-prompt structure, all architectural decisions); §11 Phase 17.1 flag count updated (three → five); §13 R34 flag list: feature_auditions added; §13 R38 added (TipTap merge tag extension pattern — mergeTag node type, toolbar inserter, substitution at send time, live preview server action, escapeHtml on substituted values); DOC.58 logged)*
+*v4.9 (August 2026 — DOC.63: Phase INVENTORY + Phase FORUMS added as confirmed pre-launch builds: §1 current phase updated; §2 inventory_manager terminology row added; §8 Inventory Management section added (full forward spec: access model, item records, categories/locations, checkout system, QR tags, prompt structure, key files); §8 Forums section added (full forward spec: access grants, user groups, thread/post structure, TipTap rich editor, file attachments, subscriptions, unread tracking, moderation, prompt structure, key files); §8 Setup Panel Section 6 updated (5 → 7 toggles, feature_inventory + feature_forums added); §9 admin_users: inventory_manager boolean column + NOTE added (Migration 034); §9 app_settings: feature_inventory + feature_forums seed blocks added (SETUP keys 19 → 21, fetch count 20 → 22); §9 next migration pointer updated (033 required, then 034 + 035 pending); §11 Phase INVENTORY + Phase FORUMS sections added (prompt structures, migration numbers, new table counts, sanctioned XHR files); §11 Phase CAST updated from "post-Phase 21" to "post-launch"; §11 Phase 17.1 flag count updated (5 → 7); §13 R34 flagged features list updated (feature_inventory + feature_forums added); DOC.63 logged)*
+
 *v4.8 (August 2026 — DOC.61 correction: §13 R32 updated — getFeatureFlags(supabase) client-agnostic signature documented; false getServerClient() association corrected; Brief header bumped to v4.8; DOC.61 logged)*
 
 *v4.7 (August 2026 — Phase AUDITIONS complete: §1 header + current phase updated (Phase AUDITIONS complete, Phase 17 next); §1 public surfaces: /auditions/upload/[token] + /auditions/cancel/[token] added; §3 TipTap custom extension pattern (MergeTagExtension) + immediatelyRender: false noted; §3 feature flag 5-file pattern noted; §6 email send function export status corrected (all exported); §7 Public row: 2 new routes added; §8 Audition Management email functions: all 4 named with triggers; §8 public signup: consent email function corrected (sendAuditionConsentFormRequestEmail not sendConsentFormRequestEmail); §8 self-cancel: cancel page described; §8 key files: complete final list; §8 Overview tab: QR display pattern noted; §8 Email Templates tab: useEditor details (immediatelyRender, 3 instances, async content init); §8 Help System: 14 → 15 sections (Auditions added — corrected to its true position before Getting Help per the live ALL_SECTIONS array, not after as originally drafted); 37 → 40 HelpTooltips; Production sidebar: Auditions + HelpContent visibility noted; Setup Panel Section 6: 5 toggles; §8 About System Emails: 11 → 15 triggers; §9 audition_signups.phone: NOT NULL corrected; §9 audition_materials: original_filename column added; §9 consent_form_submissions: audition_signup_id FK column added; §9 calendar_events: source_audition_id FK column added; source CHECK updated to include 'audition'; §9 email_log: recipient_type CHECK note updated (includes 'audition') — corrected to note the value is not yet exercised by any code path; §9 Migration 032: Pending → Applied (full inline fix inventory; migration-file/live-DB drift flagged); §9 next migration: 033; §9 AuditAction: audition.convert_to_volunteer added; §9 saveFeatureFlags revalidatePath: /crew/auditions added; §11 header updated (Phase AUDITIONS complete, Phase 17 next); §11 Phase AUDITIONS: forward spec → completed summary with all 10 prompt build logs (includes a correction to the AUDITIONS.4b log's Help System section-order claim); §13 R23: formatWallClockCT() signature corrected to 3 args (dateStr, timeStr|null, fmt); formatTime() local helper pattern documented for time without timezone columns; DOC.59 logged. NOTE (Q-item, DOC.59): the original prompt's Edit 5 referenced a separate "§7 public routes table" with a per-route row for /audition-checkin/[token] — no such table exists in this document; its intended content was already covered by the existing §7 Public role-access row, updated in this same pass.)*
