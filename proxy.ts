@@ -132,6 +132,7 @@ export async function proxy(request: NextRequest) {
     pathname !== '/crew/help' &&
     pathname !== '/crew/media' &&
     !pathname.startsWith('/crew/rehearsals') &&
+    !pathname.startsWith('/crew/auditions') &&
     !pathname.startsWith('/crew/shows/')
   ) {
     const { data: adminUser } = await supabase
