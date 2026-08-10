@@ -148,6 +148,8 @@ export type AuditAction =
   | 'forum_prefix.update'
   | 'forum_prefix.reorder'
   | 'forum_prefix.delete'
+  | 'forum_post.create'
+  | 'forum_post_attachment.upload'
 
 export async function logAction(
   adminId: string | null,

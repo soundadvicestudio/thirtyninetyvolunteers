@@ -131,3 +131,55 @@ export type ForumDetail = Forum & {
   category_name: string
   prefixes: ForumThreadPrefix[]
 }
+
+export type ForumPostAttachment = {
+  id: string
+  post_id: string
+  storage_path: string
+  filename: string
+  mime_type: string | null
+  file_size_bytes: number | null
+  uploaded_by: string | null
+  created_at: string
+  signed_url: string | null // populated server-side
+}
+
+export type ForumPostWithDetails = {
+  id: string
+  thread_id: string
+  author_id: string
+  author_name: string // joined from admin_users
+  body_html: string
+  is_deleted: boolean
+  edited_at: string | null
+  created_at: string
+  updated_at: string
+  attachments: ForumPostAttachment[]
+}
+
+export type ThreadViewData = {
+  thread: {
+    id: string
+    forum_id: string
+    prefix_id: string | null
+    prefix_label: string | null // joined
+    title: string
+    created_by: string
+    created_by_name: string // joined from admin_users
+    is_pinned: boolean
+    is_locked: boolean
+    is_deleted: boolean
+    created_at: string
+    updated_at: string
+  }
+  forum: {
+    id: string
+    name: string
+    category_name: string
+  }
+  posts: ForumPostWithDetails[]
+  isSubscribed: boolean
+  isModerator: boolean
+  adminId: string // current user's ID for client-side
+  adminRole: string // current user's role for controls
+}
