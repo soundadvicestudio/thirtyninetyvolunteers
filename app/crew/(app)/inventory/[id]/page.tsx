@@ -5,6 +5,7 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { getInventoryItemById, getInventoryItems } from '@/lib/actions/inventory'
 import { getInventoryCategories } from '@/lib/actions/inventory-settings'
 import { getCheckoutsForItem } from '@/lib/actions/inventory-checkouts'
+import { generateQR } from '@/lib/qr'
 import InventoryDetailTabs from '@/components/crew/inventory/InventoryDetailTabs'
 
 export default async function InventoryItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
 
   if (!item) notFound()
 
+  const { svg: qrSvg, pngBase64: qrPngBase64 } = await generateQR(
+    `${process.env.NEXT_PUBLIC_SITE_URL}/crew/inventory/${id}`
+  )
+
   const canWrite =
     admin.role === 'super_admin' ||
     admin.role === 'owner_admin' ||
@@ -58,6 +63,8 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
         canWrite={canWrite}
         canDelete={canDelete}
         canSeeNotes={canSeeNotes}
+        qrSvg={qrSvg}
+        qrPngBase64={qrPngBase64}
       />
     </div>
   )

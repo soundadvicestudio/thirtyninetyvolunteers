@@ -13,6 +13,7 @@ import {
   addInventoryNote,
 } from '@/lib/actions/inventory'
 import { returnCheckout } from '@/lib/actions/inventory-checkouts'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import InventoryPhotoUploader from '@/components/crew/inventory/InventoryPhotoUploader'
 import CheckoutModal from '@/components/crew/inventory/CheckoutModal'
 import type {
@@ -730,6 +731,11 @@ function CheckoutsTab({
 }) {
   return (
     <div className="p-4 space-y-4">
+      <h2 className="text-sm font-semibold text-dark dark:text-dark-text flex items-center gap-1.5">
+        Checkout History
+        <HelpTooltip anchor="inventory-checkout" label="Inventory Checkout" />
+      </h2>
+
       {item.is_checked_out && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-900/10 p-4">
           <p className="font-medium text-orange-800 dark:text-orange-400">
@@ -769,6 +775,8 @@ export default function InventoryDetailTabs({
   canWrite,
   canDelete,
   canSeeNotes,
+  qrSvg,
+  qrPngBase64,
 }: {
   item: InventoryItemWithStatus
   categories: InventoryCategory[]
@@ -778,6 +786,8 @@ export default function InventoryDetailTabs({
   canWrite: boolean
   canDelete: boolean
   canSeeNotes: boolean
+  qrSvg: string
+  qrPngBase64: string
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
@@ -826,8 +836,48 @@ export default function InventoryDetailTabs({
             />
           )}
           {activeTab === 'qr' && (
-            <div className="py-8 text-center text-mid-gray dark:text-dark-muted">
-              <p>QR code and tag printing coming soon.</p>
+            <div className="p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-dark dark:text-dark-text flex items-center gap-1.5">
+                QR Code &amp; Tag
+                <HelpTooltip anchor="inventory-tags" label="Inventory Tags" />
+              </h2>
+              <p className="text-sm text-mid-gray dark:text-dark-muted">
+                {"This QR code links to this item's detail page. Scan to quickly access item information."}
+              </p>
+              {/* White container required for QR scanability regardless of dark mode */}
+              <div className="inline-block rounded-lg border border-divider dark:border-dark-border bg-white p-4">
+                <div dangerouslySetInnerHTML={{ __html: qrSvg }} className="w-48 h-48" />
+              </div>
+              <div className="flex gap-4">
+                <a
+                  href={`data:image/png;base64,${qrPngBase64}`}
+                  download="inventory-tag.png"
+                  className="text-sm font-semibold text-brand-primary hover:underline cursor-pointer"
+                >
+                  Download PNG
+                </a>
+                <a
+                  href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`}
+                  download="inventory-tag.svg"
+                  className="text-sm font-semibold text-brand-primary hover:underline cursor-pointer"
+                >
+                  Download SVG
+                </a>
+              </div>
+              <div className={`${cardClasses} p-4`}>
+                <p className="text-sm font-medium text-dark dark:text-dark-text mb-1">Print a tag for this item</p>
+                <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
+                  {"Generate a printable tag with this item's QR code, name, and ID."}
+                </p>
+                <a
+                  href={`/api/inventory/tags?ids=${item.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary-mid transition-colors cursor-pointer"
+                >
+                  Print Tag
+                </a>
+              </div>
             </div>
           )}
         </div>

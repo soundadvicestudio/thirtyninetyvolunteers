@@ -1323,8 +1323,134 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
             <section id="inventory">
               <h2 className={h2Classes}>{`Inventory`}</h2>
               <p className={pClasses}>
-                {`Inventory management is coming soon.`}
+                {`The Inventory system tracks physical assets — costumes, props, equipment, and other items your organization owns. Each item gets a unique ID based on its category, like `}
+                {`COST-0042`}
+                {` for costumes or `}
+                {`PROP-0017`}
+                {` for props.`}
               </p>
+
+              {show('inventory-overview') && (
+                <>
+                  <h3 id="inventory-overview" className={h3Classes}>{`Overview`}</h3>
+                  <p className={pClasses}>{`Who can access inventory:`}</p>
+                  <ul className={ulClasses}>
+                    <li>{`Super Admin and Owner Admin: full read/write access, always.`}</li>
+                    <li>
+                      {`Editor with Inventory Manager access: full read/write. This is set by an admin on your account in User Management.`}
+                    </li>
+                    <li>{`Editor without Inventory Manager access: view only.`}</li>
+                    <li>{`Viewer: view only. Cannot see private notes.`}</li>
+                  </ul>
+                  <Tip>
+                    {`Categories and storage locations are managed at Settings → Inventory Management. Set these up before adding items.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('inventory-items') && (
+                <>
+                  <h3 id="inventory-items" className={h3Classes}>{`Managing Items`}</h3>
+                  <p className={pClasses}>
+                    {`Click `}
+                    <strong>{`Add Item`}</strong>
+                    {` on the inventory list to create a new item. Each item requires a name, category, condition, and at least one storage location.`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>
+                      <strong>{`Item ID: `}</strong>
+                      {`Auto-generated from the category prefix and a counter, like `}
+                      {`COST-0042`}
+                      {`. Cannot be changed after creation.`}
+                    </li>
+                    <li>
+                      <strong>{`Condition: `}</strong>
+                      {`Excellent, Good, Fair, or Poor. Update this as items wear over time.`}
+                    </li>
+                    <li>
+                      <strong>{`Locations: `}</strong>
+                      {`Choose from managed storage locations or enter a freeform location. Items can have multiple location entries.`}
+                    </li>
+                    <li>
+                      <strong>{`Photos: `}</strong>
+                      {`Upload multiple photos on the Photos tab. Photos help identify items quickly.`}
+                    </li>
+                    <li>
+                      <strong>{`Private notes: `}</strong>
+                      {`Append-only notes on the Notes tab, visible to Editors and above. Use these for condition history, repair notes, or context.`}
+                    </li>
+                  </ul>
+                  <p className={pClasses}>
+                    {`To retire an item, use `}
+                    <strong>{`Deactivate Item`}</strong>
+                    {` on its Overview tab. Deactivated items are hidden from the default list but remain in the system. Items with active checkouts must be returned before they can be deactivated.`}
+                  </p>
+                </>
+              )}
+
+              {show('inventory-checkout') && (
+                <>
+                  <h3 id="inventory-checkout" className={h3Classes}>{`Checkout & Returns`}</h3>
+                  <p className={pClasses}>
+                    {`Use checkouts to track when items leave your storage. A single checkout can cover multiple items checked out together.`}
+                  </p>
+                  <p className={pClasses}>
+                    <strong>{`To check out items: `}</strong>
+                    {`Click `}
+                    <strong>{`Check Out Items`}</strong>
+                    {` on the inventory list, or `}
+                    <strong>{`Check Out This Item`}</strong>
+                    {` on an `}
+                    {`item's`}
+                    {` Checkouts tab. Select the items, choose a target (a show, an admin user, or a custom name and contact), and optionally set an expected return date.`}
+                  </p>
+                  <p className={pClasses}>
+                    <strong>{`Overdue items`}</strong>
+                    {` are flagged automatically when the expected return date passes without a return being logged. No email is sent — this is a visual indicator only.`}
+                  </p>
+                  <p className={pClasses}>
+                    <strong>{`To return items: `}</strong>
+                    {`Find the active checkout on the Active Checkouts panel at the top of the inventory list, or on the `}
+                    {`item's`}
+                    {` Checkouts tab, then click `}
+                    <strong>{`Mark as Returned`}</strong>
+                    {`. You can add return notes at that time.`}
+                  </p>
+                  <Tip>
+                    {`Checkout notes and return notes are visible to Editors and above, not to Viewers.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('inventory-tags') && (
+                <>
+                  <h3 id="inventory-tags" className={h3Classes}>{`Printing Tags`}</h3>
+                  <p className={pClasses}>
+                    {`Each item has a printable QR code tag that links directly to its detail page. Scanning the tag takes you straight to the `}
+                    {`item's`}
+                    {` record.`}
+                  </p>
+                  <p className={pClasses}>
+                    <strong>{`Print a single tag: `}</strong>
+                    {`Open the item and go to the `}
+                    <strong>{`QR`}</strong>
+                    {` tab. Click `}
+                    <strong>{`Print Tag`}</strong>
+                    {` to download a PDF with that `}
+                    {`item's`}
+                    {` tag.`}
+                  </p>
+                  <p className={pClasses}>
+                    <strong>{`Print multiple tags at once: `}</strong>
+                    {`On the inventory list, check the boxes next to the items you want, then click `}
+                    <strong>{`Print Tags`}</strong>
+                    {`. A PDF with all selected tags will download.`}
+                  </p>
+                  <Tip>
+                    {`Tags include the item ID, name, category, and QR code. Print on label stock or cardstock and attach to the item or its storage container.`}
+                  </Tip>
+                </>
+              )}
             </section>
           )}
         </div>

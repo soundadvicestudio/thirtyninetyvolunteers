@@ -549,6 +549,12 @@ export default function InventoryListClient({
     )
   }
 
+  function handlePrintTags() {
+    if (selectedIds.size === 0) return
+    const url = `/api/inventory/tags?ids=${Array.from(selectedIds).join(',')}`
+    window.open(url, '_blank')
+  }
+
   return (
     <div className="space-y-4">
       <ActiveCheckoutsPanel checkouts={activeCheckouts} canWrite={canWrite} />
@@ -634,17 +640,28 @@ export default function InventoryListClient({
         )}
       </div>
 
-      <label className="flex items-center gap-2 cursor-pointer w-fit">
-        <input
-          type="checkbox"
-          checked={showInactive}
-          onChange={handleShowInactiveToggle}
-          className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
-        />
-        <span className="text-sm text-dark dark:text-dark-text">
-          Show inactive {isPending && <span className="text-mid-gray dark:text-dark-muted">(loading…)</span>}
-        </span>
-      </label>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <label className="flex items-center gap-2 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={showInactive}
+            onChange={handleShowInactiveToggle}
+            className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
+          />
+          <span className="text-sm text-dark dark:text-dark-text">
+            Show inactive {isPending && <span className="text-mid-gray dark:text-dark-muted">(loading…)</span>}
+          </span>
+        </label>
+
+        <button
+          type="button"
+          onClick={handlePrintTags}
+          disabled={selectedIds.size === 0}
+          className="text-sm font-semibold text-brand-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+        >
+          {selectedIds.size > 0 ? `Print Tags (${selectedIds.size})` : 'Print Tags'}
+        </button>
+      </div>
 
       {filteredItems.length === 0 ? (
         <div className={`${cardClasses} p-8 text-center`}>
@@ -695,7 +712,6 @@ export default function InventoryListClient({
                     className="border-b border-divider dark:border-dark-border last:border-0 hover:bg-gray-50 dark:hover:bg-dark-surface/50"
                   >
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {/* Tag printing wired in INVENTORY.5 */}
                       <input
                         type="checkbox"
                         checked={selectedIds.has(item.id)}
