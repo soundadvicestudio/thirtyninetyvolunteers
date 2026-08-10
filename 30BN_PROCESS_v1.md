@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.9
-### Created: July 2026 | Last Updated: August 2026 — v4.9 (DOC.67: §7 inventory_manager types/audit.ts→lib/audit.ts corrected; §7 storage dual-client pattern added (getAdminClient() required for storage API calls); §7 Supabase aliased dual self-join workaround added; §7 inventory/ path added to media bucket; §8 XHR 5→6 sanctioned files (InventoryPhotoUploader.tsx); §10 XHR grep updated (6 files); §11 three new checklist items (storage dual-client, route handler .tsx, HelpContent live convention); §13 Phase INVENTORY ✓ Complete + INVENTORY.2–5 logged; DOC.67 logged)
+## 30BN_PROCESS_v1.md — v5.0
+### Created: July 2026 | Last Updated: August 2026 — v5.0 (DOC.70: Phase FORUMS complete — §2 header updated; §7 feature flag list updated (7 active, feature_forums confirmed Migration 035); §7 forums/ path namespace added to media bucket; §7 XHR 6→7 sanctioned files (ForumPostComposer.tsx); §7 TOOLTIP_ANCHOR_MAP updated (4 entries); §7 three new patterns (lib/data/ no 'use server', TipTap Editor|null typing, non-blocking void IIFE); §8 XHR count 6→7; §10 R32 grep comment updated + XHR grep updated; §11 four new checklist items; §13 Phase FORUMS ✓ Complete + prompt log; §14 three new pattern notes; DOC.70 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -459,6 +459,8 @@ Two sanctioned storage buckets exist in this project:
 - `audition-materials/[signup_id]/[type]-[uuid].[ext]` — audition material uploads
   (headshot, resume, sheet_music, mp3, video — Phase AUDITIONS)
 - `inventory/[item_id]/[uuid].[ext]` — inventory item photo uploads (Phase INVENTORY.3)
+- `forums/[post_id]/[uuid].[ext]` — forum post attachments (Phase FORUMS.4); final path after temp-key move
+- `forums/temp/[tempKey]/[uuid].[ext]` — forum post attachment staging (temp-key pre-post upload — moved to final path at post creation via `adminClient.storage.from('media').move()`)
 
 `brand` (public) — brand asset files uploaded via the Setup Panel. Direct URL access without auth. Namespaced paths:
 - `brand/logo/[uuid].png` — org logo uploads
@@ -534,7 +536,7 @@ Sidebar conditionally renders links based on flags passed as props from the crew
 
 The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Active feature flags (seven — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_inventory` was added in Migration 034 (Phase INVENTORY — INVENTORY.1). `feature_forums` will be added in Migration 035 (Phase FORUMS — pending). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
+Active feature flags (seven — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_inventory` was added in Migration 034 (Phase INVENTORY — INVENTORY.1). `feature_forums` was added in Migration 035 (Phase FORUMS — FORUMS.1, commit dde841d, applied). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
 
 Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
 
@@ -671,7 +673,7 @@ The crew sidebar is data-driven via four locations in `components/crew/Sidebar.t
 1. `NAV_ITEMS` — the nav item object (icon, label, href)
 2. `FLAG_GATED_HREFS` — the set of hrefs gated by feature flags
 3. Production role allowlist — the set of hrefs accessible to the Production role (not just SA/OA/Editor/Viewer)
-4. `TOOLTIP_ANCHOR_MAP` — a `Record<string, string>` lookup map for flagged routes that display a HelpTooltip on their sidebar nav link. Maps href → anchor string. Added INVENTORY.1 (replacing a hardcoded `||` ternary). Current entries: `/crew/rehearsals` → `'rehearsals'`, `/crew/auditions` → `'auditions'`, `/crew/inventory` → `'inventory'`. Any new flagged route with a sidebar HelpTooltip must add an entry here — extending the old ternary no longer applies, the map is the authoritative lookup.
+4. `TOOLTIP_ANCHOR_MAP` — a `Record<string, string>` lookup map for flagged routes that display a HelpTooltip on their sidebar nav link. Maps href → anchor string. Added INVENTORY.1 (replacing a hardcoded `||` ternary). Current entries: `/crew/rehearsals` → `'rehearsals'`, `/crew/auditions` → `'auditions'`, `/crew/inventory` → `'inventory'`, `/crew/forums` → `'forums'` (added FORUMS.1). Any new flagged route with a sidebar HelpTooltip must add an entry here — extending the old ternary no longer applies, the map is the authoritative lookup.
 
 All four must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
 - Missing NAV_ITEMS: the link does not appear at all for any role
@@ -854,6 +856,84 @@ utilities must construct their own client internally — a raw Supabase client c
 be passed across the client/server boundary. This is the same principle as
 `syncShowDateToCalendar(showDateId, supabase)` in calendar-sync.ts.
 
+**`lib/data/*.ts` must NOT have 'use server' — extended parameter-passing rule (confirmed FORUMS.3):**
+The `lib/data/*.ts` parameter-passing pattern (established 15.1) has an explicit companion
+constraint: data modules in `lib/data/` must NOT include `'use server'` at the top of the file.
+Adding `'use server'` to a data module turns ALL of its exports into publicly callable server
+actions, which is incorrect — these are internal utilities, not public-facing action endpoints.
+
+Correct architecture:
+- `lib/data/forums.ts` — NO 'use server'; pure data logic; accepts supabase client as param
+- `lib/actions/forums.ts` — 'use server'; constructs client; calls into lib/data/forums.ts
+
+The `'use server'` directive belongs only in files under `lib/actions/` and `app/*/actions/`.
+Any new file in `lib/data/` that uses the parameter-passing pattern must not have it. Confirmed
+FORUMS.3: `lib/data/forums.ts` with 'use server' was one of the quality gate checks — must
+return zero results.
+
+**TipTap `useEditor` overload: always type `Editor | null` explicitly (confirmed FORUMS.5 Q3):**
+`ReturnType<typeof useEditor>` is unreliable when `immediatelyRender: false` is passed.
+TypeScript resolves the last matching overload signature, which may return `Editor`
+(non-null) instead of `Editor | null`. This causes silent null-safety failures: the
+TypeScript compiler does not warn, but runtime null dereferences occur when the editor
+has not yet initialized.
+
+Correct pattern:
+```typescript
+import { useEditor, EditorContent, Editor } from '@tiptap/react'
+
+// WRONG — inferred type may be Editor, not Editor|null
+const editor = useEditor({ ..., immediatelyRender: false })
+
+// CORRECT — explicit typing required
+const editor: Editor | null = useEditor({ ..., immediatelyRender: false })
+```
+
+Also applies to toolbar helper function props:
+```typescript
+// WRONG
+function FormatButton({ editor }: { editor: ReturnType<typeof useEditor> })
+
+// CORRECT
+function FormatButton({ editor }: { editor: Editor | null })
+```
+
+Import `Editor` from `@tiptap/react` (not from `@tiptap/core` — use the re-export from
+the React package). Apply to ALL TipTap editor variables regardless of where they appear.
+Confirmed failure mode (FORUMS.5 Q3): both `ThreadListClient.tsx` and `ThreadViewClient.tsx`
+required the fix before `tsc --noEmit` would pass.
+
+**Non-blocking void IIFE pattern for fire-and-forget async side-effects in server actions (FORUMS.5):**
+When a server action must trigger an async side-effect (e.g., sending a notification email)
+that must never block the action's return value, use the void IIFE pattern:
+
+```typescript
+// Non-blocking notification
+// Errors must never block post creation
+void (async () => {
+  try {
+    await sendForumNotificationEmail(threadId, postId)
+  } catch {
+    // Swallow — notification failure is non-fatal
+  }
+})()
+```
+
+This fires the async operation without awaiting it, so the server action returns
+immediately. The `void` keyword explicitly discards the Promise (preventing TypeScript
+`@typescript-eslint/no-floating-promises` lint warnings in strict configs). The try/catch
+ensures errors in the side-effect can never surface to the caller.
+
+Use this pattern ONLY for genuinely non-critical side-effects where failure is acceptable
+and must be invisible to the user. Examples: subscription notification emails, audit log
+writes that cannot be allowed to fail silently. Do NOT use for operations where failure
+matters (storage moves, DB mutations that are part of the core business logic) — those
+should be awaited and their errors handled.
+
+Applied in `lib/actions/forum-posts.ts`: `createForumPost()` fires
+`sendForumNotificationEmail(threadId, postId)` via this pattern after the post is
+created and revalidatePath calls are made.
+
 ---
 
 ## 8. Build Report Format
@@ -967,8 +1047,8 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
-**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS, Phase INVENTORY):**
-The project's default HTTP pattern is `fetch()`. There are six sanctioned deviations,
+**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS, Phase INVENTORY, Phase FORUMS):**
+The project's default HTTP pattern is `fetch()`. There are seven sanctioned deviations,
 all in file upload components with progress tracking:
 - `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
 - `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
@@ -976,8 +1056,9 @@ all in file upload components with progress tracking:
 - `components/audition/AuditionSignupClient.tsx` — inline material upload at audition signup (Phase AUDITIONS)
 - `components/audition/AuditionUploadClient.tsx` — late material upload via upload_token link (Phase AUDITIONS)
 - `components/crew/inventory/InventoryPhotoUploader.tsx` — inventory item photo upload (Phase INVENTORY.3)
+- `components/crew/forums/ForumPostComposer.tsx` — forum post attachment upload, including attachments on thread replies (Phase FORUMS.4 — 7th sanctioned XHR file; uses sequential upload mirroring InventoryPhotoUploader.tsx's `uploadWithProgress()` pattern)
 
-Body format for all six: FormData with `cacheControl: '3600'` and file appended under
+Body format for all seven: FormData with `cacheControl: '3600'` and file appended under
 empty field name `''` — not a raw file body with explicit Content-Type header.
 
 `fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
@@ -1218,12 +1299,13 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 
 ```bash
 # Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
-# Active flags after Migration 034 (Phase INVENTORY):
+# Active flags after Migration 035 (Phase FORUMS):
 #   feature_calendar, feature_checkin, feature_blast,
-#   feature_rehearsals, feature_auditions, feature_inventory
-# feature_forums pending (Migration 035 — Phase FORUMS)
-# (feature_opportunities, feature_hours_milestones,
-#  feature_documents deleted — core features)
+#   feature_rehearsals, feature_auditions,
+#   feature_inventory, feature_forums
+# All seven flags active. (feature_opportunities,
+#  feature_hours_milestones, feature_documents
+#  deleted — core features)
 grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions\|feature_inventory\|feature_forums" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
@@ -1294,14 +1376,15 @@ grep -n "getServerClient" \
 ```bash
 # Confirm XHR usage is intentional (established 15.2/15.3/SETUP.2)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Sanctioned XHR locations (upload progress tracking — six total):
+# Sanctioned XHR locations (upload progress tracking — seven total):
 #   - components/consent/ConsentUploadForm.tsx (15.2)
 #   - components/crew/media/MediaLibrary.tsx (15.3)
 #   - components/crew/settings/BrandImageUploader.tsx (SETUP.2)
 #   - components/audition/AuditionSignupClient.tsx (Phase AUDITIONS)
 #   - components/audition/AuditionUploadClient.tsx (Phase AUDITIONS)
 #   - components/crew/inventory/InventoryPhotoUploader.tsx (Phase INVENTORY.3)
-# All six use XHR because fetch() does not support upload progress
+#   - components/crew/forums/ForumPostComposer.tsx (Phase FORUMS.4 — 7th sanctioned XHR file)
+# All seven use XHR because fetch() does not support upload progress
 # events. All must include the deviation comment. Body format:
 # FormData with cacheControl + file under '' field name (not raw
 # file body with Content-Type header).
@@ -1899,6 +1982,43 @@ did not match the live file; the build correctly rewrote
 in the live convention instead. Read the most recently
 built adjacent section to confirm the current pattern.
 (INVENTORY.5 F3)
+□ Any new `lib/data/*.ts` file that uses the parameter-passing
+pattern (accepts supabase client as param, never constructs its
+own): confirm it does NOT have `'use server'` at the top. A
+`'use server'` directive on a data utility module turns all its
+exports into public server actions — wrong for internal utility
+functions. Data modules belong in `lib/data/`; action endpoints
+belong in `lib/actions/`. Confirmed (FORUMS.3): `lib/data/
+forums.ts` must have zero `'use server'` — verified via grep
+check in quality gate.
+□ Any new TipTap `useEditor()` call using `immediatelyRender:
+false`: type the returned editor variable explicitly as
+`Editor | null` (import `Editor` from `@tiptap/react`). Do NOT
+rely on `ReturnType<typeof useEditor>` — TypeScript may resolve
+the wrong overload and infer `Editor` (non-null), causing silent
+null-safety failures. Also type any toolbar helper props that
+accept the editor as `Editor | null`. Both `ThreadListClient.tsx`
+and `ThreadViewClient.tsx` required this fix before `tsc --noEmit`
+passed. (FORUMS.5 Q3)
+□ Any new email notification that fires after a successful
+mutation (e.g., forum subscription notifications): confirm it
+uses `sendBatchEmails()` via the shared helper — NOT a
+per-recipient loop calling `resend.emails.send()`. R8 prohibits
+looping `resend.emails.send()` even for "per-user" notification
+patterns — the batch approach handles personalization via
+individual payload items in one batch call. Confirmed FORUMS.5
+Q2: the initial pseudocode looped per-subscriber; corrected to
+`sendBatchEmails()` before commit. (R8 / sendBatchEmails() pattern)
+□ Any new storage path in the `media` bucket: confirm it follows
+the established namespace pattern. Forum paths use
+`forums/[post_id]/[uuid].[ext]` for final attachments and
+`forums/temp/[tempKey]/[uuid].[ext]` for pre-post-creation
+staging. At post creation time, temp files are moved to final
+paths via `adminClient.storage.from('media').move(tempPath,
+finalPath)` before inserting `forum_post_attachments` rows. This
+is the temp-key pattern — avoids orphaned storage objects when
+post creation fails after upload but before DB insert. (FORUMS.4
+pattern)
 ```
 
 ---
@@ -3066,6 +3186,87 @@ Phase INVENTORY — Inventory Management System (in progress)
     markup — F3). jsx-a11y/alt-text caught pre-ship. Phase INVENTORY
     complete. 6 files. Commit 7f57805.
 Phase INVENTORY — Inventory Management System ✓ Complete (INVENTORY.A–5)
+Phase FORUMS — Internal Discussion Forums ✓ Complete
+  FORUMS.A ✓ Read-only audit (10 targets). Key findings: proxy.ts
+    187 lines — no matcher change needed (/crew/:path* covers
+    forums), needsFlagCheck after line 53, Production allowlist
+    between lines 136-137, crew flag block after line 172.
+    Sidebar 201 lines — MessageSquare icon not yet imported,
+    4 atomic locations. HelpContent 1460 lines — 16 live
+    sections, Forums 17th, roles MUST include 'production'.
+    F3: Email Templates editors use StarterKit+MergeTagExtension
+    only (not Link+Underline). F4: settings card must use
+    canAccessAdminSettings gate.
+  FORUMS.1 ✓ Migration 035 applied (12 forum tables + feature_
+    forums seed). 5-file flag pattern. proxy.ts 3 edits
+    (needsFlagCheck, Production allowlist, crew flag block —
+    no matcher change, no public block). Sidebar 5-part atomic
+    edit (MessageSquare icon + NAV_ITEMS + FLAG_GATED_HREFS +
+    Production allowlist + TOOLTIP_ANCHOR_MAP). HelpContent
+    17th section stub (roles include 'production'). types/
+    forums.ts. lib/audit.ts 5 forum_group.* AuditAction types.
+    lib/actions/forum-groups.ts (8 actions). settings/groups
+    page + ForumGroupsClient.tsx. User Groups Settings hub
+    card (canAccessAdminSettings gate — F4 fix). Forums stub
+    page. 15 files. Commit dde841d.
+  FORUMS.2 ✓ 19 new AuditAction types. types/forums.ts stubs
+    → full types + 6 new = 10 total (94 lines). lib/actions/
+    forum-admin.ts (21 functions: getForumManageData with
+    FK-hint parallel fetch + Array.isArray norm, category
+    CRUD×4, forum CRUD×7, access grants×2, moderators×2,
+    search×1, thread prefixes×4). Manage page + ForumManage
+    Client.tsx (3 sub-panels per forum). Q2: 'user'→'individual'
+    mapping at call site. Q3: adminUsers prop unused (server-
+    side search). 5 files. Commit c1c7328.
+  FORUMS.3 ✓ 4 new types (133 lines, 14 total). lib/data/
+    forums.ts (new — NO 'use server'; supabase as param;
+    TypeScript-join access control for 3-way OR; getAccessible
+    ForumIds, canAccessForum, isForumModerator, getForumIndex
+    Data, getThreadListData). lib/actions/forums.ts (getForum
+    Index, getThreadList, markThreadRead batch upsert,
+    markAllForumRead). Real forum index. ForumIndexClient.tsx.
+    /crew/forums/[forumId]/page.tsx. ThreadListClient.tsx.
+    Q2: archived forums excluded from index for all roles
+    (is_archived=false unconditional — correct). First-pass
+    clean (no pre-commit fixes). 7 files. Commit 5c95810.
+  FORUMS.4 ✓ 3 new types (185 lines, 17 total). lib/audit.ts:
+    forum_post.create + forum_post_attachment.upload. lib/
+    actions/forum-posts.ts (FORUM_POST_SANITIZE_OPTIONS
+    exported; getThreadWithPosts — parallel fetch + single-
+    batch signed URLs; getPostAttachmentUploadUrl; createForum
+    Post — temp-key move; toggleThreadSubscription). Thread
+    view page (forumId URL mismatch → notFound; markThreadRead
+    on load). ThreadViewClient.tsx (breadcrumbs, subscribe
+    toggle, sanitized HTML, attachments, locked notice, composer
+    slot). ForumPostComposer.tsx (7th sanctioned XHR file;
+    uploadWithProgress() pattern from InventoryPhotoUploader;
+    11-button toolbar). Q1: mimeType given input validation
+    job. Q2: forumId prop unused (removed FORUMS.5). 6 files.
+    Commit b21b3a4.
+  FORUMS.5 ✓ lib/audit.ts 8 new types (forum_thread.create/
+    lock/unlock/pin/unpin/move, forum_post.edit/delete).
+    lib/actions/forum-moderation.ts (new — 8 actions: create
+    Thread, lock/unlock, pin/unpin, moveThread SA/OA only,
+    editPost, deletePost idempotent soft delete; private
+    isModeratableBy()). lib/email.ts: sendForumNotification
+    Email() (sendBatchEmails() per R8 — Q2 self-correction;
+    resolveEmailSettings(); escapeHtml() on user strings;
+    logEmailSent() after send; sentBy: null; getAdminClient()).
+    Non-blocking void IIFE call site in createForumPost().
+    getForumsForMove() in forum-admin.ts. ThreadListClient.tsx:
+    New Thread modal with shadcn Dialog + inline TipTap (no
+    file attachments on thread creation). ThreadViewClient.tsx:
+    per-post edit (shared editor, async setContent() in click
+    handler) + delete + moderation bar (lock/pin/move). Forum
+    PostComposer.tsx: forumId dead prop removed. HelpContent.tsx:
+    full 4-subsection Forums section (forums-overview/threads
+    visible all roles; forums-access/moderation SA/OA only).
+    Key fixes: Q1 — buildEmailHtml() real signature read before
+    writing (pseudocode assumed wrong params); Q2 — per-subscriber
+    loop corrected to sendBatchEmails(); Q3 — Editor|null explicit
+    typing required (useEditor overload resolves wrong). 9 files
+    (1 new, 8 modified). Commit e41f66f. Phase FORUMS complete.
+Phase FORUMS — Internal Discussion Forums ✓ Complete (FORUMS.A–FORUMS.5)
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -3625,6 +3826,18 @@ version history ordering corrected).
 HelpTooltip count 40→42; lib/audit.ts inaccuracy
 fixed; storage dual-client note added).
 30BN-DOC.67 ✓ Process Update v4.9 (this prompt)
+30BN-FORUMS.A ✓ Read-only audit. See Phase FORUMS above.
+30BN-FORUMS.1 ✓ 15 files. Commit dde841d. See above.
+30BN-FORUMS.2 ✓ 5 files. Commit c1c7328. See above.
+30BN-FORUMS.3 ✓ 7 files. Commit 5c95810. See above.
+30BN-FORUMS.4 ✓ 6 files. Commit b21b3a4. See above.
+30BN-FORUMS.5 ✓ 9 files. Commit e41f66f. See above.
+30BN-DOC.68 ✓ Brief v5.2 Part A (§1/§2/§3/§5/§7/§8
+Phase FORUMS complete).
+30BN-DOC.69 ✓ Brief v5.2 Part B (§9 forum schema tables
++ §11 build log).
+30BN-DOC.70 ✓ Process v5.0 (this prompt — Phase FORUMS
+complete: §7/§8/§10/§11/§13/§14 updates).
 ```
 
 ---
@@ -4179,6 +4392,97 @@ Known residual: `OpportunityForm.tsx:99,115` → ADMIN.40.
 
 Use the §7 substitution table and governing hover rule when replacing any affected class.
 
+### `lib/data/*.ts` Data Module Convention — No 'use server' (confirmed FORUMS.3)
+
+Data utility modules in `lib/data/` accept a supabase client as a parameter and never
+construct their own. They must NOT have a `'use server'` directive at the top.
+
+**Why the constraint matters:** `'use server'` designates a file as a React Server
+Action module — all exported functions become callable as server action endpoints.
+Adding `'use server'` to a `lib/data/` file makes its internal helper functions
+publicly invocable as server actions, which is wrong. Data helpers are not actions;
+they are internal utilities called by action files.
+
+**Correct split:**
+- `lib/data/forums.ts` (no `'use server'`) — pure data logic; `getForumIndexData(admin, supabase)`, `canAccessForum(forumId, admin, supabase)`, etc.
+- `lib/actions/forums.ts` ('use server') — constructs client, calls data helpers, revalidates paths
+
+The `lib/data/*.ts` parameter-passing pattern was established in Phase 15.1
+(lib/data/checkin.ts, lib/data/showReport.ts) and extended in Phase FORUMS. Both
+files from Phase 15.1 are also 'use server'-free. This constraint was never
+explicitly documented before FORUMS.3 surfaced it as a quality gate check. It is
+now a standing rule for all future `lib/data/` files.
+
+Quality gate: include this grep in any prompt that creates a new `lib/data/*.ts` file:
+```bash
+grep -n "use server" lib/data/[newfile].ts
+# Must return zero results
+```
+
+### Forum Access Control — TypeScript-Join Pattern Applied to Access Control Logic (FORUMS.3)
+
+The forum access model uses a TypeScript-join approach rather than Supabase PostgREST
+filters because the three-way OR access check (role grant OR group membership OR
+individual grant) cannot be expressed in a single `.select()` filter call. Group
+membership requires a JOIN on `forum_user_group_members` that cannot be combined
+with OR conditions on other grant types in PostgREST syntax.
+
+**The pattern:**
+```typescript
+// Step 1: Fetch all grants for the target forum
+const { data: grants } = await supabase
+  .from('forum_access_grants')
+  .select('grant_type, role, group_id, admin_user_id')
+  .eq('forum_id', forumId)
+
+// Step 2: Fetch the user's group memberships
+const { data: memberships } = await supabase
+  .from('forum_user_group_members')
+  .select('group_id')
+  .eq('admin_user_id', admin.id)
+
+// Step 3: Resolve the OR in TypeScript
+const userGroupIds = new Set(
+  (memberships || []).map(m => m.group_id))
+return (grants || []).some(grant => {
+  if (grant.grant_type === 'role')
+    return grant.role === admin.role
+  if (grant.grant_type === 'group')
+    return grant.group_id && userGroupIds.has(grant.group_id)
+  if (grant.grant_type === 'individual')
+    return grant.admin_user_id === admin.id
+  return false
+})
+```
+
+SA/OA bypass: return `true` immediately without querying grants. The RLS on `forums`
+is `authenticated SELECT` (all admins can read forum rows) — the access filtering
+is entirely at the application layer.
+
+This is a confirmed extension of the two-fetch-plus-TypeScript-join pattern from §7
+(established INVENTORY.4) applied to access control rather than data enrichment.
+
+### `buildEmailHtml()` and `logEmailSent()` Signatures Must Be Read From Live File (FORUMS.5 Q1)
+
+When writing any new function in `lib/email.ts`, the prompt pseudocode or planning
+description may assume parameter names or shapes that do not match the live function
+signatures. Confirmed failure in FORUMS.5: the planned pseudocode incorrectly assumed
+`buildEmailHtml()` accepted `brandAccent` and `brandPrimaryLight` as top-level
+distinct params, and that `logEmailSent()` accepted `{ trigger, recipientEmail,
+recipientType, sentBy }`. The actual signatures differ.
+
+**Required pre-write step:** Before writing any new `lib/email.ts` function, run:
+```bash
+grep -n "function buildEmailHtml\|function logEmailSent\|function buildCtaButton\|function escapeHtml" lib/email.ts
+```
+Then view those function definitions to read the exact parameter shapes. Never infer
+signatures from the pattern description alone — the live file is authoritative.
+
+This applies to all internal helpers in `lib/email.ts` (`buildEmailHtml()`,
+`logEmailSent()`, `buildCtaButton()`, `escapeHtml()`). A signature mismatch produces
+a tsc error but — more dangerously — may only surface at the TypeScript compile
+step, not during planning or code review.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -4218,3 +4522,5 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.8 (August 2026 — DOC.65: §2 header updated (v4.8); §7 feature flag active flag list updated (five → seven: feature_inventory added Migration 034 / INVENTORY.1, feature_forums pending Migration 035 / Phase FORUMS); §7 inline single-key note updated — getUpcomingAuditions() stale comment Q-item closed (fixed in ADMIN.44); §7 migration/DB drift updated — 033 applied (DB-VERIFY.5), drift cleared; §7 Sidebar atomic edit extended (three-part → four-part: TOOLTIP_ANCHOR_MAP lookup map added as 4th required location — replaces hardcoded || ternary, established INVENTORY.1); §7 inventory_manager toggle pattern added (DB CHECK constraint, app-layer role guard, Editor-row-only toggle, SA/OA caller guard, types/audit.ts location); §10 R32 grep updated (feature_inventory + feature_forums added to grep pattern; comment updated to Migration 034); §11 PRE-PHASE-17 item updated — 033 applied, debt cleared; §13 PRE-PHASE-17 action note updated (applied); §13 Phase INVENTORY in-progress block + DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 + DOC.64 + DOC.65 logged; §13 version history ordering corrected (v4.7 was before v4.6); DOC.65 logged)*
 
 *v4.9 (August 2026 — DOC.67: Phase INVENTORY complete — §2 header updated (v4.9); §7 inventory_manager pattern: types/audit.ts corrected to lib/audit.ts (no types/audit.ts exists — inaccuracy from DOC.65 now fixed); §7 P-DC storage: inventory/ path namespace added (Phase INVENTORY.3); §7 two new patterns added: (1) storage dual-client pattern — storage API calls require getAdminClient() regardless of session (storage.objects has zero RLS; confirmed failure mode: getServerClient() returns null signed URLs silently); (2) Supabase aliased dual self-join workaround — two-fetch-plus-TypeScript-join pattern for queries needing two FKs to the same table (Supabase JS cannot alias self-joins; confirmed across INVENTORY.2/3/4); §8 XHR: 5 → 6 sanctioned files (InventoryPhotoUploader.tsx added — Phase INVENTORY.3); §10 XHR grep: 5 → 6 files; §11 three new checklist items: (1) storage dual-client (getAdminClient() for storage.objects), (2) route handler .tsx extension when JSX embedded (confirmed failure INVENTORY.5 F1), (3) HelpContent live convention discipline (read live file — show() predicates, shared class constants, backtick possessives — INVENTORY.5 F3); §13 Phase INVENTORY ✓ Complete — INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts; types/admin.ts + lib/auth.ts unplanned additions noted); INVENTORY.2–5 phase tracker entries added; prompt log: INVENTORY.2–5 + DOC.66 + DOC.67 added; DOC.67 logged)*
+
+*v5.0 (August 2026 — DOC.70: Phase FORUMS complete — §2 header bumped to v5.0; §7 feature flag list: feature_forums confirmed active (Migration 035 applied, FORUMS.1); §7 P-DC media bucket: forums/ and forums/temp/ path namespaces added; §7 XHR: 6 → 7 sanctioned files (ForumPostComposer.tsx — 7th, FORUMS.4); §7 TOOLTIP_ANCHOR_MAP: /crew/forums → 'forums' entry added (FORUMS.1 — now 4 entries); §7 three new patterns added: (1) lib/data/*.ts must NOT have 'use server' — data modules are internal utilities, not action endpoints (FORUMS.3); (2) TipTap useEditor() → always type as Editor|null explicitly — ReturnType<typeof useEditor> resolves wrong overload when immediatelyRender:false (FORUMS.5 Q3); (3) non-blocking void IIFE pattern for fire-and-forget async side-effects in server actions (FORUMS.5 — sendForumNotificationEmail call site); §8 XHR count 6 → 7 (same as §7 update — confirmed single occurrence, not a separate duplicate); §10 R32 grep comment updated (all 7 flags active, Migration 035 applied); §10 XHR grep updated (seven total, ForumPostComposer.tsx added); §11 four new checklist items: lib/data/ no 'use server', TipTap Editor|null typing, R8 compliance for notification emails, forums/ storage path namespace; §13 Phase FORUMS: no prior block existed in this document — new ✓ Complete block added (FORUMS.A–5 with commits and key findings), inserted after Phase INVENTORY and before Phase 17; §13 prompt log: FORUMS.A–5 + DOC.68–70 added; §14 three new pattern notes: lib/data/ no 'use server' (FORUMS.3), forum access TypeScript-join pattern (FORUMS.3), buildEmailHtml/logEmailSent signature discipline (FORUMS.5 Q1); DOC.70 logged)*
