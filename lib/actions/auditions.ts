@@ -647,11 +647,13 @@ export async function getAuditionMaterialUploadUrl(
 
 // ─── B9: getUpcomingAuditions ──────────────────────────────────
 //
-// Powers the auditions card on / and /shows. Inline app_settings flag
-// read is correct here — this is a public-route file (getAdminClient()
-// only) and cannot use getFeatureFlags(), which is written for
-// getServerClient() authenticated contexts. Same pattern as
-// syncAuditionToCalendar() (lib/actions/calendar-sync.ts).
+// Powers the auditions card on / and /shows. Reads feature_auditions via a
+// direct single-key app_settings query rather than calling
+// getFeatureFlags(getAdminClient()) — a lightweight alternative for public
+// routes that need only one flag (getFeatureFlags() fetches all six keys
+// in one query, which is unnecessary overhead here). This is an efficiency
+// choice, not a necessity — getFeatureFlags() is client-agnostic and works
+// fine from this public-route context (see R32 / Process §7).
 
 export type UpcomingAudition = {
   id: string
