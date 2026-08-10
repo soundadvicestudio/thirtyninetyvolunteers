@@ -50,7 +50,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/crew/auditions') ||
     pathname.startsWith('/auditions/') ||
     pathname.startsWith('/audition-checkin/') ||
-    pathname.startsWith('/crew/inventory')
+    pathname.startsWith('/crew/inventory') ||
+    pathname.startsWith('/crew/forums')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -114,7 +115,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Production role: restricted to /crew/calendar, /crew/help, /crew/media,
-  // /crew/rehearsals, and /crew/shows/[id] (assigned shows only). Additive
+  // /crew/rehearsals, /crew/forums, and /crew/shows/[id] (assigned shows
+  // only). Additive
   // check — runs after all existing logic and only queries admin_users when
   // a signed-in user is headed somewhere under /crew that isn't already an
   // allowed path, so it never affects other roles' existing behavior.
@@ -124,7 +126,9 @@ export async function proxy(request: NextRequest) {
   // layer (getRehearsalSchedules()), not here. /crew/shows/ exception added
   // AUDITIONS.2a — deliberately scoped with a trailing slash so it matches
   // /crew/shows/[id] but not /crew/shows (the list page); membership is
-  // enforced by the page-level show_editors guard, not here.
+  // enforced by the page-level show_editors guard, not here. /crew/forums
+  // exception added FORUMS.1 — Production has forum access; per-forum
+  // access filtering happens at the query layer, not here.
   if (
     user &&
     pathname.startsWith('/crew') &&
@@ -134,6 +138,7 @@ export async function proxy(request: NextRequest) {
     pathname !== '/crew/media' &&
     !pathname.startsWith('/crew/rehearsals') &&
     !pathname.startsWith('/crew/auditions') &&
+    !pathname.startsWith('/crew/forums') &&
     !pathname.startsWith('/crew/shows/')
   ) {
     const { data: adminUser } = await supabase
@@ -168,6 +173,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
   if (pathname.startsWith('/crew/inventory') && flags && !flags.inventory) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+  if (pathname.startsWith('/crew/forums') && flags && !flags.forums) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
 

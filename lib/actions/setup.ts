@@ -306,6 +306,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   const rehearsals = formData.get('feature_rehearsals') as string | null
   const auditions = formData.get('feature_auditions') as string | null
   const inventory = formData.get('feature_inventory') as string | null
+  const forums = formData.get('feature_forums') as string | null
 
   if (
     !isValidFlagValue(calendar) ||
@@ -313,14 +314,15 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
     !isValidFlagValue(blast) ||
     !isValidFlagValue(rehearsals) ||
     !isValidFlagValue(auditions) ||
-    !isValidFlagValue(inventory)
+    !isValidFlagValue(inventory) ||
+    !isValidFlagValue(forums)
   ) {
     return { error: 'Invalid flag value.' }
   }
 
   const supabase = await getServerClient()
 
-  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory']
+  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory', 'feature_forums']
   const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
   const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
 
@@ -332,6 +334,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       { key: 'feature_rehearsals', value: rehearsals, updated_by: admin.id },
       { key: 'feature_auditions', value: auditions, updated_by: admin.id },
       { key: 'feature_inventory', value: inventory, updated_by: admin.id },
+      { key: 'feature_forums', value: forums, updated_by: admin.id },
     ],
     { onConflict: 'key' }
   )
@@ -350,6 +353,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   revalidatePath('/crew/rehearsals')
   revalidatePath('/crew/auditions')
   revalidatePath('/crew/inventory')
+  revalidatePath('/crew/forums')
 
   await logAction(
     admin.id,
@@ -363,6 +367,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_rehearsals: previousMap.get('feature_rehearsals') ?? '',
       feature_auditions: previousMap.get('feature_auditions') ?? '',
       feature_inventory: previousMap.get('feature_inventory') ?? '',
+      feature_forums: previousMap.get('feature_forums') ?? '',
     },
     {
       feature_calendar: calendar,
@@ -371,6 +376,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_rehearsals: rehearsals,
       feature_auditions: auditions,
       feature_inventory: inventory,
+      feature_forums: forums,
     }
   )
 

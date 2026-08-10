@@ -33,6 +33,7 @@ export type SetupPanelInitialValues = {
   feature_rehearsals: string
   feature_auditions: string
   feature_inventory: string
+  feature_forums: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -330,6 +331,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [rehearsalsEnabled, setRehearsalsEnabled] = useState(initialValues.feature_rehearsals === 'true')
   const [auditionsEnabled, setAuditionsEnabled] = useState(initialValues.feature_auditions === 'true')
   const [inventoryEnabled, setInventoryEnabled] = useState(initialValues.feature_inventory === 'true')
+  const [forumsEnabled, setForumsEnabled] = useState(initialValues.feature_forums === 'true')
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -342,6 +344,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_rehearsals', rehearsalsEnabled ? 'true' : 'false')
     fd.append('feature_auditions', auditionsEnabled ? 'true' : 'false')
     fd.append('feature_inventory', inventoryEnabled ? 'true' : 'false')
+    fd.append('feature_forums', forumsEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -397,6 +400,12 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         description="Enables the Inventory section. When off, /crew/inventory is inaccessible."
         enabled={inventoryEnabled}
         onToggle={() => setInventoryEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Internal Forums"
+        description="Enables the internal discussion forums. When off, /crew/forums is inaccessible."
+        enabled={forumsEnabled}
+        onToggle={() => setForumsEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button

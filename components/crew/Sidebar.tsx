@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Mic2,
   Package,
+  MessageSquare,
   Users,
   Theater,
   Briefcase,
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { label: 'Rehearsals', href: '/crew/rehearsals', icon: ClipboardList },
   { label: 'Auditions', href: '/crew/auditions', icon: Mic2 },
   { label: 'Inventory', href: '/crew/inventory', icon: Package },
+  { label: 'Forums', href: '/crew/forums', icon: MessageSquare },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
@@ -56,6 +58,7 @@ const TOOLTIP_ANCHOR_MAP: Record<string, string> = {
   '/crew/rehearsals': 'rehearsals',
   '/crew/auditions': 'auditions',
   '/crew/inventory': 'inventory',
+  '/crew/forums': 'forums',
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -87,6 +90,7 @@ export default function Sidebar({
     '/crew/rehearsals': flags.rehearsals,
     '/crew/auditions': flags.auditions,
     '/crew/inventory': flags.inventory,
+    '/crew/forums': flags.forums,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -97,7 +101,8 @@ export default function Sidebar({
           item.href === '/crew/help' ||
           item.href === '/crew/media' ||
           item.href === '/crew/rehearsals' ||
-          item.href === '/crew/auditions'
+          item.href === '/crew/auditions' ||
+          item.href === '/crew/forums'
       )
     : flagFilteredNavItems
 

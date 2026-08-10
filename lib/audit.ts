@@ -123,6 +123,13 @@ export type AuditAction =
   | 'inventory_checkout.create'
   | 'inventory_checkout.return'
 
+  // Forums
+  | 'forum_group.create'
+  | 'forum_group.update'
+  | 'forum_group.delete'
+  | 'forum_group_member.add'
+  | 'forum_group_member.remove'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

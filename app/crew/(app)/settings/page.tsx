@@ -221,6 +221,19 @@ export default async function SettingsPage() {
           />
         )}
 
+        {canAccessAdminSettings ? (
+          <LinkedCard
+            href="/crew/settings/groups"
+            title="User Groups"
+            description="Create named groups of admin users to grant forum access to a whole team at once."
+          />
+        ) : (
+          <LockedCard
+            title="User Groups"
+            description="Create named groups of admin users to grant forum access to a whole team at once."
+          />
+        )}
+
         {admin.role === 'super_admin' ? (
           <LinkedCard
             href="/crew/settings/setup"

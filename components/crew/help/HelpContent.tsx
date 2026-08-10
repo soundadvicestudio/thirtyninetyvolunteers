@@ -170,6 +170,18 @@ const ALL_SECTIONS: TocSection[] = [
       { id: 'inventory-tags', label: 'Printing Tags', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
     ],
   },
+  {
+    id: 'forums',
+    label: 'Internal Forums',
+    roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
+    children: [
+      {
+        id: 'forums-overview',
+        label: 'Overview',
+        roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
+      },
+    ],
+  },
 ]
 
 function flattenSections(sections: TocSection[]): TocSection[] {
@@ -1448,6 +1460,32 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                   </p>
                   <Tip>
                     {`Tags include the item ID, name, category, and QR code. Print on label stock or cardstock and attach to the item or its storage container.`}
+                  </Tip>
+                </>
+              )}
+            </section>
+          )}
+
+          {show('inventory') && <Divider />}
+
+          {/* ───────── Internal Forums ───────── */}
+          {show('forums') && (
+            <section id="forums">
+              <h2 className={h2Classes}>{`Internal Forums`}</h2>
+              <p className={pClasses}>
+                {`The Internal Forums are an admin-only discussion area, organized into categories and forums. Each forum holds threads, and each thread holds posts. There is no public-facing side — everything here is for Production Crew.`}
+              </p>
+
+              {show('forums-overview') && (
+                <>
+                  <h3 id="forums-overview" className={h3Classes}>{`Overview`}</h3>
+                  <p className={pClasses}>
+                    {`Super Admin and Owner Admin can see every forum and manage categories, forums, and access from `}
+                    <strong>{`Settings → User Groups`}</strong>
+                    {` and the forum management interface. Everyone else only sees the forums they have been explicitly granted access to — by role, by a named user group, or individually.`}
+                  </p>
+                  <Tip>
+                    {`This is a starting stub. Full posting, moderation, and read-tracking documentation will be added once the rest of the Forums feature ships.`}
                   </Tip>
                 </>
               )}
