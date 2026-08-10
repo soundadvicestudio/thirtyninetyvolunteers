@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.7
-### Created: July 2026 | Last Updated: August 2026 — v4.7 (DOC.62 correction: §7 feature flag pattern — stale sentence "getFeatureFlags() uses getServerClient()" replaced with correct client-context guidance; false getServerClient() association removed; §13 DOC.61 + DOC.62 logged; v4.7 history entry added)
+## 30BN_PROCESS_v1.md — v4.8
+### Created: July 2026 | Last Updated: August 2026 — v4.8 (DOC.65: §7 feature flag list updated (5→7 flags: feature_inventory + feature_forums); §7 Sidebar atomic edit extended to 4-part (TOOLTIP_ANCHOR_MAP added); §7 inventory_manager toggle pattern documented; §7 migration drift Q-item closed (033 applied); §10 R32 grep updated (feature_inventory added); §11 PRE-PHASE-17 item updated (033 applied); §13 DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 logged; Phase INVENTORY in-progress)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -478,7 +478,7 @@ Sidebar conditionally renders links based on flags passed as props from the crew
 
 The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Active feature flags (five — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
+Active feature flags (seven — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_inventory` was added in Migration 034 (Phase INVENTORY — INVENTORY.1). `feature_forums` will be added in Migration 035 (Phase FORUMS — pending). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
 
 Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
 
@@ -494,7 +494,7 @@ const { data: flagRow } = await supabase
   .single()
 if (flagRow?.value === 'false') return []
 ```
-NOTE (DOC.60, corrected from an earlier draft of this prompt): the comment above `getUpcomingAuditions()` in the live file still describes this as "the same pattern as `syncAuditionToCalendar()`" — that comment is now stale, since `syncAuditionToCalendar()` was corrected in AUDITIONS.2a to call `getFeatureFlags()` instead of inlining the fetch. The two functions no longer follow the same pattern. This is a Q-item for a future prompt to reconcile (update the stale comment or make both functions consistent) — not corrected here, since this prompt is documentation-only.
+NOTE (DOC.60 Q-item, resolved ADMIN.44): the comment above `getUpcomingAuditions()` in the live file previously described this as "the same pattern as `syncAuditionToCalendar()`" — that claim was stale since `syncAuditionToCalendar()` was corrected in AUDITIONS.2a to call `getFeatureFlags()`. The comment also incorrectly stated `getFeatureFlags()` "cannot be used" from a public-route context. Both inaccuracies were corrected in ADMIN.44 (commit b654083). The live comment now accurately describes `getUpcomingAuditions()` as using an inline single-key fetch as a lightweight alternative — not because `getFeatureFlags()` is unusable, but as a minor-efficiency choice.
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
 Every new feature flag requires exactly 5 file changes. Missing any one produces a silent failure — wrong TypeScript types, a toggle that doesn't save, or stale cache on flag change:
@@ -610,20 +610,41 @@ Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.
 
 Cross-reference: Brief §13 R37 (new rule in v4.5).
 
-**Sidebar data-driven three-part atomic edit (established 21.A Audit E / 21.2):**
-The crew sidebar is data-driven via three locations in `components/crew/Sidebar.tsx`:
+**Sidebar data-driven four-part atomic edit (established 21.A Audit E / 21.2; extended INVENTORY.1):**
+The crew sidebar is data-driven via four locations in `components/crew/Sidebar.tsx`:
 1. `NAV_ITEMS` — the nav item object (icon, label, href)
 2. `FLAG_GATED_HREFS` — the set of hrefs gated by feature flags
 3. Production role allowlist — the set of hrefs accessible to the Production role (not just SA/OA/Editor/Viewer)
+4. `TOOLTIP_ANCHOR_MAP` — a `Record<string, string>` lookup map for flagged routes that display a HelpTooltip on their sidebar nav link. Maps href → anchor string. Added INVENTORY.1 (replacing a hardcoded `||` ternary). Current entries: `/crew/rehearsals` → `'rehearsals'`, `/crew/auditions` → `'auditions'`, `/crew/inventory` → `'inventory'`. Any new flagged route with a sidebar HelpTooltip must add an entry here — extending the old ternary no longer applies, the map is the authoritative lookup.
 
-All three must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
+All four must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
 - Missing NAV_ITEMS: the link does not appear at all for any role
 - Missing FLAG_GATED_HREFS: the link appears even when the flag is off, bypassing the feature gate entirely
 - Missing the Production allowlist: the link appears for all roles EXCEPT Production, even when the spec requires Production access — no error, no warning, just invisibility for that role
+- Missing TOOLTIP_ANCHOR_MAP: the HelpTooltip is silently omitted from the nav link for routes that require one
 
-Confirmed in 21.2: the four-part sidebar edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + HelpTooltip on the nav link element) was performed atomically. The Production allowlist addition is the most commonly missed of the four because it is not part of the visual link definition — it is a separate allow-set in a different part of the component.
+Confirmed in 21.2: NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + HelpTooltip were performed atomically. Confirmed in INVENTORY.1: TOOLTIP_ANCHOR_MAP formalized as the 4th location (replacing the prior hardcoded ternary that required conditional extension). The Production allowlist addition is the most commonly missed of the four because it is not part of the visual link definition — it is a separate allow-set in a different part of the component.
 
-This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all three locations before making any edit, confirm all three are updated in the same commit.
+This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all four locations before making any edit, confirm all four are updated in the same commit.
+
+**`inventory_manager` boolean toggle pattern (established INVENTORY.1):**
+`inventory_manager` is a boolean column on `admin_users` (NOT NULL DEFAULT false, added Migration 034). It gates write access to the inventory system for Editor-role accounts. SA and OA always have full inventory write access regardless of this flag.
+
+Key constraints — all must be enforced together:
+
+1. **DB CHECK constraint:** `(role NOT IN ('production', 'viewer')) OR (inventory_manager = false)` — enforced at the DB level. Production and Viewer accounts can never have `inventory_manager = true`, regardless of what the app layer does.
+
+2. **App-layer role guard in `toggleInventoryManager()`:** The toggle action must verify that the target user's role is `'editor'` before performing the UPDATE. The DB CHECK prevents the actual write from succeeding on non-editor accounts, but the app-layer guard is required for defense in depth — the function should return an error before attempting the update, not rely solely on the DB constraint to reject it.
+
+3. **Toggle visible on Editor rows only:** In `UsersTable.tsx`, the toggle control renders only on rows where `adminUser.role === 'editor'`. It is absent on Super Admin, Owner Admin, Viewer, and Production rows. SA and OA always have inventory access (no toggle needed); Viewer and Production have no inventory access at all (toggle would be misleading).
+
+4. **Caller guard:** Only SA and OA callers may invoke `toggleInventoryManager()`. Editor accounts cannot promote themselves to inventory_manager.
+
+5. **AuditAction:** Logged as `user.inventory_manager_change` in `types/audit.ts` (NOT `lib/audit.ts` — the AuditAction type union lives in `types/audit.ts`).
+
+6. **Query must include the column:** Any page that renders `UsersTable.tsx` must SELECT `inventory_manager` from `admin_users` in its data fetch. Missing this column causes the toggle to render permanently unchecked (undefined prop).
+
+This pattern is intentionally parallel to `calendar_editor` (same location, same caller guard, same audit log approach) but differs in which roles receive the toggle (calendar_editor appears on Editor + Viewer + OA rows; inventory_manager appears on Editor rows only).
 
 **Audition Production access — two independent assignment paths (established AUDITIONS.2a):**
 Production-role users gain access to auditions through two independent mechanisms, and neither implies the other:
@@ -726,7 +747,7 @@ Five inline fixes were applied during Phase AUDITIONS without a corresponding mi
 4. `consent_form_submissions.audition_signup_id` column + index (AUDITIONS.1a)
 5. `email_log.recipient_type` CHECK updated to include `'audition'` (AUDITIONS.2a)
 
-Required resolution: `033_audition_schema_fixes.sql` must be written and applied before Phase 17. See §11 checklist for the pre-Phase-17 reminder.
+Resolution: `033_audition_schema_fixes.sql` was written and applied in DB-VERIFY.5 (commit 0ed3b5d). All five inline fixes are now captured in a committed migration file. The migration/DB drift from Phase AUDITIONS is cleared. See §11 checklist for the updated pre-Phase-17 note.
 
 Rule going forward: whenever an inline schema fix is applied via Supabase MCP rather than a named migration file, flag it explicitly in the build report Flags section, add a Q-item tracking the follow-up migration debt, and update the Brief §9 migration status block to reflect the inline fix. Inline fixes are acceptable during active builds; the debt must be cleared before the next phase launch.
 
@@ -1140,12 +1161,13 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 
 ```bash
 # Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
-# Active flags after Migration 032 (Phase AUDITIONS):
+# Active flags after Migration 034 (Phase INVENTORY):
 #   feature_calendar, feature_checkin, feature_blast,
-#   feature_rehearsals, feature_auditions
+#   feature_rehearsals, feature_auditions, feature_inventory
+# feature_forums pending (Migration 035 — Phase FORUMS)
 # (feature_opportunities, feature_hours_milestones,
 #  feature_documents deleted — core features)
-grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions" \
+grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions\|feature_inventory\|feature_forums" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
@@ -1767,18 +1789,14 @@ Run before every Vercel deployment:
   or <NotFound> component — these create inconsistency. Some
   older pages used an inline component; notFound() is the
   correct pattern for all new pages. (AUDITIONS.3a F4)
-□ PRE-PHASE-17 REQUIRED: Write and apply
-  033_audition_schema_fixes.sql before Phase 17 begins.
-  Five inline schema fixes applied via Supabase MCP during
-  Phase AUDITIONS have no corresponding migration file:
-  (1) audition_signups.phone NOT NULL; (2) calendar_events
-  .source_audition_id + partial index; (3) calendar_events_
-  source_check + 'audition'; (4) consent_form_submissions
-  .audition_signup_id + index; (5) email_log.recipient_type
-  CHECK + 'audition'. A fresh environment seeded from
-  committed .sql files alone does not match production
-  without this follow-up migration. See §7 migration/DB
-  drift pattern. (Phase AUDITIONS Q3 from DOC.59)
+□ RESOLVED: 033_audition_schema_fixes.sql written and
+  applied (DB-VERIFY.5, commit 0ed3b5d). The five inline
+  schema fixes from Phase AUDITIONS are now captured in
+  a committed migration file. A fresh environment seeded
+  from the repo's .sql files now produces a schema
+  identical to production. No pre-Phase-17 migration debt
+  remains from Phase AUDITIONS. (Phase AUDITIONS Q3 from
+  DOC.59 — closed DB-VERIFY.5)
 □ Any inline schema fix applied via Supabase MCP during a
   build (bypassing a named .sql migration file): flag it in
   the build report Flags section AND add a Q-item noting
@@ -2823,16 +2841,68 @@ Phase 15 — Document & Media System ✓ Complete
   30BN-DOC.45 ✓ Process Update v3.9 (this prompt).
 
 Phase 16 — Google SSO      ✓ Completed in Alpha (30BN-1.3)
-PRE-PHASE-17 ACTION REQUIRED:
-  Write + apply 033_audition_schema_fixes.sql: captures
-  5 inline schema fixes applied via Supabase MCP during
-  Phase AUDITIONS (audition_signups.phone NOT NULL,
-  calendar_events.source_audition_id + index, source_check
-  + 'audition', consent_form_submissions.audition_signup_id
-  + index, email_log.recipient_type + 'audition'). Required
-  before Phase 17.4 (seed data cleanup) or any fresh
-  environment seeding. See §7 migration/DB drift pattern
-  and §11 checklist. (Phase AUDITIONS Q3 from DOC.59)
+PRE-PHASE-17 RESOLVED:
+  033_audition_schema_fixes.sql written and applied —
+  DB-VERIFY.5 (commit 0ed3b5d). All 5 inline schema
+  fixes from Phase AUDITIONS now captured in committed
+  migration file. Migration/DB drift cleared.
+Phase INVENTORY — Inventory Management System (in progress)
+  DB-VERIFY.5 / 033 ✓ Migration 033 written and applied.
+    7 pre-migration + 5 post-migration verification
+    queries confirmed. All 5 inline Phase AUDITIONS fixes
+    now in committed migration file. 1 file. Commit 0ed3b5d.
+  ADMIN.43 ✓ proxy.ts: !pathname.startsWith('/crew/
+    auditions') added to Production allowlist (line 135).
+    Exception was documented in Brief as applied in
+    AUDITIONS.2a but the commit was never made.
+    Discovered INVENTORY.A audit F1. 1 file. Commit
+    b022423.
+  INVENTORY.A ✓ Read-only audit (9 targets). Key findings:
+    inventory_manager absent from admin_users (confirmed);
+    feature-flags.ts 5 flags, 3 insertion points; proxy.ts
+    matcher unchanged (/crew/:path* covers inventory),
+    needsFlagCheck + flag block insertion points; Sidebar.tsx
+    NAV_ITEMS / FLAG_GATED_HREFS / Production allowlist
+    (no entry for inventory) + HelpTooltip hardcoded
+    ternary at line 140 requires lookup map generalization;
+    saveFeatureFlags() full 5-part pattern required;
+    setup/page.tsx SETUP_KEYS + initialValues; HelpContent
+    .tsx 15 live sections, Inventory appends after last.
+    F1: proxy.ts missing /crew/auditions Production
+    exception → ADMIN.43. F2: Brief HelpContent order
+    claim inaccurate → DOC batch.
+  ADMIN.44 ✓ Two files. setup/page.tsx: ?? → || for 5
+    pre-existing feature flag initialValues entries
+    (feature_rehearsals + feature_auditions seeded with
+    '' — '' ?? 'true' evaluates to '' not 'true', toggles
+    rendered OFF, saving would have disabled both features).
+    feature_inventory already correct. lib/actions/
+    auditions.ts: stale comment above getUpcomingAuditions()
+    corrected (false "same pattern as syncAuditionToCalendar"
+    claim + false "cannot use getFeatureFlags()" claim both
+    removed). 2 files. Commit b654083.
+  INVENTORY.1 ✓ Migration 034 applied (inventory_manager
+    on admin_users + DB CHECK constraint + 8 inventory
+    tables + feature_inventory seed). lib/feature-flags.ts:
+    inventory flag (6th). proxy.ts: needsFlagCheck +
+    flag block for /crew/inventory (no Production exception,
+    no matcher change). Sidebar.tsx: 4-part atomic edit —
+    Package icon, NAV_ITEMS, FLAG_GATED_HREFS,
+    TOOLTIP_ANCHOR_MAP lookup map (replaces hardcoded ||
+    ternary; covers rehearsals + auditions + inventory).
+    lib/actions/setup.ts: saveFeatureFlags() full 5-part
+    update. SetupPanel.tsx: type + 6th toggle. setup/
+    page.tsx: SETUP_KEYS + initialValues (|| per R18).
+    lib/actions/users.ts: toggleInventoryManager() (mirrors
+    toggleCalendarEditor(); app-layer role = 'editor' guard).
+    types/audit.ts: user.inventory_manager_change added.
+    UsersTable.tsx: inventory_manager toggle on editor rows.
+    settings/users/page.tsx: query updated to fetch
+    inventory_manager (unplanned, required). app/crew/
+    (app)/inventory/page.tsx: stub (session + flag + role
+    guards). HelpContent.tsx: 16th ALL_SECTIONS entry
+    (Inventory, no Production). 13 files. Commit c367288.
+  INVENTORY.2–5   (pending)
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -3339,6 +3409,35 @@ stale getServerClient() sentence replaced;
 AUDITIONS: §7 audition assignment pattern;
 §10 feature_auditions grep; §11 stub tab
 checklist item; §13 phase log + DOC.58/59)
+30BN-DB-VERIFY.5/033 ✓ 033_audition_schema_fixes.sql
+written and applied. 7 pre + 5 post
+verification queries. All 5 inline Phase
+AUDITIONS fixes confirmed idempotent.
+1 file. Commit 0ed3b5d.
+30BN-ADMIN.43 ✓ proxy.ts Production allowlist: missing
+/crew/auditions exception added (line 135).
+Documented in Brief as AUDITIONS.2a but
+commit was absent. Discovered INVENTORY.A
+F1. 1 file. Commit b022423.
+30BN-INVENTORY.A ✓ Read-only audit (9 targets). No files
+modified. Key findings drove INVENTORY.1
+scope. F1 → ADMIN.43. F2 → DOC batch.
+30BN-ADMIN.44 ✓ setup/page.tsx: ?? → || for 5 flag
+initialValues entries (feature_rehearsals +
+feature_auditions seeded as '' — ?? produced
+'' not 'true'). lib/actions/auditions.ts:
+stale comment above getUpcomingAuditions()
+corrected (both inaccuracies). 2 files.
+Commit b654083.
+30BN-INVENTORY.1 ✓ Migration 034 + flag infrastructure
++ TOOLTIP_ANCHOR_MAP sidebar refactor +
+inventory_manager toggle on User Management.
+13 files. Commit c367288.
+30BN-DOC.64 ✓ Brief Update v5.0 (this session — 033+034
+applied, ADMIN.43 fix documented, INVENTORY.1
+build summary, HelpContent 16th section,
+version history ordering corrected).
+30BN-DOC.65 ✓ Process Update v4.8 (this prompt)
 ```
 
 ---
@@ -3925,6 +4024,8 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.3 (July 2026 — ADMIN.40–42 + Phase 21 lock: §1 header updated (v4.3); §7 R36 opacity-variant gap pattern added (hand-authored @layer utilities do not auto-generate /NN or stacked-variant rules; each combination requires explicit authoring; silent failure mode; 3 accessibility gaps confirmed in ADMIN.42-AUDIT; all closed ADMIN.42); §10 R36 grep check added; §11 R36 checklist item added; §13 phase tracker: globals.css opacity-variant gap marked complete (ADMIN.41/42), Phase 21 architecture noted as locked and build-ready; §13 prompt log ADMIN.40 + ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42 + DOC.54 + DOC.55 added; DOC.55 logged)*
 *v4.4 (August 2026 — Phase 21 complete: §1 header updated (v4.4); §7 feature flag list updated (three → four active flags; feature_rehearsals added — Phase 21 / Migration 031); §7 public-route invariant updated (lib/actions/rehearsals.ts added as third canonical example; split pattern confirmed for rehearsal domain); §7 three new patterns added: admin_users.id = auth.uid() for RLS policies (no auth_user_id column — confirmed failure mode 21.1 F1; cross-references R37), Sidebar data-driven three-part atomic edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist — silent failure mode confirmed 21.2), getRehearsalAttendanceForEvent() effective-roster-first pattern (must return ALL roster members with status: null for unmarked — not just rehearsal_attendance rows); §10 two grep updates: feature flags grep updated (four flags), getServerClient public-route check updated (add rehearsals.ts); §11 three new checklist items: effective-roster-first attendance queries, batch attendance single upsert, Deferred Verifications scope boundary (manual browser-only, not DB-confirmable items); §13 Phase 21 marked complete (21.A/21.1/21.2/21.3 all ✓ with summaries); §13 prompt log: 21.A + 21.1 + 21.2 + 21.3 + DOC.56 + DOC.57 added; §14 R34 updated (feature_rehearsals added to flagged features list); §14 public-route invariant updated (rehearsals.ts added, Brief single-file spec correction noted); §14 R37 cross-reference added (admin_users.id = auth.uid() — no auth_user_id column); DOC.57 logged)*
 *v4.5 (August 2026 — Phase AUDITIONS specced as pre-launch build, companion to Brief DOC.58: reconstructed retroactively during the DOC.60 session — the header was bumped to v4.5 by the real DOC.59 prompt, but no corresponding version-history entry was ever appended to this file; the history section jumped straight from v4.4 to what is now v4.6 below. §7 audition Production assignment pattern added (two independent paths — show assignment vs. direct audition assignment); §10 feature flags grep updated (feature_auditions, 5th active flag); §11 new checklist item (stub tabs for not-yet-built dependencies — Email Templates tab pattern); §13 Phase AUDITIONS 11-prompt pending block added; DOC.58 + DOC.59 logged)*
+*v4.6 (August 2026 — Phase AUDITIONS complete: §1 header updated (v4.6, Phase AUDITIONS complete); §7 public-route invariant: lib/actions/auditions.ts added as 4th canonical file; §7 split pattern extended (Phase AUDITIONS domain); §7 P-DC storage: audition-materials/ path namespace added; §7 feature flags: 4→5 active flags; getFeatureFlags() client-agnostic behavior clarified (does not require getServerClient() — corrects a misconception an earlier draft of this prompt would have introduced); inline single-key app_settings read documented as a lightweight alternative for public routes (not a necessity); 5-file flag addition pattern (setup/page.tsx type companion); §7 formatWallClockCT 3-arg signature + formatTime() helper pattern added (recurring failure mode ×3); §7 TipTap immediatelyRender: false + async setContent() patterns; §7 show_editors.admin_id naming note; §7 Supabase FK join Array.isArray normalization pattern; §7 XHR P-DC body format (FormData, not raw); §7 migration/DB drift pattern (inline fix tracking + follow-up migration requirement); §8 XHR: 3→5 sanctioned files (2 audition components added); §8 FormData body format note; §10 getServerClient grep: 4th public-route file (auditions.ts); §10 XHR grep: 5 files + FormData note; §10 feature flags grep: setup/page.tsx added to exclusions; §11 R23 checklist item: 3-arg signature + formatTime() helper; §11 two new TipTap items (immediatelyRender, async setContent); §11 HelpContent live-file discipline item; §11 notFound() consistency item; §11 PRE-PHASE-17 migration debt item (033 required); §11 inline schema fix flag item; §13 Phase AUDITIONS: pending → ✓ Complete (10 prompts, full build summaries — including a correction to the AUDITIONS.4b entry's HelpContent section-order claim); Phase 17 tracker: PRE-PHASE-17 note added (033 migration); DOC.59 ✓ + DOC.60 ✓ logged; §14 R23: 3-arg signature + formatTime() pattern; §14 R34: feature_auditions (5th flag); §14 public-route canonical files: auditions.ts (4th); §14 R38 cross-reference added (TipTap merge tag extension, immediatelyRender, escapeHtml in substituteMergeTags); §14 migration/DB drift rule added; missing v4.5 version-history entry reconstructed (see above); DOC.60 logged)*
+
 *v4.7 (August 2026 — DOC.62 correction: §7 feature flag pattern stale sentence corrected — paragraph beginning "getFeatureFlags() uses getServerClient()" replaced with accurate client-agnostic framing; the earlier text directly contradicted the corrective block two paragraphs below it in the same section; both paragraphs now agree; §13 prompt log: DOC.61 + DOC.62 added; document header bumped to v4.7; DOC.62 logged)*
 
-*v4.6 (August 2026 — Phase AUDITIONS complete: §1 header updated (v4.6, Phase AUDITIONS complete); §7 public-route invariant: lib/actions/auditions.ts added as 4th canonical file; §7 split pattern extended (Phase AUDITIONS domain); §7 P-DC storage: audition-materials/ path namespace added; §7 feature flags: 4→5 active flags; getFeatureFlags() client-agnostic behavior clarified (does not require getServerClient() — corrects a misconception an earlier draft of this prompt would have introduced); inline single-key app_settings read documented as a lightweight alternative for public routes (not a necessity); 5-file flag addition pattern (setup/page.tsx type companion); §7 formatWallClockCT 3-arg signature + formatTime() helper pattern added (recurring failure mode ×3); §7 TipTap immediatelyRender: false + async setContent() patterns; §7 show_editors.admin_id naming note; §7 Supabase FK join Array.isArray normalization pattern; §7 XHR P-DC body format (FormData, not raw); §7 migration/DB drift pattern (inline fix tracking + follow-up migration requirement); §8 XHR: 3→5 sanctioned files (2 audition components added); §8 FormData body format note; §10 getServerClient grep: 4th public-route file (auditions.ts); §10 XHR grep: 5 files + FormData note; §10 feature flags grep: setup/page.tsx added to exclusions; §11 R23 checklist item: 3-arg signature + formatTime() helper; §11 two new TipTap items (immediatelyRender, async setContent); §11 HelpContent live-file discipline item; §11 notFound() consistency item; §11 PRE-PHASE-17 migration debt item (033 required); §11 inline schema fix flag item; §13 Phase AUDITIONS: pending → ✓ Complete (10 prompts, full build summaries — including a correction to the AUDITIONS.4b entry's HelpContent section-order claim); Phase 17 tracker: PRE-PHASE-17 note added (033 migration); DOC.59 ✓ + DOC.60 ✓ logged; §14 R23: 3-arg signature + formatTime() pattern; §14 R34: feature_auditions (5th flag); §14 public-route canonical files: auditions.ts (4th); §14 R38 cross-reference added (TipTap merge tag extension, immediatelyRender, escapeHtml in substituteMergeTags); §14 migration/DB drift rule added; missing v4.5 version-history entry reconstructed (see above); DOC.60 logged)*
+*v4.8 (August 2026 — DOC.65: §2 header updated (v4.8); §7 feature flag active flag list updated (five → seven: feature_inventory added Migration 034 / INVENTORY.1, feature_forums pending Migration 035 / Phase FORUMS); §7 inline single-key note updated — getUpcomingAuditions() stale comment Q-item closed (fixed in ADMIN.44); §7 migration/DB drift updated — 033 applied (DB-VERIFY.5), drift cleared; §7 Sidebar atomic edit extended (three-part → four-part: TOOLTIP_ANCHOR_MAP lookup map added as 4th required location — replaces hardcoded || ternary, established INVENTORY.1); §7 inventory_manager toggle pattern added (DB CHECK constraint, app-layer role guard, Editor-row-only toggle, SA/OA caller guard, types/audit.ts location); §10 R32 grep updated (feature_inventory + feature_forums added to grep pattern; comment updated to Migration 034); §11 PRE-PHASE-17 item updated — 033 applied, debt cleared; §13 PRE-PHASE-17 action note updated (applied); §13 Phase INVENTORY in-progress block + DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 + DOC.64 + DOC.65 logged; §13 version history ordering corrected (v4.7 was before v4.6); DOC.65 logged)*
