@@ -1764,7 +1764,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 035 (`035_forums.sql` — Phase FORUMS). Migrations 033 and 034 are applied.
+**Next migration:** 036 (none currently planned — all pre-launch migrations applied through 035). Migrations 033, 034, and 035 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -1945,6 +1945,271 @@ index (`idx_email_log_recipients_volunteer_id`) was
 confirmed pre-existing on the live DB during ADMIN.24
 pre-work. No migration file was needed or created for
 it.
+
+### forum_user_groups
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name         text NOT NULL
+description  text
+sort_order   integer NOT NULL DEFAULT 0
+created_by   uuid REFERENCES admin_users(id)
+             ON DELETE SET NULL
+created_at   timestamptz NOT NULL DEFAULT now()
+updated_at   timestamptz NOT NULL DEFAULT now()
+-- UNIQUE INDEX: idx_forum_user_groups_name on name
+-- INDEX: idx_forum_user_groups_sort_order
+-- INDEX: idx_forum_user_groups_created_by
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL (INSERT/UPDATE/DELETE)
+-- Named groups of admin users for forum access grants.
+-- Groups have no platform function beyond access grants.
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_user_group_members
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+group_id      uuid NOT NULL
+              REFERENCES forum_user_groups(id)
+              ON DELETE CASCADE
+admin_user_id uuid NOT NULL
+              REFERENCES admin_users(id)
+              ON DELETE CASCADE
+created_at    timestamptz NOT NULL DEFAULT now()
+-- UNIQUE: (group_id, admin_user_id)
+-- INDEX: idx_forum_group_members_group_id
+-- INDEX: idx_forum_group_members_user_id
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_categories
+```sql
+id         uuid PRIMARY KEY DEFAULT gen_random_uuid()
+name       text NOT NULL
+sort_order integer NOT NULL DEFAULT 0
+created_by uuid REFERENCES admin_users(id)
+           ON DELETE SET NULL
+created_at timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forum_categories_sort_order
+-- INDEX: idx_forum_categories_created_by
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL
+-- Organizational headers for forums. Not postable.
+-- Migration 035 (035_forums.sql)
+```
+
+### forums
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+category_id uuid NOT NULL
+            REFERENCES forum_categories(id)
+            ON DELETE CASCADE
+name        text NOT NULL
+description text
+sort_order  integer NOT NULL DEFAULT 0
+is_archived boolean NOT NULL DEFAULT false
+created_by  uuid REFERENCES admin_users(id)
+            ON DELETE SET NULL
+created_at  timestamptz NOT NULL DEFAULT now()
+updated_at  timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forums_category_id
+-- INDEX: idx_forums_sort_order
+-- INDEX: idx_forums_created_by
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: authenticated SELECT (access filtering at
+--   data layer — getForumIndexData() in lib/data/forums.ts);
+--   is_super_admin_or_owner_admin() FOR ALL
+-- Archived forums hidden from index for all roles.
+-- Still accessible via direct URL or manage interface.
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_access_grants
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+forum_id      uuid NOT NULL
+              REFERENCES forums(id) ON DELETE CASCADE
+grant_type    text NOT NULL
+              CHECK (grant_type IN ('role','group','individual'))
+role          text CHECK (role IN (
+                'super_admin','owner_admin','editor',
+                'viewer','production'
+              ))
+group_id      uuid REFERENCES forum_user_groups(id)
+              ON DELETE CASCADE
+admin_user_id uuid REFERENCES admin_users(id)
+              ON DELETE CASCADE
+created_by    uuid REFERENCES admin_users(id)
+              ON DELETE SET NULL
+created_at    timestamptz NOT NULL DEFAULT now()
+-- Exactly one of role/group_id/admin_user_id is non-null
+--   per row (enforced at app layer in addForumAccessGrant()).
+-- INDEX: idx_forum_access_grants_forum_id
+-- INDEX: idx_forum_access_grants_group_id
+-- INDEX: idx_forum_access_grants_admin_user_id
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL
+-- SA/OA bypass all grants at data layer (never checked).
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_moderators
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+forum_id      uuid NOT NULL
+              REFERENCES forums(id) ON DELETE CASCADE
+admin_user_id uuid NOT NULL
+              REFERENCES admin_users(id) ON DELETE CASCADE
+assigned_by   uuid REFERENCES admin_users(id)
+              ON DELETE SET NULL
+created_at    timestamptz NOT NULL DEFAULT now()
+-- UNIQUE: (forum_id, admin_user_id)
+-- INDEX: idx_forum_moderators_forum_id
+-- INDEX: idx_forum_moderators_admin_user_id
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_thread_prefixes
+```sql
+id         uuid PRIMARY KEY DEFAULT gen_random_uuid()
+forum_id   uuid NOT NULL
+           REFERENCES forums(id) ON DELETE CASCADE
+label      text NOT NULL
+sort_order integer NOT NULL DEFAULT 0
+created_at timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forum_thread_prefixes_forum_id
+-- RLS: authenticated SELECT; is_super_admin_or_owner_admin()
+--   FOR ALL
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_threads
+```sql
+id         uuid PRIMARY KEY DEFAULT gen_random_uuid()
+forum_id   uuid NOT NULL
+           REFERENCES forums(id) ON DELETE CASCADE
+prefix_id  uuid REFERENCES forum_thread_prefixes(id)
+           ON DELETE SET NULL
+title      text NOT NULL
+created_by uuid NOT NULL REFERENCES admin_users(id)
+is_pinned  boolean NOT NULL DEFAULT false
+is_locked  boolean NOT NULL DEFAULT false
+is_deleted boolean NOT NULL DEFAULT false
+created_at timestamptz NOT NULL DEFAULT now()
+updated_at timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forum_threads_forum_id
+-- INDEX: idx_forum_threads_created_by
+-- INDEX: idx_forum_threads_prefix_id
+-- Compound sort index: idx_forum_threads_sort on
+--   (forum_id, is_pinned DESC, updated_at DESC)
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: authenticated SELECT; authenticated INSERT
+--   (anyone with forum access can create threads —
+--   access check at app layer); is_super_admin_or_
+--   owner_admin() UPDATE; is_super_admin_or_owner_admin()
+--   DELETE
+-- is_deleted = true: thread hidden (set by moderation).
+--   updated_at bumped when a reply is posted to keep
+--   the thread at the top of the sorted list.
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_posts
+```sql
+id         uuid PRIMARY KEY DEFAULT gen_random_uuid()
+thread_id  uuid NOT NULL
+           REFERENCES forum_threads(id) ON DELETE CASCADE
+author_id  uuid NOT NULL REFERENCES admin_users(id)
+body_html  text NOT NULL
+is_deleted boolean NOT NULL DEFAULT false
+edited_at  timestamptz
+created_at timestamptz NOT NULL DEFAULT now()
+updated_at timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forum_posts_thread_id
+-- INDEX: idx_forum_posts_author_id
+-- Trigger: handle_updated_at() on updated_at
+-- RLS: authenticated SELECT; authenticated INSERT;
+--   is_super_admin_or_owner_admin() UPDATE;
+--   is_super_admin_or_owner_admin() DELETE
+-- Soft delete: is_deleted = true sets body_html =
+--   '[Post deleted]' (done at app layer in deletePost()).
+--   Row preserved for thread structure + reply count.
+-- body_html sanitized via FORUM_POST_SANITIZE_OPTIONS
+--   (exported from lib/actions/forum-posts.ts) at
+--   save time for both createForumPost() and editPost().
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_post_attachments
+```sql
+id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
+post_id         uuid NOT NULL
+                REFERENCES forum_posts(id) ON DELETE CASCADE
+storage_path    text NOT NULL
+filename        text NOT NULL
+mime_type       text
+file_size_bytes bigint
+uploaded_by     uuid REFERENCES admin_users(id)
+                ON DELETE SET NULL
+created_at      timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_forum_post_attachments_post_id
+-- INDEX: idx_forum_post_attachments_uploaded_by
+-- RLS: authenticated SELECT; authenticated INSERT;
+--   is_super_admin_or_owner_admin() DELETE
+-- Storage path: forums/[post_id]/[uuid].[ext] in
+--   media bucket (moved from forums/temp/[tempKey]/
+--   at post creation time via adminClient.storage.move()).
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_thread_subscriptions
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+thread_id     uuid NOT NULL
+              REFERENCES forum_threads(id) ON DELETE CASCADE
+admin_user_id uuid NOT NULL
+              REFERENCES admin_users(id) ON DELETE CASCADE
+created_at    timestamptz NOT NULL DEFAULT now()
+-- UNIQUE: (thread_id, admin_user_id)
+-- INDEX: idx_forum_thread_subs_thread_id
+-- INDEX: idx_forum_thread_subs_user_id
+-- RLS: authenticated SELECT; INSERT WITH CHECK
+--   (admin_user_id = auth.uid()) — self-scoped; DELETE
+--   USING (admin_user_id = auth.uid()) — self-scoped
+-- Users manually subscribe; no auto-subscribe on post.
+-- Subscriptions trigger sendForumNotificationEmail()
+--   on new replies (non-blocking void IIFE in
+--   createForumPost() — caller excluded from send).
+-- Migration 035 (035_forums.sql)
+```
+
+### forum_post_reads
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+post_id       uuid NOT NULL
+              REFERENCES forum_posts(id) ON DELETE CASCADE
+admin_user_id uuid NOT NULL
+              REFERENCES admin_users(id) ON DELETE CASCADE
+read_at       timestamptz NOT NULL DEFAULT now()
+-- UNIQUE: (post_id, admin_user_id)
+-- INDEX: idx_forum_post_reads_post_id
+-- INDEX: idx_forum_post_reads_user_id
+-- Composite: idx_forum_post_reads_user_post on
+--   (admin_user_id, post_id) for unread queries
+-- RLS: authenticated SELECT; INSERT WITH CHECK
+--   (admin_user_id = auth.uid()) — self-scoped; DELETE
+--   USING (admin_user_id = auth.uid()) — self-scoped
+-- Batch-upserted (ON CONFLICT DO NOTHING) when a user
+--   opens a thread (markThreadRead() in forums.ts).
+-- Unread counts computed at render time from absence
+--   of rows — no denormalized counter column.
+-- Migration 035 (035_forums.sql)
+```
 
 **`is_admin()` function ordering constraint (confirmed technical necessity):**
 `LANGUAGE sql` functions are catalog-validated at `CREATE FUNCTION` time.
@@ -2907,7 +3172,7 @@ submitted_at     timestamptz NOT NULL DEFAULT now()
 self-registration with null admin_id (R25). Logged non-blocking in
 `submitVolunteerForm()`. Phase AUDITIONS (AUDITIONS.1b): `audition.convert_to_volunteer`
 — logged when an admin converts an auditioner signup to a volunteer record via the
-Signups tab Convert to Volunteer action. All types in `lib/audit.ts`, visible in audit log viewer.
+Signups tab Convert to Volunteer action. All types in `lib/audit.ts`, visible in audit log viewer. Phase FORUMS (FORUMS.1–5): 34 new types across 5 prompts. FORUMS.1 (5): `forum_group.create`, `forum_group.update`, `forum_group.delete`, `forum_group_member.add`, `forum_group_member.remove`. FORUMS.2 (19): `forum_category.create`, `forum_category.update`, `forum_category.reorder`, `forum_category.delete`, `forum_forum.create`, `forum_forum.update`, `forum_forum.reorder`, `forum_forum.archive`, `forum_forum.unarchive`, `forum_forum.delete`, `forum_forum.move`, `forum_access_grant.add`, `forum_access_grant.remove`, `forum_moderator.add`, `forum_moderator.remove`, `forum_prefix.create`, `forum_prefix.update`, `forum_prefix.reorder`, `forum_prefix.delete`. FORUMS.4 (2): `forum_post.create`, `forum_post_attachment.upload`. FORUMS.5 (8): `forum_thread.create`, `forum_thread.lock`, `forum_thread.unlock`, `forum_thread.pin`, `forum_thread.unpin`, `forum_thread.move`, `forum_post.edit`, `forum_post.delete`.
 
 **Default `app_settings` seed values:**
 ```
@@ -3000,6 +3265,8 @@ toggle row for this flag. `saveFeatureFlags()` revalidates
 `/crew/forums` alongside existing routes.
 Total active SETUP keys: 21. Setup Panel fetches 22 keys
 total (21 SETUP keys + default_reply_to).
+
+**Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
 Every new feature flag requires exactly 5 file changes:
@@ -4048,7 +4315,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete. Phase AUDITIONS (Audition Management) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Migration 032 applied. Phase 17 (Launch) is next.*
+*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete. Phase AUDITIONS (Audition Management) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Phase INVENTORY complete — all 6 prompts shipped (INVENTORY.A through INVENTORY.5). Phase FORUMS (Internal Discussion Forums) complete — all 6 prompts shipped (FORUMS.A through FORUMS.5). Migrations 032–035 applied. Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -4940,6 +5207,22 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
 
 **30BN-INVENTORY.5 ✓** See Phase INVENTORY section above for full build summary. Phase INVENTORY complete. Key findings: route handler must be .tsx (JSX embedded); HelpContent content written in live file convention not prompt's markup. 6 files. Commit 7f57805.
 
+**30BN-FORUMS.A ✓** Read-only audit. See Phase FORUMS section above for full findings.
+
+**30BN-FORUMS.1 ✓** See Phase FORUMS section above. 15 files. Commit dde841d.
+
+**30BN-FORUMS.2 ✓** See Phase FORUMS section above. 5 files. Commit c1c7328.
+
+**30BN-FORUMS.3 ✓** See Phase FORUMS section above. 7 files. Commit 5c95810.
+
+**30BN-FORUMS.4 ✓** See Phase FORUMS section above. 6 files. Commit b21b3a4.
+
+**30BN-FORUMS.5 ✓** See Phase FORUMS section above. 9 files. Commit e41f66f.
+
+**30BN-DOC.68 ✓** Brief Update v5.2 Part A (§1/§2/§3/§5/§7/§8 — Phase FORUMS complete).
+
+**30BN-DOC.69 ✓** Brief Update v5.2 Part B (§9 forum schema tables + Migration 035 + §11 Phase FORUMS build summary + prompt log — this prompt).
+
 ### Phase 17 — Launch
 
 **17.1 — Production Environment Audit + Setup Panel Configuration**
@@ -5160,9 +5443,21 @@ Full forward spec in §8 (Inventory Management section) and §9 (admin_users + a
 
 **30BN-INVENTORY.5 ✓** `components/crew/inventory/InventoryTagsPDF.tsx` (new — @react-pdf/renderer Document; createStyles() factory with StyleSheet.create() strictly inside — THEME.4 compliant; 2-column tag grid per Letter page; PNG QR image via `data:image/png;base64,${pngBase64}`). `app/api/inventory/tags/route.tsx` (new — .tsx not .ts since JSX is embedded directly; auth + flag + Production guards; ids query param max 50; item + category fetch with Array.isArray normalization for FK join; brand_primary from app_settings via getAdminClient(); lightenHex() for brandPrimaryLight; generateQR() per item; renderToBuffer(); fixed filename `inventory-tags.pdf` in Content-Disposition — never interpolated). `app/crew/(app)/inventory/[id]/page.tsx`: generateQR() called server-side; qrSvg + qrPngBase64 passed as props to InventoryDetailTabs. `components/crew/inventory/InventoryDetailTabs.tsx`: QR tab stub replaced (white-container SVG display, PNG + SVG download links, Print Tag link); HelpTooltip added to Checkouts tab (inventory-checkout) and QR tab (inventory-tags). `components/crew/inventory/InventoryListClient.tsx`: Print Tags button wired (window.open to /api/inventory/tags?ids=..., shows count, disabled when empty; stale comment removed). `components/crew/help/HelpContent.tsx`: Inventory section stub replaced with full 4-subsection content (overview, items, checkout, tags); written in live file convention (show() predicates, shared class constants, backtick template literals) not prompt's suggested markup (F3 — prompt's aria-labelledby nested sections didn't match live convention). jsx-a11y/alt-text lint warning on @react-pdf/renderer Image caught and fixed. Phase INVENTORY complete. 6 files. Commit 7f57805.
 
-### Phase FORUMS — Internal Discussion Forums (pre-launch)
+### Phase FORUMS — Internal Discussion Forums ✓ Complete
 
-Full forward spec in §8 (Internal Forums section) and §9 (app_settings + schema tables). Prompt structure: FORUMS.A (audit) → FORUMS.1 (migration + flag + user groups settings + sidebar with Production allowlist) → FORUMS.2 (forum management interface — SA/OA) → FORUMS.3 (forum index + thread list + read tracking) → FORUMS.4 (thread view + post composer + attachments) → FORUMS.5 (thread creation + moderation actions + subscription emails). Migration: 035. Feature flag: `feature_forums`. Production role has access (Production allowlist entry in proxy.ts and Sidebar required). 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. 7th sanctioned XHR file: `ForumPostComposer.tsx`. New `sendForumNotificationEmail()` in `lib/email.ts`. New Settings hub card for Groups (`/crew/settings/groups`).
+Full forward spec in §8 (Internal Forums section) and §9 (Migration 035, 12 forum table schemas, AuditAction types). All 6 prompts shipped.
+
+**30BN-FORUMS.A ✓** Read-only audit. 10 targets audited with exact line numbers. Key findings: `feature_forums` absent from all 5 required file locations; `proxy.ts` 187 lines — no matcher change needed (`/crew/:path*` covers forums), needsFlagCheck insertion after line 53, Production allowlist insertion between lines 136–137, flag block after line 172; `Sidebar.tsx` 201 lines — `MessageSquare` icon not yet imported, 4 atomic edit locations confirmed; `setup/page.tsx` — 21 SETUP_KEYS (including `default_reply_to`), all 6 flag `initialValues` use `||` correctly; `HelpContent.tsx` 1460 lines — 16 live sections, Forums becomes 17th, roles MUST include 'production' (unlike Inventory). F3: Email Templates editors in AuditionDetailTabs use StarterKit+MergeTagExtension only (not Link+Underline — prompt had assumed full extension set). F4: settings/page.tsx User Groups card must use `canAccessAdminSettings` gate (not `isEditorOrAbove`). No code.
+
+**30BN-FORUMS.1 ✓** Migration 035 applied (12 forum tables + feature_forums seed). 5-file flag pattern for `feature_forums`. `proxy.ts` 3 edits (needsFlagCheck, Production allowlist, crew flag block — no matcher change, no public block). `Sidebar.tsx` 5-part atomic edit (MessageSquare icon import + NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + TOOLTIP_ANCHOR_MAP — `/crew/forums` → `'forums'` added as 4th map entry). `HelpContent.tsx` 17th section stub (roles include 'production'). `types/forums.ts` created. `lib/audit.ts` 5 forum_group.* AuditAction types. `lib/actions/forum-groups.ts` (8 actions, SA/OA-gated). Settings/groups page + `ForumGroupsClient.tsx`. User Groups card added to settings hub before Platform Setup (`canAccessAdminSettings` gate — F4). Forums stub page. 15 files. Commit dde841d.
+
+**30BN-FORUMS.2 ✓** `lib/audit.ts` 19 new forum_* AuditAction types (total 24 forum entries). `types/forums.ts` stubs replaced with full types + 6 new types = 10 total (94 lines). `lib/actions/forum-admin.ts` (21 exported functions: `getForumManageData()` with FK-hint parallel fetch + Array.isArray() normalization, category CRUD×4, forum CRUD×7 including `moveForum()`, access grants×2, moderators×2, admin search×1, thread prefixes×4). Manage page + `ForumManageClient.tsx` (three per-forum sub-panels: access grants with role/group/user segmented control, moderators, thread prefixes). Key: Q2 — 'user'→'individual' mapping at call site (UI label vs DB grant_type value); Q3 — `adminUsers` prop in ForumManageClient unused (server-side search used instead). 5 files. Commit c1c7328.
+
+**30BN-FORUMS.3 ✓** `types/forums.ts` 4 new types (ForumSummary, CategoryWithForumSummary, ThreadSummary, ForumDetail — 133 lines, 14 types total). `lib/data/forums.ts` (new — NO 'use server', accepts supabase as param; private `getAccessibleForumIds()`, `canAccessForum()`, `isForumModerator()`, `getForumIndexData()`, `getThreadListData()` — TypeScript-join approach for three-way OR access check; parallel-fetched grants + group memberships resolved in JS, not in Supabase query). `lib/actions/forums.ts` (`getForumIndex()`, `getThreadList()`, `markThreadRead()` batch upsert, `markAllForumRead()` — all `getServerClient()` only). Real forum index page replacing stub. `ForumIndexClient.tsx`. `/crew/forums/[forumId]/page.tsx`. `ThreadListClient.tsx` (pinned sections, prefix badges, mark-all-read). First-pass lint+tsc clean (no pre-commit fixes). Q2: archived forums excluded from index for all roles including SA/OA (is_archived=false filter is unconditional — correct behavior). 7 files. Commit 5c95810.
+
+**30BN-FORUMS.4 ✓** `types/forums.ts` 3 new types (ForumPostAttachment + signed_url field, ForumPostWithDetails, ThreadViewData — 185 lines, 17 types total). `lib/audit.ts` forum_post.create + forum_post_attachment.upload. `lib/actions/forum-posts.ts` (`FORUM_POST_SANITIZE_OPTIONS` exported constant; `getThreadWithPosts()` — parallel fetch, single-batch signed URL generation, no client-in-loop; `getPostAttachmentUploadUrl()` with mimeType input validation; `createForumPost()` — temp-key move pattern; `toggleThreadSubscription()`). Thread view page (forumId URL mismatch check → notFound(); `markThreadRead()` called on load). `ThreadViewClient.tsx` (breadcrumbs, subscribe toggle, sanitized HTML, attachments, locked notice, composer slot). `ForumPostComposer.tsx` (7th sanctioned XHR file — sequential upload mirroring InventoryPhotoUploader.tsx `uploadWithProgress()` pattern; 11-button toolbar adding H3+Blockquote to BlastComposer's 9). Two real lint warnings caught and fixed pre-commit. Q1: mimeType param given real job (input validation); Q2: forumId prop unused in ForumPostComposer (cleanup candidate — removed FORUMS.5). 6 files. Commit b21b3a4.
+
+**30BN-FORUMS.5 ✓** `lib/audit.ts` 8 new AuditAction types (forum_thread.create/lock/unlock/pin/unpin/move, forum_post.edit/delete). `lib/actions/forum-moderation.ts` (new — 8 actions: createThread, lock/unlock, pin/unpin, moveThread (SA/OA only), editPost, deletePost idempotent soft delete; private `isModeratableBy()` helper). `lib/email.ts` `sendForumNotificationEmail()` added (uses `sendBatchEmails()` per R8 — Q2 fix; `resolveEmailSettings()` required — no hardcoded hex; `escapeHtml()` on posterName + threadTitle; `logEmailSent()` after send; `sentBy: null`; `getAdminClient()` internal; poster excluded from subscriber fetch via `.neq('admin_user_id', post.author_id)`). Non-blocking void IIFE call site added to `createForumPost()` in forum-posts.ts. `getForumsForMove()` added to forum-admin.ts. `ThreadListClient.tsx` — New Thread button + shadcn Dialog modal with prefix selector, title, 11-button TipTap editor (no file attachments on thread creation — Brief spec confirmed). `ThreadViewClient.tsx` — per-post edit (shared editor, async `setContent()` in click handler per AUDITIONS.2c F7 pattern) + delete controls + moderation bar (lock/pin/move). `ForumPostComposer.tsx` — dead `forumId` prop removed (Q2 FORUMS.4 cleanup). `HelpContent.tsx` — full 4-subsection Forums section replacing stub (forums-overview/threads visible to all roles including production; forums-access/moderation SA/OA only). All 17 sections now have full content. Key fixes before commit: Q1 — `buildEmailHtml()` and `logEmailSent()` real signatures read before writing (pseudocode signature was wrong); Q2 — per-subscriber loop replaced with `sendBatchEmails()` per R8; Q3 — `Editor | null` explicit typing required (ReturnType<typeof useEditor> picks wrong overload when immediatelyRender: false). 9 files (1 new, 8 modified). Commit e41f66f. Phase FORUMS complete.
 
 ### Phase CAST — Cast Member Portal (post-launch)
 
@@ -5479,3 +5774,5 @@ logged)*
 *v5.0 (August 2026 — DOC.64: §1 current phase updated (033 applied, INVENTORY.1 complete, INVENTORY.2–5 pending); §7 Phase AUDITIONS proxy block corrected — /crew/auditions Production exception attribution changed from AUDITIONS.2a to ADMIN.43 (the fix was missing from the AUDITIONS.2a commit and applied separately); §7 Phase INVENTORY proxy.ts additions block added (needsFlagCheck + crew flag block, no Production exception); §8 User Management: inventory_manager toggle documented (INVENTORY.1 — Editor rows only, toggleInventoryManager(), logged as user.inventory_manager_change in types/audit.ts); §8 HelpContent NOTE: TOOLTIP_ANCHOR_MAP pattern documented (replaces hardcoded || ternary — INVENTORY.1 refactor); §8 Help System: 15 → 16 sections, Inventory anchors added, Production exclusion noted; §9 Migration 033 status block added (applied DB-VERIFY.5); §9 Migration 034 status block added (applied INVENTORY.1 — 8 tables + inventory_manager column); §9 next-migration pointer updated (035 next); §9 Migration 032 inline fix NOTE updated (five fixes now captured in 033, drift resolved); §11 Phase INVENTORY: 8 tables (not 9 — prompt miscount corrected); INVENTORY.A + INVENTORY.1 build summaries added; §11 prompt log: DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 all logged; §13 version history ordering corrected (v4.9 was inserted before v4.8/v4.7 in DOC.63 — reordered to chronological ascending); DOC.64 logged)*
 
 *v5.1 (August 2026 — DOC.66: Phase INVENTORY complete — §1 current phase updated (INVENTORY complete, FORUMS next); §8 User Management inventory_manager toggle: types/audit.ts corrected to lib/audit.ts (inaccuracy introduced DOC.64); §8 Settings hub table: Inventory Management card added (INVENTORY.2); §8 Inventory Management: prompt structure updated (all 6 prompts ✓); key files list replaced (pending → built, 17 files total; route.ts corrected to route.tsx — F1 INVENTORY.5; lib/audit.ts corrected from types/audit.ts — F1 INVENTORY.2; types/inventory.ts, InventoryTagsPDF.tsx, CheckoutModal.tsx added; types/admin.ts + lib/auth.ts unplanned additions documented); §8 Help System: Inventory stub note removed; HelpTooltip count 40 → 42 (inventory-checkout + inventory-tags added INVENTORY.5); §9 lib/audit.ts AuditAction location note added (admin_users schema block); §9 media bucket: inventory/ path namespace added + storage dual-client pattern noted (Edit 10 adapted to the live prose-paragraph format at line 148 — the prompt's bulleted-list old_str did not exist in the Brief; it matched the Process document's format instead); §11 Phase INVENTORY: INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts); INVENTORY.2–5 full build summaries added; §11 prompt log: INVENTORY.2–5 logged; DOC.66 logged)*
+
+*v5.2 (August 2026 — DOC.68/DOC.69: Phase FORUMS complete — §1 header + current phase updated (FORUMS complete, Phase 17 next); §2 Production row updated (forums access added); §3 TipTap useEditor overload caveat added (Editor | null explicit typing required — FORUMS.5 Q3); §5 media bucket forums path namespace added; §7 Production roles table updated (/crew/forums added), Phase FORUMS proxy.ts additions block added (needsFlagCheck, Production exception, crew flag block — no matcher, no public block); §8 Internal Forums section: pending → complete, prompt structure all ✓, key files list replaced (17 files total); §8 Settings hub User Groups card added (FORUMS.1, canAccessAdminSettings gate); §8 Help System: 16 → 17 sections, 42 → 43 HelpTooltips, forum anchors added, TOOLTIP_ANCHOR_MAP /crew/forums → 'forums' entry added, Production sidebar: Forums link + partial HelpContent visibility noted; §8 About System Emails: 15 → 16 triggers (forum_notification added); §8 Setup Panel setup/page.tsx key count corrected (18 → 22); §9 Migration 035 status block added; §9 12 forum table schema blocks added; §9 next migration pointer updated (036 — no pending migrations); §9 AuditAction types: 34 new forum_* types across FORUMS.1–5; §11 Phase FORUMS: forward spec → completed 6-prompt build summary (FORUMS.A–FORUMS.5 with commits and key findings); §11 header updated; §11 prompt log: FORUMS.A–FORUMS.5 + DOC.68 + DOC.69 added; DOC.69 logged)*
