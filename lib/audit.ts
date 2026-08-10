@@ -102,6 +102,18 @@ export type AuditAction =
   // Auditions
   | 'audition.convert_to_volunteer'
 
+  // Inventory
+  | 'inventory_category.create'
+  | 'inventory_category.update'
+  | 'inventory_category.reorder'
+  | 'inventory_category.deactivate'
+  | 'inventory_location.create'
+  | 'inventory_location.update'
+  | 'inventory_location.reorder'
+  | 'inventory_location.deactivate'
+  | 'inventory_item.create'
+  | 'inventory_item.update'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

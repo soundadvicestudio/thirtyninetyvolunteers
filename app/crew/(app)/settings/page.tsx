@@ -61,6 +61,8 @@ export default async function SettingsPage() {
 
   const canAccessAdminSettings = admin.role === 'super_admin' || admin.role === 'owner_admin'
   const isEditorOrAbove = admin.role !== 'viewer' && admin.role !== 'production'
+  const canAccessInventorySettings =
+    canAccessAdminSettings || (admin.role === 'editor' && admin.inventory_manager)
 
   return (
     <div>
@@ -162,6 +164,20 @@ export default async function SettingsPage() {
           <LockedCard
             title="Location Management"
             description="Manage bookable spaces used by the master calendar, show booking form, and event creation."
+          />
+        )}
+
+        {canAccessInventorySettings ? (
+          <LinkedCard
+            href="/crew/settings/inventory"
+            title="Inventory Settings"
+            description="Manage inventory categories and storage locations used by the inventory system."
+          />
+        ) : (
+          <LockedCard
+            title="Inventory Settings"
+            description="Manage inventory categories and storage locations used by the inventory system."
+            badgeLabel="Inventory Manager required"
           />
         )}
 

@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
+import { getInventoryCategories, getInventoryLocations } from '@/lib/actions/inventory-settings'
+import { getInventoryItems } from '@/lib/actions/inventory'
+import InventoryListClient from '@/components/crew/inventory/InventoryListClient'
+import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 export default async function InventoryPage() {
   const admin = await getAdminUser()
@@ -19,14 +23,35 @@ export default async function InventoryPage() {
     redirect('/crew/dashboard')
   }
 
+  const canWrite =
+    admin.role === 'super_admin' ||
+    admin.role === 'owner_admin' ||
+    (admin.role === 'editor' && admin.inventory_manager)
+
+  const [categories, locations, items] = await Promise.all([
+    getInventoryCategories(supabase),
+    getInventoryLocations(supabase),
+    getInventoryItems({ is_active: true }, supabase),
+  ])
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Inventory</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">
+          Inventory <HelpTooltip anchor="inventory" label="Inventory" />
+        </h1>
         <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
-          Inventory management is coming soon.
+          Track props, costumes, and other production inventory.
         </p>
       </div>
+
+      <InventoryListClient
+        categories={categories}
+        locations={locations}
+        items={items}
+        adminRole={admin.role}
+        canWrite={canWrite}
+      />
     </div>
   )
 }
