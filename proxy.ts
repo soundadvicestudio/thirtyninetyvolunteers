@@ -49,7 +49,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/rehearsal-checkin/') ||
     pathname.startsWith('/crew/auditions') ||
     pathname.startsWith('/auditions/') ||
-    pathname.startsWith('/audition-checkin/')
+    pathname.startsWith('/audition-checkin/') ||
+    pathname.startsWith('/crew/inventory')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -164,6 +165,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
   if (pathname.startsWith('/crew/auditions') && flags && !flags.auditions) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+  if (pathname.startsWith('/crew/inventory') && flags && !flags.inventory) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
 

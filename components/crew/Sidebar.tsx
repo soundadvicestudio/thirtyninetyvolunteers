@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ClipboardList,
   Mic2,
+  Package,
   Users,
   Theater,
   Briefcase,
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { label: 'Calendar', href: '/crew/calendar', icon: CalendarDays },
   { label: 'Rehearsals', href: '/crew/rehearsals', icon: ClipboardList },
   { label: 'Auditions', href: '/crew/auditions', icon: Mic2 },
+  { label: 'Inventory', href: '/crew/inventory', icon: Package },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
@@ -45,6 +47,16 @@ const NAV_ITEMS = [
   { label: 'Settings', href: '/crew/settings', icon: Settings },
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
+
+// Nav items whose HelpTooltip renders as a sibling of the nav Link (see the
+// render-loop comment below for why). Keyed by href so the render loop can
+// do a single lookup instead of a hardcoded || chain — generalized INVENTORY.1
+// from the Rehearsals/Auditions-only special case established in AUDITIONS.2b.
+const TOOLTIP_ANCHOR_MAP: Record<string, string> = {
+  '/crew/rehearsals': 'rehearsals',
+  '/crew/auditions': 'auditions',
+  '/crew/inventory': 'inventory',
+}
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -74,6 +86,7 @@ export default function Sidebar({
     '/crew/communication': flags.blast,
     '/crew/rehearsals': flags.rehearsals,
     '/crew/auditions': flags.auditions,
+    '/crew/inventory': flags.inventory,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -133,12 +146,13 @@ export default function Sidebar({
           }`
 
           // HelpTooltip renders its own <Link> (<a>) — it cannot nest inside
-          // this item's <Link>, so Rehearsals and Auditions get a sibling
-          // wrapper instead of the plain per-item Link every other nav item
-          // uses. Generalized AUDITIONS.2b from the original Rehearsals-only
-          // special case.
-          if (href === '/crew/rehearsals' || href === '/crew/auditions') {
-            const anchor = href === '/crew/rehearsals' ? 'rehearsals' : 'auditions'
+          // this item's <Link>, so any href in TOOLTIP_ANCHOR_MAP gets a
+          // sibling wrapper instead of the plain per-item Link every other
+          // nav item uses. Generalized AUDITIONS.2b from the original
+          // Rehearsals-only special case; lookup map replaces the hardcoded
+          // || chain as of INVENTORY.1.
+          if (href in TOOLTIP_ANCHOR_MAP) {
+            const anchor = TOOLTIP_ANCHOR_MAP[href]
             return (
               <div key={href} className="flex items-center gap-1">
                 <Link href={href} className={`flex-1 ${linkClasses}`}>

@@ -35,6 +35,7 @@ export type AuditAction =
   | 'user.decline_registration'
   | 'user.password_change'
   | 'user.calendar_editor_change'
+  | 'user.inventory_manager_change'
 
   // Opportunities
   | 'opportunity.create'

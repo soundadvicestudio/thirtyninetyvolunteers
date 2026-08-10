@@ -32,6 +32,7 @@ export type SetupPanelInitialValues = {
   feature_blast: string
   feature_rehearsals: string
   feature_auditions: string
+  feature_inventory: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -328,6 +329,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [blastEnabled, setBlastEnabled] = useState(initialValues.feature_blast === 'true')
   const [rehearsalsEnabled, setRehearsalsEnabled] = useState(initialValues.feature_rehearsals === 'true')
   const [auditionsEnabled, setAuditionsEnabled] = useState(initialValues.feature_auditions === 'true')
+  const [inventoryEnabled, setInventoryEnabled] = useState(initialValues.feature_inventory === 'true')
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -339,6 +341,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_blast', blastEnabled ? 'true' : 'false')
     fd.append('feature_rehearsals', rehearsalsEnabled ? 'true' : 'false')
     fd.append('feature_auditions', auditionsEnabled ? 'true' : 'false')
+    fd.append('feature_inventory', inventoryEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -388,6 +391,12 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         description="Enables the Auditions section, the public audition signup page, and the audition check-in page. When off, /crew/auditions and the audition public routes are inaccessible."
         enabled={auditionsEnabled}
         onToggle={() => setAuditionsEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Inventory Management"
+        description="Enables the Inventory section. When off, /crew/inventory is inaccessible."
+        enabled={inventoryEnabled}
+        onToggle={() => setInventoryEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button

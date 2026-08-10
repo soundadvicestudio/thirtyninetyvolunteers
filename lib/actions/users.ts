@@ -334,3 +334,58 @@ export async function toggleCalendarEditor(
 
   return { success: true }
 }
+
+export async function toggleInventoryManager(
+  targetUserId: string,
+  enabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const admin = await getAdminUser()
+  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: target } = await supabase
+    .from('admin_users')
+    .select('role, inventory_manager')
+    .eq('id', targetUserId)
+    .maybeSingle()
+
+  if (!target) {
+    return { success: false, error: 'User not found' }
+  }
+
+  // F4: app-layer guard — inventory_manager is only meaningful on Editor
+  // accounts. The DB CHECK constraint is the safety net (blocks production/
+  // viewer), but this guard rejects the call before attempting the update
+  // for any non-Editor role, including SA/OA/Production/Viewer.
+  if (target.role !== 'editor') {
+    return {
+      success: false,
+      error: 'Inventory manager access can only be granted to Editor accounts.',
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('admin_users')
+    .update({ inventory_manager: enabled })
+    .eq('id', targetUserId)
+
+  if (updateError) {
+    return { success: false, error: updateError.message }
+  }
+
+  await logAction(
+    admin.id,
+    'user.inventory_manager_change',
+    'admin_user',
+    targetUserId,
+    { inventory_manager: !enabled },
+    { inventory_manager: enabled }
+  )
+
+  revalidatePath('/crew/settings/users')
+
+  return { success: true }
+}

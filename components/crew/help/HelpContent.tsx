@@ -159,6 +159,17 @@ const ALL_SECTIONS: TocSection[] = [
       { id: 'auditions-checkin', label: 'Day-of Check-In', roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'] },
     ],
   },
+  {
+    id: 'inventory',
+    label: 'Inventory',
+    roles: ['super_admin', 'owner_admin', 'editor', 'viewer'],
+    children: [
+      { id: 'inventory-overview', label: 'Overview', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
+      { id: 'inventory-items', label: 'Managing Items', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
+      { id: 'inventory-checkout', label: 'Checkout & Returns', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
+      { id: 'inventory-tags', label: 'Printing Tags', roles: ['super_admin', 'owner_admin', 'editor', 'viewer'] },
+    ],
+  },
 ]
 
 function flattenSections(sections: TocSection[]): TocSection[] {
@@ -1302,6 +1313,18 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
                   </p>
                 </>
               )}
+            </section>
+          )}
+
+          {show('auditions') && <Divider />}
+
+          {/* ───────── Inventory ───────── */}
+          {show('inventory') && (
+            <section id="inventory">
+              <h2 className={h2Classes}>{`Inventory`}</h2>
+              <p className={pClasses}>
+                {`Inventory management is coming soon.`}
+              </p>
             </section>
           )}
         </div>

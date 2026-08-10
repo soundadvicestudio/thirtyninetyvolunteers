@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatCT } from '@/lib/utils/date'
-import { changeRole, deactivateUser, reactivateUser, toggleCalendarEditor } from '@/lib/actions/users'
+import { changeRole, deactivateUser, reactivateUser, toggleCalendarEditor, toggleInventoryManager } from '@/lib/actions/users'
 import type { AdminRole } from '@/types/admin'
 
 type AdminUserRow = {
@@ -13,6 +13,7 @@ type AdminUserRow = {
   role: AdminRole
   is_active: boolean
   calendar_editor: boolean
+  inventory_manager: boolean
   last_login: string | null
   created_at: string
 }
@@ -35,6 +36,7 @@ function UserRow({
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isTogglingCalendarEditor, setIsTogglingCalendarEditor] = useState(false)
+  const [isTogglingInventoryManager, setIsTogglingInventoryManager] = useState(false)
 
   async function handleRoleChange(newRole: 'editor' | 'viewer' | 'production' | 'owner_admin') {
     setIsSubmitting(true)
@@ -62,6 +64,17 @@ function UserRow({
     setIsTogglingCalendarEditor(true)
     const result = await toggleCalendarEditor(user.id, enabled)
     setIsTogglingCalendarEditor(false)
+    if (result.success) {
+      router.refresh()
+      return
+    }
+    alert(result.error)
+  }
+
+  async function handleToggleInventoryManager(enabled: boolean) {
+    setIsTogglingInventoryManager(true)
+    const result = await toggleInventoryManager(user.id, enabled)
+    setIsTogglingInventoryManager(false)
     if (result.success) {
       router.refresh()
       return
@@ -124,6 +137,19 @@ function UserRow({
               />
               Calendar Editor{' '}
               <span className="text-xs">(direct calendar write access)</span>
+            </label>
+          )}
+
+          {user.role === 'editor' && (
+            <label className="flex items-center gap-2 text-sm text-mid-gray dark:text-dark-muted cursor-pointer">
+              <input
+                type="checkbox"
+                checked={user.inventory_manager}
+                onChange={(e) => handleToggleInventoryManager(e.target.checked)}
+                disabled={isTogglingInventoryManager}
+                className="rounded"
+              />
+              Inventory Mgr
             </label>
           )}
 
