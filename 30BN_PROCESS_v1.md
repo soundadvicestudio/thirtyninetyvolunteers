@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v4.8
-### Created: July 2026 | Last Updated: August 2026 — v4.8 (DOC.65: §7 feature flag list updated (5→7 flags: feature_inventory + feature_forums); §7 Sidebar atomic edit extended to 4-part (TOOLTIP_ANCHOR_MAP added); §7 inventory_manager toggle pattern documented; §7 migration drift Q-item closed (033 applied); §10 R32 grep updated (feature_inventory added); §11 PRE-PHASE-17 item updated (033 applied); §13 DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 logged; Phase INVENTORY in-progress)
+## 30BN_PROCESS_v1.md — v4.9
+### Created: July 2026 | Last Updated: August 2026 — v4.9 (DOC.67: §7 inventory_manager types/audit.ts→lib/audit.ts corrected; §7 storage dual-client pattern added (getAdminClient() required for storage API calls); §7 Supabase aliased dual self-join workaround added; §7 inventory/ path added to media bucket; §8 XHR 5→6 sanctioned files (InventoryPhotoUploader.tsx); §10 XHR grep updated (6 files); §11 three new checklist items (storage dual-client, route handler .tsx, HelpContent live convention); §13 Phase INVENTORY ✓ Complete + INVENTORY.2–5 logged; DOC.67 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -458,12 +458,68 @@ Two sanctioned storage buckets exist in this project:
 - `attachments/[type]/[record_id]/[document_id]/` — show/rehearsal/audition attachments
 - `audition-materials/[signup_id]/[type]-[uuid].[ext]` — audition material uploads
   (headshot, resume, sheet_music, mp3, video — Phase AUDITIONS)
+- `inventory/[item_id]/[uuid].[ext]` — inventory item photo uploads (Phase INVENTORY.3)
 
 `brand` (public) — brand asset files uploaded via the Setup Panel. Direct URL access without auth. Namespaced paths:
 - `brand/logo/[uuid].png` — org logo uploads
 - `brand/favicon/[uuid].png` — favicon uploads
 
 `media` reads go through the `/documents/[token]` redirect route (access tier + signed URL generation). `brand` files are served directly via public URL — never through the redirect route (they're intentionally public). Never use `brand` for any access-controlled content. Never use `media` for brand assets that must be publicly accessible on landing pages.
+
+**Storage API calls require `getAdminClient()` regardless of session context (confirmed INVENTORY.3 F1):**
+The Supabase `storage.objects` table has zero RLS policies — access is governed by the service role key, not by the user's session. This means all storage API operations (`createSignedUrl`, `createSignedUploadUrl`, `remove`) on the `media` bucket must use `getAdminClient()`, even when the calling function is running inside an authenticated server action context that otherwise uses `getServerClient()`.
+
+The correct dual-client pattern for functions that combine storage operations with DB row operations:
+```typescript
+// DB operations — use the authenticated session client
+const supabase = getServerClient()
+const { data: row } = await supabase.from('inventory_photos').select('*')...
+
+// Storage operations — always use the admin client (service role required)
+const adminClient = getAdminClient()
+const { data: signedUrl } = await adminClient.storage
+  .from('media').createSignedUrl(row.storage_path, 3600)
+```
+
+This is not a security weakness — the admin client is server-side only and the path is derived from an authenticated DB query, not from user input. The dual-client pattern is intentional and correct. Confirmed failure mode before INVENTORY.3 F1 fix: using `getServerClient()` for storage calls returned null signed URLs silently with no error thrown, because the session client lacks the service role key required for storage access.
+
+Apply this pattern to all future functions that need both: (1) authenticated DB access via `getServerClient()` and (2) storage operations on the `media` bucket.
+
+**Supabase JS client cannot alias dual self-joins — two-fetch-plus-TypeScript-join pattern (established INVENTORY.4 Q2):**
+When a query needs two different JOINs on the same table (e.g., `inventory_checkouts` needs `checked_out_by → admin_users` AND `target_user_id → admin_users`), the Supabase JS client `.select()` syntax cannot alias the joins to differentiate them. Attempting this produces a single merged result or a type error.
+
+Established workaround — the two-fetch-plus-TypeScript-join pattern:
+```typescript
+// Step 1: Fetch the primary rows
+const { data: checkouts } = await supabase.from('inventory_checkouts').select('*')
+
+// Step 2: Collect all distinct FK IDs needed
+const adminUserIds = [
+  ...new Set([
+    ...checkouts.map(c => c.checked_out_by).filter(Boolean),
+    ...checkouts.map(c => c.target_user_id).filter(Boolean),
+  ])
+]
+const showIds = checkouts.map(c => c.target_show_id).filter(Boolean)
+
+// Step 3: Fetch referenced rows by ID in two queries
+const { data: adminUsers } = await supabase
+  .from('admin_users').select('id, name').in('id', adminUserIds)
+const { data: shows } = await supabase
+  .from('shows').select('id, name').in('id', showIds)
+
+// Step 4: Build lookup maps and join in TypeScript
+const adminMap = Object.fromEntries((adminUsers || []).map(u => [u.id, u]))
+const showMap = Object.fromEntries((shows || []).map(s => [s.id, s]))
+return checkouts.map(c => ({
+  ...c,
+  checked_out_by_name: adminMap[c.checked_out_by ?? '']?.name,
+  target_show_name: showMap[c.target_show_id ?? '']?.name,
+  target_user_name: adminMap[c.target_user_id ?? '']?.name,
+}))
+```
+
+This pattern produces 3 queries instead of 1 but avoids the alias limitation entirely. Extract to a named helper function (e.g., `enrichCheckouts()`) — do not inline in the main query function. Confirmed pattern across INVENTORY.2 (`attachCheckoutStatus()`), INVENTORY.3 (`attachPhotosAndNotes()`), and INVENTORY.4 (`enrichCheckouts()`). Apply to any future cross-table enrichment where two FKs reference the same table.
 
 **Never create a client inside a loop.** Create once per function, reuse.
 
@@ -640,7 +696,7 @@ Key constraints — all must be enforced together:
 
 4. **Caller guard:** Only SA and OA callers may invoke `toggleInventoryManager()`. Editor accounts cannot promote themselves to inventory_manager.
 
-5. **AuditAction:** Logged as `user.inventory_manager_change` in `types/audit.ts` (NOT `lib/audit.ts` — the AuditAction type union lives in `types/audit.ts`).
+5. **AuditAction:** Logged as `user.inventory_manager_change` in `lib/audit.ts` (confirmed INVENTORY.2 F1 — the AuditAction type union lives in `lib/audit.ts`; there is no `types/audit.ts` file in this project).
 
 6. **Query must include the column:** Any page that renders `UsersTable.tsx` must SELECT `inventory_manager` from `admin_users` in its data fetch. Missing this column causes the toggle to render permanently unchecked (undefined prop).
 
@@ -911,16 +967,17 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 **All build prompts must be contained in a single fenced code block (established 13.3b/13.4a):**
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
-**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS):**
-The project's default HTTP pattern is `fetch()`. There are five sanctioned deviations,
+**XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS, Phase INVENTORY):**
+The project's default HTTP pattern is `fetch()`. There are six sanctioned deviations,
 all in file upload components with progress tracking:
 - `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
 - `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
 - `components/crew/settings/BrandImageUploader.tsx` — brand asset upload / logo + favicon (SETUP.2)
 - `components/audition/AuditionSignupClient.tsx` — inline material upload at audition signup (Phase AUDITIONS)
 - `components/audition/AuditionUploadClient.tsx` — late material upload via upload_token link (Phase AUDITIONS)
+- `components/crew/inventory/InventoryPhotoUploader.tsx` — inventory item photo upload (Phase INVENTORY.3)
 
-Body format for all five: FormData with `cacheControl: '3600'` and file appended under
+Body format for all six: FormData with `cacheControl: '3600'` and file appended under
 empty field name `''` — not a raw file body with explicit Content-Type header.
 
 `fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
@@ -1237,17 +1294,18 @@ grep -n "getServerClient" \
 ```bash
 # Confirm XHR usage is intentional (established 15.2/15.3/SETUP.2)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Sanctioned XHR locations (upload progress tracking — five total):
+# Sanctioned XHR locations (upload progress tracking — six total):
 #   - components/consent/ConsentUploadForm.tsx (15.2)
 #   - components/crew/media/MediaLibrary.tsx (15.3)
 #   - components/crew/settings/BrandImageUploader.tsx (SETUP.2)
 #   - components/audition/AuditionSignupClient.tsx (Phase AUDITIONS)
 #   - components/audition/AuditionUploadClient.tsx (Phase AUDITIONS)
-# All five use XHR because fetch() does not support upload progress
+#   - components/crew/inventory/InventoryPhotoUploader.tsx (Phase INVENTORY.3)
+# All six use XHR because fetch() does not support upload progress
 # events. All must include the deviation comment. Body format:
 # FormData with cacheControl + file under '' field name (not raw
 # file body with Content-Type header).
-# Any hit outside these five files requires review.
+# Any hit outside these six files requires review.
 ```
 
 ```bash
@@ -1542,7 +1600,17 @@ Run before every Vercel deployment:
   path is correctly namespaced within the media bucket:
   consent-forms/ for consent submissions; library/ for
   media library files; attachments/ for show/rehearsal/
-  audition attachments. (15.2 established; 15.3 extends)
+  audition attachments; inventory/ for inventory item
+  photos (Phase INVENTORY.3). CRITICAL: All storage API
+  calls (createSignedUrl, createSignedUploadUrl, remove)
+  must use getAdminClient() — storage.objects has zero
+  RLS policies and requires the service role key regardless
+  of session context. Use the dual-client pattern: DB row
+  operations use getServerClient(), storage calls use
+  getAdminClient() in the same function. Confirmed failure
+  mode (INVENTORY.3 F1): getServerClient() returns null
+  signed URLs silently with no error. (15.2 established;
+  15.3 extends; INVENTORY.3 F1 adds dual-client requirement)
 □ Any new attendance insert with source = 'checkin':
   confirm slot_claim_id is explicitly set — either the
   slot_claims.id for a rostered volunteer, or null for
@@ -1798,12 +1866,39 @@ Run before every Vercel deployment:
   remains from Phase AUDITIONS. (Phase AUDITIONS Q3 from
   DOC.59 — closed DB-VERIFY.5)
 □ Any inline schema fix applied via Supabase MCP during a
-  build (bypassing a named .sql migration file): flag it in
-  the build report Flags section AND add a Q-item noting
-  that a follow-up migration must be written before the next
-  phase launch. Do not apply inline fixes silently — they
-  create migration/DB drift. See §7 migration/DB drift
-  pattern. (Phase AUDITIONS — established from Q3 DOC.59)
+build (bypassing a named .sql migration file): flag it in
+the build report Flags section AND add a Q-item noting
+that a follow-up migration must be written before the next
+phase launch. Do not apply inline fixes silently — they
+create migration/DB drift. See §7 migration/DB drift
+pattern. (Phase AUDITIONS — established from Q3 DOC.59)
+□ Any new route handler (app/api/***/route) that embeds JSX
+directly in the handler (e.g., renderToBuffer(<Component
+.../>) with @react-pdf/renderer): use the .tsx extension,
+not .ts. A .ts file cannot parse JSX syntax — the build
+will silently fail or tsc will error. Confirmed failure
+mode (INVENTORY.5 F1): app/api/inventory/tags/route.tsx
+required .tsx because it embeds <InventoryTagsPDF .../>.
+The pattern is established in app/crew/(app)/volunteers/
+export/route.tsx (same reason). When in doubt: if a route
+handler calls renderToBuffer() or any JSX factory, use
+.tsx. (INVENTORY.5 F1)
+□ Any prompt that writes or modifies HelpContent.tsx section
+JSX: read the live file and match its actual authoring
+convention before writing replacement content. The live
+convention uses: show(id) predicates (not aria-labelledby
+nested <section> blocks), shared h2Classes/h3Classes/
+pClasses constants defined at the top of the file,
+<Tip>/<Warning>/<Divider> helper components already
+defined in the file, and backtick template literals for
+possessives and contractions ({item's} not {"item's"}).
+Prompt-suggested markup is always overridden by the live
+convention when they conflict. Confirmed (INVENTORY.5 F3):
+the prompt's suggested aria-labelledby section structure
+did not match the live file; the build correctly rewrote
+in the live convention instead. Read the most recently
+built adjacent section to confirm the current pattern.
+(INVENTORY.5 F3)
 ```
 
 ---
@@ -2895,14 +2990,82 @@ Phase INVENTORY — Inventory Management System (in progress)
     page.tsx: SETUP_KEYS + initialValues (|| per R18).
     lib/actions/users.ts: toggleInventoryManager() (mirrors
     toggleCalendarEditor(); app-layer role = 'editor' guard).
-    types/audit.ts: user.inventory_manager_change added.
+    lib/audit.ts: user.inventory_manager_change added
+    (Brief originally said types/audit.ts — corrected
+    DOC.66; no types/audit.ts file exists). AdminUser
+    type in types/admin.ts + getAdminUser() SELECT in
+    lib/auth.ts both extended to include inventory_manager
+    (unplanned — without these, all canWrite checks
+    silently returned undefined).
     UsersTable.tsx: inventory_manager toggle on editor rows.
     settings/users/page.tsx: query updated to fetch
     inventory_manager (unplanned, required). app/crew/
     (app)/inventory/page.tsx: stub (session + flag + role
     guards). HelpContent.tsx: 16th ALL_SECTIONS entry
     (Inventory, no Production). 13 files. Commit c367288.
-  INVENTORY.2–5   (pending)
+  INVENTORY.2 ✓ types/inventory.ts (new — InventoryCategory,
+    InventoryLocation, InventoryItem, InventoryItemWithStatus,
+    CreateItemData, UpdateItemData). lib/audit.ts: 10 types
+    added (inventory_category.*/inventory_location.*/
+    inventory_item.create/update). lib/actions/inventory-
+    settings.ts (new — getInventoryCategories,
+    getInventoryLocations, create/update/reorder/toggle for
+    both). lib/actions/inventory.ts (new — generateItemNumber
+    internal, getInventoryItems, getInventoryItemById,
+    createInventoryItem, updateInventoryItem).
+    app/crew/(app)/settings/inventory/page.tsx (new).
+    components/crew/settings/InventorySettingsClient.tsx (new).
+    app/crew/(app)/settings/page.tsx: Inventory card added.
+    app/crew/(app)/inventory/page.tsx: stub → real list page.
+    components/crew/inventory/InventoryListClient.tsx (new —
+    filters, table, CreateItemModal). 9 files + 2 unplanned
+    (types/admin.ts + lib/auth.ts — inventory_manager missing
+    from AdminUser type and getAdminUser() SELECT). Commit 48bc27a.
+  INVENTORY.3 ✓ types/inventory.ts: InventoryPhoto + InventoryNote
+    added. lib/audit.ts: 7 types (inventory_item.deactivate/
+    reactivate/delete, inventory_photo.*, inventory_note.add).
+    lib/actions/inventory.ts: 8 new functions (photo upload URL,
+    confirm upload, delete photo, reorder photo, add note,
+    deactivate/reactivate/delete item); getInventoryItemById
+    extended (photos with signed URLs + notes with author names).
+    Key finding (F1): storage.objects has zero RLS → all storage
+    calls require getAdminClient() regardless of session; dual-
+    client pattern established (storage = getAdminClient(), DB
+    rows = getServerClient() in same function). app/crew/(app)/
+    inventory/[id]/page.tsx (new — Next.js 15 params as Promise,
+    notFound(), parallel fetch). InventoryDetailTabs.tsx (new —
+    5-tab shell). InventoryPhotoUploader.tsx (new — 6th sanctioned
+    XHR file; sequential per-file; FormData body). tsc caught
+    formatCT() missing arg before ship. 6 files. Commit bacd937.
+  INVENTORY.4 ✓ types/inventory.ts: InventoryCheckout, CheckoutItem,
+    CreateCheckoutData added. lib/audit.ts: inventory_checkout.create
+    + return. lib/actions/inventory-checkouts.ts (new —
+    getCheckoutsForItem, getActiveCheckouts, getSearchableShows,
+    getSearchableAdminUsers, createCheckout with double-checkout
+    guard, returnCheckout; enrichCheckouts() helper using
+    two-fetch-plus-TypeScript-join pattern for dual admin_users FK).
+    CheckoutModal.tsx (new — multi-item chips, three-way target
+    segmented control, debounced search). InventoryDetailTabs.tsx:
+    Checkouts stub replaced. [id]/page.tsx: extended parallel fetch.
+    inventory/page.tsx: getActiveCheckouts added. InventoryListClient
+    .tsx: ActiveCheckoutsPanel + "Check Out Items" + CheckoutModal.
+    react-hooks/set-state-in-effect violation caught pre-ship. 8 files.
+    Commit 35ba6cb.
+  INVENTORY.5 ✓ InventoryTagsPDF.tsx (new — @react-pdf/renderer;
+    createStyles() factory THEME.4 compliant; 2-column grid; PNG QR
+    via data:image/png;base64). app/api/inventory/tags/route.tsx (new
+    — .tsx not .ts: JSX embedded directly; auth+flag+Production guards;
+    max 50 items; Array.isArray normalization; brand_primary from
+    app_settings via getAdminClient(); lightenHex(); fixed filename
+    "inventory-tags.pdf"). [id]/page.tsx: generateQR() server-side,
+    props to tabs. InventoryDetailTabs.tsx: QR tab (white-container SVG,
+    PNG/SVG downloads, Print Tag link) + 2 HelpTooltips (inventory-
+    checkout, inventory-tags). InventoryListClient.tsx: Print Tags
+    wired (window.open, count display). HelpContent.tsx: Inventory
+    section full content (written in live file convention not prompt
+    markup — F3). jsx-a11y/alt-text caught pre-ship. Phase INVENTORY
+    complete. 6 files. Commit 7f57805.
+Phase INVENTORY — Inventory Management System ✓ Complete (INVENTORY.A–5)
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -3432,12 +3595,36 @@ Commit b654083.
 30BN-INVENTORY.1 ✓ Migration 034 + flag infrastructure
 + TOOLTIP_ANCHOR_MAP sidebar refactor +
 inventory_manager toggle on User Management.
-13 files. Commit c367288.
+13 files + 2 unplanned. Commit c367288.
+30BN-INVENTORY.2 ✓ Settings page (categories + locations)
++ item list page + creation modal +
+lib/actions/inventory-settings.ts +
+lib/actions/inventory.ts. 9 files + 2 unplanned.
+Commit 48bc27a.
+30BN-INVENTORY.3 ✓ Item detail page (5-tab shell) + photo
+gallery (6th sanctioned XHR file:
+InventoryPhotoUploader.tsx) + private notes +
+deactivation flow. Storage dual-client pattern
+confirmed (F1). 6 files. Commit bacd937.
+30BN-INVENTORY.4 ✓ Checkout system (CheckoutModal +
+ActiveCheckoutsPanel + history timeline + return
+action). Two-fetch-plus-TypeScript-join pattern
+for dual FK to admin_users (enrichCheckouts()).
+8 files. Commit 35ba6cb.
+30BN-INVENTORY.5 ✓ QR display + PDF tag export
+(InventoryTagsPDF.tsx + route.tsx) + Print Tags
+wired + HelpContent full section. Phase INVENTORY
+complete. 6 files. Commit 7f57805.
 30BN-DOC.64 ✓ Brief Update v5.0 (this session — 033+034
 applied, ADMIN.43 fix documented, INVENTORY.1
 build summary, HelpContent 16th section,
 version history ordering corrected).
 30BN-DOC.65 ✓ Process Update v4.8 (this prompt)
+30BN-DOC.66 ✓ Brief Update v5.1 (Phase INVENTORY complete
+— INVENTORY.2–5 summaries; key files corrected;
+HelpTooltip count 40→42; lib/audit.ts inaccuracy
+fixed; storage dual-client note added).
+30BN-DOC.67 ✓ Process Update v4.9 (this prompt)
 ```
 
 ---
@@ -4029,3 +4216,5 @@ Use the §7 substitution table and governing hover rule when replacing any affec
 *v4.7 (August 2026 — DOC.62 correction: §7 feature flag pattern stale sentence corrected — paragraph beginning "getFeatureFlags() uses getServerClient()" replaced with accurate client-agnostic framing; the earlier text directly contradicted the corrective block two paragraphs below it in the same section; both paragraphs now agree; §13 prompt log: DOC.61 + DOC.62 added; document header bumped to v4.7; DOC.62 logged)*
 
 *v4.8 (August 2026 — DOC.65: §2 header updated (v4.8); §7 feature flag active flag list updated (five → seven: feature_inventory added Migration 034 / INVENTORY.1, feature_forums pending Migration 035 / Phase FORUMS); §7 inline single-key note updated — getUpcomingAuditions() stale comment Q-item closed (fixed in ADMIN.44); §7 migration/DB drift updated — 033 applied (DB-VERIFY.5), drift cleared; §7 Sidebar atomic edit extended (three-part → four-part: TOOLTIP_ANCHOR_MAP lookup map added as 4th required location — replaces hardcoded || ternary, established INVENTORY.1); §7 inventory_manager toggle pattern added (DB CHECK constraint, app-layer role guard, Editor-row-only toggle, SA/OA caller guard, types/audit.ts location); §10 R32 grep updated (feature_inventory + feature_forums added to grep pattern; comment updated to Migration 034); §11 PRE-PHASE-17 item updated — 033 applied, debt cleared; §13 PRE-PHASE-17 action note updated (applied); §13 Phase INVENTORY in-progress block + DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 + DOC.64 + DOC.65 logged; §13 version history ordering corrected (v4.7 was before v4.6); DOC.65 logged)*
+
+*v4.9 (August 2026 — DOC.67: Phase INVENTORY complete — §2 header updated (v4.9); §7 inventory_manager pattern: types/audit.ts corrected to lib/audit.ts (no types/audit.ts exists — inaccuracy from DOC.65 now fixed); §7 P-DC storage: inventory/ path namespace added (Phase INVENTORY.3); §7 two new patterns added: (1) storage dual-client pattern — storage API calls require getAdminClient() regardless of session (storage.objects has zero RLS; confirmed failure mode: getServerClient() returns null signed URLs silently); (2) Supabase aliased dual self-join workaround — two-fetch-plus-TypeScript-join pattern for queries needing two FKs to the same table (Supabase JS cannot alias self-joins; confirmed across INVENTORY.2/3/4); §8 XHR: 5 → 6 sanctioned files (InventoryPhotoUploader.tsx added — Phase INVENTORY.3); §10 XHR grep: 5 → 6 files; §11 three new checklist items: (1) storage dual-client (getAdminClient() for storage.objects), (2) route handler .tsx extension when JSX embedded (confirmed failure INVENTORY.5 F1), (3) HelpContent live convention discipline (read live file — show() predicates, shared class constants, backtick possessives — INVENTORY.5 F3); §13 Phase INVENTORY ✓ Complete — INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts; types/admin.ts + lib/auth.ts unplanned additions noted); INVENTORY.2–5 phase tracker entries added; prompt log: INVENTORY.2–5 + DOC.66 + DOC.67 added; DOC.67 logged)*
