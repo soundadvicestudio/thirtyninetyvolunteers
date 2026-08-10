@@ -25,6 +25,25 @@ export type InventoryItemLocation = {
 
 export type InventoryCondition = 'excellent' | 'good' | 'fair' | 'poor'
 
+export type InventoryPhoto = {
+  id: string
+  item_id: string
+  storage_path: string
+  sort_order: number
+  uploaded_by: string | null
+  uploaded_at: string
+  signed_url?: string // populated server-side before passing to client
+}
+
+export type InventoryNote = {
+  id: string
+  item_id: string
+  content: string
+  created_by: string | null
+  created_at: string
+  author_name?: string // joined from admin_users.name
+}
+
 export type InventoryItem = {
   id: string
   item_number: string
@@ -38,6 +57,8 @@ export type InventoryItem = {
   updated_at: string
   category?: InventoryCategory | null
   item_locations?: InventoryItemLocation[]
+  photos?: InventoryPhoto[]
+  notes?: InventoryNote[]
 }
 
 export type InventoryItemWithStatus = InventoryItem & {

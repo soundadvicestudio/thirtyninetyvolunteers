@@ -113,6 +113,13 @@ export type AuditAction =
   | 'inventory_location.deactivate'
   | 'inventory_item.create'
   | 'inventory_item.update'
+  | 'inventory_item.deactivate'
+  | 'inventory_item.reactivate'
+  | 'inventory_item.delete'
+  | 'inventory_photo.upload'
+  | 'inventory_photo.delete'
+  | 'inventory_photo.reorder'
+  | 'inventory_note.add'
 
 export async function logAction(
   adminId: string | null,

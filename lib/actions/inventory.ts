@@ -8,10 +8,13 @@ import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminUser, type AdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { logAction } from '@/lib/audit'
 import type {
   CreateItemData,
   InventoryItemWithStatus,
+  InventoryNote,
+  InventoryPhoto,
   UpdateItemData,
 } from '@/types/inventory'
 
@@ -156,6 +159,58 @@ export async function getInventoryItems(
   return withStatus.filter((item) => item.is_overdue)
 }
 
+// Storage requires service role on the 'media' bucket — it has zero
+// storage.objects RLS policies (confirmed via live Supabase query, same
+// finding as lib/actions/media.ts / app/documents/[token]/route.ts).
+// getServerClient() cannot call any storage.* method here regardless of
+// session; getAdminClient() is used for storage calls only — all
+// inventory_photos table reads/writes still go through getServerClient().
+async function getInventoryPhotoSignedUrl(path: string): Promise<string | null> {
+  const admin = getAdminClient()
+  const { data, error } = await admin.storage.from('media').createSignedUrl(path, 3600)
+  if (error || !data) return null
+  return data.signedUrl
+}
+
+async function attachPhotosAndNotes(
+  item: InventoryItemWithStatus,
+  client: SupabaseClient
+): Promise<InventoryItemWithStatus> {
+  const [{ data: photoRows }, { data: noteRows }] = await Promise.all([
+    client
+      .from('inventory_photos')
+      .select('id, item_id, storage_path, sort_order, uploaded_by, uploaded_at')
+      .eq('item_id', item.id)
+      .order('sort_order', { ascending: true }),
+    client
+      .from('inventory_notes')
+      .select('id, item_id, content, created_by, created_at, author:admin_users(name)')
+      .eq('item_id', item.id)
+      .order('created_at', { ascending: true }),
+  ])
+
+  const photos: InventoryPhoto[] = await Promise.all(
+    (photoRows ?? []).map(async (photo) => ({
+      ...photo,
+      signed_url: (await getInventoryPhotoSignedUrl(photo.storage_path)) ?? undefined,
+    }))
+  )
+
+  const notes: InventoryNote[] = (noteRows ?? []).map((note) => {
+    const author = Array.isArray(note.author) ? note.author[0] : note.author
+    return {
+      id: note.id,
+      item_id: note.item_id,
+      content: note.content,
+      created_by: note.created_by,
+      created_at: note.created_at,
+      author_name: author?.name,
+    }
+  })
+
+  return { ...item, photos, notes }
+}
+
 export async function getInventoryItemById(
   id: string,
   supabase?: SupabaseClient
@@ -167,7 +222,7 @@ export async function getInventoryItemById(
   if (!data) return null
 
   const [withStatus] = await attachCheckoutStatus([data as unknown as InventoryItemWithStatus], client)
-  return withStatus
+  return attachPhotosAndNotes(withStatus, client)
 }
 
 export async function createInventoryItem(data: CreateItemData): Promise<CreateItemResult> {
@@ -294,6 +349,339 @@ export async function updateInventoryItem(id: string, data: UpdateItemData): Pro
 
   revalidatePath('/crew/inventory')
   revalidatePath('/crew/inventory/' + id)
+
+  return { success: true }
+}
+
+// ─── Photos ────────────────────────────────────────────────────
+
+const MAX_NOTE_LENGTH = 2000
+
+function getExtFromFilename(filename: string): string {
+  const parts = filename.split('.')
+  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'jpg'
+}
+
+export async function getInventoryPhotoUploadUrl(
+  itemId: string,
+  filename: string,
+  contentType: string
+): Promise<{ signedUrl: string; path: string } | { error: string }> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  if (!contentType.startsWith('image/')) {
+    return { error: 'Only image files are allowed.' }
+  }
+
+  const path = `inventory/${itemId}/${crypto.randomUUID()}.${getExtFromFilename(filename)}`
+
+  // Storage requires service role on this private bucket — see the note on
+  // getInventoryPhotoSignedUrl() above.
+  const storageClient = getAdminClient()
+  const { data, error } = await storageClient.storage.from('media').createSignedUploadUrl(path)
+
+  if (error || !data) {
+    return { error: 'Something went wrong preparing this upload. Please try again.' }
+  }
+
+  return { signedUrl: data.signedUrl, path }
+}
+
+export async function confirmInventoryPhotoUpload(
+  itemId: string,
+  path: string,
+  sortOrder: number
+): Promise<ActionResult> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  const supabase = await getServerClient()
+
+  const { data: photo, error } = await supabase
+    .from('inventory_photos')
+    .insert({
+      item_id: itemId,
+      storage_path: path,
+      sort_order: sortOrder,
+      uploaded_by: admin.id,
+    })
+    .select('id')
+    .single()
+
+  if (error || !photo) {
+    return { error: error?.message ?? 'Something went wrong saving this photo.' }
+  }
+
+  await logAction(admin.id, 'inventory_photo.upload', 'inventory_photo', photo.id, undefined, {
+    item_id: itemId,
+    storage_path: path,
+  })
+
+  revalidatePath('/crew/inventory/' + itemId)
+
+  return { success: true }
+}
+
+export async function deleteInventoryPhoto(photoId: string): Promise<ActionResult> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  const supabase = await getServerClient()
+
+  const { data: photo, error: fetchError } = await supabase
+    .from('inventory_photos')
+    .select('item_id, storage_path')
+    .eq('id', photoId)
+    .single()
+
+  if (fetchError || !photo) {
+    return { error: 'Could not find this photo.' }
+  }
+
+  // Storage requires service role on this private bucket — see the note on
+  // getInventoryPhotoSignedUrl() above.
+  const storageClient = getAdminClient()
+  const { error: storageError } = await storageClient.storage.from('media').remove([photo.storage_path])
+
+  if (storageError) {
+    return { error: 'Something went wrong deleting this photo. Please try again.' }
+  }
+
+  const { error } = await supabase.from('inventory_photos').delete().eq('id', photoId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(admin.id, 'inventory_photo.delete', 'inventory_photo', photoId, {
+    item_id: photo.item_id,
+    storage_path: photo.storage_path,
+  })
+
+  revalidatePath('/crew/inventory/' + photo.item_id)
+
+  return { success: true }
+}
+
+export async function reorderInventoryPhoto(
+  photoId: string,
+  direction: 'up' | 'down'
+): Promise<ActionResult> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  const supabase = await getServerClient()
+
+  const { data: current, error: currentError } = await supabase
+    .from('inventory_photos')
+    .select('item_id, sort_order')
+    .eq('id', photoId)
+    .single()
+
+  if (currentError || !current) {
+    return { error: 'Could not find this photo.' }
+  }
+
+  const { data: photos, error: fetchError } = await supabase
+    .from('inventory_photos')
+    .select('id, sort_order')
+    .eq('item_id', current.item_id)
+    .order('sort_order', { ascending: true })
+
+  if (fetchError || !photos) {
+    return { error: 'Could not load photos.' }
+  }
+
+  const index = photos.findIndex((p) => p.id === photoId)
+  if (index === -1) {
+    return { error: 'Could not find this photo.' }
+  }
+
+  const swapIndex = direction === 'up' ? index - 1 : index + 1
+  if (swapIndex < 0 || swapIndex >= photos.length) {
+    return { success: true }
+  }
+
+  const currentPhoto = photos[index]
+  const swapTarget = photos[swapIndex]
+
+  const { error: updateCurrentError } = await supabase
+    .from('inventory_photos')
+    .update({ sort_order: swapTarget.sort_order })
+    .eq('id', currentPhoto.id)
+
+  if (updateCurrentError) {
+    return { error: 'Something went wrong reordering photos. Please try again.' }
+  }
+
+  const { error: updateSwapError } = await supabase
+    .from('inventory_photos')
+    .update({ sort_order: currentPhoto.sort_order })
+    .eq('id', swapTarget.id)
+
+  if (updateSwapError) {
+    return { error: 'Something went wrong reordering photos. Please try again.' }
+  }
+
+  await logAction(admin.id, 'inventory_photo.reorder', 'inventory_photo', photoId, undefined, {
+    direction,
+    item_id: current.item_id,
+  })
+
+  revalidatePath('/crew/inventory/' + current.item_id)
+
+  return { success: true }
+}
+
+// ─── Notes ─────────────────────────────────────────────────────
+
+// Note write access is Editor-tier (SA/OA/any Editor) — NOT gated on
+// inventory_manager. inventory_manager controls item/category/checkout
+// write access; note visibility (SA/OA/Editor only, Viewer excluded) is a
+// separate restriction enforced by the inventory_notes RLS SELECT policy.
+export async function addInventoryNote(itemId: string, content: string): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Unauthorized' }
+  if (!['super_admin', 'owner_admin', 'editor'].includes(admin.role)) {
+    return { error: 'Insufficient permissions' }
+  }
+
+  const trimmed = content.trim()
+  if (!trimmed) return { error: 'Note content is required.' }
+  if (trimmed.length > MAX_NOTE_LENGTH) {
+    return { error: `Notes are limited to ${MAX_NOTE_LENGTH} characters.` }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: note, error } = await supabase
+    .from('inventory_notes')
+    .insert({ item_id: itemId, content: trimmed, created_by: admin.id })
+    .select('id')
+    .single()
+
+  if (error || !note) {
+    return { error: error?.message ?? 'Something went wrong adding this note.' }
+  }
+
+  await logAction(admin.id, 'inventory_note.add', 'inventory_note', note.id, undefined, {
+    item_id: itemId,
+  })
+
+  revalidatePath('/crew/inventory/' + itemId)
+
+  return { success: true }
+}
+
+// ─── Deactivation / deletion ───────────────────────────────────
+
+export async function deactivateInventoryItem(itemId: string): Promise<ActionResult> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  const supabase = await getServerClient()
+
+  const { data: activeCheckouts } = await supabase.from('inventory_checkouts').select('id').is('returned_at', null)
+  const activeCheckoutIds = (activeCheckouts ?? []).map((c) => c.id)
+
+  if (activeCheckoutIds.length > 0) {
+    const { count } = await supabase
+      .from('inventory_checkout_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('item_id', itemId)
+      .in('checkout_id', activeCheckoutIds)
+
+    if (count && count > 0) {
+      return { error: 'This item has active checkouts. Return all checked-out items before deactivating.' }
+    }
+  }
+
+  const { error } = await supabase.from('inventory_items').update({ is_active: false }).eq('id', itemId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(admin.id, 'inventory_item.deactivate', 'inventory_item', itemId, undefined, undefined)
+
+  revalidatePath('/crew/inventory')
+  revalidatePath('/crew/inventory/' + itemId)
+
+  return { success: true }
+}
+
+export async function reactivateInventoryItem(itemId: string): Promise<ActionResult> {
+  const admin = await requireWriteAccess()
+  if (!isAdminUser(admin)) return admin
+
+  const supabase = await getServerClient()
+
+  const { error } = await supabase.from('inventory_items').update({ is_active: true }).eq('id', itemId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(admin.id, 'inventory_item.reactivate', 'inventory_item', itemId, undefined, undefined)
+
+  revalidatePath('/crew/inventory')
+  revalidatePath('/crew/inventory/' + itemId)
+
+  return { success: true }
+}
+
+export async function deleteInventoryItem(itemId: string): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Unauthorized' }
+  if (!['super_admin', 'owner_admin'].includes(admin.role)) {
+    return { error: 'Insufficient permissions' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: item, error: fetchError } = await supabase
+    .from('inventory_items')
+    .select('is_active, item_number')
+    .eq('id', itemId)
+    .single()
+
+  if (fetchError || !item) {
+    return { error: 'Could not find this item.' }
+  }
+
+  if (item.is_active) {
+    return { error: 'Deactivate this item before deleting it permanently.' }
+  }
+
+  const { data: photos } = await supabase
+    .from('inventory_photos')
+    .select('storage_path')
+    .eq('item_id', itemId)
+
+  if (photos && photos.length > 0) {
+    // Storage requires service role on this private bucket — see the note
+    // on getInventoryPhotoSignedUrl() above.
+    const storageClient = getAdminClient()
+    const { error: storageError } = await storageClient.storage
+      .from('media')
+      .remove(photos.map((p) => p.storage_path))
+    if (storageError) {
+      return { error: 'Something went wrong deleting this item’s photos. Please try again.' }
+    }
+  }
+
+  const { error } = await supabase.from('inventory_items').delete().eq('id', itemId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await logAction(admin.id, 'inventory_item.delete', 'inventory_item', itemId, {
+    item_number: item.item_number,
+  })
+
+  revalidatePath('/crew/inventory')
 
   return { success: true }
 }
