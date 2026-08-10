@@ -2023,3 +2023,91 @@ export async function sendAuditionCancellationEmail({
     recipients: [{ email: to }],
   })
 }
+
+// ─── Forum reply notification (Phase FORUMS) ─────────────────────
+// R8 — batch sends via sendBatchEmails()/resend.batch.send() since a
+// thread can have more than one subscriber. One personalized payload is
+// built per subscriber, then sent and logged as a single batch — same
+// pattern as buildReminderEmailPayload()/buildThankYouEmailPayload().
+
+export async function sendForumNotificationEmail(threadId: string, newPostId: string): Promise<void> {
+  const adminClient = getAdminClient()
+
+  const { data: post } = await adminClient
+    .from('forum_posts')
+    .select('author_id')
+    .eq('id', newPostId)
+    .maybeSingle()
+  if (!post) return
+
+  const { data: thread } = await adminClient
+    .from('forum_threads')
+    .select('title, forum_id')
+    .eq('id', threadId)
+    .maybeSingle()
+  if (!thread) return
+
+  const { data: poster } = await adminClient.from('admin_users').select('name').eq('id', post.author_id).maybeSingle()
+  const posterName = poster?.name || 'Someone'
+
+  const { data: subs } = await adminClient
+    .from('forum_thread_subscriptions')
+    .select('admin_user_id, admin_users!forum_thread_subscriptions_admin_user_id_fkey(email, name)')
+    .eq('thread_id', threadId)
+    .neq('admin_user_id', post.author_id)
+  if (!subs || subs.length === 0) return
+
+  const emailSettings = await resolveEmailSettings()
+  const threadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/forums/${thread.forum_id}/${threadId}`
+  const safePosterName = escapeHtml(posterName)
+  const safeTitle = escapeHtml(thread.title)
+  const subject = `${emailSettings.orgName} — New reply in "${thread.title}"`
+
+  const payloads: BatchEmailPayload[] = []
+  for (const sub of subs) {
+    const subscriber = Array.isArray(sub.admin_users) ? sub.admin_users[0] : sub.admin_users
+    if (!subscriber?.email) continue
+
+    const body = `
+      <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(subscriber.name || 'there')},</h1>
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        ${safePosterName} replied to a thread you're subscribed to:
+      </p>
+      <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+        <strong>${safeTitle}</strong>
+      </p>
+      ${buildCtaButton('View Thread', threadUrl, emailSettings.brandPrimary)}
+    `
+
+    payloads.push({
+      from: emailSettings.from,
+      to: subscriber.email,
+      subject,
+      html: buildEmailHtml({
+        subject,
+        preheader: `${safePosterName} replied to ${safeTitle}`,
+        body,
+        logoUrl: emailSettings.logoUrl,
+        orgName: emailSettings.orgName,
+        brandPrimary: emailSettings.brandPrimary,
+      }),
+    })
+  }
+
+  if (payloads.length === 0) return
+
+  try {
+    await sendBatchEmails(payloads)
+    await logEmailSent({
+      subject,
+      bodyPreview: `${posterName} replied to ${thread.title}`,
+      recipientType: 'transactional',
+      recipientFilter: 'trigger:forum_notification',
+      sentBy: null,
+      recipients: payloads.map((p) => ({ email: p.to })),
+    })
+  } catch {
+    // Swallow — notification failure must never propagate. The call site
+    // in forum-posts.ts also wraps this call in try/catch as defense in depth.
+  }
+}

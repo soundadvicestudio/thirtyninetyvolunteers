@@ -150,6 +150,14 @@ export type AuditAction =
   | 'forum_prefix.delete'
   | 'forum_post.create'
   | 'forum_post_attachment.upload'
+  | 'forum_thread.create'
+  | 'forum_thread.lock'
+  | 'forum_thread.unlock'
+  | 'forum_thread.pin'
+  | 'forum_thread.unpin'
+  | 'forum_thread.move'
+  | 'forum_post.edit'
+  | 'forum_post.delete'
 
 export async function logAction(
   adminId: string | null,

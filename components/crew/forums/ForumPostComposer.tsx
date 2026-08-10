@@ -59,7 +59,7 @@ function uploadWithProgress(signedUrl: string, file: File, onProgress: (percent:
   })
 }
 
-export default function ForumPostComposer({ threadId }: { threadId: string; forumId: string }) {
+export default function ForumPostComposer({ threadId }: { threadId: string }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])

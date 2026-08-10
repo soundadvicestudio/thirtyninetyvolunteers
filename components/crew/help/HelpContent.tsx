@@ -180,6 +180,21 @@ const ALL_SECTIONS: TocSection[] = [
         label: 'Overview',
         roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
       },
+      {
+        id: 'forums-access',
+        label: 'Access & Visibility',
+        roles: ['super_admin', 'owner_admin'],
+      },
+      {
+        id: 'forums-threads',
+        label: 'Threads & Replies',
+        roles: ['super_admin', 'owner_admin', 'editor', 'viewer', 'production'],
+      },
+      {
+        id: 'forums-moderation',
+        label: 'Moderation',
+        roles: ['super_admin', 'owner_admin'],
+      },
     ],
   },
 ]
@@ -1472,20 +1487,102 @@ export default function HelpContent({ role, calendarEditor }: HelpContentProps) 
           {show('forums') && (
             <section id="forums">
               <h2 className={h2Classes}>{`Internal Forums`}</h2>
-              <p className={pClasses}>
-                {`The Internal Forums are an admin-only discussion area, organized into categories and forums. Each forum holds threads, and each thread holds posts. There is no public-facing side — everything here is for Production Crew.`}
-              </p>
 
               {show('forums-overview') && (
                 <>
                   <h3 id="forums-overview" className={h3Classes}>{`Overview`}</h3>
                   <p className={pClasses}>
-                    {`Super Admin and Owner Admin can see every forum and manage categories, forums, and access from `}
-                    <strong>{`Settings → User Groups`}</strong>
-                    {` and the forum management interface. Everyone else only sees the forums they have been explicitly granted access to — by role, by a named user group, or individually.`}
+                    {`The Internal Forums is a private discussion space for your organization's admin team. Forums are organized into categories, and each forum contains threads. Anyone with forum access can create threads and reply. Forums are accessible only to users who have been explicitly granted access — or to Super Admins and Owner Admins who always see everything.`}
                   </p>
                   <Tip>
-                    {`This is a starting stub. Full posting, moderation, and read-tracking documentation will be added once the rest of the Forums feature ships.`}
+                    {`Super Admins and Owner Admins can set up categories, forums, and access grants from the `}
+                    <strong>{`Forum Management`}</strong>
+                    {` page at `}
+                    <strong>{`/crew/forums/manage`}</strong>
+                    {`.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('forums-access') && (
+                <>
+                  <h3 id="forums-access" className={h3Classes}>{`Access & Visibility`}</h3>
+                  <p className={pClasses}>
+                    {`Access to each forum is controlled by grants. Three grant types exist:`}
+                  </p>
+                  <ul className={ulClasses}>
+                    <li>
+                      <strong>{`Role: `}</strong>
+                      {`any user with that role.`}
+                    </li>
+                    <li>
+                      <strong>{`Group: `}</strong>
+                      {`any member of a named group — manage groups at `}
+                      <strong>{`Settings → User Groups`}</strong>
+                      {`.`}
+                    </li>
+                    <li>
+                      <strong>{`Individual: `}</strong>
+                      {`a specific admin user.`}
+                    </li>
+                  </ul>
+                  <p className={pClasses}>
+                    {`A user sees a forum if they match any one grant. Super Admins and Owner Admins bypass all grant checks and always see every forum.`}
+                  </p>
+                </>
+              )}
+
+              {show('forums-threads') && (
+                <>
+                  <h3 id="forums-threads" className={h3Classes}>{`Threads & Replies`}</h3>
+                  <p className={pClasses}>
+                    {`Create a thread using the `}
+                    <strong>{`New Thread`}</strong>
+                    {` button on a forum's page. Select an optional prefix (like `}
+                    {`[ANNOUNCEMENT]`}
+                    {` or `}
+                    {`[QUESTION]`}
+                    {` — prefixes are configured per forum), add a title, and write your opening post using the rich text editor.`}
+                  </p>
+                  <p className={pClasses}>
+                    {`Anyone with forum access can reply to any thread. Attach files to replies using the attachment area in the post composer. Subscribe to a thread to receive email notifications when new replies are posted — use the `}
+                    <strong>{`Subscribe`}</strong>
+                    {`/`}
+                    <strong>{`Unsubscribe`}</strong>
+                    {` button on the thread view page.`}
+                  </p>
+                  <Tip>
+                    {`Unread threads and forums appear highlighted. Mark all threads in a forum as read using the `}
+                    <strong>{`Mark all as read`}</strong>
+                    {` button on the forum's thread list page.`}
+                  </Tip>
+                </>
+              )}
+
+              {show('forums-moderation') && (
+                <>
+                  <h3 id="forums-moderation" className={h3Classes}>{`Moderation`}</h3>
+                  <p className={pClasses}>
+                    {`Super Admins and Owner Admins can moderate all forums. Assigned moderators can moderate their assigned forum only.`}
+                  </p>
+                  <p className={pClasses}>{`Moderation actions include:`}</p>
+                  <ul className={ulClasses}>
+                    <li>{`Locking threads (prevents new replies).`}</li>
+                    <li>{`Pinning threads (appear at the top of the thread list).`}</li>
+                    <li>{`Moving threads between forums (Super Admin and Owner Admin only).`}</li>
+                    <li>{`Editing any post.`}</li>
+                    <li>
+                      {`Soft-deleting posts (the post body is replaced with `}
+                      {`"[Post deleted]"`}
+                      {` but the row is preserved for thread structure).`}
+                    </li>
+                  </ul>
+                  <Tip>
+                    {`Assign moderators to a forum from the `}
+                    <strong>{`Forum Management`}</strong>
+                    {` page at `}
+                    <strong>{`/crew/forums/manage`}</strong>
+                    {`.`}
                   </Tip>
                 </>
               )}

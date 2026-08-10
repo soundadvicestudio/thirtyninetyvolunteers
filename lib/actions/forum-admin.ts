@@ -794,3 +794,27 @@ export async function deleteForumPrefix(id: string): Promise<ActionResult> {
 
   return { success: true }
 }
+
+// ─── Forum picker for Move Thread (ThreadViewClient) ────────────
+
+export async function getForumsForMove(
+  excludeForumId: string
+): Promise<Array<{ id: string; name: string; category_name: string }>> {
+  const admin = await getAdminUser()
+  if (!admin || !isSaOa(admin.role)) return []
+
+  const supabase = await getServerClient()
+
+  const { data } = await supabase
+    .from('forums')
+    .select('id, name, forum_categories!forums_category_id_fkey(name)')
+    .eq('is_archived', false)
+    .neq('id', excludeForumId)
+    .order('category_id', { ascending: true })
+    .order('sort_order', { ascending: true })
+
+  return (data ?? []).map((f) => {
+    const category = Array.isArray(f.forum_categories) ? f.forum_categories[0] : f.forum_categories
+    return { id: f.id, name: f.name, category_name: category?.name ?? '' }
+  })
+}

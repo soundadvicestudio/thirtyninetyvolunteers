@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { logAction } from '@/lib/audit'
+import { sendForumNotificationEmail } from '@/lib/email'
 import { canAccessForum, isForumModerator } from '@/lib/data/forums'
 import type { ForumPostAttachment, ForumPostWithDetails, ThreadViewData } from '@/types/forums'
 
@@ -18,7 +19,7 @@ export const FORUM_POST_SANITIZE_OPTIONS = {
   allowedSchemes: ['http', 'https', 'mailto'],
 }
 
-type AttachmentInfo = {
+export type AttachmentInfo = {
   path: string
   originalFilename: string
   mimeType: string
@@ -259,6 +260,15 @@ export async function createForumPost(
 
   revalidatePath(`/crew/forums/${thread.forum_id}`)
   revalidatePath(`/crew/forums/${thread.forum_id}/${threadId}`)
+
+  // Non-blocking subscription notifications — errors must never block post creation
+  void (async () => {
+    try {
+      await sendForumNotificationEmail(threadId, postId)
+    } catch {
+      // Swallow — notification failure never blocks post creation
+    }
+  })()
 
   return { success: true, postId }
 }

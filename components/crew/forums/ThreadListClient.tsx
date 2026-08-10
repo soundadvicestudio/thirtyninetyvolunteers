@@ -3,9 +3,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import TiptapLink from '@tiptap/extension-link'
+import Underline from '@tiptap/extension-underline'
 import { Pin, Lock, MessageSquare } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { markAllForumRead } from '@/lib/actions/forums'
+import { createThread } from '@/lib/actions/forum-moderation'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { ForumDetail, ThreadSummary } from '@/types/forums'
 
 function ThreadRow({ forumId, thread }: { forumId: string; thread: ThreadSummary }) {
@@ -49,6 +55,229 @@ function ThreadRow({ forumId, thread }: { forumId: string; thread: ThreadSummary
   )
 }
 
+function ThreadEditorToolbar({ editor }: { editor: Editor | null }) {
+  function handleSetLink() {
+    const previousUrl = editor?.getAttributes('link').href ?? ''
+    const url = window.prompt('Enter URL:', previousUrl)
+    if (url === null) return
+    if (url === '') {
+      editor?.chain().focus().unsetLink().run()
+      return
+    }
+    editor?.chain().focus().setLink({ href: url }).run()
+  }
+
+  const btnClass = (active: boolean) =>
+    `px-2 py-1 text-xs rounded ${
+      active
+        ? 'bg-brand-primary text-white'
+        : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+    }`
+
+  return (
+    <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-gray-50 dark:bg-dark-surface/50 rounded-t-md">
+      <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`${btnClass(!!editor?.isActive('bold'))} font-bold`}>
+        B
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`${btnClass(!!editor?.isActive('italic'))} italic`}>
+        I
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`${btnClass(!!editor?.isActive('underline'))} underline`}>
+        U
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} className={`${btnClass(!!editor?.isActive('heading', { level: 1 }))} font-bold`}>
+        H1
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={`${btnClass(!!editor?.isActive('heading', { level: 2 }))} font-semibold`}>
+        H2
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={`${btnClass(!!editor?.isActive('heading', { level: 3 }))} font-semibold`}>
+        H3
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={btnClass(!!editor?.isActive('bulletList'))}>
+        • List
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()} className={btnClass(!!editor?.isActive('orderedList'))}>
+        1. List
+      </button>
+      <button type="button" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={btnClass(!!editor?.isActive('blockquote'))}>
+        &ldquo; Quote
+      </button>
+      <button type="button" onClick={handleSetLink} className={btnClass(!!editor?.isActive('link'))} title="Insert or edit link">
+        🔗
+      </button>
+      <button
+        type="button"
+        onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+        className="px-2 py-1 text-xs rounded text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border"
+        title="Insert horizontal rule"
+      >
+        —
+      </button>
+    </div>
+  )
+}
+
+function NewThreadModal({
+  open,
+  onOpenChange,
+  forum,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  forum: ForumDetail
+}) {
+  const router = useRouter()
+  const [title, setTitle] = useState('')
+  const [prefixId, setPrefixId] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TiptapLink.configure({
+        openOnClick: false,
+        HTMLAttributes: { rel: 'noopener noreferrer' },
+      }),
+    ],
+    content: '',
+    immediatelyRender: false, // required for Next.js App Router to prevent hydration mismatch
+  })
+
+  function resetForm() {
+    setTitle('')
+    setPrefixId(null)
+    setError(null)
+    editor?.commands.clearContent()
+  }
+
+  function closeModal() {
+    onOpenChange(false)
+    resetForm()
+  }
+
+  async function handleCreate() {
+    if (!title.trim()) {
+      setError('Thread title is required.')
+      return
+    }
+    if (!editor || editor.getText().trim().length === 0) {
+      setError('Opening post cannot be empty.')
+      return
+    }
+
+    setError(null)
+    setIsCreating(true)
+    const result = await createThread(forum.id, prefixId, title.trim(), editor.getHTML(), [])
+    setIsCreating(false)
+
+    if ('error' in result) {
+      setError(result.error)
+      return
+    }
+
+    onOpenChange(false)
+    resetForm()
+    router.push(`/crew/forums/${forum.id}/${result.threadId}`)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : closeModal())}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{`New Thread in ${forum.name}`}</DialogTitle>
+          <DialogDescription>Start a new discussion in this forum.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+          {forum.prefixes.length > 0 && (
+            <div>
+              <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Prefix</label>
+              <select
+                value={prefixId ?? ''}
+                onChange={(e) => setPrefixId(e.target.value || null)}
+                className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+              >
+                <option value="">— No prefix —</option>
+                {forum.prefixes.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">
+              Thread title<span className="text-brand-accent ml-0.5">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="What's this thread about?"
+              className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Opening post</label>
+            <ThreadEditorToolbar editor={editor} />
+            <EditorContent
+              editor={editor}
+              className="min-h-[120px] px-3 py-2 text-sm
+                text-dark dark:text-dark-text
+                bg-white dark:bg-dark-surface
+                rounded-b-md border-x border-b
+                border-divider dark:border-dark-border
+                [&_.ProseMirror]:outline-none
+                [&_.ProseMirror]:min-h-[100px]
+                [&_.ProseMirror_p]:mb-3
+                [&_.ProseMirror_ul]:list-disc
+                [&_.ProseMirror_ul]:pl-5
+                [&_.ProseMirror_ol]:list-decimal
+                [&_.ProseMirror_ol]:pl-5
+                [&_.ProseMirror_blockquote]:border-l-4
+                [&_.ProseMirror_blockquote]:border-divider
+                [&_.ProseMirror_blockquote]:pl-3
+                [&_.ProseMirror_strong]:font-bold
+                [&_.ProseMirror_em]:italic"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={isCreating}
+              className="w-full bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCreating ? 'Creating…' : 'Create Thread'}
+            </button>
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={isCreating}
+              className="w-full text-sm font-semibold text-dark dark:text-dark-text hover:underline cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ThreadListClient({
   forum,
   threads,
@@ -63,6 +292,7 @@ export default function ThreadListClient({
   const router = useRouter()
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false)
   const [markAllError, setMarkAllError] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   const isSaOa = admin.role === 'super_admin' || admin.role === 'owner_admin'
   const pinnedThreads = threads.filter((t) => t.is_pinned)
@@ -115,6 +345,15 @@ export default function ThreadListClient({
               Manage Forums
             </Link>
           )}
+          {!forum.is_archived && (
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+            >
+              New Thread
+            </button>
+          )}
         </div>
       </div>
       {markAllError && <p className="text-sm text-brand-accent">{markAllError}</p>}
@@ -150,6 +389,8 @@ export default function ThreadListClient({
           )}
         </div>
       )}
+
+      <NewThreadModal open={showCreateModal} onOpenChange={setShowCreateModal} forum={forum} />
     </div>
   )
 }
