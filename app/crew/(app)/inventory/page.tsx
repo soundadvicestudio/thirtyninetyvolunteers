@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getInventoryCategories, getInventoryLocations } from '@/lib/actions/inventory-settings'
 import { getInventoryItems } from '@/lib/actions/inventory'
+import { getActiveCheckouts } from '@/lib/actions/inventory-checkouts'
 import InventoryListClient from '@/components/crew/inventory/InventoryListClient'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
@@ -28,10 +29,11 @@ export default async function InventoryPage() {
     admin.role === 'owner_admin' ||
     (admin.role === 'editor' && admin.inventory_manager)
 
-  const [categories, locations, items] = await Promise.all([
+  const [categories, locations, items, activeCheckouts] = await Promise.all([
     getInventoryCategories(supabase),
     getInventoryLocations(supabase),
     getInventoryItems({ is_active: true }, supabase),
+    getActiveCheckouts(supabase),
   ])
 
   return (
@@ -49,6 +51,7 @@ export default async function InventoryPage() {
         categories={categories}
         locations={locations}
         items={items}
+        activeCheckouts={activeCheckouts}
         adminRole={admin.role}
         canWrite={canWrite}
       />

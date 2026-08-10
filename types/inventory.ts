@@ -85,3 +85,46 @@ export type UpdateItemData = {
   description?: string
   condition: InventoryCondition
 }
+
+export type CheckoutTargetType = 'show' | 'user' | 'custom'
+
+export type InventoryCheckout = {
+  id: string
+  checked_out_at: string
+  expected_return_date: string | null
+  returned_at: string | null
+  checked_out_by: string | null
+  target_type: CheckoutTargetType
+  target_show_id: string | null
+  target_user_id: string | null
+  target_custom_name: string | null
+  target_custom_contact: string | null
+  checkout_notes: string | null
+  return_notes: string | null
+  created_at: string
+  // joined fields
+  checked_out_by_name?: string
+  target_show_name?: string
+  target_user_name?: string
+  items?: CheckoutItem[]
+  is_overdue?: boolean
+}
+
+export type CheckoutItem = {
+  id: string
+  checkout_id: string
+  item_id: string
+  item_number?: string
+  item_name?: string
+}
+
+export type CreateCheckoutData = {
+  item_ids: string[]
+  target_type: CheckoutTargetType
+  target_show_id?: string
+  target_user_id?: string
+  target_custom_name?: string
+  target_custom_contact?: string
+  expected_return_date?: string
+  checkout_notes?: string
+}

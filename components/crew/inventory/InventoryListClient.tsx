@@ -2,11 +2,15 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { formatCT } from '@/lib/utils/date'
 import { getInventoryItems, createInventoryItem } from '@/lib/actions/inventory'
+import { returnCheckout } from '@/lib/actions/inventory-checkouts'
+import CheckoutModal from '@/components/crew/inventory/CheckoutModal'
 import type {
   InventoryCategory,
+  InventoryCheckout,
   InventoryItemLocationInput,
   InventoryItemWithStatus,
   InventoryLocation,
@@ -305,15 +309,186 @@ function CreateItemModal({
   )
 }
 
+function checkoutTargetLabel(checkout: InventoryCheckout): string {
+  if (checkout.target_type === 'show') return checkout.target_show_name ?? 'Unknown show'
+  if (checkout.target_type === 'user') return checkout.target_user_name ?? 'Unknown user'
+  return checkout.target_custom_name ?? 'Unknown'
+}
+
+function checkoutItemsLabel(checkout: InventoryCheckout): string {
+  const items = checkout.items ?? []
+  if (items.length === 0) return '—'
+  return items.map((i) => `${i.item_number ?? ''} ${i.item_name ?? ''}`.trim()).join(', ')
+}
+
+function ActiveCheckoutRow({ checkout, canWrite }: { checkout: InventoryCheckout; canWrite: boolean }) {
+  const router = useRouter()
+  const [returning, setReturning] = useState(false)
+  const [returnNotes, setReturnNotes] = useState('')
+  const [returnError, setReturnError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleConfirmReturn() {
+    setSubmitting(true)
+    setReturnError(null)
+    const result = await returnCheckout(checkout.id, returnNotes)
+    setSubmitting(false)
+    if ('success' in result) {
+      setReturning(false)
+      router.refresh()
+      return
+    }
+    setReturnError(result.error)
+  }
+
+  return (
+    <>
+      <tr className="border-b border-divider dark:border-dark-border last:border-0">
+        <td className="px-4 py-3 text-dark dark:text-dark-text">{checkoutItemsLabel(checkout)}</td>
+        <td className="px-4 py-3 text-dark dark:text-dark-text">{checkoutTargetLabel(checkout)}</td>
+        <td className="px-4 py-3 text-dark dark:text-dark-text">
+          {formatCT(checkout.checked_out_at, 'MMM d, yyyy')}
+        </td>
+        <td className="px-4 py-3 text-dark dark:text-dark-text">{checkout.expected_return_date ?? '—'}</td>
+        <td className="px-4 py-3">
+          <span
+            className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${
+              checkout.is_overdue
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-mid-gray/20 text-mid-gray'
+            }`}
+          >
+            {checkout.is_overdue ? 'Overdue' : 'Active'}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          {canWrite && !returning && (
+            <button
+              type="button"
+              onClick={() => setReturning(true)}
+              className="text-sm font-semibold text-brand-primary hover:underline cursor-pointer"
+            >
+              Return
+            </button>
+          )}
+        </td>
+      </tr>
+      {returning && (
+        <tr className="border-b border-divider dark:border-dark-border last:border-0">
+          <td colSpan={6} className="px-4 py-3 bg-gray-50 dark:bg-dark-bg">
+            <div className="space-y-2 max-w-md">
+              <textarea
+                rows={2}
+                placeholder="Return notes (optional)"
+                value={returnNotes}
+                onChange={(e) => setReturnNotes(e.target.value)}
+                className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+              />
+              {returnError && <p className="text-sm text-brand-accent">{returnError}</p>}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleConfirmReturn}
+                  disabled={submitting}
+                  className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? 'Confirming...' : 'Confirm Return'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReturning(false)
+                    setReturnError(null)
+                  }}
+                  disabled={submitting}
+                  className="text-sm font-semibold text-dark dark:text-dark-text hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+function ActiveCheckoutsPanel({
+  checkouts,
+  canWrite,
+}: {
+  checkouts: InventoryCheckout[]
+  canWrite: boolean
+}) {
+  const overdueCount = checkouts.filter((c) => c.is_overdue).length
+  const [expanded, setExpanded] = useState(checkouts.length > 0)
+
+  if (checkouts.length === 0) return null
+
+  return (
+    <div className={`${cardClasses} overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-surface/50"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-dark dark:text-dark-text">
+          Active Checkouts ({checkouts.length})
+          {overdueCount > 0 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+              {overdueCount} overdue
+            </span>
+          )}
+        </span>
+        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {expanded && (
+        <div className="overflow-x-auto border-t border-divider dark:border-dark-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-divider dark:border-dark-border">
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                  Item(s)
+                </th>
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                  Target
+                </th>
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                  Checked Out
+                </th>
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                  Expected Return
+                </th>
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-mid-gray dark:text-dark-muted font-semibold uppercase text-xs" />
+              </tr>
+            </thead>
+            <tbody>
+              {checkouts.map((checkout) => (
+                <ActiveCheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function InventoryListClient({
   categories,
   locations,
   items,
+  activeCheckouts,
   canWrite,
 }: {
   categories: InventoryCategory[]
   locations: InventoryLocation[]
   items: InventoryItemWithStatus[]
+  activeCheckouts: InventoryCheckout[]
   adminRole: AdminRole
   canWrite: boolean
 }) {
@@ -324,6 +499,7 @@ export default function InventoryListClient({
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
 
   const activeCategories = categories.filter((c) => c.is_active)
   const activeLocations = locations.filter((l) => l.is_active)
@@ -375,6 +551,8 @@ export default function InventoryListClient({
 
   return (
     <div className="space-y-4">
+      <ActiveCheckoutsPanel checkouts={activeCheckouts} canWrite={canWrite} />
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <select
@@ -436,14 +614,23 @@ export default function InventoryListClient({
         </div>
 
         {canWrite && (
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 bg-brand-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-primary-mid transition-colors cursor-pointer"
-          >
-            <Plus size={16} />
-            Add Item
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCheckoutModalOpen(true)}
+              className="flex items-center gap-1.5 border border-brand-primary text-brand-primary font-bold px-4 py-2 rounded-lg hover:bg-brand-primary hover:text-white transition-colors cursor-pointer"
+            >
+              Check Out Items
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-1.5 bg-brand-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-brand-primary-mid transition-colors cursor-pointer"
+            >
+              <Plus size={16} />
+              Add Item
+            </button>
+          </div>
         )}
       </div>
 
@@ -581,6 +768,13 @@ export default function InventoryListClient({
         onOpenChange={setShowCreateModal}
         categories={categories}
         locations={locations}
+      />
+
+      <CheckoutModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+        availableItems={items.filter((i) => i.is_active)}
+        canWrite={canWrite}
       />
     </div>
   )

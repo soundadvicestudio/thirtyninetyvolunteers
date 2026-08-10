@@ -120,6 +120,8 @@ export type AuditAction =
   | 'inventory_photo.delete'
   | 'inventory_photo.reorder'
   | 'inventory_note.add'
+  | 'inventory_checkout.create'
+  | 'inventory_checkout.return'
 
 export async function logAction(
   adminId: string | null,

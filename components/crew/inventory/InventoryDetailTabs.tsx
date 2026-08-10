@@ -12,8 +12,15 @@ import {
   reorderInventoryPhoto,
   addInventoryNote,
 } from '@/lib/actions/inventory'
+import { returnCheckout } from '@/lib/actions/inventory-checkouts'
 import InventoryPhotoUploader from '@/components/crew/inventory/InventoryPhotoUploader'
-import type { InventoryCategory, InventoryCondition, InventoryItemWithStatus } from '@/types/inventory'
+import CheckoutModal from '@/components/crew/inventory/CheckoutModal'
+import type {
+  InventoryCategory,
+  InventoryCheckout,
+  InventoryCondition,
+  InventoryItemWithStatus,
+} from '@/types/inventory'
 import type { AdminRole } from '@/types/admin'
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg'
@@ -589,21 +596,191 @@ function NotesTab({
   )
 }
 
+function checkoutStatusBadge(checkout: InventoryCheckout) {
+  if (checkout.returned_at) {
+    return { label: 'Returned', className: 'bg-mid-gray/20 text-mid-gray' }
+  }
+  if (checkout.is_overdue) {
+    return { label: 'Overdue', className: 'bg-red-100 text-red-800 font-bold dark:bg-red-900/30 dark:text-red-400' }
+  }
+  return { label: 'Active', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' }
+}
+
+function checkoutTargetLabel(checkout: InventoryCheckout): string {
+  if (checkout.target_type === 'show') return checkout.target_show_name ?? 'Unknown show'
+  if (checkout.target_type === 'user') return checkout.target_user_name ?? 'Unknown user'
+  return checkout.target_custom_name ?? 'Unknown'
+}
+
+function CheckoutRow({
+  checkout,
+  canWrite,
+  canSeeNotes,
+}: {
+  checkout: InventoryCheckout
+  canWrite: boolean
+  canSeeNotes: boolean
+}) {
+  const router = useRouter()
+  const badge = checkoutStatusBadge(checkout)
+  const [returning, setReturning] = useState(false)
+  const [returnNotes, setReturnNotes] = useState('')
+  const [returnError, setReturnError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleConfirmReturn() {
+    setSubmitting(true)
+    setReturnError(null)
+    const result = await returnCheckout(checkout.id, returnNotes)
+    setSubmitting(false)
+    if ('success' in result) {
+      setReturning(false)
+      router.refresh()
+      return
+    }
+    setReturnError(result.error)
+  }
+
+  return (
+    <div className={`${cardClasses} p-4 space-y-2`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${badge.className}`}>{badge.label}</span>
+        <span className="text-sm font-medium text-dark dark:text-dark-text">{checkoutTargetLabel(checkout)}</span>
+      </div>
+      <p className="text-xs text-mid-gray dark:text-dark-muted">
+        Checked out: {formatCT(checkout.checked_out_at, 'MMM d, yyyy')}
+        {checkout.checked_out_by_name ? ` by ${checkout.checked_out_by_name}` : ''}
+      </p>
+      <p className="text-xs text-mid-gray dark:text-dark-muted">
+        Expected return: {checkout.expected_return_date ?? 'No return date set'}
+      </p>
+      {checkout.returned_at && (
+        <p className="text-xs text-mid-gray dark:text-dark-muted">
+          Returned: {formatCT(checkout.returned_at, 'MMM d, yyyy')}
+        </p>
+      )}
+      {canSeeNotes && checkout.checkout_notes && (
+        <p className="text-xs text-dark dark:text-dark-text">Notes: {checkout.checkout_notes}</p>
+      )}
+      {canSeeNotes && checkout.return_notes && (
+        <p className="text-xs text-dark dark:text-dark-text">Return notes: {checkout.return_notes}</p>
+      )}
+
+      {!checkout.returned_at && canWrite && (
+        <div>
+          {!returning ? (
+            <button
+              type="button"
+              onClick={() => setReturning(true)}
+              className="text-sm font-semibold text-brand-primary hover:underline cursor-pointer"
+            >
+              Mark as Returned
+            </button>
+          ) : (
+            <div className="space-y-2 pt-2">
+              <textarea
+                rows={2}
+                placeholder="Return notes (optional)"
+                value={returnNotes}
+                onChange={(e) => setReturnNotes(e.target.value)}
+                className="w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+              />
+              {returnError && <p className="text-sm text-brand-accent">{returnError}</p>}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleConfirmReturn}
+                  disabled={submitting}
+                  className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? 'Confirming...' : 'Confirm Return'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReturning(false)
+                    setReturnError(null)
+                  }}
+                  disabled={submitting}
+                  className="text-sm font-semibold text-dark dark:text-dark-text hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CheckoutsTab({
+  item,
+  checkouts,
+  canWrite,
+  canSeeNotes,
+  onOpenCheckoutModal,
+}: {
+  item: InventoryItemWithStatus
+  checkouts: InventoryCheckout[]
+  canWrite: boolean
+  canSeeNotes: boolean
+  onOpenCheckoutModal: () => void
+}) {
+  return (
+    <div className="p-4 space-y-4">
+      {item.is_checked_out && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-900/10 p-4">
+          <p className="font-medium text-orange-800 dark:text-orange-400">
+            This item is currently checked out{item.is_overdue ? ' — OVERDUE' : ''}
+          </p>
+        </div>
+      )}
+
+      {canWrite && !item.is_checked_out && (
+        <button
+          type="button"
+          onClick={onOpenCheckoutModal}
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+        >
+          Check Out This Item
+        </button>
+      )}
+
+      {checkouts.length === 0 ? (
+        <p className="text-sm text-mid-gray dark:text-dark-muted">No checkout history for this item.</p>
+      ) : (
+        <div className="space-y-3">
+          {checkouts.map((checkout) => (
+            <CheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} canSeeNotes={canSeeNotes} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function InventoryDetailTabs({
   item,
   categories,
+  checkouts,
+  availableItems,
   canWrite,
   canDelete,
   canSeeNotes,
 }: {
   item: InventoryItemWithStatus
   categories: InventoryCategory[]
+  checkouts: InventoryCheckout[]
+  availableItems: InventoryItemWithStatus[]
   adminRole: AdminRole
   canWrite: boolean
   canDelete: boolean
   canSeeNotes: boolean
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
 
   const tabClasses = (tab: TabKey) =>
     `px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
@@ -640,9 +817,13 @@ export default function InventoryDetailTabs({
           {activeTab === 'photos' && <PhotosTab item={item} canWrite={canWrite} />}
           {activeTab === 'notes' && <NotesTab item={item} canWrite={canWrite} canSeeNotes={canSeeNotes} />}
           {activeTab === 'checkouts' && (
-            <div className="py-8 text-center text-mid-gray dark:text-dark-muted">
-              <p>Checkout history and management coming soon.</p>
-            </div>
+            <CheckoutsTab
+              item={item}
+              checkouts={checkouts}
+              canWrite={canWrite}
+              canSeeNotes={canSeeNotes}
+              onOpenCheckoutModal={() => setCheckoutModalOpen(true)}
+            />
           )}
           {activeTab === 'qr' && (
             <div className="py-8 text-center text-mid-gray dark:text-dark-muted">
@@ -651,6 +832,14 @@ export default function InventoryDetailTabs({
           )}
         </div>
       </div>
+
+      <CheckoutModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+        initialItemIds={[item.id]}
+        availableItems={availableItems}
+        canWrite={canWrite}
+      />
     </div>
   )
 }

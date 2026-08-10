@@ -2,8 +2,9 @@ import { notFound, redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
-import { getInventoryItemById } from '@/lib/actions/inventory'
+import { getInventoryItemById, getInventoryItems } from '@/lib/actions/inventory'
 import { getInventoryCategories } from '@/lib/actions/inventory-settings'
+import { getCheckoutsForItem } from '@/lib/actions/inventory-checkouts'
 import InventoryDetailTabs from '@/components/crew/inventory/InventoryDetailTabs'
 
 export default async function InventoryItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,9 +25,11 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
     redirect('/crew/dashboard')
   }
 
-  const [item, categories] = await Promise.all([
+  const [item, categories, checkouts, allItems] = await Promise.all([
     getInventoryItemById(id, supabase),
     getInventoryCategories(supabase),
+    getCheckoutsForItem(id, supabase),
+    getInventoryItems({ is_active: true }, supabase),
   ])
 
   if (!item) notFound()
@@ -49,6 +52,8 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
       <InventoryDetailTabs
         item={item}
         categories={categories}
+        checkouts={checkouts}
+        availableItems={allItems}
         adminRole={admin.role}
         canWrite={canWrite}
         canDelete={canDelete}
