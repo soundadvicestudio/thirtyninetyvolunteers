@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.3
-### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.71: FORUMS.5-FIX documented — §11 FORUMS.5 build summary updated with fix note; §11 prompt log: FORUMS.5-FIX + DOC.71 added)
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.4
+### Created: July 2026 | Last Updated: August 2026 — v5.4 (DOC.72: Phase STYLE complete documented — §1 current phase updated; §3 darkenHex() noted; §6 CSS custom properties subsection added; §8 Style Sandbox section + hub card added; §11 Phase STYLE build summaries + prompt log added; §13 R33/R35/R36 notes added)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase AUDITIONS complete (AUDITIONS.A–4b, Migration 032). Migration 033 (audition schema fixes) applied. Phase INVENTORY complete — all 6 prompts shipped (INVENTORY.A through INVENTORY.5, Migration 034 applied). Phase FORUMS complete — all 6 prompts shipped (FORUMS.A through FORUMS.5, Migration 035 applied, commits dde841d/c1c7328/5c95810/b21b3a4/e41f66f). Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase STYLE complete (STYLE.A–STYLE.8, commits 8cf6144/aea0090/67d594e/5a29b48/4b2bd69/ae5f455/db3c980/19f9714/2eb1f1c). Phase 17 (Launch) is next. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -67,7 +67,7 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Image Config** | next.config.ts images.remotePatterns | Must include *.supabase.co hostname pattern (added ADMIN.33). Required for dynamic logo rendering when org_logo_url points to Supabase Storage. Without this entry, next/image will throw a runtime error on any deployment with a custom uploaded logo. |
 | **Export** | `@react-pdf/renderer` | PDF export of volunteer list via server-side route handler. CSV export is client-side via `lib/utils/csv.ts`. Brand colors passed as props via `createStyles()` factory (THEME.4 — see §8 Volunteer List PDF). |
-| **Color Utility** | `lib/utils/color.ts` | `lightenHex(hex, amount)` — pure server-side hex tint computation. Blends a hex color with white at the given percentage. Used by `resolveEmailSettings()` to compute `brandPrimaryLight` (8% tint of `brand_primary`) and by the PDF export route handler for the same derivation. Required because email clients and `@react-pdf/renderer` do not support CSS custom properties or `color-mix()` — tints must be concrete hex strings computed server-side. Established THEME.3b. |
+| **Color Utility** | `lib/utils/color.ts` | `lightenHex(hex, amount)` — pure server-side hex tint computation. Blends a hex color with white at the given percentage. Used by `resolveEmailSettings()` to compute `brandPrimaryLight` (8% tint of `brand_primary`) and by the PDF export route handler for the same derivation. Required because email clients and `@react-pdf/renderer` do not support CSS custom properties or `color-mix()` — tints must be concrete hex strings computed server-side. Established THEME.3b. `darkenHex(hex, amount)` — added STYLE.A. Blends a hex color toward black (amount = 1.0 → pure hex; amount = 0.0 → pure black). Used to compute `--brand-primary-dark` and `--brand-accent-dark` CSS custom properties in `resolveBrandColors()`. Same signature convention as `lightenHex()` — different blend target. |
 | **Rich Text** | TipTap (`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`) | Rich text editing in the email blast composer (`/crew/communication`). StarterKit provides bold, italic, bullet/ordered lists, blockquote, headings, horizontal rule. `@tiptap/extension-link` and `@tiptap/extension-underline` added in ADMIN.27. Toolbar: B, I, U, H1, H2, —, • List, 1. List, 🔗. Editor outputs HTML passed to `sendBlastEmail()`. **Custom extension pattern (Phase AUDITIONS.4a):** `MergeTagExtension.ts` in `components/crew/auditions/` — inline/atom Node with `data-merge-tag` attribute round-trip, `insertMergeTag(tag)` command via module augmentation (`declare module '@tiptap/core'`), `.merge-tag-pill` CSS class for visual display. All TipTap editor instances in admin components use `immediatelyRender: false` (SSR/hydration safety — required in Next.js App Router). Installed 13.3b; extensions added ADMIN.27; custom extension added AUDITIONS.4a. **`useEditor` TypeScript overload caveat (FORUMS.5):** `ReturnType<typeof useEditor>` does not reliably infer `Editor | null` when `immediatelyRender: false` is set — TypeScript picks the last matching overload signature, which may return non-null `Editor`. Always type TipTap editor variables and toolbar helper props explicitly as `Editor | null` to avoid silent null-safety failures. |
 | **Image Cropping** | react-easy-crop v6.2.3 | Client-side image crop editor for brand asset uploads in the Setup Panel (BrandImageUploader.tsx). Used for logo (free aspect ratio) and favicon (1:1 square lock). Installed SETUP.2. |
 | **HTML Sanitization** | `sanitize-html` + `@types/sanitize-html` | Server-side sanitization of TipTap HTML output in `sendBlastEmail()` before the email payload is built. Allowlist: `p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href]` only. HTTP/HTTPS/mailto schemes only. Strips `<script>`, event handlers, and `javascript:` hrefs. Installed 13.4a. |
@@ -166,6 +166,39 @@ White:                #FFFFFF
 Dark Text:            #1A1A1A  --color-dark
 Mid Gray:             #555555  --color-mid-gray
 ```
+
+### CSS Custom Properties (injected by resolveBrandColors())
+
+`resolveBrandColors()` in `app/layout.tsx` fetches
+`brand_primary` and `brand_accent` from `app_settings` and
+computes nine CSS custom properties injected via a `<style>`
+tag in the root layout, cascading to all routes. The function
+returns `{ primary, accent }` — bound as `brand.primary` and
+`brand.accent` in the function body (not destructured as
+`brandPrimary`/`brandAccent`).
+
+**Six original tokens (THEME.1):**
+- `--brand-primary` — raw primary hex
+- `--brand-accent` — raw accent hex
+- `--brand-primary-mid` — `color-mix(in srgb, var(--brand-primary) 59%, white)`
+- `--brand-primary-tint` — `color-mix(in srgb, var(--brand-primary) 47%, white)`
+- `--brand-primary-light` — `color-mix(in srgb, var(--brand-primary) 8%, white)`
+- `--brand-accent-light` — `color-mix(in srgb, var(--brand-accent) 5%, white)`
+
+**Three new derived tokens (STYLE.A — computed server-side):**
+- `--brand-primary-dark` — `darkenHex(brand.primary, 0.82)` — hover/pressed states on primary elements
+- `--brand-accent-dark` — `darkenHex(brand.accent, 0.82)` — hover/pressed states on accent elements
+- `--brand-primary-subtle` — `lightenHex(brand.primary, 0.03)` — 3% pale tint for zebra rows and focus backgrounds
+
+**Two static neutral tokens (STYLE.A — @theme, not derived):**
+Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind v4 auto-generates utility classes from `@theme` tokens — `bg-neutral-surface`, `dark:bg-neutral-surface`, `border-neutral-border`, etc. are all auto-generated; no hand-authoring in `@layer utilities` needed.
+- `--color-neutral-surface: #F8F9FA` — card and panel surface color
+- `--color-neutral-border: #E2E6EA` — border color for cards, tables, dividers
+
+**Authoring rules confirmed STYLE.A:**
+- `@theme` token naming: the `--color-` prefix is required for Tailwind v4 to auto-generate color utility classes. Tokens without this prefix produce inert custom properties with no utility class output.
+- `resolveBrandColors()` return shape: `{ primary, accent }` — bound as `brand.primary` and `brand.accent` in the template literal. No `brandPrimary` or `brandAccent` local variables exist.
+- Dark variant pattern in `@layer utilities`: uses `:where([data-theme="dark"], [data-theme="dark"] *)` selector, not the two-selector pattern `.dark .class / [data-theme="dark"] .class`.
 
 ### Typography
 - **Font:** Open Sans (Google Fonts)
@@ -1296,6 +1329,7 @@ displays 8 section cards using the `LinkedCard` /
 | Location Management | `/crew/settings/locations` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
 | Inventory Management | `/crew/settings/inventory` | Super Admin + Owner Admin (LinkedCard); Editor with `inventory_manager` (LinkedCard); Editor without flag + Viewer (LockedCard) — built INVENTORY.2 |
 | User Groups | `/crew/settings/groups` | Super Admin + Owner Admin (LinkedCard, `canAccessAdminSettings` gate); Editor + Viewer (LockedCard "Super Admin only") — built FORUMS.1 |
+| Style Sandbox | `/crew/settings/style` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — built STYLE.1. Reached via hub card only — no sidebar link. |
 | Platform Setup | `/crew/settings/setup` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — Phase SETUP |
 
 **Email Activity (`/crew/settings/email-activity`, built Phase 13.1 — Super Admin only):**
@@ -1391,6 +1425,122 @@ Key files (Phase SETUP):
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
 - `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
 - `app/layout.tsx` — `generateMetadata()` reads `favicon_url`, `org_name`, and `org_tagline` from `app_settings` (ADMIN.34)
+
+---
+
+**Style Sandbox (`/crew/settings/style`, Phase STYLE — complete):**
+Super Admin only. A design evaluation tool for iterating on
+UI aesthetics before any platform-wide rollout. Not a runtime
+theming tool — changes here are made in code (globals.css,
+layout.tsx) and immediately reflected in the sandbox, then
+validated before the rollout phase (STYLE-ROLLOUT, future).
+
+**Access:** Super Admin only. `proxy.ts` exact-match guard
+(`pathname === '/crew/settings/style'`) hard-redirects all
+non-Super-Admin roles to `/crew/dashboard`. Server-side
+double-guard on the page (same pattern as Platform Setup).
+No feature flag — this is the first Super Admin-only tool
+with no meaningful "off" state for any client (R34 exception,
+documented). No sidebar link — reached via Settings hub card
+only, same pattern as all other settings sub-pages.
+
+**Settings hub card:** LinkedCard for Super Admin; LockedCard
+for all other roles. Note: `LinkedCard` and `LockedCard` are
+locally defined in `app/crew/(app)/settings/page.tsx` — they
+are not importable from an external path. Any new card added
+to the settings hub edits that file directly.
+
+**Section 1 — Primitive Gallery:** Static render of key UI
+primitives using the live CSS token system. Changes to
+`globals.css` or `app/layout.tsx` are immediately visible.
+Eight groups: Buttons (primary/secondary/destructive with
+hover:bg-brand-primary-dark demonstration), Form Input
+(default/focused/error states), Card, Data Table (with badge
+examples), Navigation Item (active/inactive states), Stat
+Card (2×2 grid), Badges (role + brand-derived), Token
+Reference (all 11 CSS custom properties with color swatches
+via inline style={{ background: 'var(--token)' }}).
+
+**Section 2 — Page Mockups:** Fifteen full-fidelity static
+reproductions of admin pages using the Option A design
+patterns. All data is hardcoded representative values — no
+DB queries. Mockups live entirely within the sandbox; zero
+production files are touched. Added STYLE.2 through STYLE.8.
+
+Page mockup inventory (15 total):
+1. Dashboard — stat tiles with border-t-brand-primary accent,
+   activity feed with NEW badge using bg-brand-primary-subtle
+2. Calendar — Month view, location color chips inline style,
+   static day detail panel, 35-cell hardcoded grid
+3. Rehearsals — schedule list (Active/Pending/Cancelled
+   status badges)
+4. Auditions — audition list (type badges: Timed Slots/Open
+   Call; status badges: Published/Draft/Closed/Archived)
+5. Inventory — item table with monospace ID pills using
+   bg-neutral-surface, condition badges, availability badges,
+   Active Checkouts strip using bg-brand-primary-light
+6. Volunteers — 8-column dense table with Name cell inline
+   badges (SH badge, communication preference badge)
+7. Forums — two sections: Forum Index (category headers +
+   forum rows with border-l-4 left accent) + Thread List
+   (prefix badges, pin/lock indicators, unread state)
+8. Shows — season accordion (expanded with brand-primary
+   left accent + "Current" badge; collapsed with neutral
+   left accent); per-show staffing mini progress bars
+9. Opportunities — list with claim-type badges (Interest
+   Form/Slot Claim), submission counts in brand-primary
+10. Forms — list with status badges (Live/Draft/Closed),
+    response counts in brand-primary
+11. QR Generator — generator card, 10×10 static QR grid
+    (bg-white always — scanability rule, no dark: override),
+    3-entry history panel
+12. Check-In Dashboard — roster grouped by role, 5 attendance
+    status badge variants, animate-pulse live indicator
+13. Communication — Compose step (recipient tabs, static
+    TipTap toolbar, body) + Confirm step (orange warning
+    banner using bg-orange-50, Send button using bg-brand-accent)
+14. Media Library — two-panel layout (folder browser left +
+    document table right); active folder uses bg-brand-
+    primary-light; type and access tier badge system
+15. Setup Panel — 3 section cards (Org Identity, Brand Colors,
+    Feature Flags) with header/body/footer pattern; color
+    swatches via inline style; toggle switch visuals
+
+**Option A design patterns (applied throughout mockups):**
+These are the intended targets for STYLE-ROLLOUT:
+- Page heading zone: `<div className="pb-4 border-b border-neutral-border">` wrapping h1 + subtitle paragraph
+- Stat tile top accent: `border-t-2 border-t-brand-primary` (two separate class strings — never combined)
+- Data table header: `bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border`
+- Table row hover: `hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors` (both native Tailwind — R35 safe)
+- Left border accent: `border-l-4` (Tailwind, sets width) + `style={{ borderLeftColor: 'var(--brand-primary)' }}` (CSS custom property, sets color). Never use `border-brand-primary` alongside a full `border` class — it overrides all four border sides.
+- Section card pattern (Setup Panel): header/body/footer with `bg-neutral-surface` header + `border-t border-neutral-border` footer + "Save Changes" per section
+- Activity feed NEW badge: `bg-brand-primary-subtle text-brand-primary` (hand-authored — R35: no native dark: pairing on same property)
+- Staffing progress bars: hardcoded complete class strings for color (`bg-green-500`, `bg-yellow-400`, `bg-red-500`) and width (`w-[87.5%]`, `w-[58.3%]`, `w-0`) — never computed dynamically (Tailwind purge risk)
+- Season accordion: expanded state uses `style={{ borderLeftColor: 'var(--brand-primary)' }}`; collapsed state uses `style={{ borderLeftColor: 'var(--color-neutral-border)' }}`
+
+**Named badge export pattern (established STYLE.4):**
+All badge helper functions in mockup components are named
+exports (not module-private). This prevents
+`@typescript-eslint/no-unused-vars` lint warnings for badge
+variants not present in the representative data rows —
+discovered STYLE.4 F1 and pre-empted in all subsequent
+mockup prompts.
+
+**Key files:**
+- `proxy.ts` — exact-match guard for `/crew/settings/style`
+- `app/crew/(app)/settings/style/page.tsx` — Server Component shell, SA double-guard
+- `components/crew/settings/StyleSandbox.tsx` — Client Component, Section 1 + Section 2
+- `lib/utils/color.ts` — `darkenHex()` added alongside `lightenHex()` (STYLE.A)
+- `app/globals.css` — `--color-neutral-surface` / `--color-neutral-border` in @theme block; new @layer utilities classes for brand-derived tokens
+- `app/layout.tsx` — `resolveBrandColors()` extended to inject 9 total custom properties
+- Mockup components (15 files):
+  `DashboardMockup.tsx`, `CalendarMockup.tsx`, `RehearsalsMockup.tsx`,
+  `AuditionsMockup.tsx`, `InventoryMockup.tsx`, `VolunteersMockup.tsx`,
+  `ForumsMockup.tsx`, `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`,
+  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`, `CheckInMockup.tsx`,
+  `CommunicationMockup.tsx`, `MediaLibraryMockup.tsx`, `SetupPanelMockup.tsx`
+
+---
 
 **Document Management (`/crew/settings/documents`) — Built Phase 15.1–15.2:**
 Super Admin + Owner Admin only. "Beta" badge removed from the Settings hub card
@@ -4315,7 +4465,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase THEME complete. Phase 19 (Communication Preferences) complete. ADMIN.35–42 complete. Phase 21 (Rehearsal Management) complete. Phase AUDITIONS (Audition Management) complete — all 10 build prompts shipped (AUDITIONS.A through AUDITIONS.4b). Phase INVENTORY complete — all 6 prompts shipped (INVENTORY.A through INVENTORY.5). Phase FORUMS (Internal Discussion Forums) complete — all 6 prompts shipped (FORUMS.A through FORUMS.5). Migrations 032–035 applied. Phase 17 (Launch) is next.*
+*Phase STYLE complete (STYLE.A–STYLE.8, 9 prompts). Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -5227,6 +5377,129 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
 
 **30BN-DOC.71 ✓** Brief v5.3 + Process v5.1 (FORUMS.5-FIX documented — 'use server' non-function export constraint added to §7/§10/§11/§13 of Process; §11 FORUMS.5 entry + prompt log updated in Brief — this prompt).
 
+**30BN-STYLE.A ✓** Token extension (darkenHex, --brand-primary-dark, --brand-accent-dark, --brand-primary-subtle, --color-neutral-surface, --color-neutral-border). 3 files. Commit 8cf6144.
+
+**30BN-STYLE.1 ✓** Style Sandbox shell + primitive gallery (proxy.ts guard, settings hub card, style/page.tsx shell, StyleSandbox.tsx with 8-group gallery + Section 2 placeholder). 4 files. Commit aea0090.
+
+**30BN-STYLE.2 ✓** Dashboard mockup (6 sections, border-t-brand-primary stat tiles, bg-brand-primary-subtle NEW badges). 2 files. Commit 67d594e.
+
+**30BN-STYLE.3 ✓** Calendar mockup (35-cell Oct 2025 grid, location colors as named constants + inline styles, static day detail panel). 2 files. Commit 5a29b48.
+
+**30BN-STYLE.4 ✓** Rehearsals + Auditions list mockups. Named export badge helper pattern established (STYLE.4 F1). 3 files. Commit 4b2bd69.
+
+**30BN-STYLE.5 ✓** Inventory + Volunteers list mockups. bg-neutral-surface ID pills, 8-column dense table, overflow-x-auto. Named export pattern pre-empted. 3 files. Commit ae5f455.
+
+**30BN-STYLE.6 ✓** Forums + Shows mockups. Left accent via border-l-4 + style={{ borderLeftColor }}. Season accordion card pattern. Hardcoded w-[N%] progress bar widths. 3 files. Commit db3c980.
+
+**30BN-STYLE.7 ✓** Opportunities, Forms, QR Generator, Check-In mockups. 100-cell explicit QR grid. bg-white on QR container (no dark: override). animate-pulse live indicator. 5 files. Commit 19f9714.
+
+**30BN-STYLE.8 ✓** Communication, Media Library, Setup Panel mockups. bg-brand-accent on Send button. Two-panel Media Library. 3 section card pattern. Named export badge pattern pre-empted. 4 files. Commit 2eb1f1c.
+
+**30BN-DOC.72 ✓** Brief v5.4 + Process v5.2 (this prompt)
+
+### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
+
+**STYLE.A ✓** — Token extension. `lib/utils/color.ts`:
+`darkenHex()` added. `app/layout.tsx`: `resolveBrandColors()`
+extended from 6 to 9 injected CSS custom properties
+(`--brand-primary-dark`, `--brand-accent-dark`,
+`--brand-primary-subtle`). `app/globals.css`: `@theme` block
+gains `--color-neutral-surface` + `--color-neutral-border`
+(static hex; `--color-` prefix required for Tailwind utility
+generation); `@layer utilities` gains classes for the 3 new
+brand-derived tokens. Key findings: `resolveBrandColors()`
+returns `{ primary, accent }` not destructured locals (F1
+pre-commit); `--color-` prefix required in @theme or tokens
+are inert (F3 pre-commit); dark variant pattern is
+`:where([data-theme="dark"], [data-theme="dark"] *)` not
+two-selector form (F4 pre-commit). 3 files. Commit 8cf6144.
+
+**STYLE.1 ✓** — Style Sandbox shell + primitive gallery.
+`proxy.ts`: exact-match Super Admin-only guard for
+`/crew/settings/style`. `app/crew/(app)/settings/page.tsx`:
+Style Sandbox LinkedCard/LockedCard added (no icon —
+skip the optional icon approach to match all 12 existing
+cards exactly). `app/crew/(app)/settings/style/page.tsx`
+(new — Server Component, double-guard). `components/crew/
+settings/StyleSandbox.tsx` (new — Client Component, Section
+1 primitive gallery with 8 groups, Section 2 placeholder).
+Key findings: no sidebar "Settings section" with sub-links
+exists — Settings is a flat NAV_ITEMS entry; Style Sandbox
+is hub-card-only (F1 — Task C eliminated). No icon prop on
+cards (F3 — keeping all cards visually identical). 4 files.
+Commit aea0090.
+
+**STYLE.2 ✓** — Dashboard mockup. `components/crew/settings/
+DashboardMockup.tsx` (new — 6 sections: page heading, Quick
+Stats stat tiles with border-t-brand-primary accent, Season
+at a Glance with staffing dots, Pending Milestones,
+Pending Hours Review with brand-accent-dark Confirm buttons,
+Activity Feed with bg-brand-primary-subtle NEW badges).
+`StyleSandbox.tsx`: placeholder replaced with
+`<DashboardMockup />`. 2 files. Commit 67d594e.
+
+**STYLE.3 ✓** — Calendar mockup. `components/crew/settings/
+CalendarMockup.tsx` (new — Month view: page heading, view
+switcher tabs, filter bar, location legend, 35-cell October
+2025 grid with hardcoded event placements, static day detail
+panel for Oct 14). Location colors as named constants
+(MAINSTAGE_COLOR etc.) used in inline style={{ backgroundColor }}
+only — never as Tailwind classes. All 35 cells written
+explicitly (no .map() over computed data). F1: grid math
+inconsistency (2 leading + 31 October + 2 trailing = 35,
+not 3 trailing as spec stated — corrected pre-commit). 2
+files. Commit 5a29b48.
+
+**STYLE.4 ✓** — Rehearsals + Auditions list mockups.
+`RehearsalsMockup.tsx` + `AuditionsMockup.tsx` (new —
+both independently written, named export badge helpers
+established as the pattern to prevent unused-var lint
+warnings). Named export pattern was the STYLE.4 F1
+discovery — pre-empted in all subsequent prompts. 3 files.
+Commit 4b2bd69.
+
+**STYLE.5 ✓** — Inventory + Volunteers list mockups.
+`InventoryMockup.tsx` (item table with monospace ID pills
+using bg-neutral-surface + border-neutral-border, condition
+badges, availability badges including bg-brand-primary-light
+for Checked Out, Active Checkouts strip) + `VolunteersMockup
+.tsx` (8-column dense table with Name cell SH + comm pref
+badges, category chips, overflow-x-auto wrapper). Named
+export badge pattern pre-empted. 3 files. Commit ae5f455.
+
+**STYLE.6 ✓** — Forums + Shows mockups. `ForumsMockup.tsx`
+(two sequential sections: Forum Index with category header
+bands + forum rows with border-l-4 + style={{ borderLeftColor
+}} left accent pattern; Thread List with prefix badges,
+pin/lock icons, unread state) + `ShowsMockup.tsx` (season
+accordion: expanded with brand-primary left accent via inline
+style, collapsed with neutral left accent; per-show cards
+with staffing mini progress bars using hardcoded w-[N%] and
+color class strings). All verification counts passed. 3
+files. Commit db3c980.
+
+**STYLE.7 ✓** — Opportunities, Forms, QR Generator, Check-In
+mockups. Four components in one prompt. `QRGeneratorMockup
+.tsx`: 10×10 QR grid — all 100 cells written explicitly with
+bg-white/bg-gray-900, white container has NO dark: override
+(QR scanability rule). `CheckInMockup.tsx`: roster grouped
+by role, 5 named attendance status badge variants, animate-
+pulse live indicator (RefreshCw icon substituted for
+non-existent Refresh — Q1 accepted). 5 files. Commit 19f9714.
+
+**STYLE.8 ✓** — Communication, Media Library, Setup Panel
+mockups. `CommunicationMockup.tsx`: Compose step (static
+TipTap toolbar, recipient tabs, body) + Confirm step (orange
+warning banner via bg-orange-50, Send button via bg-brand-
+accent + hover:bg-brand-accent-dark demonstrating new accent-
+dark token). `MediaLibraryMockup.tsx`: two-panel layout,
+active folder using bg-brand-primary-light (R35: no native
+dark: pairing), 7 named-export badge helpers. `SetupPanelMockup
+.tsx`: 3 section cards (header/body/footer), color swatches
+as inline style divs, 7 feature flag toggle rows — all 3
+section "Save Changes" buttons written explicitly (verification
+check required exactly 3 occurrences). 4 files. Commit 2eb1f1c.
+
 ### Phase 17 — Launch
 
 **17.1 — Production Environment Audit + Setup Panel Configuration**
@@ -5637,6 +5910,15 @@ All feature flag reads in the codebase must go through `getFeatureFlags()` in `l
 ### R33 — After Phase THEME: CSS Custom Properties for Brand Colors, Not Tailwind Utility Classes
 After Phase THEME ships, all components that reference brand-driven colors (`bg-navy`, `text-orange`, `border-navy`, `hover:bg-navy`, etc.) must use CSS custom properties (`var(--brand-primary)`, `var(--brand-accent)`) via inline styles or a small set of CSS utility classes in `globals.css` that reference these variables. Static Tailwind brand color utility classes are no longer permitted in new code after THEME ships — they reference static hex values and cannot respond to `app_settings` color changes. The `@theme` block in `globals.css` is NOT modified (R7 still applies — structural and non-brand colors stay as static hex in `@theme`). Phase THEME.A audits all current usages before any replacements are made. Established Phase THEME design (not yet built — enforced from THEME.1 onward).
 
+**@theme neutral tokens (STYLE.A):** `--color-neutral-surface`
+and `--color-neutral-border` are static @theme tokens.
+Tailwind v4 auto-generates their utility classes
+(`bg-neutral-surface`, `border-neutral-border`,
+`dark:bg-neutral-surface`, etc.) — no hand-authoring in
+`@layer utilities` needed or appropriate. The `--color-`
+prefix is required for this auto-generation; tokens without
+it produce inert custom properties only.
+
 ### R34 — All Non-Core Features Must Be Built Flag-Ready
 
 Any feature added after Phase SETUP ships that a client might reasonably not want or pay for separately must be built flag-ready at the time of initial build — not retrofitted later. Flag-ready means: (1) a feature_X key exists in app_settings with a default value seeded in the migration; (2) getFeatureFlags() in lib/feature-flags.ts returns the flag in its typed object; (3) proxy.ts blocks the route when the flag is 'false'; (4) the sidebar link renders conditionally based on the flag; (5) any public routes associated with the feature return 404 when the flag is off; (6) any server action that is the exclusive entry point for the feature returns early with an error when the flag is off (defense in depth). Definition of "non-core": features beyond volunteer management, show/slot management, user management, forms, media library, hours & milestones, standing opportunities, and the Call Board. Current flagged features: Calendar (`feature_calendar`), Check-In (`feature_checkin`), Email Blast (`feature_blast`), Rehearsal Management (`feature_rehearsals` — Phase 21), Audition Management (`feature_auditions` — Phase AUDITIONS), Inventory Management (`feature_inventory` — Phase INVENTORY), Internal Forums (`feature_forums` — Phase FORUMS). When in doubt, build flag-ready — adding a flag is cheap, retrofitting guards is expensive. Established this session; enforced from SETUP.4 onward.
@@ -5665,6 +5947,16 @@ dark: class is specified.)
 
 This defect was confirmed empirically via live PostCSS compilation in ADMIN.35-AUDIT and fully resolved across 54 files in ADMIN.39a–c.
 
+**Left border accent pattern (STYLE.6):** To apply a
+brand-primary left border accent without overriding all
+four border sides, use `border-l-4` (Tailwind native —
+sets left border width) combined with
+`style={{ borderLeftColor: 'var(--brand-primary)' }}`
+(inline style — sets color via CSS custom property). Never
+use `border-brand-primary` alongside a full `border` class
+— `border-brand-primary` sets `border-color` on all four
+sides, overriding the neutral border on other sides.
+
 ### R36 — Hand-Authored @layer utilities Classes Do NOT Auto-Generate Opacity-Suffix or Pseudo-Class-Stacked Variant Rules
 
 In Tailwind v4 with hand-authored `@layer utilities` classes, each specific combination must be explicitly authored as its own rule. This is distinct from R35 (which is about cascade ordering between hand-authored and native classes) — R36 is about missing rules that produce silent CSS failures.
@@ -5683,6 +5975,19 @@ Native Tailwind utility classes (bg-gray-50, etc.) DO auto-generate these combin
 Failure mode: a class with no matching rule produces zero CSS output — the element renders as if the class is not present, or silently falls back to a sibling class that produces the wrong color or opacity. No build error, no lint error. Confirmed failure in button.tsx: `focus-visible:ring-brand-primary/50` was present in every button variant but produced no focus ring color (ACCESSIBILITY impact) until ADMIN.42 added the explicit rule.
 
 Correct approach: whenever adding a brand utility class to a component with an opacity suffix or stacked pseudo-class/variant prefix, check globals.css immediately and author the missing rule if it does not exist. See §10 grep check and §11 checklist item in Process for enforcement.
+
+**Tailwind purge risk for width and color classes
+(STYLE.3/STYLE.6):** Any Tailwind class assembled from
+computed values at runtime is invisible to the content
+scanner and will be purged from the production bundle.
+This applies to progress bar widths (`w-[87.5%]`,
+`w-[58.3%]`) and fill colors (`bg-green-500`,
+`bg-yellow-400`, `bg-red-500`) — each must appear as a
+complete unbroken string literal in JSX. Never construct
+class names via template literals or array joins even when
+the pieces are all literals. This is the same root cause
+as the R36 `@layer utilities` missing-rule gap — both
+produce silent CSS failures.
 
 ### R37 — admin_users.id Is the Supabase Auth UUID — No auth_user_id Column
 
@@ -5782,3 +6087,25 @@ logged)*
 *v5.2 (August 2026 — DOC.68/DOC.69: Phase FORUMS complete — §1 header + current phase updated (FORUMS complete, Phase 17 next); §2 Production row updated (forums access added); §3 TipTap useEditor overload caveat added (Editor | null explicit typing required — FORUMS.5 Q3); §5 media bucket forums path namespace added; §7 Production roles table updated (/crew/forums added), Phase FORUMS proxy.ts additions block added (needsFlagCheck, Production exception, crew flag block — no matcher, no public block); §8 Internal Forums section: pending → complete, prompt structure all ✓, key files list replaced (17 files total); §8 Settings hub User Groups card added (FORUMS.1, canAccessAdminSettings gate); §8 Help System: 16 → 17 sections, 42 → 43 HelpTooltips, forum anchors added, TOOLTIP_ANCHOR_MAP /crew/forums → 'forums' entry added, Production sidebar: Forums link + partial HelpContent visibility noted; §8 About System Emails: 15 → 16 triggers (forum_notification added); §8 Setup Panel setup/page.tsx key count corrected (18 → 22); §9 Migration 035 status block added; §9 12 forum table schema blocks added; §9 next migration pointer updated (036 — no pending migrations); §9 AuditAction types: 34 new forum_* types across FORUMS.1–5; §11 Phase FORUMS: forward spec → completed 6-prompt build summary (FORUMS.A–FORUMS.5 with commits and key findings); §11 header updated; §11 prompt log: FORUMS.A–FORUMS.5 + DOC.68 + DOC.69 added; DOC.69 logged)*
 
 *v5.3 (August 2026 — DOC.71: FORUMS.5-FIX documented — §11 FORUMS.5 build summary extended with post-build fix note (FORUM_POST_SANITIZE_OPTIONS plain-object export from 'use server' file — Vercel build failure, not caught by local lint/tsc; fixed by extracting to lib/actions/forum-post-sanitize.ts, 3 files, commit 02f4569; full 'use server' audit confirmed zero other violations); §11 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
+
+*v5.4 (August 2026 — DOC.72: Phase STYLE complete — §1
+header + current phase updated (STYLE.A–STYLE.8, 9 prompts,
+Phase 17 next); §3 Tech Stack: color.ts darkenHex() addition
+noted; §6 Brand System: new CSS Custom Properties subsection
+(9 derived tokens, 2 static @theme tokens, resolveBrandColors()
+return shape, --color- prefix rule, :where() dark variant
+pattern); §8 Settings hub table: Style Sandbox card added
+(SA-only LinkedCard, no sidebar link); §8 new Phase STYLE
+section (sandbox spec: access model, two sections, primitive
+gallery 8 groups, 15 page mockups with full inventory, Option
+A design patterns reference, named badge export pattern,
+key files including 15 mockup components); §11 header
+updated (Phase STYLE complete, Phase 17 next); §11 Phase
+STYLE build summaries added (STYLE.A–STYLE.8, all 9 prompts
+with commits and key findings); §11 prompt log: STYLE.A–
+STYLE.8 + DOC.72 added; §13 R33 note added (--color- prefix
+rule for @theme tokens, no @layer utilities hand-authoring
+needed); §13 R35 note added (left border accent pattern:
+border-l-4 + style={{ borderLeftColor }}); §13 R36 note
+added (Tailwind purge risk for computed class strings,
+progress bar width + color literals); DOC.72 logged)*
