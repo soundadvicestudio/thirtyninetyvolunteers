@@ -1,6 +1,7 @@
 'use client'
 
-import { Palette, Square, PaintBucket } from 'lucide-react'
+import { Palette, Square } from 'lucide-react'
+import { DashboardMockup } from './DashboardMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -235,10 +236,7 @@ export default function StyleSandbox() {
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-6">
           Full-fidelity page reproductions using upgraded design patterns. Added in STYLE.2+.
         </p>
-        <div className="text-center py-16 text-gray-400">
-          <PaintBucket className="w-12 h-12 mx-auto mb-3" />
-          <p>No mockups yet — coming in STYLE.2</p>
-        </div>
+        <DashboardMockup />
       </div>
     </div>
   )
