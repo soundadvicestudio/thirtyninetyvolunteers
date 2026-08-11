@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.1
-### Created: July 2026 | Last Updated: August 2026 — v5.1 (DOC.71: FORUMS.5-FIX — 'use server' non-function export constraint documented)
+## 30BN_PROCESS_v1.md — v5.2
+### Created: July 2026 | Last Updated: August 2026 — v5.2 (DOC.72: Phase STYLE complete — 6 new §7 patterns, 4 new §11 checklist items, §13 Phase STYLE tracker block, §14 pattern notes)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -983,6 +983,107 @@ grepped for `export const` non-function patterns. Zero other violations found.
 This constraint is in the same class as the `lib/data/*.ts` no-`'use server'` rule
 documented above — both arise from mismatches between a file's directive and what it
 exports or how it is used. The companion quality gate grep is in §10.
+
+**`darkenHex()` for server-side hex darkening (established
+STYLE.A):**
+When a darker variant of a brand color is needed (hover
+states, pressed states), compute it server-side using
+`darkenHex()` from `lib/utils/color.ts`:
+
+```typescript
+import { darkenHex } from '@/lib/utils/color'
+// amount = 0.82 → 82% primary + 18% black
+const brandPrimaryDark = darkenHex(brandPrimary, 0.82)
+```
+
+Convention mirrors `lightenHex()`: amount = 1.0 → pure hex;
+amount = 0.0 → pure black. Both functions live in
+`lib/utils/color.ts` and are pure (no DB calls, no
+server-only imports). `darkenHex()` is used by
+`resolveBrandColors()` in `app/layout.tsx` to compute
+`--brand-primary-dark` and `--brand-accent-dark`.
+
+**`resolveBrandColors()` return shape (confirmed STYLE.A F2):**
+`resolveBrandColors()` in `app/layout.tsx` fetches
+`brand_primary` and `brand_accent` from `app_settings` and
+returns `{ primary, accent }`. The values are bound as
+`brand.primary` and `brand.accent` in the template literal —
+NOT as `brandPrimary` / `brandAccent` local variables. Any
+prompt that writes additions to the `<style>` tag template
+literal must use `brand.primary` and `brand.accent`. Using
+`brandPrimary`/`brandAccent` produces a TypeScript error
+(undefined identifiers). Confirmed STYLE.A F2 pre-commit.
+
+**`@theme` token naming — `--color-` prefix required
+(confirmed STYLE.A F3):**
+In Tailwind v4, `@theme` tokens that should auto-generate
+color utility classes (`bg-*`, `text-*`, `border-*`, `dark:*`)
+must use the `--color-` prefix. Example:
+- CORRECT: `--color-neutral-surface: #F8F9FA;` → generates
+  `bg-neutral-surface`, `dark:bg-neutral-surface`, etc.
+- WRONG: `--neutral-surface: #F8F9FA;` → inert custom property
+  only; no utility classes generated; no error thrown.
+This was the STYLE.A F3 pre-commit correction. When adding
+any new color token to `@theme`, always use the `--color-`
+prefix.
+
+**`@layer utilities` dark variant selector (confirmed
+STYLE.A F4):**
+The correct dark variant selector for hand-authored
+`@layer utilities` classes in this project is:
+
+```css
+.dark\:bg-brand-primary-dark:where(
+  [data-theme="dark"],
+  [data-theme="dark"] *
+) {
+  background-color: var(--brand-primary-dark);
+}
+```
+
+The prompt-described two-selector pattern
+(`.dark .class / [data-theme="dark"] .class`) is incorrect —
+the live file uses the single `:where()` form. Always read
+the live `app/globals.css` `@layer utilities` block before
+writing new dark variants to confirm the exact selector
+pattern in use.
+
+**Left border accent pattern (established STYLE.6):**
+To apply a colored left border accent without overriding all
+four border sides on an element that also has a full `border`
+class, use:
+- `border-l-4` — Tailwind native class, sets left border
+  width to 4px. No color effect.
+- `style={{ borderLeftColor: 'var(--brand-primary)' }}` —
+  inline style, sets left border color via CSS custom
+  property.
+
+These two must coexist on the same element. Do NOT use
+`border-brand-primary` alongside a full `border` class —
+`border-brand-primary` sets `border-color` on all four sides,
+overriding the neutral color on top/right/bottom.
+
+For a neutral left accent (collapsed state), use:
+`style={{ borderLeftColor: 'var(--color-neutral-border)' }}`
+
+**Hardcoded class string requirement for computed-looking
+values (established STYLE.3/STYLE.6):**
+Tailwind's content scanner cannot see class names assembled
+at runtime from parts (template literals, array joins,
+conditional ternaries building class strings). This applies
+beyond the obvious dynamic cases — even when all pieces are
+literal strings, assembling them into a class name is
+prohibited if the full class name doesn't appear as a literal
+somewhere in the scanned file.
+
+The affected pattern in the mockup codebase:
+- Progress bar widths: `w-[87.5%]`, `w-[58.3%]`, `w-0`
+- Progress bar fill colors: `bg-green-500`, `bg-yellow-400`,
+  `bg-red-500`
+- All must appear as complete unbroken string literals in JSX.
+
+Rule: every Tailwind class used in a file must appear as a
+complete literal string in that file's source code.
 
 ---
 
@@ -2101,6 +2202,33 @@ failure that does not surface in npm run lint or npx tsc
 server' files. (FORUMS.5-FIX — confirmed failure mode:
 FORUM_POST_SANITIZE_OPTIONS plain object export from
 lib/actions/forum-posts.ts)
+
+□ Any new color token added to `app/globals.css` @theme
+  block: confirm the `--color-` prefix is used (not `--`
+  directly). Without the `--color-` prefix, Tailwind v4
+  will NOT auto-generate utility classes from the token —
+  it produces an inert CSS custom property only. No error
+  is thrown. (STYLE.A F3)
+
+□ Any new CSS custom property addition to
+  `resolveBrandColors()` in `app/layout.tsx`: confirm the
+  template literal uses `brand.primary` and `brand.accent`
+  (the actual bound identifiers), NOT `brandPrimary` /
+  `brandAccent` (which do not exist). (STYLE.A F2)
+
+□ Any mockup component in components/crew/settings/ that
+  defines badge or status helpers: confirm all helpers are
+  named exports, not module-private functions. Module-private
+  unused helpers trigger @typescript-eslint/no-unused-vars
+  lint warnings even if all badge variants needed for the
+  representative data are present. (STYLE.4 F1 — pre-empt)
+
+□ Any component using Tailwind classes for computed-looking
+  values (progress bar widths, fill colors, staffing
+  indicators): confirm every class name appears as a complete
+  unbroken literal string. No template literals, no array
+  joins, no conditional expressions that build class names
+  from parts. (STYLE.3/STYLE.6)
 ```
 
 ---
@@ -3349,6 +3477,40 @@ Phase FORUMS — Internal Discussion Forums ✓ Complete
     typing required (useEditor overload resolves wrong). 9 files
     (1 new, 8 modified). Commit e41f66f. Phase FORUMS complete.
 Phase FORUMS — Internal Discussion Forums ✓ Complete (FORUMS.A–FORUMS.5)
+
+Phase STYLE — Style Sandbox & Design Token Extension
+  ✓ Complete (STYLE.A–STYLE.8, 9 prompts)
+  STYLE.A ✓ Token extension — darkenHex(), 3 new derived
+           CSS custom properties, 2 new @theme neutral
+           tokens, @layer utilities classes. 3 files.
+           Commit 8cf6144.
+  STYLE.1 ✓ Style Sandbox shell + primitive gallery —
+           proxy.ts guard, hub card, style/page.tsx shell,
+           StyleSandbox.tsx (8-group gallery + placeholder).
+           4 files. Commit aea0090.
+  STYLE.2 ✓ Dashboard mockup — 6 sections, stat tile
+           top accent, activity feed NEW badge. 2 files.
+           Commit 67d594e.
+  STYLE.3 ✓ Calendar mockup — 35-cell Oct 2025 grid,
+           location color constants + inline styles,
+           static day detail panel. 2 files. Commit 5a29b48.
+  STYLE.4 ✓ Rehearsals + Auditions list mockups. Named
+           export badge pattern established (F1). 3 files.
+           Commit 4b2bd69.
+  STYLE.5 ✓ Inventory + Volunteers list mockups —
+           bg-neutral-surface ID pills, 8-column dense
+           table, overflow-x-auto. 3 files. Commit ae5f455.
+  STYLE.6 ✓ Forums + Shows mockups — left accent pattern,
+           season accordion, hardcoded progress bars.
+           3 files. Commit db3c980.
+  STYLE.7 ✓ Opportunities, Forms, QR Generator, Check-In
+           mockups — 100-cell explicit QR grid, animate-
+           pulse live indicator. 5 files. Commit 19f9714.
+  STYLE.8 ✓ Communication, Media Library, Setup Panel
+           mockups — two-panel layout, section card
+           pattern, brand-accent Send button. 4 files.
+           Commit 2eb1f1c.
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -4574,6 +4736,26 @@ This applies to all internal helpers in `lib/email.ts` (`buildEmailHtml()`,
 a tsc error but — more dangerously — may only surface at the TypeScript compile
 step, not during planning or code review.
 
+**Phase STYLE — token naming, left accent, and class
+literal discipline (STYLE.A/STYLE.6/STYLE.3):**
+
+Three key pattern confirmations from Phase STYLE that apply
+to all future prompts:
+
+1. `@theme` token naming: always use `--color-` prefix for
+   color tokens in `globals.css @theme`. Without it,
+   Tailwind v4 generates no utility classes. (STYLE.A F3)
+
+2. Left border accent: use `border-l-4` (Tailwind width) +
+   `style={{ borderLeftColor: 'var(--token)' }}` (inline
+   color). Never combine with `border-{color}` class as it
+   overrides all four sides. (STYLE.6)
+
+3. Hardcoded class literals: every Tailwind class must
+   appear as a complete unbroken string in source. Computed
+   parts — even from string literals — make classes
+   invisible to the content scanner. (STYLE.3/STYLE.6)
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -4617,3 +4799,22 @@ step, not during planning or code review.
 *v5.0 (August 2026 — DOC.70: Phase FORUMS complete — §2 header bumped to v5.0; §7 feature flag list: feature_forums confirmed active (Migration 035 applied, FORUMS.1); §7 P-DC media bucket: forums/ and forums/temp/ path namespaces added; §7 XHR: 6 → 7 sanctioned files (ForumPostComposer.tsx — 7th, FORUMS.4); §7 TOOLTIP_ANCHOR_MAP: /crew/forums → 'forums' entry added (FORUMS.1 — now 4 entries); §7 three new patterns added: (1) lib/data/*.ts must NOT have 'use server' — data modules are internal utilities, not action endpoints (FORUMS.3); (2) TipTap useEditor() → always type as Editor|null explicitly — ReturnType<typeof useEditor> resolves wrong overload when immediatelyRender:false (FORUMS.5 Q3); (3) non-blocking void IIFE pattern for fire-and-forget async side-effects in server actions (FORUMS.5 — sendForumNotificationEmail call site); §8 XHR count 6 → 7 (same as §7 update — confirmed single occurrence, not a separate duplicate); §10 R32 grep comment updated (all 7 flags active, Migration 035 applied); §10 XHR grep updated (seven total, ForumPostComposer.tsx added); §11 four new checklist items: lib/data/ no 'use server', TipTap Editor|null typing, R8 compliance for notification emails, forums/ storage path namespace; §13 Phase FORUMS: no prior block existed in this document — new ✓ Complete block added (FORUMS.A–5 with commits and key findings), inserted after Phase INVENTORY and before Phase 17; §13 prompt log: FORUMS.A–5 + DOC.68–70 added; §14 three new pattern notes: lib/data/ no 'use server' (FORUMS.3), forum access TypeScript-join pattern (FORUMS.3), buildEmailHtml/logEmailSent signature discipline (FORUMS.5 Q1); DOC.70 logged)*
 
 *v5.1 (August 2026 — DOC.71: FORUMS.5-FIX documented — §2 header bumped to v5.1; §7 new pattern added ('use server' files may only export async functions — plain object/constant exports cause Vercel build failure not caught by lint or tsc; correct pattern: companion file without 'use server'; export type is safe; confirmed FORUMS.5-FIX, commit 02f4569); §10 new grep check added (grep 'use server' files for export const non-function values); §11 new checklist item (any new shared constant needed by multiple 'use server' files must go in a companion non-server module); §13 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
+
+*v5.2 (August 2026 — DOC.72: Phase STYLE complete — §2
+header bumped to v5.2; §7 four new patterns added:
+(1) darkenHex() for server-side hex darkening (STYLE.A);
+(2) resolveBrandColors() return shape — brand.primary/
+brand.accent not brandPrimary/brandAccent (STYLE.A F2);
+(3) @theme token naming — --color- prefix required for
+Tailwind utility generation (STYLE.A F3); (4) @layer
+utilities dark variant selector -- :where() form confirmed
+(STYLE.A F4); (5) left border accent pattern — border-l-4
++ style={{ borderLeftColor }} (STYLE.6); (6) hardcoded
+class literal discipline — no computed class construction
+(STYLE.3/STYLE.6); §11 four new checklist items (@theme
+--color- prefix, resolveBrandColors() identifiers, named
+badge exports, hardcoded class literals); §13 Phase STYLE
+✓ Complete block added (STYLE.A–STYLE.8, all 9 prompts
+with commits); §14 three new pattern notes (STYLE.A/STYLE.3/
+STYLE.6 confirmed patterns); document header bumped to v5.2;
+DOC.72 logged)*
