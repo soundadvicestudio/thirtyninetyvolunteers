@@ -3,6 +3,8 @@
 import { Palette, Square } from 'lucide-react'
 import { DashboardMockup } from './DashboardMockup'
 import { CalendarMockup } from './CalendarMockup'
+import { RehearsalsMockup } from './RehearsalsMockup'
+import { AuditionsMockup } from './AuditionsMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -240,6 +242,10 @@ export default function StyleSandbox() {
         <DashboardMockup />
         <div className="border-t border-neutral-border my-8" />
         <CalendarMockup />
+        <div className="border-t border-neutral-border my-8" />
+        <RehearsalsMockup />
+        <div className="border-t border-neutral-border my-8" />
+        <AuditionsMockup />
       </div>
     </div>
   )
