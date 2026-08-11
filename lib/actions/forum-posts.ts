@@ -10,14 +10,7 @@ import { logAction } from '@/lib/audit'
 import { sendForumNotificationEmail } from '@/lib/email'
 import { canAccessForum, isForumModerator } from '@/lib/data/forums'
 import type { ForumPostAttachment, ForumPostWithDetails, ThreadViewData } from '@/types/forums'
-
-export const FORUM_POST_SANITIZE_OPTIONS = {
-  allowedTags: ['p', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'blockquote', 'a', 'hr', 'pre', 'code'],
-  allowedAttributes: {
-    a: ['href', 'rel', 'target'],
-  },
-  allowedSchemes: ['http', 'https', 'mailto'],
-}
+import { FORUM_POST_SANITIZE_OPTIONS } from './forum-post-sanitize'
 
 export type AttachmentInfo = {
   path: string

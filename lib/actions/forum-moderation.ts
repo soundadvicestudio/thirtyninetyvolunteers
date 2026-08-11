@@ -9,7 +9,8 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { logAction } from '@/lib/audit'
 import { canAccessForum, isForumModerator } from '@/lib/data/forums'
-import { FORUM_POST_SANITIZE_OPTIONS, type AttachmentInfo } from '@/lib/actions/forum-posts'
+import type { AttachmentInfo } from '@/lib/actions/forum-posts'
+import { FORUM_POST_SANITIZE_OPTIONS } from '@/lib/actions/forum-post-sanitize'
 
 async function isModeratableBy(
   forumId: string,
