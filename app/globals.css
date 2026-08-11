@@ -18,6 +18,9 @@
   --color-dark-nav: #1e2235;
   --color-dark-text: #e8eaf0;
   --color-dark-muted: #8b90a0;
+
+  --color-neutral-surface: #F8F9FA;
+  --color-neutral-border: #E2E6EA;
 }
 
 @variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -177,5 +180,29 @@ body {
     vertical-align: baseline;
     line-height: 1.4;
   }
+
+  /* ── Primary Dark (hover state for primary-colored elements) */
+  .bg-brand-primary-dark        { background-color: var(--brand-primary-dark); }
+  .text-brand-primary-dark      { color: var(--brand-primary-dark); }
+  .border-brand-primary-dark    { border-color: var(--brand-primary-dark); }
+
+  .hover\:bg-brand-primary-dark:hover { background-color: var(--brand-primary-dark); }
+
+  .dark\:bg-brand-primary-dark:where([data-theme="dark"], [data-theme="dark"] *) { background-color: var(--brand-primary-dark); }
+
+  /* ── Accent Dark (hover state for accent-colored elements) */
+  .bg-brand-accent-dark        { background-color: var(--brand-accent-dark); }
+  .text-brand-accent-dark      { color: var(--brand-accent-dark); }
+  .border-brand-accent-dark    { border-color: var(--brand-accent-dark); }
+
+  .hover\:bg-brand-accent-dark:hover { background-color: var(--brand-accent-dark); }
+
+  .dark\:bg-brand-accent-dark:where([data-theme="dark"], [data-theme="dark"] *) { background-color: var(--brand-accent-dark); }
+
+  /* ── Primary Subtle (3% tint — zebra rows, focus backgrounds) */
+  .bg-brand-primary-subtle     { background-color: var(--brand-primary-subtle); }
+  .border-brand-primary-subtle { border-color: var(--brand-primary-subtle); }
+
+  .hover\:bg-brand-primary-subtle:hover { background-color: var(--brand-primary-subtle); }
 
 }

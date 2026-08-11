@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Open_Sans } from 'next/font/google'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { lightenHex, darkenHex } from '@/lib/utils/color'
 import './globals.css'
 
 const openSans = Open_Sans({
@@ -61,6 +62,9 @@ export default async function RootLayout({
             --brand-primary-tint: color-mix(in srgb, var(--brand-primary) 47%, white);
             --brand-primary-light: color-mix(in srgb, var(--brand-primary) 8%, white);
             --brand-accent-light: color-mix(in srgb, var(--brand-accent) 5%, white);
+            --brand-primary-dark: ${darkenHex(brand.primary, 0.82)};
+            --brand-accent-dark: ${darkenHex(brand.accent, 0.82)};
+            --brand-primary-subtle: ${lightenHex(brand.primary, 0.03)};
           }
         `}</style>
         {children}
