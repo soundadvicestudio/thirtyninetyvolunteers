@@ -2,6 +2,7 @@
 
 import { Palette, Square } from 'lucide-react'
 import { DashboardMockup } from './DashboardMockup'
+import { CalendarMockup } from './CalendarMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -237,6 +238,8 @@ export default function StyleSandbox() {
           Full-fidelity page reproductions using upgraded design patterns. Added in STYLE.2+.
         </p>
         <DashboardMockup />
+        <div className="border-t border-neutral-border my-8" />
+        <CalendarMockup />
       </div>
     </div>
   )
