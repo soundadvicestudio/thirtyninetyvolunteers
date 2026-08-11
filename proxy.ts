@@ -114,6 +114,26 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Style Sandbox: hard-blocked at the route level for every role except
+  // Super Admin, including Owner Admin. Additive check — runs only when a
+  // signed-in user is headed into /crew/settings/style, so it never affects
+  // any other route's existing behavior. Exact match (not prefix) — no
+  // sub-routes exist under /crew/settings/style yet.
+  if (user && pathname === '/crew/settings/style') {
+    const { data: styleAdminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (styleAdminUser?.role !== 'super_admin') {
+      const dashboardUrl = request.nextUrl.clone()
+      dashboardUrl.pathname = '/crew/dashboard'
+      return NextResponse.redirect(dashboardUrl)
+    }
+  }
+
   // Production role: restricted to /crew/calendar, /crew/help, /crew/media,
   // /crew/rehearsals, /crew/forums, and /crew/shows/[id] (assigned shows
   // only). Additive
