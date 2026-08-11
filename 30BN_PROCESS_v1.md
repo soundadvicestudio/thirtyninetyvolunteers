@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.0
-### Created: July 2026 | Last Updated: August 2026 — v5.0 (DOC.70: Phase FORUMS complete — §2 header updated; §7 feature flag list updated (7 active, feature_forums confirmed Migration 035); §7 forums/ path namespace added to media bucket; §7 XHR 6→7 sanctioned files (ForumPostComposer.tsx); §7 TOOLTIP_ANCHOR_MAP updated (4 entries); §7 three new patterns (lib/data/ no 'use server', TipTap Editor|null typing, non-blocking void IIFE); §8 XHR count 6→7; §10 R32 grep comment updated + XHR grep updated; §11 four new checklist items; §13 Phase FORUMS ✓ Complete + prompt log; §14 three new pattern notes; DOC.70 logged)
+## 30BN_PROCESS_v1.md — v5.1
+### Created: July 2026 | Last Updated: August 2026 — v5.1 (DOC.71: FORUMS.5-FIX — 'use server' non-function export constraint documented)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -934,6 +934,56 @@ Applied in `lib/actions/forum-posts.ts`: `createForumPost()` fires
 `sendForumNotificationEmail(threadId, postId)` via this pattern after the post is
 created and revalidatePath calls are made.
 
+**'use server' files may only export async functions — never plain objects or constants (confirmed FORUMS.5-FIX, commit 02f4569):**
+Next.js/Turbopack strictly enforces that any file with `'use server'` at the top may only
+export async functions. Exporting a plain object, constant, type alias (at runtime), or
+any non-function value from a `'use server'` file causes a Vercel production build failure:
+
+```
+Error: A "use server" file can only export async
+functions, found object.
+Read more: https://nextjs.org/docs/messages/
+invalid-use-server-value
+```
+
+**Critical:** This error does NOT surface in `npm run lint` or `npx tsc --noEmit`. Local
+tooling passes cleanly. The failure only appears at Next.js build time via Turbopack's
+module evaluation. It will not be caught by any pre-commit check in the current quality
+gate unless the grep below (§10) is run.
+
+**Confirmed failure mode (FORUMS.5-FIX):**
+`FORUM_POST_SANITIZE_OPTIONS` was defined and exported as a plain object
+(`export const FORUM_POST_SANITIZE_OPTIONS: IOptions = { ... }`) from
+`lib/actions/forum-posts.ts`, which has `'use server'`. This caused the Vercel build
+to fail after commit 002a818. The fix: extract the constant to
+`lib/actions/forum-post-sanitize.ts` (no `'use server'` directive) and import it into
+both consumer files.
+
+**The correct pattern for shared constants used by multiple 'use server' files:**
+```typescript
+// lib/actions/my-shared-constants.ts
+// NO 'use server' — this is a pure shared module
+import type { IOptions } from 'sanitize-html'
+export const MY_CONSTANT: IOptions = { ... }
+
+// lib/actions/my-action.ts
+'use server'
+import { MY_CONSTANT } from './my-shared-constants'
+// MY_CONSTANT is usable here; it is not re-exported
+```
+
+**`export type` is safe:** TypeScript type exports (`export type Foo = ...`) are erased
+at compile time and do not violate the constraint. Only runtime value exports (functions,
+objects, arrays, primitives) are affected — and only async functions are permitted.
+
+**Full audit after fix:** All `'use server'` files in `lib/actions/` and `app/` were
+grepped for `export const` non-function patterns. Zero other violations found.
+`FORUM_POST_SANITIZE_OPTIONS` was the only offending export in the codebase.
+
+This constraint is in the same class as the `lib/data/*.ts` no-`'use server'` rule
+documented above — both arise from mismatches between a file's directive and what it
+exports or how it is used. The companion quality gate grep is in §10.
+
 ---
 
 ## 8. Build Report Format
@@ -1497,6 +1547,26 @@ grep -n "brand-primary\/80\|ring-brand-primary\/50" \
 # This check is a regression guard for future edits.
 ```
 
+```bash
+# Confirm no non-function value exports from 'use server'
+# files (FORUMS.5-FIX — Vercel build failure, not caught
+# by lint or tsc)
+# 'use server' files may only export async functions.
+# export const of a plain object/array/primitive is a
+# build error. export type is safe (erased at compile time).
+grep -rl "'use server'" lib/actions/ app/ \
+  --include="*.ts" --include="*.tsx" \
+| xargs grep -l "^export const" 2>/dev/null
+# Any file appearing in this output requires manual review:
+# confirm every export const in that file is an async
+# function. If any export const is a plain object or
+# non-function value, extract it to a companion file
+# without 'use server' (see §7 pattern).
+# Sanctioned companion files (no 'use server', export only):
+#   lib/actions/forum-post-sanitize.ts — FORUM_POST_
+#     SANITIZE_OPTIONS (IOptions object — FORUMS.5-FIX)
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -2019,6 +2089,18 @@ finalPath)` before inserting `forum_post_attachments` rows. This
 is the temp-key pattern — avoids orphaned storage objects when
 post creation fails after upload but before DB insert. (FORUMS.4
 pattern)
+□ Any new exported constant or non-function value needed by
+multiple server action files: confirm it is NOT defined in a
+'use server' file. Extract it to a companion module without
+'use server' (e.g. lib/actions/my-shared-constants.ts) and
+import it at each call site. 'use server' files may only export
+async functions — a plain object export causes a Vercel build
+failure that does not surface in npm run lint or npx tsc
+--noEmit. export type is safe (erased at compile time). Run the
+§10 grep check after any prompt that adds exports to 'use
+server' files. (FORUMS.5-FIX — confirmed failure mode:
+FORUM_POST_SANITIZE_OPTIONS plain object export from
+lib/actions/forum-posts.ts)
 ```
 
 ---
@@ -3838,6 +3920,15 @@ Phase FORUMS complete).
 + §11 build log).
 30BN-DOC.70 ✓ Process v5.0 (this prompt — Phase FORUMS
 complete: §7/§8/§10/§11/§13/§14 updates).
+30BN-FORUMS.5-FIX ✓ 'use server' non-function export fix.
+FORUM_POST_SANITIZE_OPTIONS extracted to lib/actions/
+forum-post-sanitize.ts (no 'use server'). 2 import
+sites updated (forum-posts.ts, forum-moderation.ts).
+Full 'use server' audit: zero other violations. 3 files.
+Commit 02f4569.
+30BN-DOC.71 ✓ Brief v5.3 + Process v5.1 (FORUMS.5-FIX
+documented — §7 new pattern, §10 grep check, §11
+checklist item, §13 prompt log — this prompt).
 ```
 
 ---
@@ -4524,3 +4615,5 @@ step, not during planning or code review.
 *v4.9 (August 2026 — DOC.67: Phase INVENTORY complete — §2 header updated (v4.9); §7 inventory_manager pattern: types/audit.ts corrected to lib/audit.ts (no types/audit.ts exists — inaccuracy from DOC.65 now fixed); §7 P-DC storage: inventory/ path namespace added (Phase INVENTORY.3); §7 two new patterns added: (1) storage dual-client pattern — storage API calls require getAdminClient() regardless of session (storage.objects has zero RLS; confirmed failure mode: getServerClient() returns null signed URLs silently); (2) Supabase aliased dual self-join workaround — two-fetch-plus-TypeScript-join pattern for queries needing two FKs to the same table (Supabase JS cannot alias self-joins; confirmed across INVENTORY.2/3/4); §8 XHR: 5 → 6 sanctioned files (InventoryPhotoUploader.tsx added — Phase INVENTORY.3); §10 XHR grep: 5 → 6 files; §11 three new checklist items: (1) storage dual-client (getAdminClient() for storage.objects), (2) route handler .tsx extension when JSX embedded (confirmed failure INVENTORY.5 F1), (3) HelpContent live convention discipline (read live file — show() predicates, shared class constants, backtick possessives — INVENTORY.5 F3); §13 Phase INVENTORY ✓ Complete — INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts; types/admin.ts + lib/auth.ts unplanned additions noted); INVENTORY.2–5 phase tracker entries added; prompt log: INVENTORY.2–5 + DOC.66 + DOC.67 added; DOC.67 logged)*
 
 *v5.0 (August 2026 — DOC.70: Phase FORUMS complete — §2 header bumped to v5.0; §7 feature flag list: feature_forums confirmed active (Migration 035 applied, FORUMS.1); §7 P-DC media bucket: forums/ and forums/temp/ path namespaces added; §7 XHR: 6 → 7 sanctioned files (ForumPostComposer.tsx — 7th, FORUMS.4); §7 TOOLTIP_ANCHOR_MAP: /crew/forums → 'forums' entry added (FORUMS.1 — now 4 entries); §7 three new patterns added: (1) lib/data/*.ts must NOT have 'use server' — data modules are internal utilities, not action endpoints (FORUMS.3); (2) TipTap useEditor() → always type as Editor|null explicitly — ReturnType<typeof useEditor> resolves wrong overload when immediatelyRender:false (FORUMS.5 Q3); (3) non-blocking void IIFE pattern for fire-and-forget async side-effects in server actions (FORUMS.5 — sendForumNotificationEmail call site); §8 XHR count 6 → 7 (same as §7 update — confirmed single occurrence, not a separate duplicate); §10 R32 grep comment updated (all 7 flags active, Migration 035 applied); §10 XHR grep updated (seven total, ForumPostComposer.tsx added); §11 four new checklist items: lib/data/ no 'use server', TipTap Editor|null typing, R8 compliance for notification emails, forums/ storage path namespace; §13 Phase FORUMS: no prior block existed in this document — new ✓ Complete block added (FORUMS.A–5 with commits and key findings), inserted after Phase INVENTORY and before Phase 17; §13 prompt log: FORUMS.A–5 + DOC.68–70 added; §14 three new pattern notes: lib/data/ no 'use server' (FORUMS.3), forum access TypeScript-join pattern (FORUMS.3), buildEmailHtml/logEmailSent signature discipline (FORUMS.5 Q1); DOC.70 logged)*
+
+*v5.1 (August 2026 — DOC.71: FORUMS.5-FIX documented — §2 header bumped to v5.1; §7 new pattern added ('use server' files may only export async functions — plain object/constant exports cause Vercel build failure not caught by lint or tsc; correct pattern: companion file without 'use server'; export type is safe; confirmed FORUMS.5-FIX, commit 02f4569); §10 new grep check added (grep 'use server' files for export const non-function values); §11 new checklist item (any new shared constant needed by multiple 'use server' files must go in a companion non-server module); §13 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
