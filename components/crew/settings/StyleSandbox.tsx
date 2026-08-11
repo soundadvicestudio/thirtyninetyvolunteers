@@ -5,6 +5,8 @@ import { DashboardMockup } from './DashboardMockup'
 import { CalendarMockup } from './CalendarMockup'
 import { RehearsalsMockup } from './RehearsalsMockup'
 import { AuditionsMockup } from './AuditionsMockup'
+import { InventoryMockup } from './InventoryMockup'
+import { VolunteersMockup } from './VolunteersMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -246,6 +248,10 @@ export default function StyleSandbox() {
         <RehearsalsMockup />
         <div className="border-t border-neutral-border my-8" />
         <AuditionsMockup />
+        <div className="border-t border-neutral-border my-8" />
+        <InventoryMockup />
+        <div className="border-t border-neutral-border my-8" />
+        <VolunteersMockup />
       </div>
     </div>
   )
