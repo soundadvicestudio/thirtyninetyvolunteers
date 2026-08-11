@@ -1539,7 +1539,7 @@ grep -rn "XMLHttpRequest\|new XHR" components/ app/
 # events. All must include the deviation comment. Body format:
 # FormData with cacheControl + file under '' field name (not raw
 # file body with Content-Type header).
-# Any hit outside these six files requires review.
+# Any hit outside these seven files requires review.
 ```
 
 ```bash
@@ -4801,7 +4801,7 @@ to all future prompts:
 *v5.1 (August 2026 — DOC.71: FORUMS.5-FIX documented — §2 header bumped to v5.1; §7 new pattern added ('use server' files may only export async functions — plain object/constant exports cause Vercel build failure not caught by lint or tsc; correct pattern: companion file without 'use server'; export type is safe; confirmed FORUMS.5-FIX, commit 02f4569); §10 new grep check added (grep 'use server' files for export const non-function values); §11 new checklist item (any new shared constant needed by multiple 'use server' files must go in a companion non-server module); §13 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
 
 *v5.2 (August 2026 — DOC.72: Phase STYLE complete — §2
-header bumped to v5.2; §7 four new patterns added:
+header bumped to v5.2; §7 six new patterns added:
 (1) darkenHex() for server-side hex darkening (STYLE.A);
 (2) resolveBrandColors() return shape — brand.primary/
 brand.accent not brandPrimary/brandAccent (STYLE.A F2);
