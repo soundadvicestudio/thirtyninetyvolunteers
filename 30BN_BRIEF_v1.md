@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.4
-### Created: July 2026 | Last Updated: August 2026 — v5.4 (DOC.72: Phase STYLE complete documented — §1 current phase updated; §3 darkenHex() noted; §6 CSS custom properties subsection added; §8 Style Sandbox section + hub card added; §11 Phase STYLE build summaries + prompt log added; §13 R33/R35/R36 notes added)
+### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 
 ---
 
@@ -20,7 +20,7 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase STYLE complete (STYLE.A–STYLE.8, commits 8cf6144/aea0090/67d594e/5a29b48/4b2bd69/ae5f455/db3c980/19f9714/2eb1f1c). Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase NOTIFY complete (NOTIFY.A through NOTIFY.4-CLEANUP, commits 26b2add/c7e8000/6e363d3/80c7021/7ea1f19/5e7656f). Phase 17 (Launch) is next. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -615,7 +615,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 
 **User Management (`/crew/settings/users`) — Super Admin only:**
 - List all admin users: name, email, role, status, last login, created
-- **Pending Registrations section** (appears above admin list when requests exist): per-request row with name, email, requested time, role selector (default Viewer), Approve and Decline buttons with inline confirmation. Badge on Users sidebar nav link showing pending count. Approve: creates `admin_users` row, sends approval email. Decline: deletes Supabase Auth user, sends decline email. Both log to `audit_log`. Built in ADMIN.15.
+- **Pending Registrations section** (appears above admin list when requests exist): per-request row with name, email, requested time, role selector (default Viewer), Approve and Decline buttons with inline confirmation. Pending registration count now surfaces in the TopBar NotificationPanel "Needs Action" section for SA and OA (ephemeral — clears when the request is approved or declined). Approve: creates `admin_users` row, sends approval email. Decline: deletes Supabase Auth user, sends decline email. Both log to `audit_log`. Built in ADMIN.15.
 - Create new account: Name, Email, Role (Editor/Viewer/Owner Admin for SA+OA callers; Production additionally available to Super Admin only), Send Welcome Email toggle
   - Creates Supabase Auth user, inserts `admin_users` record, sends branded welcome email with login link + temp password + instructions to change password
 - Deactivate/reactivate (cannot deactivate own account)
@@ -1206,7 +1206,7 @@ Anyone with forum access can create threads and post replies. Thread creation: p
 **File attachments on posts:** P-DC pattern (7th sanctioned XHR file — `ForumPostComposer.tsx`). Multiple attachments per post. Storage path: `forums/[post_id]/[uuid].[ext]` in `media` bucket. Temp-key pattern: attachments uploaded before post creation using a temp identifier, confirmed and re-pathed at post creation time to avoid orphaned storage objects.
 
 **Thread subscriptions and notifications:**
-Users manually subscribe to threads (no auto-subscribe on post). When subscribed, user receives an email notification (`sendForumNotificationEmail()` in `lib/email.ts`) on each new reply to that thread. Non-blocking send (try/catch, errors swallowed). Logged to `email_log`. Users can unsubscribe from any thread. Subscribe/unsubscribe toggle visible on thread view.
+Users manually subscribe to threads (no auto-subscribe on post). When subscribed, user receives an email notification AND an in-app notification on each new reply to that thread. Email: `sendForumNotificationEmail()` in `lib/email.ts` — now returns `{ notifiedUserIds: string[] }` (refactored NOTIFY.3). In-app: `createNotification()` called per subscriber using the returned `notifiedUserIds`, independently of email deliverability (NOTIFY.3-FIX: early-return path when subscribers have no email now correctly returns the populated array). Non-blocking void IIFE (try/catch, errors swallowed). Email logged to `email_log`. Users can unsubscribe from any thread. Subscribe/unsubscribe toggle visible on thread view.
 
 **Unread tracking:**
 `forum_post_reads` table tracks per-user read state (one row per user per post once read). When a user opens a thread, all posts in that thread are batch-upserted as read for that user. Forum index and thread list show unread indicators (bold text or badge) on forums/threads containing unread posts. Unread count computed at render time from `forum_post_reads` — no denormalized counter column.
@@ -1242,6 +1242,175 @@ Users manually subscribe to threads (no auto-subscribe on post). When subscribed
 - `components/crew/forums/ForumIndexClient.tsx` — forum index display (read-only, 'use client')
 - `components/crew/forums/ThreadListClient.tsx` — thread list + New Thread modal with inline TipTap editor (no file attachments on thread creation)
 - `components/crew/forums/ThreadViewClient.tsx` — post list, subscribe toggle, per-post edit/delete (shared editor instance, async setContent() pattern), moderation bar (lock/pin/move)
+
+**Notification System (Phase NOTIFY — complete):**
+A two-track notification architecture surfaced via a bell
+icon panel in the TopBar. No feature flag — core
+infrastructure (R34 exception, same rationale as the Style
+Sandbox).
+
+**Two tracks:**
+
+*Track A — Ephemeral (queue-driven, role-filtered):*
+Derived live from existing data at render time. Notification
+persists until the underlying queue item is resolved — not
+when a user clicks through, but when the work is finalized.
+No per-user dismissal. No new table for the notification
+itself — counts are live SELECT queries.
+
+- Pending registrations: SA + OA. Count from
+  `pending_registrations WHERE status = 'pending'`. Clears
+  when approved or declined. Links to `/crew/settings/users`.
+- Pending calendar events: SA only. Count from
+  `calendar_events WHERE status = 'pending'`. Clears when
+  approved or cancelled. Links to `/crew/calendar/pending`.
+- Pending consent forms: SA + OA + Editor. Count from
+  `consent_form_submissions WHERE reviewed_at IS NULL AND
+  submitted_file_path IS NOT NULL`. Clears when an admin
+  sets `reviewed_at` (the column already existed on the
+  live table — confirmed NOTIFY.A, no migration needed).
+  Links to `/crew/settings/documents`.
+
+*Track B — Persistent (per-user, stored in `notifications`
+table):*
+A row is written to the `notifications` table at the
+moment the event fires. Each row is tied to a specific
+`admin_user_id` recipient. `read_at` nullable — null =
+unread. Individually dismissible. History retained.
+
+Persistent notification types (from the `type` CHECK
+constraint):
+- `audition_signup` — new audition signup submitted.
+  Recipients: Editors and Production users assigned to
+  that audition (via `audition_assignments` or via
+  `show_editors.admin_id` for show-linked auditions).
+- `audition_material` — material uploaded for an existing
+  signup. Same recipients as `audition_signup`.
+- `calendar_approved` — calendar event approved. Recipients:
+  Production users assigned to that event (via
+  `rehearsal_schedule_assignments` for batch events, or
+  `show_editors`/`audition_assignments` for show/audition-
+  linked events). Resolved by `resolveCalendarRecipients()`
+  private helper in `lib/actions/calendar.ts`.
+- `calendar_changed` — calendar event updated (time,
+  location, or other change). Same recipients.
+- `calendar_cancelled` — calendar event cancelled. Same
+  recipients.
+- `forum_reply` — new post in a subscribed thread.
+  Recipients: all subscribers in `forum_thread_subscriptions`
+  (excluding the poster — same exclusion as the email send).
+
+**NotificationPanel (TopBar):**
+`components/crew/NotificationPanel.tsx` — 'use client'.
+Rendered as the first child of the TopBar right-side div.
+
+Bell badge: `totalEphemeral + unreadPersistent`. The forum
+unread count is intentionally excluded — it has its own
+badge on the sidebar Forums link. Badge capped at 99+ for
+display.
+
+Dropdown (two sections):
+1. "Needs Action" — ephemeral items, role-filtered. Each
+   is a link to the relevant queue page. Section hidden
+   when no ephemeral items are pending.
+2. "Notifications" — persistent items, reverse-
+   chronological (most recent 20). Unread rows highlighted
+   (`bg-neutral-surface dark:bg-dark-nav` — R35-safe; no
+   dark variant for `bg-brand-primary-subtle` exists in
+   globals.css). "Mark all read" button. Each item links
+   to `notification.href`.
+
+State model: SSR-first (initial data from layout server
+fetch as props), optimistic client updates via
+`startTransition` for mark-read actions. Outside-click
+closes dropdown (useEffect + useRef cleanup pattern).
+
+`timeAgo()` is a pure client-safe helper defined locally
+in the component — no server imports. `getTypeIcon()`
+maps `NotificationType` to lucide-react icons.
+
+**Forum unread badge (Sidebar):**
+Forums sidebar link renders a count pill badge when
+`forumUnreadCount > 0`. Passed as a prop from the crew
+layout (`app/crew/(app)/layout.tsx`). Count derived from
+`forum_post_reads` (existing table), filtered to
+`is_archived = false` to exclude archived forums. Capped
+at 99+ for display. This badge is separate from the TopBar
+bell badge — forum unread does not contribute to the bell
+total.
+
+**No feature flag:** The notification system is core
+infrastructure with no meaningful "off" state. R34
+exception confirmed.
+
+**Key new files (Phase NOTIFY):**
+- `types/notifications.ts` — `NotificationType`,
+  `NotificationRow`, `EphemeralCounts`, `NotificationCounts`
+- `lib/utils/notifications.ts` — `createNotification()`
+  internal helper (no 'use server'; accepts supabase client
+  as param; never throws; companion-module pattern per
+  FORUMS.5-FIX rule)
+- `lib/data/notifications.ts` — `getForumUnreadCount()`,
+  `getNotificationCounts()`, `getUserNotifications()` (no
+  'use server'; role-scoped; parallel via Promise.all)
+- `lib/actions/notifications.ts` — 'use server': exported
+  `getNotificationCounts()`, `getUserNotifications()`,
+  `markNotificationRead()`, `markAllNotificationsRead()`
+- `components/crew/NotificationPanel.tsx` — 'use client'
+  TopBar bell panel
+
+**Key modified files (Phase NOTIFY):**
+- `components/crew/Sidebar.tsx` — Users link removed;
+  HelpTooltips and TOOLTIP_ANCHOR_MAP removed; Platform
+  Setup SA-only link added to bottom section above
+  ThemeToggle; Forums link unread badge added
+- `app/crew/(app)/layout.tsx` — notification counts + initial
+  notifications fetched in server Promise.all; props threaded
+  to Sidebar (forumUnreadCount) and TopBar
+  (notificationCounts, initialNotifications)
+- `components/crew/TopBar.tsx` — NotificationPanel rendered
+  as first child of right-side div; props extended
+- `lib/email.ts` — `sendForumNotificationEmail()` refactored
+  to return `Promise<{ notifiedUserIds: string[] }>`
+- `lib/actions/forum-posts.ts` — void IIFE extended to call
+  `createNotification()` per subscriber
+- `lib/actions/auditions.ts` — `submitAuditionSignup()` and
+  `confirmAuditionMaterialUpload()` both have void IIFEs;
+  `confirmAuditionMaterialUpload()` select extended with
+  `audition_id`
+- `lib/actions/calendar.ts` — `resolveCalendarRecipients()`
+  private helper added; five write points wired (7 total
+  call sites in `cancelRecurringOccurrence` three branches)
+- `lib/actions/consent.ts` — `revalidatePath('/crew', 'layout')`
+  added to `confirmConsentSubmission()`
+
+**Prompt structure (6 prompts — all complete):**
+- NOTIFY.A ✓ — Read-only audit (no code). Key findings:
+  `reviewed_at` already present on `consent_form_submissions`;
+  TopBar is 'use client'; TOOLTIP_ANCHOR_MAP at lines 57–62;
+  HelpTooltip render block at lines 159–170; Platform Setup
+  card in settings/page.tsx lines 237–248; `confirmAudition
+  MaterialUpload()` missing `audition_id`; `approveBatch()`
+  not tracking approved event IDs.
+- NOTIFY.1 ✓ — Migration 036 + sidebar/settings cleanup +
+  `types/notifications.ts`. Commits 26b2add + c7e8000
+  (NOTIFY.1-FIX: HelpTooltip comment).
+- NOTIFY.2 ✓ — Notification infrastructure (lib/utils,
+  lib/data, lib/actions) + layout prop threading + Sidebar
+  forum badge. Commit 6e363d3.
+- NOTIFY.3 ✓ — Write-point wiring across 6 action files.
+  `getForumUnreadCount()` archived-forum filter fixed.
+  `sendForumNotificationEmail()` return type changed.
+  Commit 80c7021.
+- NOTIFY.4 ✓ — NotificationPanel.tsx + TopBar wiring +
+  NOTIFY.3-FIX (early-return path fix in lib/email.ts).
+  React 19.2.4 confirmed (async startTransition native).
+  Commit 7ea1f19.
+- NOTIFY.4-CLEANUP ✓ — Lint baseline restored:
+  TOOLTIP_ANCHOR_MAP const removed from Sidebar.tsx;
+  unused type imports removed from layout.tsx; dynamic
+  pluralization in NotificationPanel.tsx. npm run lint:
+  0 errors, 0 warnings. Commit 5e7656f.
 
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
@@ -1292,7 +1461,7 @@ All 17 sections (in order — confirmed against the live `ALL_SECTIONS` array; F
 
 Sections and anchors: 15 h2 sections, ~50 subsections, all with named anchor IDs. Key anchors (must-preserve — 9 original HelpTooltip targets): `hours`, `milestones`, `default-hours`, `volunteer-profile`, `publish-show`, `categories`, `volunteer-communication`, `show-volunteers`, `waitlist`. HELP phase anchors: `dashboard`, `dashboard-stats`, `dashboard-season`, `dashboard-feed`, `calendar`, `calendar-overview`, `calendar-submit`, `calendar-direct-create`, `calendar-bulk-rehearsal`, `calendar-recurring`, `calendar-pending`, `calendar-book-space`, `calendar-export`, `calendar-public`, `communication`, `blast-compose`, `audit-log`, `location-management`, `email-activity-log`. ADMIN.30 anchors: `check-in`, `check-in-qr`, `check-in-dashboard`, `document-types`, `consent-forms`, `media-library`, `media-library-upload`, `media-library-access`. Phase 21 anchors: `rehearsals`, `rehearsals-schedules`, `rehearsals-assignments`, `rehearsals-attendance`, `rehearsals-checkin`. Phase AUDITIONS anchors: `auditions`, `auditions-overview`, `auditions-signups`, `auditions-materials`, `auditions-checkin`. Phase INVENTORY anchors: `inventory`, `inventory-overview`, `inventory-items`, `inventory-checkout`, `inventory-tags`. Phase FORUMS anchors: `forums`, `forums-overview`, `forums-access` (SA/OA only), `forums-threads`, `forums-moderation` (SA/OA only). Full section content added INVENTORY.5. Production role does NOT see the Inventory section (inventory has no Production access).
 
-HelpTooltip placements: 43 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`. Phase 21 (5): `Sidebar.tsx` → `rehearsals` (nav link); `rehearsals/page.tsx` → `rehearsals` (list header); `RehearsalDetailTabs.tsx` → `rehearsals-assignments` (Roster tab), `rehearsals-assignments` (Dates tab), `rehearsals-attendance` (Attendance tab). Phase AUDITIONS (3): `app/crew/(app)/auditions/page.tsx` → `auditions` (list page header — placed in Server Component, not list client); `AuditionDetailTabs.tsx` → `auditions-signups` (Signups tab header); `AuditionDetailTabs.tsx` → `auditions-materials` (Materials tab header). Phase INVENTORY (2, added INVENTORY.5): `InventoryDetailTabs.tsx` → `inventory-checkout` (Checkouts tab header); `InventoryDetailTabs.tsx` → `inventory-tags` (QR tab header). Phase FORUMS (1, added FORUMS.1): `app/crew/(app)/forums/manage/page.tsx` → `forums` (manage page heading, SA/OA only). NOTE: `inventory` anchor HelpTooltip on `/crew/inventory` list page header and `/crew/settings/inventory` settings page header were placed in INVENTORY.2 (confirming 2 earlier INVENTORY placements not counted separately above — total correctly reflects all placements). NOTE: sidebar nav link HelpTooltips for flagged routes use a `TOOLTIP_ANCHOR_MAP` lookup (Record<string, string>) in `Sidebar.tsx` — refactored from a hardcoded `||` ternary in INVENTORY.1. Current map: `/crew/rehearsals` → `'rehearsals'`, `/crew/auditions` → `'auditions'`, `/crew/inventory` → `'inventory'`, `/crew/forums` → `'forums'` (added FORUMS.1). Any new flagged route with a sidebar HelpTooltip must add an entry to this map (not extend the ternary — the ternary no longer exists).
+HelpTooltip placements: 43 total. Original 17 (12.2c): dashboard card headings, volunteer profile sections, show detail, show form, volunteer list milestone filter, settings. HELP.2d (5): `SeasonAtAGlance.tsx` → `dashboard-season`; `communication/page.tsx` → `blast-compose`; `settings/locations/page.tsx` → `location-management`; `settings/audit-log/page.tsx` → `audit-log`; `settings/email-activity/page.tsx` → `email-activity-log`. ADMIN.29 (4): `CalendarShell.tsx` → `calendar-submit`, `calendar-export`, `calendar-book-space`; `PendingQueueClient.tsx` → `calendar-pending`. ADMIN.30 (6): `app/crew/(app)/tools/checkin/page.tsx` → `check-in-dashboard`; `ShowDetail.tsx` (Dates tab) → `check-in-qr`; `DocumentTypesManager.tsx` → `document-types`; `ConsentSubmissionsQueue.tsx` (×2 — empty-state + main render) → `consent-forms`; `MediaLibrary.tsx` → `media-library-access`. Phase 21 (5): `Sidebar.tsx` → `rehearsals` (nav link); `rehearsals/page.tsx` → `rehearsals` (list header); `RehearsalDetailTabs.tsx` → `rehearsals-assignments` (Roster tab), `rehearsals-assignments` (Dates tab), `rehearsals-attendance` (Attendance tab). Phase AUDITIONS (3): `app/crew/(app)/auditions/page.tsx` → `auditions` (list page header — placed in Server Component, not list client); `AuditionDetailTabs.tsx` → `auditions-signups` (Signups tab header); `AuditionDetailTabs.tsx` → `auditions-materials` (Materials tab header). Phase INVENTORY (2, added INVENTORY.5): `InventoryDetailTabs.tsx` → `inventory-checkout` (Checkouts tab header); `InventoryDetailTabs.tsx` → `inventory-tags` (QR tab header). Phase FORUMS (1, added FORUMS.1): `app/crew/(app)/forums/manage/page.tsx` → `forums` (manage page heading, SA/OA only). NOTE: `inventory` anchor HelpTooltip on `/crew/inventory` list page header and `/crew/settings/inventory` settings page header were placed in INVENTORY.2 (confirming 2 earlier INVENTORY placements not counted separately above — total correctly reflects all placements). NOTE: `TOOLTIP_ANCHOR_MAP` and all sidebar nav link HelpTooltips for flagged routes were removed in NOTIFY.1 (render block) and NOTIFY.4-CLEANUP (const). HelpTooltips no longer appear on any sidebar nav link. HelpTooltips on page-level headers and content areas (e.g. the Rehearsals list page header, AuditionDetailTabs section headers) are unchanged — those are in separate component files. The sidebar is now a three-part atomic edit for any new flagged nav link: NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist. The fourth location (TOOLTIP_ANCHOR_MAP) no longer exists.
 
 Production sidebar: Help link added (HELP.2b). Media Library link also visible to Production (ADMIN.30 confirmed — Production has `/crew/media` sidebar access). Rehearsals link visible to Production (Phase 21). Auditions link visible to Production (Phase AUDITIONS). HelpContent Auditions section visible to Production role (Phase AUDITIONS — same visibility as Rehearsals). Forums link visible to Production (Phase FORUMS). HelpContent Forums section visible to Production role (forums-overview and forums-threads subsections; forums-access and forums-moderation are SA/OA only).
 
@@ -1330,7 +1499,16 @@ displays 8 section cards using the `LinkedCard` /
 | Inventory Management | `/crew/settings/inventory` | Super Admin + Owner Admin (LinkedCard); Editor with `inventory_manager` (LinkedCard); Editor without flag + Viewer (LockedCard) — built INVENTORY.2 |
 | User Groups | `/crew/settings/groups` | Super Admin + Owner Admin (LinkedCard, `canAccessAdminSettings` gate); Editor + Viewer (LockedCard "Super Admin only") — built FORUMS.1 |
 | Style Sandbox | `/crew/settings/style` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — built STYLE.1. Reached via hub card only — no sidebar link. |
-| Platform Setup | `/crew/settings/setup` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — Phase SETUP |
+
+**Platform Setup sidebar link (NOTIFY.1):** The Platform
+Setup link was removed from the Settings hub (no card for
+any role) and added as a direct sidebar link in the bottom
+section of `Sidebar.tsx`, above the ThemeToggle. Super
+Admin only — conditionally rendered based on role. Label:
+"Platform Setup". Links to `/crew/settings/setup`. The
+`proxy.ts` hard-redirect and server-side double-guard on
+the page are unchanged. Non-SA roles simply do not see
+this link anywhere.
 
 **Email Activity (`/crew/settings/email-activity`, built Phase 13.1 — Super Admin only):**
 Global log of all emails sent by the platform. Three tabs via `?tab=` URL param:
@@ -1914,7 +2092,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 036 (none currently planned — all pre-launch migrations applied through 035). Migrations 033, 034, and 035 are applied.
+**Next migration:** 037 (none currently planned — all pre-launch migrations applied through 036). Migrations 033, 034, 035, and 036 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -3173,6 +3351,11 @@ submitted_file_path text  -- null until file uploaded via /consent/[token]
 submitted_at        timestamptz  -- null until submitted
 reviewed_by         uuid REFERENCES admin_users(id)
 reviewed_at         timestamptz
+-- Already present on live table (confirmed NOTIFY.A
+-- audit — no Migration 036 addition needed). Used by
+-- the ephemeral consent notification: clears when
+-- reviewed_at IS NOT NULL (admin has acknowledged the
+-- submission). confirmConsentSubmission() sets this.
 notes               text
 created_at          timestamptz NOT NULL DEFAULT now()
 -- UNIQUE INDEX: idx_consent_submissions_token on upload_token
@@ -3417,6 +3600,34 @@ Total active SETUP keys: 21. Setup Panel fetches 22 keys
 total (21 SETUP keys + default_reply_to).
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
+
+**Migration 036 status:** Applied — `036_notifications.sql`
+(NOTIFY.1, commits 26b2add + c7e8000). Creates the
+`notifications` table for persistent in-app notifications:
+
+```sql
+id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
+admin_user_id uuid NOT NULL REFERENCES admin_users(id)
+              ON DELETE CASCADE
+type          text NOT NULL CHECK (type IN (
+                'audition_signup','audition_material',
+                'calendar_approved','calendar_changed',
+                'calendar_cancelled','forum_reply'))
+title         text NOT NULL
+body          text
+href          text NOT NULL
+read_at       timestamptz
+created_at    timestamptz NOT NULL DEFAULT now()
+-- RLS: select_own — SELECT WHERE admin_user_id = auth.uid()
+-- RLS: update_own — UPDATE WHERE admin_user_id = auth.uid()
+-- INDEX: idx_notifications_user_id on (admin_user_id)
+-- INDEX: idx_notifications_unread on (admin_user_id, read_at)
+--   WHERE read_at IS NULL (partial — powers badge count query)
+-- INDEX: idx_notifications_created_at on (created_at DESC)
+-- No hard delete — rows accumulate; read_at IS NULL = unread.
+-- INSERT via getAdminClient() in server actions (service role).
+-- Migration 036 (036_notifications.sql)
+```
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
 Every new feature flag requires exactly 5 file changes:
@@ -4465,7 +4676,7 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase STYLE complete (STYLE.A–STYLE.8, 9 prompts). Phase 17 (Launch) is next.*
+*Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -5396,6 +5607,26 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
 **30BN-STYLE.8 ✓** Communication, Media Library, Setup Panel mockups. bg-brand-accent on Send button. Two-panel Media Library. 3 section card pattern. Named export badge pattern pre-empted. 4 files. Commit 2eb1f1c.
 
 **30BN-DOC.72 ✓** Brief v5.4 + Process v5.2 (this prompt)
+  30BN-NOTIFY.A ✓ Read-only audit (7 targets). Key findings
+               above.
+  30BN-NOTIFY.1 ✓ Migration 036 + sidebar/settings cleanup
+               + types/notifications.ts. Commits 26b2add +
+               c7e8000 (NOTIFY.1-FIX).
+  30BN-NOTIFY.2 ✓ Notification infrastructure (lib/utils,
+               lib/data, lib/actions) + layout prop
+               threading + Sidebar forum badge.
+               Commit 6e363d3.
+  30BN-NOTIFY.3 ✓ Write-point wiring (6 action files, 7
+               calendar call sites, forum archived-filter
+               fix, sendForumNotificationEmail() return
+               type). Commit 80c7021.
+  30BN-NOTIFY.4 ✓ NotificationPanel.tsx + TopBar wiring +
+               NOTIFY.3-FIX (email early-return path).
+               Commit 7ea1f19.
+  30BN-NOTIFY.4-CLEANUP ✓ Lint baseline: TOOLTIP_ANCHOR_MAP
+               removed, unused type imports removed, dynamic
+               pluralization. Commit 5e7656f.
+  30BN-DOC.73  ✓ Brief v5.5 (this prompt)
 
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
@@ -5499,6 +5730,126 @@ dark: pairing), 7 named-export badge helpers. `SetupPanelMockup
 as inline style divs, 7 feature flag toggle rows — all 3
 section "Save Changes" buttons written explicitly (verification
 check required exactly 3 occurrences). 4 files. Commit 2eb1f1c.
+
+### Phase NOTIFY — Notification System ✓ Complete
+
+**NOTIFY.A ✓** Read-only audit (no code). Seven targets
+audited with exact line numbers. Key findings: `reviewed_at`
+already present on `consent_form_submissions` (no Migration
+036 column addition needed — the ephemeral consent
+notification clears when this field is non-null);
+`TopBar.tsx` is 'use client' (82 lines); `layout.tsx` is
+a Server Component (82 lines); `Sidebar.tsx` 206 lines —
+`TOOLTIP_ANCHOR_MAP` at lines 57–62, HelpTooltip render
+block at lines 159–170, Platform Setup card confirmed in
+`settings/page.tsx` lines 237–248; `pendingRegistrationCount`
+fetched conditionally in layout; `confirmAuditionMaterial
+Upload()` missing `audition_id` in its select (NOTIFY.3
+fix); `approveBatch()` does not track approved event IDs
+(NOTIFY.3 accumulator fix). No code.
+
+**NOTIFY.1 ✓** Migration 036 applied (`036_notifications.sql`
+— `notifications` table: 9 columns, 2 self-scoped RLS
+policies, 3 indexes including partial unread index).
+`types/notifications.ts` created: `NotificationType`,
+`NotificationRow`, `EphemeralCounts`, `NotificationCounts`.
+`Sidebar.tsx`: Users link removed from NAV_ITEMS; HelpTooltip
+render block removed from nav link loop; TOOLTIP_ANCHOR_MAP
+render removed (const retained — removed in NOTIFY.4-
+CLEANUP); Platform Setup SA-only link added to bottom section
+above ThemeToggle; `pendingRegistrationCount` prop removed.
+`app/crew/(app)/settings/page.tsx`: Platform Setup LinkedCard/
+LockedCard pair removed (13 cards remain after removal).
+`app/crew/(app)/layout.tsx`: `pendingRegistrationCount` fetch
+block removed, prop removed from Sidebar call. Stray file
+`openingprompt` at repo root removed (was untracked — plain
+`rm`, not `git rm`). NOTIFY.1-FIX (commit c7e8000):
+HelpTooltip comment fix pre-empted a lint warning. 2 commits:
+26b2add + c7e8000.
+
+**NOTIFY.2 ✓** `lib/utils/notifications.ts` (no 'use server'):
+`createNotification()` helper — accepts supabase client as
+parameter, never throws (companion-module pattern, same rule
+as FORUMS.5-FIX). `lib/data/notifications.ts` (no 'use
+server'): `getForumUnreadCount()`, `getNotificationCounts()`,
+`getUserNotifications()` — all role-scoped, all parallel via
+Promise.all. `lib/actions/notifications.ts` ('use server'):
+exported `getNotificationCounts()`, `getUserNotifications()`,
+`markNotificationRead()`, `markAllNotificationsRead()`.
+`app/crew/(app)/layout.tsx` extended: notification fetches
+in same Promise.all as `resolveOrgIdentity()`; `forumUnread
+Count` passed to Sidebar; `notificationCounts` +
+`initialNotifications` passed to TopBar. `Sidebar.tsx`:
+`forumUnreadCount` prop added; Forums link badge renders
+count pill when >0, capped at 99+. `TopBar.tsx`: props
+extended to accept `notificationCounts` + `initialNotifications`
+(no JSX yet — panel built NOTIFY.4). Q-item: `getAccessibleForumIds()`
+duplicated between `lib/data/forums.ts` and
+`lib/data/notifications.ts` (private helper, cleanup
+deferred — export from forums.ts and import in
+notifications.ts). Commit 6e363d3.
+
+**NOTIFY.3 ✓** `lib/data/notifications.ts`:
+`getForumUnreadCount()` fixed to filter `is_archived = false`
+via forums join (archived forum posts excluded from badge
+count). `lib/email.ts`: `sendForumNotificationEmail()`
+refactored to return `Promise<{ notifiedUserIds: string[] }>`;
+all return paths updated (early-return-with-no-emails path
+initially returned `[]` — corrected in NOTIFY.4 as
+NOTIFY.3-FIX). `lib/actions/forum-posts.ts`: thread select
+extended with `title`; void IIFE extended to call
+`createNotification()` per subscriber using returned
+`notifiedUserIds`. `lib/actions/auditions.ts`:
+`submitAuditionSignup()` void IIFE added (two-path recipient:
+`audition_assignments` + `auditions.show_id` →
+`show_editors.admin_id` — note: `show_editors` uses `admin_id`
+column, not `admin_user_id`); `confirmAuditionMaterialUpload()`
+select extended with `audition_id` + void IIFE added.
+`lib/actions/calendar.ts`: `resolveCalendarRecipients()`
+private (unexported) helper added (handles rehearsal batch
+via `rehearsal_schedule_assignments`, show-linked via
+`show_dates` → `show_editors.admin_id`, audition-linked via
+`audition_assignments` + `auditions.show_id` → `show_editors`);
+five write points wired (`approveCalendarEvent`, `approveBatch`
+with `approvedEventIds` accumulator, `cancelCalendarEvent`,
+`updateCalendarEvent`, `cancelRecurringOccurrence` — all three
+'this'/'future'/'all' branches with `.select('id')` added —
+7 total call sites). `lib/actions/consent.ts`:
+`revalidatePath('/crew', 'layout')` added to
+`confirmConsentSubmission()`. Commit 80c7021.
+
+**NOTIFY.4 ✓** NOTIFY.3-FIX bundled: `lib/email.ts`
+`sendForumNotificationEmail()` early-return path (subscribers
+exist but have no email address) corrected to return
+`{ notifiedUserIds }` (populated array) not
+`{ notifiedUserIds: [] }` — in-app notifications are
+independent of email deliverability. `components/crew/
+NotificationPanel.tsx` created ('use client' first line):
+bell button with count badge (totalEphemeral +
+unreadPersistent, excludes forumUnread which has sidebar
+badge), outside-click via useEffect + useRef with cleanup
+return, two-section dropdown ("Needs Action" ephemeral rows
++ "Notifications" persistent rows), optimistic mark-read via
+startTransition, mark-all-read, `timeAgo()` pure client-safe
+helper (no server imports), `getTypeIcon()` helper.
+Unread row background: `bg-neutral-surface dark:bg-dark-nav`
+(R35-safe — confirmed via globals.css audit that no dark
+variant for `bg-brand-primary-light` exists). React 19.2.4
+confirmed (native async-startTransition support). `TopBar.tsx`:
+`NotificationPanel` imported and rendered as first child of
+right-side div. 3 lint warnings from D2 — all pre-existing
+carry-forwards (TOOLTIP_ANCHOR_MAP unused, 2 unused type
+imports in layout.tsx), not regressions. Commit 7ea1f19.
+
+**NOTIFY.4-CLEANUP ✓** Lint baseline restored (0 errors, 0
+warnings). `Sidebar.tsx`: TOOLTIP_ANCHOR_MAP const + comment
+removed (6 lines). `layout.tsx`: unused
+`import type { NotificationCounts, NotificationRow }` from
+`@/types/notifications` removed (types inferred from function
+return types). `NotificationPanel.tsx`: three "(s)" string
+literals replaced with dynamic pluralization ternaries. npm
+run lint: empty output — clean baseline. tsc --noEmit: 0
+errors. Commit 5e7656f.
 
 ### Phase 17 — Launch
 
@@ -6109,3 +6460,30 @@ needed); §13 R35 note added (left border accent pattern:
 border-l-4 + style={{ borderLeftColor }}); §13 R36 note
 added (Tailwind purge risk for computed class strings,
 progress bar width + color literals); DOC.72 logged)*
+*v5.5 (August 2026 — DOC.73: Phase NOTIFY complete — §1
+header + current phase updated (NOTIFY.A–NOTIFY.4-CLEANUP,
+Phase 17 next); §8 User Management: pending registrations
+badge note updated (count now in TopBar NotificationPanel
+"Needs Action" section for SA/OA); §8 Settings hub:
+Platform Setup row removed (card removed from hub, link
+moved to sidebar bottom section SA-only — NOTIFY.1); §8
+Help System: TOOLTIP_ANCHOR_MAP note updated (const removed
+NOTIFY.4-CLEANUP — sidebar is now three-part atomic edit,
+no HelpTooltips on sidebar nav links); §8 Forums: thread
+subscriptions updated (sendForumNotificationEmail() returns
+{ notifiedUserIds: string[] }, in-app notification created
+per subscriber independently of email deliverability —
+NOTIFY.3/NOTIFY.3-FIX); §8 new Notification System section
+(full spec: two-track architecture, ephemeral items, 6
+persistent types, NotificationPanel, forum unread badge,
+key new/modified files, 6-prompt structure); §9 Migration
+036 status block added (notifications table — 9 columns,
+2 RLS policies, 3 indexes); §9 next migration pointer
+updated (036 applied → 037 next); §9 consent_form_
+submissions: reviewed_at pre-existence confirmed + note
+added; §11 header updated (Phase NOTIFY complete, Phase 17
+next); §11 Phase NOTIFY build summary added (NOTIFY.A–
+NOTIFY.4-CLEANUP all ✓ with commits and key findings);
+§11 prompt log: NOTIFY.A–NOTIFY.4-CLEANUP + DOC.73 added;
+§13 TOOLTIP_ANCHOR_MAP removal note (if applicable);
+DOC.73 logged)*
