@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { LogOut, Menu } from 'lucide-react'
 import { signOut } from '@/app/crew/actions'
 import type { AdminUser } from '@/lib/auth'
+import type { NotificationCounts, NotificationRow } from '@/types/notifications'
 import { useMobileSidebar } from './MobileSidebarContext'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
@@ -25,9 +26,13 @@ const ROLE_BADGE_CLASSES: Record<AdminUser['role'], string> = {
 export default function TopBar({
   admin,
   title = 'Production Crew',
+  notificationCounts,
+  initialNotifications,
 }: {
   admin: AdminUser
   title?: string
+  notificationCounts: NotificationCounts
+  initialNotifications: NotificationRow[]
 }) {
   const { toggle } = useMobileSidebar()
 

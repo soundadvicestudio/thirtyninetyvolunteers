@@ -5,6 +5,8 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getNotificationCounts, getUserNotifications } from '@/lib/data/notifications'
+import type { NotificationCounts, NotificationRow } from '@/types/notifications'
 import Sidebar from '@/components/crew/Sidebar'
 import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
@@ -36,7 +38,12 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
   const supabase = await getServerClient()
 
   const flags = await getFeatureFlags(supabase)
-  const org = await resolveOrgIdentity()
+
+  const [org, notificationCounts, initialNotifications] = await Promise.all([
+    resolveOrgIdentity(),
+    getNotificationCounts(admin, flags, supabase),
+    getUserNotifications(admin.id, supabase),
+  ])
 
   return (
     <>
@@ -59,9 +66,13 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       <ThemeProvider>
         <MobileSidebarProvider>
           <div className="flex h-screen">
-            <Sidebar admin={admin} flags={flags} org={org} />
+            <Sidebar admin={admin} flags={flags} org={org} forumUnreadCount={notificationCounts.forumUnread} />
             <div className="flex-1 flex flex-col min-w-0">
-              <TopBar admin={admin} />
+              <TopBar
+                admin={admin}
+                notificationCounts={notificationCounts}
+                initialNotifications={initialNotifications}
+              />
               <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6">{children}</main>
             </div>
           </div>

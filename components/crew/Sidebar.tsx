@@ -66,10 +66,12 @@ export default function Sidebar({
   admin,
   flags,
   org,
+  forumUnreadCount = 0,
 }: {
   admin: AdminUser
   flags: FeatureFlags
   org: OrgIdentity
+  forumUnreadCount?: number
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
@@ -149,6 +151,11 @@ export default function Sidebar({
             <Link key={href} href={href} className={linkClasses}>
               <Icon size={18} />
               {label}
+              {href === '/crew/forums' && forumUnreadCount > 0 && (
+                <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+                  {forumUnreadCount > 99 ? '99+' : forumUnreadCount}
+                </span>
+              )}
             </Link>
           )
         })}
