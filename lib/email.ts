@@ -2030,7 +2030,10 @@ export async function sendAuditionCancellationEmail({
 // built per subscriber, then sent and logged as a single batch — same
 // pattern as buildReminderEmailPayload()/buildThankYouEmailPayload().
 
-export async function sendForumNotificationEmail(threadId: string, newPostId: string): Promise<void> {
+export async function sendForumNotificationEmail(
+  threadId: string,
+  newPostId: string
+): Promise<{ notifiedUserIds: string[] }> {
   const adminClient = getAdminClient()
 
   const { data: post } = await adminClient
@@ -2038,14 +2041,14 @@ export async function sendForumNotificationEmail(threadId: string, newPostId: st
     .select('author_id')
     .eq('id', newPostId)
     .maybeSingle()
-  if (!post) return
+  if (!post) return { notifiedUserIds: [] }
 
   const { data: thread } = await adminClient
     .from('forum_threads')
     .select('title, forum_id')
     .eq('id', threadId)
     .maybeSingle()
-  if (!thread) return
+  if (!thread) return { notifiedUserIds: [] }
 
   const { data: poster } = await adminClient.from('admin_users').select('name').eq('id', post.author_id).maybeSingle()
   const posterName = poster?.name || 'Someone'
@@ -2055,7 +2058,9 @@ export async function sendForumNotificationEmail(threadId: string, newPostId: st
     .select('admin_user_id, admin_users!forum_thread_subscriptions_admin_user_id_fkey(email, name)')
     .eq('thread_id', threadId)
     .neq('admin_user_id', post.author_id)
-  if (!subs || subs.length === 0) return
+  if (!subs || subs.length === 0) return { notifiedUserIds: [] }
+
+  const notifiedUserIds = subs.map((sub) => sub.admin_user_id)
 
   const emailSettings = await resolveEmailSettings()
   const threadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/forums/${thread.forum_id}/${threadId}`
@@ -2094,7 +2099,7 @@ export async function sendForumNotificationEmail(threadId: string, newPostId: st
     })
   }
 
-  if (payloads.length === 0) return
+  if (payloads.length === 0) return { notifiedUserIds: [] }
 
   try {
     await sendBatchEmails(payloads)
@@ -2110,4 +2115,6 @@ export async function sendForumNotificationEmail(threadId: string, newPostId: st
     // Swallow — notification failure must never propagate. The call site
     // in forum-posts.ts also wraps this call in try/catch as defense in depth.
   }
+
+  return { notifiedUserIds }
 }

@@ -9,6 +9,7 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { logAction } from '@/lib/audit'
 import { sendForumNotificationEmail } from '@/lib/email'
 import { canAccessForum, isForumModerator } from '@/lib/data/forums'
+import { createNotification } from '@/lib/utils/notifications'
 import type { ForumPostAttachment, ForumPostWithDetails, ThreadViewData } from '@/types/forums'
 import { FORUM_POST_SANITIZE_OPTIONS } from './forum-post-sanitize'
 
@@ -188,7 +189,7 @@ export async function createForumPost(
 
   const { data: thread } = await supabase
     .from('forum_threads')
-    .select('id, forum_id, is_locked, is_deleted')
+    .select('id, forum_id, title, is_locked, is_deleted')
     .eq('id', threadId)
     .maybeSingle()
 
@@ -257,7 +258,17 @@ export async function createForumPost(
   // Non-blocking subscription notifications — errors must never block post creation
   void (async () => {
     try {
-      await sendForumNotificationEmail(threadId, postId)
+      const { notifiedUserIds } = await sendForumNotificationEmail(threadId, postId)
+      for (const userId of notifiedUserIds) {
+        await createNotification(
+          userId,
+          'forum_reply',
+          `New reply in: ${thread.title}`,
+          `/crew/forums/${thread.forum_id}/${threadId}`,
+          null,
+          supabase
+        )
+      }
     } catch {
       // Swallow — notification failure never blocks post creation
     }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
@@ -9,6 +10,7 @@ import { hasConflict } from '@/lib/utils/calendar-conflict'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import { generateOccurrenceDates } from '@/lib/utils/calendar-recurrence'
+import { createNotification } from '@/lib/utils/notifications'
 import {
   calendarEventSubmitSchema,
   rehearsalBatchSchema,
@@ -24,6 +26,73 @@ function buildEventTimes(date: string, startTime: string, endTime: string): { st
   const startUTC = fromZonedTime(`${date} ${startTime}:00`, CT)
   const endUTC = fromZonedTime(`${date} ${endTime}:00`, CT)
   return { startUTC, endUTC }
+}
+
+// Not exported — private module-level helper, same pattern as
+// assertAuditionAccess() in lib/actions/auditions-admin.ts. Resolves who
+// should be notified about a calendar event via its three possible links:
+// a rehearsal batch's assignees, a show's editors (via show_dates), or an
+// audition's assignees + the audition's show's editors.
+async function resolveCalendarRecipients(eventId: string, supabase: SupabaseClient): Promise<string[]> {
+  try {
+    const { data: event } = await supabase
+      .from('calendar_events')
+      .select('rehearsal_batch_id, source_show_date_id, source_audition_id')
+      .eq('id', eventId)
+      .single()
+    if (!event) return []
+
+    const recipientIds = new Set<string>()
+
+    if (event.rehearsal_batch_id) {
+      const { data: assignees } = await supabase
+        .from('rehearsal_schedule_assignments')
+        .select('admin_user_id')
+        .eq('rehearsal_batch_id', event.rehearsal_batch_id)
+      ;(assignees ?? []).forEach((a) => recipientIds.add(a.admin_user_id))
+    }
+
+    // show_editors uses admin_id, not admin_user_id (AUDITIONS.A audit G3).
+    if (event.source_show_date_id) {
+      const { data: showDate } = await supabase
+        .from('show_dates')
+        .select('show_id')
+        .eq('id', event.source_show_date_id)
+        .single()
+      if (showDate?.show_id) {
+        const { data: editors } = await supabase
+          .from('show_editors')
+          .select('admin_id')
+          .eq('show_id', showDate.show_id)
+        ;(editors ?? []).forEach((e) => recipientIds.add(e.admin_id))
+      }
+    }
+
+    if (event.source_audition_id) {
+      const { data: audAssignees } = await supabase
+        .from('audition_assignments')
+        .select('admin_user_id')
+        .eq('audition_id', event.source_audition_id)
+      ;(audAssignees ?? []).forEach((a) => recipientIds.add(a.admin_user_id))
+
+      const { data: aud } = await supabase
+        .from('auditions')
+        .select('show_id')
+        .eq('id', event.source_audition_id)
+        .single()
+      if (aud?.show_id) {
+        const { data: editors } = await supabase
+          .from('show_editors')
+          .select('admin_id')
+          .eq('show_id', aud.show_id)
+        ;(editors ?? []).forEach((e) => recipientIds.add(e.admin_id))
+      }
+    }
+
+    return [...recipientIds]
+  } catch {
+    return []
+  }
 }
 
 export async function checkEventConflict(
@@ -189,6 +258,17 @@ export async function updateCalendarEvent(
 
   revalidatePath('/crew/calendar')
   revalidatePath('/crew/calendar/pending')
+
+  void (async () => {
+    try {
+      const recipients = await resolveCalendarRecipients(eventId, supabase)
+      for (const userId of recipients) {
+        await createNotification(userId, 'calendar_changed', 'Calendar event updated', '/crew/calendar', null, supabase)
+      }
+    } catch {
+      // Swallow — notification failure must never block the update
+    }
+  })()
 
   return { success: true }
 }
@@ -362,6 +442,17 @@ export async function approveCalendarEvent(eventId: string, locationId: string):
   revalidatePath('/crew/calendar')
   revalidatePath('/crew/calendar/pending')
 
+  void (async () => {
+    try {
+      const recipients = await resolveCalendarRecipients(eventId, supabase)
+      for (const userId of recipients) {
+        await createNotification(userId, 'calendar_approved', 'Calendar event approved', '/crew/calendar', null, supabase)
+      }
+    } catch {
+      // Swallow — notification failure must never block approval
+    }
+  })()
+
   return { success: true }
 }
 
@@ -390,6 +481,7 @@ export async function approveBatch(
 
   let approvedCount = 0
   const skipped: { eventId: string; error: string }[] = []
+  const approvedEventIds: string[] = []
 
   for (const approval of approvals) {
     const { data: event, error: fetchError } = await supabase
@@ -427,10 +519,24 @@ export async function approveBatch(
     }
 
     approvedCount++
+    approvedEventIds.push(approval.eventId)
   }
 
   revalidatePath('/crew/calendar')
   revalidatePath('/crew/calendar/pending')
+
+  void (async () => {
+    try {
+      for (const evId of approvedEventIds) {
+        const recipients = await resolveCalendarRecipients(evId, supabase)
+        for (const userId of recipients) {
+          await createNotification(userId, 'calendar_approved', 'Calendar event approved', '/crew/calendar', null, supabase)
+        }
+      }
+    } catch {
+      // Swallow — notification failure must never block batch approval
+    }
+  })()
 
   return { success: true, approvedCount, skipped: skipped.length > 0 ? skipped : undefined }
 }
@@ -477,6 +583,17 @@ export async function cancelCalendarEvent(eventId: string): Promise<CancelCalend
 
   revalidatePath('/crew/calendar')
   revalidatePath('/crew/calendar/pending')
+
+  void (async () => {
+    try {
+      const recipients = await resolveCalendarRecipients(eventId, supabase)
+      for (const userId of recipients) {
+        await createNotification(userId, 'calendar_cancelled', 'Calendar event cancelled', '/crew/calendar', null, supabase)
+      }
+    } catch {
+      // Swallow — notification failure must never block cancellation
+    }
+  })()
 
   return { success: true }
 }
@@ -852,24 +969,63 @@ export async function cancelRecurringOccurrence(
     if (updateError) {
       return { success: false, error: updateError.message }
     }
+
+    void (async () => {
+      try {
+        const recipients = await resolveCalendarRecipients(eventId, supabase)
+        for (const userId of recipients) {
+          await createNotification(userId, 'calendar_cancelled', 'Calendar event cancelled', '/crew/calendar', null, supabase)
+        }
+      } catch {
+        // Swallow — notification failure must never block cancellation
+      }
+    })()
   } else if (effectiveScope === 'future') {
-    const { error: updateError } = await supabase
+    const { data: cancelledEvents, error: updateError } = await supabase
       .from('calendar_events')
       .update({ status: 'cancelled' })
       .eq('recurrence_group_id', targetEvent.recurrence_group_id)
       .gte('start_time', targetEvent.start_time)
+      .select('id')
     if (updateError) {
       return { success: false, error: updateError.message }
     }
+
+    void (async () => {
+      try {
+        for (const ev of cancelledEvents ?? []) {
+          const recipients = await resolveCalendarRecipients(ev.id, supabase)
+          for (const userId of recipients) {
+            await createNotification(userId, 'calendar_cancelled', 'Calendar event cancelled', '/crew/calendar', null, supabase)
+          }
+        }
+      } catch {
+        // Swallow — notification failure must never block cancellation
+      }
+    })()
   } else {
-    const { error: updateError } = await supabase
+    const { data: cancelledEvents, error: updateError } = await supabase
       .from('calendar_events')
       .update({ status: 'cancelled' })
       .eq('recurrence_group_id', targetEvent.recurrence_group_id)
+      .select('id')
     if (updateError) {
       return { success: false, error: updateError.message }
     }
     await supabase.from('recurrence_groups').update({ status: 'cancelled' }).eq('id', targetEvent.recurrence_group_id)
+
+    void (async () => {
+      try {
+        for (const ev of cancelledEvents ?? []) {
+          const recipients = await resolveCalendarRecipients(ev.id, supabase)
+          for (const userId of recipients) {
+            await createNotification(userId, 'calendar_cancelled', 'Calendar event cancelled', '/crew/calendar', null, supabase)
+          }
+        }
+      } catch {
+        // Swallow — notification failure must never block cancellation
+      }
+    })()
   }
 
   await logAction(

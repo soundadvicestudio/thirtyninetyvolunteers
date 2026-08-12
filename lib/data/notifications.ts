@@ -41,30 +41,36 @@ export async function getForumUnreadCount(admin: AdminUser, supabase: SupabaseCl
       return 0
     }
 
+    // Archived forums are excluded from the unread count for both roles —
+    // neither the SA/OA path nor accessibleForumIds filters is_archived,
+    // so it's applied here via an explicit forums lookup before scoping
+    // threads/posts.
+    let forumsQuery = supabase.from('forums').select('id').eq('is_archived', false)
+    if (accessibleForumIds !== null) {
+      forumsQuery = forumsQuery.in('id', accessibleForumIds)
+    }
+    const { data: forumsRaw } = await forumsQuery
+    const forumIds = (forumsRaw ?? []).map((f) => f.id)
+
+    if (forumIds.length === 0) return 0
+
     // forum_posts has no forum_id column (only thread_id) — scope through
     // forum_threads first, same join order as getForumIndexData().
-    let postIds: string[]
+    const { data: threadsRaw } = await supabase
+      .from('forum_threads')
+      .select('id')
+      .in('forum_id', forumIds)
+      .eq('is_deleted', false)
+    const threadIds = (threadsRaw ?? []).map((t) => t.id)
 
-    if (accessibleForumIds === null) {
-      const { data: postsRaw } = await supabase.from('forum_posts').select('id').eq('is_deleted', false)
-      postIds = (postsRaw ?? []).map((p) => p.id)
-    } else {
-      const { data: threadsRaw } = await supabase
-        .from('forum_threads')
-        .select('id')
-        .in('forum_id', accessibleForumIds)
-        .eq('is_deleted', false)
-      const threadIds = (threadsRaw ?? []).map((t) => t.id)
+    if (threadIds.length === 0) return 0
 
-      if (threadIds.length === 0) return 0
-
-      const { data: postsRaw } = await supabase
-        .from('forum_posts')
-        .select('id')
-        .in('thread_id', threadIds)
-        .eq('is_deleted', false)
-      postIds = (postsRaw ?? []).map((p) => p.id)
-    }
+    const { data: postsRaw } = await supabase
+      .from('forum_posts')
+      .select('id')
+      .in('thread_id', threadIds)
+      .eq('is_deleted', false)
+    const postIds = (postsRaw ?? []).map((p) => p.id)
 
     if (postIds.length === 0) return 0
 

@@ -11,6 +11,7 @@ import { toZonedTime } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { createNotification } from '@/lib/utils/notifications'
 import {
   sendAuditionSignupConfirmation,
   sendAuditionConsentFormRequestEmail,
@@ -323,6 +324,40 @@ export async function submitAuditionSignup(
       auditionId: audition.id,
     }).catch((err) => console.error('Confirmation email error:', err))
 
+    // Non-blocking in-app notification — never blocks the signup response.
+    void (async () => {
+      try {
+        const [{ data: assignments }, { data: auditionRow }] = await Promise.all([
+          supabase.from('audition_assignments').select('admin_user_id').eq('audition_id', data.auditionId),
+          supabase.from('auditions').select('show_id').eq('id', data.auditionId).maybeSingle(),
+        ])
+
+        const recipientIds = new Set<string>()
+        for (const a of assignments ?? []) recipientIds.add(a.admin_user_id)
+
+        if (auditionRow?.show_id) {
+          const { data: editors } = await supabase
+            .from('show_editors')
+            .select('admin_id')
+            .eq('show_id', auditionRow.show_id)
+          for (const e of editors ?? []) recipientIds.add(e.admin_id)
+        }
+
+        for (const userId of recipientIds) {
+          await createNotification(
+            userId,
+            'audition_signup',
+            `New audition signup: ${data.name}`,
+            `/crew/auditions/${data.auditionId}`,
+            null,
+            supabase
+          )
+        }
+      } catch {
+        // Swallow — notification failure must never block signup
+      }
+    })()
+
     return { success: true, signupId: signup.id, uploadToken: signup.upload_token }
   } catch (err) {
     console.error('submitAuditionSignup unexpected error:', err)
@@ -442,7 +477,7 @@ export async function confirmAuditionMaterialUpload(params: {
     const { data: signup } = await supabase
       .from('audition_signups')
       .select(
-        'id, audition:auditions(material_headshot, material_resume, material_sheet_music, material_mp3, material_video)'
+        'id, audition_id, audition:auditions(material_headshot, material_resume, material_sheet_music, material_mp3, material_video)'
       )
       .eq('upload_token', params.uploadToken)
       .maybeSingle()
@@ -479,6 +514,40 @@ export async function confirmAuditionMaterialUpload(params: {
       console.error('confirmAuditionMaterialUpload insert error:', insertError)
       return { success: false, error: 'Failed to save your upload. Please try again.' }
     }
+
+    // Non-blocking in-app notification — never blocks the upload response.
+    void (async () => {
+      try {
+        const [{ data: assignments }, { data: auditionRow }] = await Promise.all([
+          supabase.from('audition_assignments').select('admin_user_id').eq('audition_id', signup.audition_id),
+          supabase.from('auditions').select('show_id').eq('id', signup.audition_id).maybeSingle(),
+        ])
+
+        const recipientIds = new Set<string>()
+        for (const a of assignments ?? []) recipientIds.add(a.admin_user_id)
+
+        if (auditionRow?.show_id) {
+          const { data: editors } = await supabase
+            .from('show_editors')
+            .select('admin_id')
+            .eq('show_id', auditionRow.show_id)
+          for (const e of editors ?? []) recipientIds.add(e.admin_id)
+        }
+
+        for (const userId of recipientIds) {
+          await createNotification(
+            userId,
+            'audition_material',
+            `Material uploaded: ${params.materialType}`,
+            `/crew/auditions/${signup.audition_id}`,
+            null,
+            supabase
+          )
+        }
+      } catch {
+        // Swallow — notification failure must never block upload
+      }
+    })()
 
     return { success: true }
   } catch (err) {

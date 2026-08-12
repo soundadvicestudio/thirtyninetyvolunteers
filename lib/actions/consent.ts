@@ -116,6 +116,7 @@ export async function confirmConsentSubmission(
     )
 
     revalidatePath('/crew/settings/documents')
+    revalidatePath('/crew', 'layout')
 
     return { success: true }
   } catch (err) {
