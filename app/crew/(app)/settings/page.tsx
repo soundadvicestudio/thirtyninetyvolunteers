@@ -236,19 +236,6 @@ export default async function SettingsPage() {
 
         {admin.role === 'super_admin' ? (
           <LinkedCard
-            href="/crew/settings/setup"
-            title="Platform Setup"
-            description="Configure org identity, branding, email, and feature flags for this deployment."
-          />
-        ) : (
-          <LockedCard
-            title="Platform Setup"
-            description="Configure org identity, branding, email, and feature flags for this deployment."
-          />
-        )}
-
-        {admin.role === 'super_admin' ? (
-          <LinkedCard
             href="/crew/settings/style"
             title="Style Sandbox"
             description="Design and preview UI aesthetic changes before platform-wide rollout."

@@ -35,15 +35,6 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
 
   const supabase = await getServerClient()
 
-  let pendingRegistrationCount = 0
-  if (admin.role === 'super_admin' || admin.role === 'owner_admin') {
-    const { count } = await supabase
-      .from('pending_registrations')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending')
-    pendingRegistrationCount = count ?? 0
-  }
-
   const flags = await getFeatureFlags(supabase)
   const org = await resolveOrgIdentity()
 
@@ -68,7 +59,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       <ThemeProvider>
         <MobileSidebarProvider>
           <div className="flex h-screen">
-            <Sidebar admin={admin} pendingRegistrationCount={pendingRegistrationCount} flags={flags} org={org} />
+            <Sidebar admin={admin} flags={flags} org={org} />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar admin={admin} />
               <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6">{children}</main>

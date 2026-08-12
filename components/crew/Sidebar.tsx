@@ -20,14 +20,12 @@ import {
   Mail,
   FolderOpen,
   Settings,
-  UserCog,
   HelpCircle,
   X,
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
 import type { OrgIdentity } from '@/lib/utils/org-identity'
-import { HelpTooltip } from './HelpTooltip'
 import { ThemeToggle } from './ThemeToggle'
 import { useMobileSidebar } from './MobileSidebarContext'
 
@@ -67,12 +65,10 @@ function isActivePath(pathname: string, href: string) {
 
 export default function Sidebar({
   admin,
-  pendingRegistrationCount = 0,
   flags,
   org,
 }: {
   admin: AdminUser
-  pendingRegistrationCount?: number
   flags: FeatureFlags
   org: OrgIdentity
 }) {
@@ -150,25 +146,6 @@ export default function Sidebar({
               : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
           }`
 
-          // HelpTooltip renders its own <Link> (<a>) — it cannot nest inside
-          // this item's <Link>, so any href in TOOLTIP_ANCHOR_MAP gets a
-          // sibling wrapper instead of the plain per-item Link every other
-          // nav item uses. Generalized AUDITIONS.2b from the original
-          // Rehearsals-only special case; lookup map replaces the hardcoded
-          // || chain as of INVENTORY.1.
-          if (href in TOOLTIP_ANCHOR_MAP) {
-            const anchor = TOOLTIP_ANCHOR_MAP[href]
-            return (
-              <div key={href} className="flex items-center gap-1">
-                <Link href={href} className={`flex-1 ${linkClasses}`}>
-                  <Icon size={18} />
-                  {label}
-                </Link>
-                <HelpTooltip anchor={anchor} label={label} />
-              </div>
-            )
-          }
-
           return (
             <Link key={href} href={href} className={linkClasses}>
               <Icon size={18} />
@@ -176,28 +153,18 @@ export default function Sidebar({
             </Link>
           )
         })}
-
-        {(admin.role === 'super_admin' || admin.role === 'owner_admin') && (
-          <Link
-            href="/crew/settings/users"
-            className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
-              isActivePath(pathname, '/crew/settings/users')
-                ? 'bg-brand-primary text-white'
-                : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
-            }`}
-          >
-            <UserCog size={18} />
-            Users
-            {pendingRegistrationCount > 0 && (
-              <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
-                {pendingRegistrationCount}
-              </span>
-            )}
-          </Link>
-        )}
       </nav>
 
         <div className="px-3 py-3 border-t border-divider dark:border-dark-border shrink-0">
+          {admin.role === 'super_admin' && (
+            <Link
+              href="/crew/settings/setup"
+              className="flex items-center gap-2 px-2 py-2 rounded text-sm text-mid-gray dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-nav transition-colors mb-2"
+            >
+              <Settings size={16} />
+              Platform Setup
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </aside>
