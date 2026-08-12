@@ -133,7 +133,9 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {counts.ephemeral.pendingRegistrations} pending registration(s)
+                    {`${counts.ephemeral.pendingRegistrations} pending registration${
+                      counts.ephemeral.pendingRegistrations === 1 ? '' : 's'
+                    }`}
                   </span>
                 </Link>
               )}
@@ -146,7 +148,9 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {counts.ephemeral.pendingCalendarEvents} event(s) awaiting approval
+                    {`${counts.ephemeral.pendingCalendarEvents} event${
+                      counts.ephemeral.pendingCalendarEvents === 1 ? '' : 's'
+                    } awaiting approval`}
                   </span>
                 </Link>
               )}
@@ -159,7 +163,9 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {counts.ephemeral.pendingConsentForms} consent form(s) to review
+                    {`${counts.ephemeral.pendingConsentForms} consent form${
+                      counts.ephemeral.pendingConsentForms === 1 ? '' : 's'
+                    } to review`}
                   </span>
                 </Link>
               )}

@@ -48,16 +48,6 @@ const NAV_ITEMS = [
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
 
-// Anchor keys for flag-gated nav items. The per-link tooltip render branch
-// that consumed this map was removed from the nav loop below in NOTIFY.1;
-// retained per NOTIFY.1 task scope (not removed).
-const TOOLTIP_ANCHOR_MAP: Record<string, string> = {
-  '/crew/rehearsals': 'rehearsals',
-  '/crew/auditions': 'auditions',
-  '/crew/inventory': 'inventory',
-  '/crew/forums': 'forums',
-}
-
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
