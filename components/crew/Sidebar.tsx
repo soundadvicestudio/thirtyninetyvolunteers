@@ -48,10 +48,9 @@ const NAV_ITEMS = [
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
 
-// Nav items whose HelpTooltip renders as a sibling of the nav Link (see the
-// render-loop comment below for why). Keyed by href so the render loop can
-// do a single lookup instead of a hardcoded || chain — generalized INVENTORY.1
-// from the Rehearsals/Auditions-only special case established in AUDITIONS.2b.
+// Anchor keys for flag-gated nav items. The per-link tooltip render branch
+// that consumed this map was removed from the nav loop below in NOTIFY.1;
+// retained per NOTIFY.1 task scope (not removed).
 const TOOLTIP_ANCHOR_MAP: Record<string, string> = {
   '/crew/rehearsals': 'rehearsals',
   '/crew/auditions': 'auditions',
