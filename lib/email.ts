@@ -2099,7 +2099,7 @@ export async function sendForumNotificationEmail(
     })
   }
 
-  if (payloads.length === 0) return { notifiedUserIds: [] }
+  if (payloads.length === 0) return { notifiedUserIds }
 
   try {
     await sendBatchEmails(payloads)

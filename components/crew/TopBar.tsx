@@ -6,6 +6,7 @@ import { signOut } from '@/app/crew/actions'
 import type { AdminUser } from '@/lib/auth'
 import type { NotificationCounts, NotificationRow } from '@/types/notifications'
 import { useMobileSidebar } from './MobileSidebarContext'
+import NotificationPanel from '@/components/crew/NotificationPanel'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
   super_admin: 'Super Admin',
@@ -51,6 +52,7 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        <NotificationPanel notificationCounts={notificationCounts} initialNotifications={initialNotifications} />
         <span className="hidden sm:inline text-sm text-dark dark:text-dark-text">{admin.name}</span>
         <span
           className={`text-xs font-semibold px-2 py-1 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
