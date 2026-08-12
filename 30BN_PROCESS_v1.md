@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.2
-### Created: July 2026 | Last Updated: August 2026 — v5.2 (DOC.72: Phase STYLE complete — 6 new §7 patterns, 4 new §11 checklist items, §13 Phase STYLE tracker block, §14 pattern notes)
+## 30BN_PROCESS_v1.md — v5.3
+### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -668,22 +668,116 @@ Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.
 
 Cross-reference: Brief §13 R37 (new rule in v4.5).
 
-**Sidebar data-driven four-part atomic edit (established 21.A Audit E / 21.2; extended INVENTORY.1):**
-The crew sidebar is data-driven via four locations in `components/crew/Sidebar.tsx`:
+**Sidebar data-driven three-part atomic edit (established 21.A Audit E / 21.2; extended INVENTORY.1; updated NOTIFY.1/NOTIFY.4-CLEANUP):**
+The crew sidebar is data-driven via three locations in `components/crew/Sidebar.tsx`:
 1. `NAV_ITEMS` — the nav item object (icon, label, href)
 2. `FLAG_GATED_HREFS` — the set of hrefs gated by feature flags
 3. Production role allowlist — the set of hrefs accessible to the Production role (not just SA/OA/Editor/Viewer)
-4. `TOOLTIP_ANCHOR_MAP` — a `Record<string, string>` lookup map for flagged routes that display a HelpTooltip on their sidebar nav link. Maps href → anchor string. Added INVENTORY.1 (replacing a hardcoded `||` ternary). Current entries: `/crew/rehearsals` → `'rehearsals'`, `/crew/auditions` → `'auditions'`, `/crew/inventory` → `'inventory'`, `/crew/forums` → `'forums'` (added FORUMS.1). Any new flagged route with a sidebar HelpTooltip must add an entry here — extending the old ternary no longer applies, the map is the authoritative lookup.
 
-All four must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
+All three must be edited atomically when adding a new flagged nav link. Missing any single location produces a silent failure:
 - Missing NAV_ITEMS: the link does not appear at all for any role
 - Missing FLAG_GATED_HREFS: the link appears even when the flag is off, bypassing the feature gate entirely
 - Missing the Production allowlist: the link appears for all roles EXCEPT Production, even when the spec requires Production access — no error, no warning, just invisibility for that role
-- Missing TOOLTIP_ANCHOR_MAP: the HelpTooltip is silently omitted from the nav link for routes that require one
 
-Confirmed in 21.2: NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + HelpTooltip were performed atomically. Confirmed in INVENTORY.1: TOOLTIP_ANCHOR_MAP formalized as the 4th location (replacing the prior hardcoded ternary that required conditional extension). The Production allowlist addition is the most commonly missed of the four because it is not part of the visual link definition — it is a separate allow-set in a different part of the component.
+**TOOLTIP_ANCHOR_MAP removed (NOTIFY.1/NOTIFY.4-CLEANUP):**
+The `TOOLTIP_ANCHOR_MAP` (formerly the 4th required location) was removed in its entirety during Phase NOTIFY. The render block was removed in NOTIFY.1; the const definition was removed in NOTIFY.4-CLEANUP. HelpTooltips no longer appear on any sidebar nav link. HelpTooltips on page-level headers and component content areas (e.g., Rehearsals list page header, AuditionDetailTabs section headers) are in separate component files and are unchanged. Any new flagged nav link requires only three atomic edits — the fourth location no longer exists.
 
-This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all four locations before making any edit, confirm all four are updated in the same commit.
+Confirmed in 21.2: three-part atomic edit required. INVENTORY.1: extended to four-part (TOOLTIP_ANCHOR_MAP added). NOTIFY.1/NOTIFY.4-CLEANUP: reverted to three-part (TOOLTIP_ANCHOR_MAP removed).
+
+This is the same class of silent failure mode as SETUP.1 F1 (proxy.ts matcher must cover all guarded paths before guards are written). The pattern: audit all three locations before making any edit, confirm all three are updated in the same commit.
+
+**`createNotification()` companion-module pattern (established
+NOTIFY.2):**
+The notification write helper `createNotification()` lives in
+`lib/utils/notifications.ts` — a plain TypeScript module with
+NO `'use server'` directive. It accepts the Supabase client as a
+parameter (same pattern as `syncShowDateToCalendar()` from CAL.3)
+and never throws — errors are swallowed so notification failure
+never blocks a primary server action.
+
+This extends two existing patterns simultaneously:
+1. **Companion-module pattern (FORUMS.5-FIX):** A function
+   needed by multiple `'use server'` action files that is NOT
+   itself a server action must live in a companion module without
+   `'use server'`. Exporting a non-async-function from a
+   `'use server'` file causes Vercel build failure.
+2. **Client-as-parameter pattern (CAL.3):** The caller
+   constructs the supabase client and passes it in — the helper
+   never creates its own client.
+
+Call sites in `lib/actions/forum-posts.ts`,
+`lib/actions/auditions.ts`, and `lib/actions/calendar.ts` all
+use the void IIFE pattern — createNotification() is never
+awaited in the primary action flow.
+
+**`sendForumNotificationEmail()` return shape (established
+NOTIFY.3):**
+`sendForumNotificationEmail()` in `lib/email.ts` was refactored
+from `Promise<void>` to `Promise<{ notifiedUserIds: string[] }>`.
+The returned `notifiedUserIds` array drives in-app notification
+creation independently of email deliverability — if a subscriber
+has no email address, they still receive an in-app notification.
+
+Critical: ALL return paths must return `{ notifiedUserIds }` (the
+array, populated or empty as appropriate). The early-return path
+where subscribers exist but have no email address must return
+`{ notifiedUserIds }` (the populated array collected from the
+subscriber fetch) — NOT `{ notifiedUserIds: [] }`. Returning an
+empty array on that path would silently drop in-app notifications
+for those users. Confirmed failure mode caught and fixed in
+NOTIFY.3-FIX (bundled into NOTIFY.4).
+
+**`resolveCalendarRecipients()` private unexported helper
+(established NOTIFY.3):**
+A private `async function resolveCalendarRecipients(eventId,
+supabase)` defined at module scope in `lib/actions/calendar.ts`
+but NOT exported. This is the correct pattern for a
+module-private helper in a `'use server'` file — same as
+`assertAuditionAccess()` in `lib/actions/auditions-admin.ts`
+and `isModeratableBy()` in `lib/actions/forum-moderation.ts`.
+
+An unexported async function in a `'use server'` file is NOT a
+server action endpoint — it is only callable from within that
+file. The `'use server'` files-may-only-export-async-functions
+constraint applies only to EXPORTED symbols. An unexported
+function is a module-private utility.
+
+**`getForumUnreadCount()` — must filter archived forums via
+forum_threads join (established NOTIFY.3):**
+`forum_posts` does not have a direct `forum_id` column. The
+join chain to reach `forums.is_archived` is:
+`forum_posts → forum_threads → forums`
+
+Any query counting unread forum posts must traverse this chain
+and filter `forums.is_archived = false`. Archived forum posts
+must NOT contribute to the unread badge count. Confirmed fix
+in NOTIFY.3: the initial implementation in NOTIFY.2 was missing
+this filter — added in NOTIFY.3 before commit.
+
+**Ephemeral vs. persistent notification distinction (established
+NOTIFY.1/NOTIFY.2):**
+Two distinct notification tracks exist in this system:
+
+*Ephemeral (Track A):* Derived live from existing tables at
+render time. No `notifications` table row. Clears when the
+underlying queue item is resolved by admin action — NOT when a
+user clicks through. Examples: pending registrations, pending
+calendar events, pending consent forms. Each is a live SELECT
+COUNT query. No `createNotification()` call needed.
+
+*Persistent (Track B):* Written to the `notifications` table at
+event time via `createNotification()`. Per-user `read_at`
+(nullable). Individually dismissible. History retained. Clears
+only when the user marks it read. Examples: audition signups,
+material uploads, calendar approved/changed/cancelled,
+forum replies to subscribed threads.
+
+Never confuse the two: an ephemeral item clears platform-wide
+when the work is done; a persistent item clears per-user when
+they dismiss it. The forum unread sidebar badge is a third
+distinct track — derived from `forum_post_reads`, separate from
+both the ephemeral and persistent tracks, not included in the
+TopBar bell badge total.
 
 **`inventory_manager` boolean toggle pattern (established INVENTORY.1):**
 `inventory_manager` is a boolean column on `admin_users` (NOT NULL DEFAULT false, added Migration 034). It gates write access to the inventory system for Editor-role accounts. SA and OA always have full inventory write access regardless of this flag.
@@ -1668,6 +1762,30 @@ grep -rl "'use server'" lib/actions/ app/ \
 #     SANITIZE_OPTIONS (IOptions object — FORUMS.5-FIX)
 ```
 
+```bash
+# Confirm createNotification() is wired at all NOTIFY
+# write points (NOTIFY.3 pattern)
+grep -n "createNotification" \
+  lib/actions/forum-posts.ts \
+  lib/actions/auditions.ts \
+  lib/actions/calendar.ts
+# Must return results in all three files. Any file with
+# zero hits means a write point was not wired.
+# lib/utils/notifications.ts defines the helper.
+# lib/actions/notifications.ts exports the server actions.
+```
+
+```bash
+# Confirm sendForumNotificationEmail() returns the correct
+# shape (NOTIFY.3/NOTIFY.3-FIX)
+grep -n "Promise<{ notifiedUserIds" lib/email.ts
+# Must return exactly one result (the function signature).
+# Any absence means the return type was not updated.
+# All return paths (including the early-return path where
+# subscribers have no email) must return { notifiedUserIds }
+# — not { notifiedUserIds: [] }.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -2229,6 +2347,45 @@ lib/actions/forum-posts.ts)
   unbroken literal string. No template literals, no array
   joins, no conditional expressions that build class names
   from parts. (STYLE.3/STYLE.6)
+
+□ Any new persistent notification type added to the system:
+  confirm the notification is created via createNotification()
+  from lib/utils/notifications.ts (NO 'use server') and called
+  inside a void IIFE in the relevant server action so notification
+  failure never blocks the primary action's return.
+  Pattern: void (async () => { try {
+    await createNotification(userId, type, title, href,
+    body, supabase)
+  } catch { /* swallow */ } })()
+  Never await createNotification() directly in the primary flow.
+  (NOTIFY.2/NOTIFY.3 — companion-module + void IIFE patterns)
+
+□ Any new ephemeral notification count (queue-driven): confirm
+  it is derived as a live SELECT COUNT from an existing table —
+  NOT written to the notifications table. Ephemeral items clear
+  platform-wide when the underlying queue item is resolved.
+  Persistent items (forum replies, audition signups, etc.) go
+  to the notifications table. Never confuse the two tracks.
+  (NOTIFY.1/NOTIFY.2 — ephemeral vs persistent distinction)
+
+□ Any query that counts unread forum posts: confirm the query
+  joins through forum_threads to reach forums.is_archived and
+  filters is_archived = false. forum_posts does NOT have a
+  direct forum_id column — the join chain is:
+  forum_posts → forum_threads → forums.
+  Archived forum posts must NOT contribute to unread badge
+  counts. (NOTIFY.3 — getForumUnreadCount() archived fix)
+
+□ Any new private helper function defined in a 'use server'
+  file (i.e. not exported): confirm it is truly unexported.
+  Unexported async functions in 'use server' files are module-
+  private utilities, NOT server action endpoints — this is
+  correct and safe. The 'use server' export constraint applies
+  only to exported symbols. Established patterns:
+  assertAuditionAccess() in lib/actions/auditions-admin.ts,
+  isModeratableBy() in lib/actions/forum-moderation.ts,
+  resolveCalendarRecipients() in lib/actions/calendar.ts.
+  (NOTIFY.3)
 ```
 
 ---
@@ -3511,6 +3668,86 @@ Phase STYLE — Style Sandbox & Design Token Extension
            pattern, brand-accent Send button. 4 files.
            Commit 2eb1f1c.
 
+Phase NOTIFY — Notification System ✓ Complete
+  NOTIFY.A  ✓ Read-only audit (no code). Confirmed:
+              reviewed_at already present on consent_form_
+              submissions (no schema change needed); TopBar
+              is 'use client'; layout.tsx is Server Component;
+              Sidebar.tsx 206 lines — TOOLTIP_ANCHOR_MAP at
+              lines 57–62, HelpTooltip render block at lines
+              159–170; Platform Setup card in settings/page.tsx
+              lines 237–248; confirmAuditionMaterialUpload()
+              missing audition_id in select; approveBatch()
+              not tracking approved event IDs.
+  NOTIFY.1  ✓ Migration 036 (notifications table: 6 columns,
+              2 self-scoped RLS policies, 3 indexes incl.
+              partial unread index). types/notifications.ts
+              (new — 4 types). Sidebar.tsx: Users link removed,
+              HelpTooltip render block removed, TOOLTIP_ANCHOR_
+              MAP render removed (const retained for cleanup),
+              Platform Setup SA-only link added above ThemeToggle,
+              pendingRegistrationCount prop removed. settings/
+              page.tsx: Platform Setup LinkedCard/LockedCard
+              removed. layout.tsx: pendingRegistrationCount
+              fetch + prop removed. NOTIFY.1-FIX (commit
+              c7e8000): HelpTooltip comment fix. Commits
+              26b2add + c7e8000.
+  NOTIFY.2  ✓ lib/utils/notifications.ts (new — no 'use server';
+              createNotification() helper accepting supabase
+              client as param; never throws).
+              lib/data/notifications.ts (new — no 'use server';
+              getForumUnreadCount, getNotificationCounts,
+              getUserNotifications — all role-scoped, parallel
+              Promise.all). lib/actions/notifications.ts (new —
+              'use server'; 4 exported actions).
+              layout.tsx extended: notification fetches in
+              Promise.all; forumUnreadCount → Sidebar; notification
+              Counts + initialNotifications → TopBar.
+              Sidebar.tsx: forumUnreadCount prop + Forums badge.
+              TopBar.tsx: props extended (no JSX yet). Commit
+              6e363d3.
+  NOTIFY.3  ✓ lib/data/notifications.ts: getForumUnreadCount()
+              fixed to filter is_archived = false via forum_threads
+              join (archived forum posts excluded from badge count).
+              lib/email.ts: sendForumNotificationEmail() refactored
+              → Promise<{ notifiedUserIds: string[] }> (all return
+              paths updated; early-return-with-no-emails path
+              initially returned [] — corrected NOTIFY.3-FIX in
+              NOTIFY.4). lib/actions/forum-posts.ts: thread select
+              extended with title; void IIFE extended with
+              createNotification() per subscriber.
+              lib/actions/auditions.ts: submitAuditionSignup() void
+              IIFE added (two-path recipient: audition_assignments
+              + show_editors.admin_id); confirmAuditionMaterial
+              Upload() select extended with audition_id + void
+              IIFE added. lib/actions/calendar.ts: resolveCalendar
+              Recipients() private (unexported) helper added
+              (handles batch via rehearsal_schedule_assignments,
+              show-linked via show_dates → show_editors.admin_id,
+              audition-linked via audition_assignments +
+              auditions.show_id → show_editors); five write points
+              wired (7 total call sites — cancelRecurringOccurrence
+              three branches each call independently).
+              lib/actions/consent.ts: revalidatePath('/crew', 'layout')
+              added to confirmConsentSubmission(). Commit 80c7021.
+  NOTIFY.4  ✓ NOTIFY.3-FIX bundled: lib/email.ts early-return
+              path corrected (returns { notifiedUserIds } populated,
+              not []). components/crew/NotificationPanel.tsx (new —
+              'use client'; bell + badge; outside-click useEffect +
+              useRef; two-section dropdown; optimistic mark-read
+              via startTransition; mark-all-read; timeAgo() pure
+              client-safe helper; getTypeIcon() helper; unread
+              bg-neutral-surface dark:bg-dark-nav — R35-safe;
+              React 19.2.4 native async-startTransition confirmed).
+              TopBar.tsx: NotificationPanel first child of right-
+              side div. Commit 7ea1f19.
+  NOTIFY.4-CLEANUP ✓ Lint baseline restored (0 errors, 0 warnings).
+              Sidebar.tsx: TOOLTIP_ANCHOR_MAP const + comment
+              removed (6 lines). layout.tsx: unused import type
+              { NotificationCounts, NotificationRow } removed.
+              NotificationPanel.tsx: three dynamic pluralization
+              ternaries replace "(s)" literals. Commit 5e7656f.
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -4091,6 +4328,24 @@ Commit 02f4569.
 30BN-DOC.71 ✓ Brief v5.3 + Process v5.1 (FORUMS.5-FIX
 documented — §7 new pattern, §10 grep check, §11
 checklist item, §13 prompt log — this prompt).
+  30BN-NOTIFY.A   ✓ Read-only audit (7 targets). Findings above.
+  30BN-NOTIFY.1   ✓ Migration 036 + sidebar/settings cleanup +
+                    types/notifications.ts. Commits 26b2add +
+                    c7e8000 (NOTIFY.1-FIX).
+  30BN-NOTIFY.2   ✓ Notification infrastructure (lib/utils,
+                    lib/data, lib/actions) + layout prop threading
+                    + Sidebar forum badge. Commit 6e363d3.
+  30BN-NOTIFY.3   ✓ Write-point wiring (6 action files, 7 calendar
+                    call sites, archived-forum filter fix, send
+                    ForumNotificationEmail() return type). Commit
+                    80c7021.
+  30BN-NOTIFY.4   ✓ NotificationPanel.tsx + TopBar wiring +
+                    NOTIFY.3-FIX (email early-return path).
+                    Commit 7ea1f19.
+  30BN-NOTIFY.4-CLEANUP ✓ Lint baseline: TOOLTIP_ANCHOR_MAP
+                    removed, unused type imports removed, dynamic
+                    pluralization. Commit 5e7656f.
+  30BN-DOC.73     ✓ Process v5.3 (this prompt)
 ```
 
 ---
@@ -4756,6 +5011,48 @@ to all future prompts:
    parts — even from string literals — make classes
    invisible to the content scanner. (STYLE.3/STYLE.6)
 
+**`createNotification()` supabase-client-as-parameter
+pattern (NOTIFY.2):**
+Extends the client-as-parameter pattern established in CAL.3
+(`syncShowDateToCalendar(showDateId, supabase)`). The
+`createNotification()` helper in `lib/utils/notifications.ts`
+accepts the supabase client as a parameter from the calling
+server action. The caller constructs the client once
+(`getServerClient()` or `getAdminClient()` as appropriate for
+the action file) and passes it in. The helper never constructs
+its own client. This is correct for any utility function
+called from both authenticated-session and public-route
+action files.
+
+**Ephemeral vs. persistent notification track distinction
+(NOTIFY.1/NOTIFY.2):**
+Two tracks compose the notification system. Track A (ephemeral):
+derived via live SELECT COUNT queries from existing tables at
+render time; clears when the underlying queue item is resolved
+by admin action; no `notifications` table row; no
+`createNotification()` call. Track B (persistent): written to
+`notifications` table at event time via `createNotification()`;
+per-user `read_at`; individually dismissible; cleared per-user
+when dismissed. A third hybrid track (forum unread sidebar badge)
+is derived from `forum_post_reads` and is separate from both.
+The TopBar bell badge total = ephemeral + persistent unread
+(forum unread is excluded — it has its own sidebar badge).
+
+**`resolveCalendarRecipients()` and other private unexported
+helpers in 'use server' files (NOTIFY.3):**
+An unexported `async function` in a `'use server'` file is a
+module-private utility — NOT a server action endpoint. The
+Next.js/Turbopack `'use server'` export constraint applies only
+to exported symbols. Unexported async functions in `'use server'`
+files are correct and safe. Standing examples in this codebase:
+`assertAuditionAccess()` in `lib/actions/auditions-admin.ts`,
+`isModeratableBy()` in `lib/actions/forum-moderation.ts`,
+`resolveCalendarRecipients()` in `lib/actions/calendar.ts`.
+Do NOT export these functions — exporting a non-async-function
+value would violate the `'use server'` constraint; exporting
+an async function would promote it to a public server action
+endpoint, which these helpers are not.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -4818,3 +5115,31 @@ badge exports, hardcoded class literals); §13 Phase STYLE
 with commits); §14 three new pattern notes (STYLE.A/STYLE.3/
 STYLE.6 confirmed patterns); document header bumped to v5.2;
 DOC.72 logged)*
+
+*v5.3 (August 2026 — DOC.73: Phase NOTIFY complete — §2
+header bumped to v5.3; §7 sidebar atomic edit updated
+(four-part → three-part; TOOLTIP_ANCHOR_MAP removed in
+NOTIFY.1/NOTIFY.4-CLEANUP; HelpTooltips removed from all
+sidebar nav links); §7 five new NOTIFY patterns added:
+createNotification() companion-module + client-as-parameter
+(NOTIFY.2), sendForumNotificationEmail() return shape and
+early-return path correctness (NOTIFY.3/NOTIFY.3-FIX),
+resolveCalendarRecipients() private-unexported-helper pattern
+(NOTIFY.3), getForumUnreadCount() archived-forum filter via
+forum_threads join (NOTIFY.3), ephemeral vs persistent
+notification track distinction (NOTIFY.1/NOTIFY.2); §10
+two new grep checks (createNotification write points,
+sendForumNotificationEmail return type); §11 four new
+items added (createNotification void IIFE discipline, ephemeral vs
+persistent track distinction, forum unread archived filter,
+private unexported helpers in 'use server' files) — no
+pre-existing §11 sidebar four-part/TOOLTIP_ANCHOR_MAP
+checklist item was found in the live file to update (§7 was
+the only location carrying that pattern; flagged, not
+fabricated — see DOC.73 build report Flags); §13 Phase
+NOTIFY ✓ Complete block added (NOTIFY.A through NOTIFY.4-
+CLEANUP with commits); §13 prompt log: NOTIFY.A through
+DOC.73 added; §14 three new pattern notes (createNotification
+client-as-parameter, ephemeral/persistent distinction,
+private unexported helpers); document header bumped to v5.3;
+DOC.73 logged)*
