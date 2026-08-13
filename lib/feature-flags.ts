@@ -8,6 +8,7 @@ export type FeatureFlags = {
   auditions: boolean
   inventory: boolean
   forums: boolean
+  messages?: boolean
 }
 
 /**

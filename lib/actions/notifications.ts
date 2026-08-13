@@ -14,6 +14,7 @@ const EMPTY_COUNTS: NotificationCounts = {
   ephemeral: { pendingRegistrations: 0, pendingCalendarEvents: 0, pendingConsentForms: 0 },
   unreadPersistent: 0,
   forumUnread: 0,
+  messageUnread: 0,
 }
 
 export async function getNotificationCounts(): Promise<NotificationCounts> {

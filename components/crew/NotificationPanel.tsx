@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
   Edit,
+  Mail,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { markNotificationRead, markAllNotificationsRead } from '@/lib/actions/notifications'
@@ -50,6 +51,8 @@ function getTypeIcon(type: NotificationType): LucideIcon {
       return XCircle
     case 'calendar_changed':
       return Edit
+    case 'direct_message':
+      return Mail
   }
 }
 

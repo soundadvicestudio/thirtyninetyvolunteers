@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
 import type { NotificationCounts, NotificationRow } from '@/types/notifications'
+import { getUnreadMessageCount } from '@/lib/data/messages'
 
 // Mirrors the three-way OR access-control pattern in lib/data/forums.ts
 // (role grant / group grant + membership join / individual grant) —
@@ -131,6 +132,7 @@ export async function getNotificationCounts(
     ephemeral: { pendingRegistrations: 0, pendingCalendarEvents: 0, pendingConsentForms: 0 },
     unreadPersistent: 0,
     forumUnread: 0,
+    messageUnread: 0,
   }
 
   try {
@@ -149,10 +151,13 @@ export async function getNotificationCounts(
         canSeeForumUnread ? getForumUnreadCount(admin, supabase) : Promise.resolve(0),
       ])
 
+    const messageUnread = flags.messages ? await getUnreadMessageCount(supabase, admin.id) : 0
+
     return {
       ephemeral: { pendingRegistrations, pendingCalendarEvents, pendingConsentForms },
       unreadPersistent,
       forumUnread,
+      messageUnread,
     }
   } catch (err) {
     console.error('[getNotificationCounts] failed:', err)

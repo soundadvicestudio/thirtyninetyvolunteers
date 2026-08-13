@@ -2118,3 +2118,63 @@ export async function sendForumNotificationEmail(
 
   return { notifiedUserIds }
 }
+
+// ─── Direct message notification email (Phase MESSAGES) ──────────
+
+export async function sendDirectMessageEmail({
+  to,
+  senderName,
+  subject,
+  threadId,
+  senderId,
+  isReply = false,
+}: {
+  to: string
+  senderName: string
+  subject: string
+  threadId: string
+  senderId: string
+  isReply?: boolean
+}): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
+  const safeSubject = escapeHtml(subject)
+  const safeSenderName = escapeHtml(senderName)
+  const emailSubject = isReply ? `Re: ${safeSubject}` : `New message: ${safeSubject}`
+  const threadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/messages/${threadId}`
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">
+      You have a new ${isReply ? 'reply' : 'message'}
+    </h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      ${safeSenderName} sent you a message regarding:
+      <strong>${safeSubject}</strong>
+    </p>
+    ${buildCtaButton('View Message', threadUrl, emailSettings.brandPrimary)}
+  `
+
+  const html = buildEmailHtml({
+    subject: emailSubject,
+    preheader: `${safeSenderName} sent you a message: ${safeSubject}`,
+    body,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await resend.emails.send({
+    from: emailSettings.from,
+    to,
+    subject: emailSubject,
+    html,
+  })
+
+  await logEmailSent({
+    subject: emailSubject,
+    bodyPreview: `${senderName} sent you a ${isReply ? 'reply' : 'message'} regarding: ${subject}`,
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:direct_message',
+    sentBy: senderId,
+    recipients: [{ email: to, volunteerId: null }],
+  })
+}

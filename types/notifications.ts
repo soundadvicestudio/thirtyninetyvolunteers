@@ -5,6 +5,7 @@ export type NotificationType =
   | 'calendar_changed'
   | 'calendar_cancelled'
   | 'forum_reply'
+  | 'direct_message'
 
 export interface NotificationRow {
   id: string
@@ -27,4 +28,5 @@ export interface NotificationCounts {
   ephemeral: EphemeralCounts
   unreadPersistent: number
   forumUnread: number
+  messageUnread: number
 }
