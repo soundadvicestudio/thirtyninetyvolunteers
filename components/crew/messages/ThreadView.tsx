@@ -3,7 +3,7 @@
 import { useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Paperclip } from 'lucide-react'
 import { markThreadRead, archiveThread } from '@/lib/actions/messages'
 import { formatCT } from '@/lib/utils/date'
 import ReplyComposer from './ReplyComposer'
@@ -127,6 +127,28 @@ export default function ThreadView({
                     [&_a]:text-brand-primary [&_a]:underline [&_hr]:my-3"
                   dangerouslySetInnerHTML={{ __html: reply.body }}
                 />
+
+                {/* Attachments — bodies sanitized at write time (MESSAGES.5 Task B) */}
+                {reply.attachments.length > 0 && (
+                  <ul className="mt-2 space-y-1 pt-2 border-t border-neutral-border dark:border-dark-border">
+                    {reply.attachments.map((att) => (
+                      <li key={att.id}>
+                        <a
+                          href={att.signed_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-brand-primary hover:underline"
+                        >
+                          <Paperclip size={12} />
+                          {att.file_name}
+                          <span className="text-mid-gray dark:text-dark-muted ml-1">
+                            ({Math.round(att.file_size / 1024)}KB)
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {/* Read receipt — only on the last reply, only if we sent it */}
                 {isLast && showReadReceipt && (

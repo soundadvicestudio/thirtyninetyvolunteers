@@ -1,6 +1,10 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { InboxThreadRow, ThreadDetail, AdminUserBasic } from '@/types/messages'
+import type { InboxThreadRow, ThreadDetail, AdminUserBasic, ThreadReplyAttachmentWithUrl } from '@/types/messages'
+// getAdminClient used below in getThreadData() for signed URL generation only.
+// Storage API requires service role key regardless of session context.
+// All DB operations continue to use the supabase parameter (authenticated client).
+import { getAdminClient } from '@/lib/supabase/admin'
 
 function stripHtmlForPreview(html: string): string {
   return html
@@ -228,6 +232,47 @@ export async function getThreadData(
     const otherPersonId = thread.creator_id === currentUserId ? thread.recipient_id : thread.creator_id
     const otherPersonName = userMap.get(otherPersonId) ?? 'Unknown'
 
+    // Fetch attachments for all replies and generate signed download URLs.
+    // getAdminClient() required — storage.objects has zero RLS policies.
+    const replyIds = (replies ?? []).map((r) => r.id)
+    let attachmentsByReplyId: Record<string, ThreadReplyAttachmentWithUrl[]> = {}
+
+    if (replyIds.length > 0) {
+      try {
+        const { data: attachmentRows } = await supabase
+          .from('thread_reply_attachments')
+          .select('id, reply_id, file_name, file_size, content_type, file_path')
+          .in('reply_id', replyIds)
+
+        if (attachmentRows && attachmentRows.length > 0) {
+          const adminClient = getAdminClient()
+          const withUrls = await Promise.all(
+            attachmentRows.map(async (att) => {
+              const { data: urlData } = await adminClient.storage
+                .from('media')
+                .createSignedUrl(att.file_path, 3600)
+              return {
+                id: att.id,
+                reply_id: att.reply_id,
+                file_name: att.file_name,
+                file_size: att.file_size,
+                content_type: att.content_type,
+                signed_url: urlData?.signedUrl ?? '',
+              }
+            })
+          )
+          // Group by reply_id
+          attachmentsByReplyId = withUrls.reduce<Record<string, ThreadReplyAttachmentWithUrl[]>>((acc, att) => {
+            if (!acc[att.reply_id]) acc[att.reply_id] = []
+            acc[att.reply_id].push(att)
+            return acc
+          }, {})
+        }
+      } catch {
+        // Attachment fetch failure is non-fatal — replies still display without attachments
+      }
+    }
+
     return {
       thread: {
         ...thread,
@@ -237,6 +282,7 @@ export async function getThreadData(
       replies: (replies ?? []).map((r) => ({
         ...r,
         sender_name: senderMap.get(r.sender_id) ?? 'Unknown',
+        attachments: attachmentsByReplyId[r.id] ?? [],
       })),
       my_last_read_at: myReadRecord?.last_read_at ?? null,
       other_last_read_at: otherReadRecord?.last_read_at ?? null,

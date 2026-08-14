@@ -8,7 +8,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { createNotification } from '@/lib/utils/notifications'
 import { sendDirectMessageEmail } from '@/lib/email'
-import type { AdminUserBasic } from '@/types/messages'
+import type { AdminUserBasic, AttachmentInput } from '@/types/messages'
 
 // Sanitize options for DM message bodies (admin-to-admin context)
 const DM_SANITIZE_OPTIONS: IOptions = {
@@ -25,7 +25,8 @@ const DM_SANITIZE_OPTIONS: IOptions = {
 export async function createThread(
   recipientId: string,
   subject: string,
-  body: string
+  body: string,
+  attachments?: AttachmentInput[]
 ): Promise<{ threadId: string } | { error: string }> {
   const admin = await getAdminUser()
   if (!admin) return { error: 'Unauthorized' }
@@ -65,6 +66,37 @@ export async function createThread(
       { onConflict: 'thread_id,user_id' }
     )
 
+  // Move confirmed attachments from temp storage to final path
+  // and insert into thread_reply_attachments.
+  // Per-attachment errors are swallowed — message is already sent.
+  if (attachments && attachments.length > 0) {
+    const adminClientForStorage = getAdminClient()
+    for (const att of attachments) {
+      try {
+        const { data: files } = await adminClientForStorage.storage
+          .from('media')
+          .list(`messages/temp/${att.tempKey}`)
+        const file = files?.[0]
+        if (!file) continue
+        const tempPath = `messages/temp/${att.tempKey}/${file.name}`
+        const finalPath = `messages/${reply.id}/${file.name}`
+        const { error: moveError } = await adminClientForStorage.storage
+          .from('media')
+          .move(tempPath, finalPath)
+        if (moveError) continue
+        await supabase.from('thread_reply_attachments').insert({
+          reply_id: reply.id,
+          file_path: finalPath,
+          file_name: att.fileName,
+          file_size: att.fileSize,
+          content_type: att.contentType,
+        })
+      } catch {
+        continue
+      }
+    }
+  }
+
   // Non-blocking notification + email — errors must never block thread creation.
   void (async () => {
     try {
@@ -96,7 +128,8 @@ export async function createThread(
 
 export async function createReply(
   threadId: string,
-  body: string
+  body: string,
+  attachments?: AttachmentInput[]
 ): Promise<{ replyId: string } | { error: string }> {
   const admin = await getAdminUser()
   if (!admin) return { error: 'Unauthorized' }
@@ -145,6 +178,37 @@ export async function createReply(
       { thread_id: threadId, user_id: admin.id, last_read_at: new Date().toISOString() },
       { onConflict: 'thread_id,user_id' }
     )
+
+  // Move confirmed attachments from temp storage to final path
+  // and insert into thread_reply_attachments.
+  // Per-attachment errors are swallowed — message is already sent.
+  if (attachments && attachments.length > 0) {
+    const adminClientForStorage = getAdminClient()
+    for (const att of attachments) {
+      try {
+        const { data: files } = await adminClientForStorage.storage
+          .from('media')
+          .list(`messages/temp/${att.tempKey}`)
+        const file = files?.[0]
+        if (!file) continue
+        const tempPath = `messages/temp/${att.tempKey}/${file.name}`
+        const finalPath = `messages/${reply.id}/${file.name}`
+        const { error: moveError } = await adminClientForStorage.storage
+          .from('media')
+          .move(tempPath, finalPath)
+        if (moveError) continue
+        await supabase.from('thread_reply_attachments').insert({
+          reply_id: reply.id,
+          file_path: finalPath,
+          file_name: att.fileName,
+          file_size: att.fileSize,
+          content_type: att.contentType,
+        })
+      } catch {
+        continue
+      }
+    }
+  }
 
   // Non-blocking notification + email — errors must never block reply creation.
   void (async () => {

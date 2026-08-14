@@ -59,6 +59,7 @@ export type ThreadReplyWithDetails = {
   sender_name: string
   body: string
   created_at: string
+  attachments: ThreadReplyAttachmentWithUrl[]
 }
 
 // Full thread detail for thread view page
@@ -76,4 +77,22 @@ export type ThreadDetail = {
 export type AdminUserBasic = {
   id: string
   name: string
+}
+
+// Attachment metadata passed from client to server actions
+export type AttachmentInput = {
+  tempKey: string
+  fileName: string   // original user-facing filename
+  fileSize: number   // bytes
+  contentType: string
+}
+
+// Attachment with generated signed URL for display in ThreadView
+export type ThreadReplyAttachmentWithUrl = {
+  id: string
+  reply_id: string
+  file_name: string
+  file_size: number
+  content_type: string
+  signed_url: string
 }

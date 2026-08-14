@@ -54,7 +54,7 @@ export default async function ComposePage({
       </div>
 
       <div className="bg-white dark:bg-dark-surface rounded-lg border border-neutral-border overflow-hidden p-6">
-        <ComposeForm currentAdminId={admin.id} initialRecipient={initialRecipient} />
+        <ComposeForm initialRecipient={initialRecipient} />
       </div>
     </div>
   )
