@@ -8,7 +8,7 @@ export type FeatureFlags = {
   auditions: boolean
   inventory: boolean
   forums: boolean
-  messages?: boolean
+  messages: boolean
 }
 
 /**
@@ -26,7 +26,7 @@ export async function getFeatureFlags(
   const { data } = await supabase
     .from('app_settings')
     .select('key, value')
-    .in('key', ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory', 'feature_forums'])
+    .in('key', ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory', 'feature_forums', 'feature_messages'])
 
   const map = Object.fromEntries(
     (data ?? []).map((r: { key: string; value: string }) => [r.key, r.value])
@@ -40,5 +40,6 @@ export async function getFeatureFlags(
     auditions: map['feature_auditions'] !== 'false',
     inventory: map['feature_inventory'] !== 'false',
     forums: map['feature_forums'] !== 'false',
+    messages: map['feature_messages'] !== 'false',
   }
 }

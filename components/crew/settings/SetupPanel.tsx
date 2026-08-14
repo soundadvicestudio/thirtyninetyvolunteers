@@ -34,6 +34,7 @@ export type SetupPanelInitialValues = {
   feature_auditions: string
   feature_inventory: string
   feature_forums: string
+  feature_messages: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -332,6 +333,9 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [auditionsEnabled, setAuditionsEnabled] = useState(initialValues.feature_auditions === 'true')
   const [inventoryEnabled, setInventoryEnabled] = useState(initialValues.feature_inventory === 'true')
   const [forumsEnabled, setForumsEnabled] = useState(initialValues.feature_forums === 'true')
+  const [messagesEnabled, setMessagesEnabled] = useState(
+    initialValues.feature_messages === 'true'
+  )
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -345,6 +349,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_auditions', auditionsEnabled ? 'true' : 'false')
     fd.append('feature_inventory', inventoryEnabled ? 'true' : 'false')
     fd.append('feature_forums', forumsEnabled ? 'true' : 'false')
+    fd.append('feature_messages', messagesEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -406,6 +411,14 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         description="Enables the internal discussion forums. When off, /crew/forums is inaccessible."
         enabled={forumsEnabled}
         onToggle={() => setForumsEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Private Messaging"
+        description="Enables the internal private messaging system between
+          crew members. When off, /crew/messages and /crew/users are
+          inaccessible."
+        enabled={messagesEnabled}
+        onToggle={() => setMessagesEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button

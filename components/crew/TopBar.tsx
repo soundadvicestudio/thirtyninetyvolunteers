@@ -7,6 +7,7 @@ import type { AdminUser } from '@/lib/auth'
 import type { NotificationCounts, NotificationRow } from '@/types/notifications'
 import { useMobileSidebar } from './MobileSidebarContext'
 import NotificationPanel from '@/components/crew/NotificationPanel'
+import MessagesIcon from '@/components/crew/MessagesIcon'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
   super_admin: 'Super Admin',
@@ -29,11 +30,13 @@ export default function TopBar({
   title = 'Production Crew',
   notificationCounts,
   initialNotifications,
+  messagesEnabled,
 }: {
   admin: AdminUser
   title?: string
   notificationCounts: NotificationCounts
   initialNotifications: NotificationRow[]
+  messagesEnabled?: boolean
 }) {
   const { toggle } = useMobileSidebar()
 
@@ -52,6 +55,9 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        {messagesEnabled && (
+          <MessagesIcon unreadCount={notificationCounts.messageUnread} />
+        )}
         <NotificationPanel notificationCounts={notificationCounts} initialNotifications={initialNotifications} />
         <span className="hidden sm:inline text-sm text-dark dark:text-dark-text">{admin.name}</span>
         <span

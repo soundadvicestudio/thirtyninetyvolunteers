@@ -65,12 +65,19 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
       <ThemeProvider>
         <MobileSidebarProvider>
           <div className="flex h-screen">
-            <Sidebar admin={admin} flags={flags} org={org} forumUnreadCount={notificationCounts.forumUnread} />
+            <Sidebar
+              admin={admin}
+              flags={flags}
+              org={org}
+              forumUnreadCount={notificationCounts.forumUnread}
+              messagesUnreadCount={notificationCounts.messageUnread}
+            />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar
                 admin={admin}
                 notificationCounts={notificationCounts}
                 initialNotifications={initialNotifications}
+                messagesEnabled={flags.messages}
               />
               <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6">{children}</main>
             </div>

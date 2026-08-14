@@ -51,7 +51,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/auditions/') ||
     pathname.startsWith('/audition-checkin/') ||
     pathname.startsWith('/crew/inventory') ||
-    pathname.startsWith('/crew/forums')
+    pathname.startsWith('/crew/forums') ||
+    pathname.startsWith('/crew/messages') ||
+    pathname.startsWith('/crew/users')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -196,6 +198,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
   if (pathname.startsWith('/crew/forums') && flags && !flags.forums) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+
+  if (pathname.startsWith('/crew/messages') && flags && !flags.messages) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+
+  if (pathname.startsWith('/crew/users') && flags && !flags.messages) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
 

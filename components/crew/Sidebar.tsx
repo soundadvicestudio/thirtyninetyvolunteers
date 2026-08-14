@@ -11,7 +11,9 @@ import {
   Mic2,
   Package,
   MessageSquare,
+  Inbox,
   Users,
+  UserSearch,
   Theater,
   Briefcase,
   FileText,
@@ -36,7 +38,9 @@ const NAV_ITEMS = [
   { label: 'Auditions', href: '/crew/auditions', icon: Mic2 },
   { label: 'Inventory', href: '/crew/inventory', icon: Package },
   { label: 'Forums', href: '/crew/forums', icon: MessageSquare },
+  { label: 'Messages', href: '/crew/messages', icon: Inbox },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
+  { label: 'Directory', href: '/crew/users', icon: UserSearch },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
   { label: 'Forms', href: '/crew/forms', icon: FileText },
@@ -57,11 +61,13 @@ export default function Sidebar({
   flags,
   org,
   forumUnreadCount = 0,
+  messagesUnreadCount = 0,
 }: {
   admin: AdminUser
   flags: FeatureFlags
   org: OrgIdentity
   forumUnreadCount?: number
+  messagesUnreadCount?: number
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
@@ -78,6 +84,8 @@ export default function Sidebar({
     '/crew/auditions': flags.auditions,
     '/crew/inventory': flags.inventory,
     '/crew/forums': flags.forums,
+    '/crew/messages': flags.messages,
+    '/crew/users': flags.messages,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -89,7 +97,9 @@ export default function Sidebar({
           item.href === '/crew/media' ||
           item.href === '/crew/rehearsals' ||
           item.href === '/crew/auditions' ||
-          item.href === '/crew/forums'
+          item.href === '/crew/forums' ||
+          item.href === '/crew/messages' ||
+          item.href === '/crew/users'
       )
     : flagFilteredNavItems
 
@@ -144,6 +154,11 @@ export default function Sidebar({
               {href === '/crew/forums' && forumUnreadCount > 0 && (
                 <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
                   {forumUnreadCount > 99 ? '99+' : forumUnreadCount}
+                </span>
+              )}
+              {href === '/crew/messages' && messagesUnreadCount > 0 && (
+                <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+                  {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
                 </span>
               )}
             </Link>
