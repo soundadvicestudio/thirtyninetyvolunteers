@@ -1,5 +1,7 @@
 'use server'
 
+import sanitizeHtml from 'sanitize-html'
+import type { IOptions } from 'sanitize-html'
 import { revalidatePath } from 'next/cache'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
@@ -7,6 +9,18 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { createNotification } from '@/lib/utils/notifications'
 import { sendDirectMessageEmail } from '@/lib/email'
 import type { AdminUserBasic } from '@/types/messages'
+
+// Sanitize options for DM message bodies (admin-to-admin context)
+const DM_SANITIZE_OPTIONS: IOptions = {
+  allowedTags: [
+    'p', 'strong', 'em', 'u',
+    'ul', 'ol', 'li', 'br',
+    'h1', 'h2', 'h3',
+    'blockquote', 'a', 'hr',
+  ],
+  allowedAttributes: { a: ['href', 'target', 'rel'] },
+  allowedSchemes: ['http', 'https', 'mailto'],
+}
 
 export async function createThread(
   recipientId: string,
@@ -33,9 +47,10 @@ export async function createThread(
     .single()
   if (threadError || !thread) return { error: threadError?.message ?? 'Failed to create thread' }
 
+  const sanitizedBody = sanitizeHtml(body, DM_SANITIZE_OPTIONS)
   const { data: reply, error: replyError } = await supabase
     .from('thread_replies')
-    .insert({ thread_id: thread.id, sender_id: admin.id, body })
+    .insert({ thread_id: thread.id, sender_id: admin.id, body: sanitizedBody })
     .select('id')
     .single()
   if (replyError || !reply) return { error: replyError?.message ?? 'Failed to create message' }
@@ -103,9 +118,10 @@ export async function createReply(
     .eq('id', otherParticipantId)
     .single()
 
+  const sanitizedBody = sanitizeHtml(body, DM_SANITIZE_OPTIONS)
   const { data: reply, error: replyError } = await supabase
     .from('thread_replies')
-    .insert({ thread_id: threadId, sender_id: admin.id, body })
+    .insert({ thread_id: threadId, sender_id: admin.id, body: sanitizedBody })
     .select('id')
     .single()
   if (replyError || !reply) return { error: replyError?.message ?? 'Failed to send reply' }
