@@ -1,6 +1,18 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.3
+## 30BN_PROCESS_v1.md — v5.4
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
+### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
+— §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
+default flag noted); §7 six new MESSAGES pattern notes (SetupPanel fd.append(),
+Sidebar prop double-location, EMPTY_COUNTS cascade, Style Sandbox text tokens,
+DM privacy + thread_reads asymmetry, sender mark-as-read); §10 R32 grep
+updated (feature_messages, 8 flags); §10 createNotification grep extended
+(lib/actions/messages.ts); §11 five new checklist items (R39, R40, EMPTY_COUNTS
+cascade, SetupPanel fd.append(), Sidebar double-location); §13 10 missing STYLE
+flat log entries inserted (STYLE.A–STYLE.8 + DOC.72 — gap from DOC.72/73 now
+resolved); §13 Phase MESSAGES in-progress block added (MESSAGES.A–4 ✓,
+MESSAGES.5–8 pending); §13 prompt log updated; §14 five new pattern notes;
+DOC.74 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -536,7 +548,14 @@ Sidebar conditionally renders links based on flags passed as props from the crew
 
 The typed return object prevents key-name typos and handles missing keys consistently. Missing keys default to `!== 'false'` (i.e., missing = enabled — never silently disables a feature).
 
-Active feature flags (seven — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`. `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_inventory` was added in Migration 034 (Phase INVENTORY — INVENTORY.1). `feature_forums` was added in Migration 035 (Phase FORUMS — FORUMS.1, commit dde841d, applied). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
+Active feature flags (eight — core features are not flagged): `feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`, `feature_messages` (added Migration 037 / Phase MESSAGES — MESSAGES.1). `feature_calendar` through `feature_blast` were present since SETUP.1. `feature_rehearsals` was added in Migration 031 (Phase 21). `feature_auditions` was added in Migration 032 (Phase AUDITIONS). `feature_inventory` was added in Migration 034 (Phase INVENTORY — INVENTORY.1). `feature_forums` was added in Migration 035 (Phase FORUMS — FORUMS.1, commit dde841d, applied). `feature_opportunities`, `feature_hours_milestones`, and `feature_documents` were deleted in Migration 026 — those are core features.
+
+Note: `feature_messages` is the first and only flag that defaults to `'false'`
+(disabled). All prior flags default to enabled (`''` or `'true'`). The
+`!== 'false'` evaluation logic means a missing key evaluates as enabled —
+an explicit `'false'` seed is required to disable at initialization. Private
+Messaging is opt-in; enabling it activates /crew/messages, /crew/users,
+MessagesIcon in TopBar, and Messages + Directory sidebar links.
 
 Any new prompt adding a feature-flagged route or component must import and call `getFeatureFlags()` — never a direct `app_settings` query for `feature_*` keys. See R34 in Brief §13 for the full flag-ready requirement.
 
@@ -1179,6 +1198,70 @@ The affected pattern in the mockup codebase:
 Rule: every Tailwind class used in a file must appear as a
 complete literal string in that file's source code.
 
+**`SetupPanel.tsx` uses `fd.append()` for feature flag toggles — not hidden inputs (confirmed MESSAGES.3 F1):**
+`SetupPanel.tsx` is a 'use client' component. The R13.3a rule ("no form elements in Client Components") means there is no `<form>` element and therefore no `<input type="hidden">` elements. Feature flag values are submitted by calling `fd.append('feature_[key]', enabled ? 'true' : 'false')` inside `handleSave()` for each toggle. Every new feature flag toggle added to Section 6 requires all four of these additions:
+1. State declaration: `const [xyzEnabled, setXyzEnabled] = useState(initialValues.feature_xyz === 'true')`
+2. `ToggleRow` JSX in Section 6
+3. `SetupPanelInitialValues` type widening: `feature_xyz: string`
+4. `fd.append('feature_xyz', xyzEnabled ? 'true' : 'false')` in `handleSave()`
+
+Missing the `fd.append()` call means the flag value is never sent to `saveFeatureFlags()`. The build compiles cleanly, TypeScript passes — the failure is silent at runtime only. Established MESSAGES.3 F1.
+
+**`Sidebar.tsx` prop interface requires both the type declaration AND the destructured default (confirmed MESSAGES.3 F3):**
+When adding a new prop to `Sidebar.tsx`, two locations require editing — not one:
+1. The TypeScript interface (prop type declaration, e.g. `messagesUnreadCount?: number`)
+2. The function's destructured parameter list with an explicit default value (e.g. `messagesUnreadCount = 0`)
+
+Pattern to follow exactly: `forumUnreadCount = 0` and `messagesUnreadCount = 0`. Adding the interface type without the destructured default causes TS2304 ("Cannot find name 'messagesUnreadCount'") anywhere the prop is referenced in JSX — the error surfaces in JSX, not at the interface definition, which can be confusing. The default value in the destructuring brings the prop into scope as a variable. Confirmed failure mode (MESSAGES.3 F3): TS2304 ×3 in badge JSX after interface-only addition.
+
+**`EMPTY_COUNTS` fallback literal cascades when `NotificationCounts` is expanded (confirmed MESSAGES.2 F1):**
+`lib/actions/notifications.ts` contains an `EMPTY_COUNTS` constant that must be structurally complete for the `NotificationCounts` type. When a new field is added to `NotificationCounts` in `types/notifications.ts`, TypeScript raises TS2741 (missing required property) on `EMPTY_COUNTS` because it no longer satisfies the type. This cascade is predictable — any prompt that expands `NotificationCounts` must include `EMPTY_COUNTS` as a planned modification. Check: `grep -n "EMPTY_COUNTS" lib/actions/notifications.ts` before planning any `NotificationCounts` expansion.
+
+**Style Sandbox text color tokens are not the live production token system (confirmed MESSAGES.4 F1):**
+The Style Sandbox mockup components (`components/crew/settings/StyleSandbox.tsx` and its 15 mockup files) use `text-gray-900 dark:text-white` and `text-gray-500 dark:text-gray-400` for heading and subtitle text. These are static Tailwind tokens and do NOT match the live production system. The live convention for crew admin pages (confirmed from Forums, Audit Log, Volunteers, and all other live crew pages) is:
+- Headings: `text-dark dark:text-dark-text`
+- Subtitles/descriptions: `text-mid-gray dark:text-dark-muted`
+
+When building production pages that reference the Style Sandbox as a design source, use container, hover, border, and layout classes from the mockups (these use confirmed live tokens like `border-neutral-border`, `hover:bg-neutral-surface dark:hover:bg-dark-nav`), but substitute live production text tokens for all text color classes. Never copy sandbox `text-gray-*` classes to production pages.
+
+Phase STYLE-ROLLOUT must explicitly reconcile sandbox text tokens against the live production token system before applying mockup classes globally. A naive sweep using sandbox classes directly would break dark mode text rendering on all production pages.
+
+**`getServerClient()` exclusively for all DM table operations — DM privacy model (established MESSAGES.2/MESSAGES.3):**
+All reads and writes on the four Phase MESSAGES tables (`message_threads`, `thread_replies`, `thread_reads`, `thread_reply_attachments`) must use `getServerClient()`. The entire privacy model for private messages depends on RLS enforcement — `getAdminClient()` bypasses RLS and would expose any user's DM threads to any authenticated caller regardless of role.
+
+Two `getAdminClient()` uses are intentional and confined exclusively to void IIFEs:
+- `createNotification()` calls — notification inserts require the service role because the notification is written for the OTHER participant (not auth.uid())
+- `sendDirectMessageEmail()` → `resolveEmailSettings()` uses `getAdminClient()` internally (established pattern for `app_settings` helpers — §14)
+
+`getAdminClient()` must NEVER appear in message table read paths or outside void IIFEs in `lib/actions/messages.ts`. Any such use is a privacy violation.
+
+Additional DM-specific patterns (established MESSAGES.1/MESSAGES.2):
+- `thread_reads` SELECT RLS policy allows BOTH participants to read each other's `last_read_at`. This is INTENTIONAL ASYMMETRY required for read receipts — each participant must see the other's read timestamp. Do NOT "fix" this to self-only scoping. The policy comment in Migration 037 explicitly documents this. See §13 for the policy text.
+- Sender mark-as-read: after inserting a reply row in `createThread()` or `createReply()`, upsert `thread_reads` for the sender immediately. This prevents the sender's own message from appearing in their unread count. The upsert must happen AFTER the reply insert so `last_read_at >= last_reply_at` is guaranteed.
+- `createReply()` clears the OTHER participant's `archived_at` column (not the sender's) when a new reply is sent — to resurface archived threads in their Inbox automatically.
+
+**`createNotification()` and `sendDirectMessageEmail()` as sibling void IIFE calls (established MESSAGES.2):**
+In `createThread()` and `createReply()`, both the notification and the email are called inside the same void IIFE — they are not separate IIFEs. The pattern:
+
+```typescript
+void (async () => {
+  try {
+    const adminSupabase = getAdminClient()
+    await createNotification(
+      recipientId,
+      'direct_message',
+      title,
+      href,
+      body,
+      adminSupabase
+    )
+    await sendDirectMessageEmail({ to, senderName, subject, threadId, ... })
+  } catch {}
+})()
+```
+
+Both share a single `getAdminClient()` instance created inside the IIFE. `createNotification()` receives it as a parameter (companion-module pattern from NOTIFY.2); `sendDirectMessageEmail()` calls `resolveEmailSettings()` internally which creates its own admin client. The try/catch wraps both — either failure is non-fatal. Established MESSAGES.2.
+
 ---
 
 ## 8. Build Report Format
@@ -1544,14 +1627,15 @@ ls middleware.ts 2>/dev/null && echo "middleware.ts STALE — should have been r
 
 ```bash
 # Confirm feature flags read through getFeatureFlags() (R32 / SETUP.1)
-# Active flags after Migration 035 (Phase FORUMS):
+# Active flags after Migration 037 (Phase MESSAGES):
 #   feature_calendar, feature_checkin, feature_blast,
 #   feature_rehearsals, feature_auditions,
-#   feature_inventory, feature_forums
-# All seven flags active. (feature_opportunities,
+#   feature_inventory, feature_forums,
+#   feature_messages (Migration 037 — Phase MESSAGES)
+# All eight flags active. (feature_opportunities,
 #  feature_hours_milestones, feature_documents
 #  deleted — core features)
-grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions\|feature_inventory\|feature_forums" \
+grep -rn "feature_calendar\|feature_checkin\|feature_blast\|feature_rehearsals\|feature_auditions\|feature_inventory\|feature_forums\|feature_messages" \
   app/ components/ lib/ \
   --include="*.ts" --include="*.tsx" \
   | grep -v "feature-flags.ts" \
@@ -1768,9 +1852,12 @@ grep -rl "'use server'" lib/actions/ app/ \
 grep -n "createNotification" \
   lib/actions/forum-posts.ts \
   lib/actions/auditions.ts \
-  lib/actions/calendar.ts
-# Must return results in all three files. Any file with
-# zero hits means a write point was not wired.
+  lib/actions/calendar.ts \
+  lib/actions/messages.ts
+# Must return results in all four files. Any file with zero hits means
+# a write point was not wired for that domain.
+# lib/actions/messages.ts added Phase MESSAGES — createThread() and
+# createReply() each call createNotification() inside a void IIFE.
 # lib/utils/notifications.ts defines the helper.
 # lib/actions/notifications.ts exports the server actions.
 ```
@@ -2386,6 +2473,43 @@ lib/actions/forum-posts.ts)
   isModeratableBy() in lib/actions/forum-moderation.ts,
   resolveCalendarRecipients() in lib/actions/calendar.ts.
   (NOTIFY.3)
+
+□ Any new migration SQL file: confirm policy names use unquoted snake_case with
+  a table prefix (e.g. `message_threads_select_participant`, not
+  `"select_participant_threads"`), `TO authenticated` is present on every policy,
+  and `WITH CHECK` mirrors `USING` on UPDATE policies. Always read the most recent
+  migration file before writing a new one — follow its exact naming convention.
+  (R39 — established MESSAGES.1)
+
+□ Any Server Action bound via `.bind(null, id)` and passed to `<form action>`:
+  if the action's return type is non-void (e.g. `Promise<{ error?: string }>`),
+  cast it `as unknown as (formData: FormData) => Promise<void>`. A single direct
+  cast produces TS2352 ("insufficient overlap") — route through `unknown` as
+  TypeScript itself recommends when overlap is insufficient. This is not a general
+  suppression; it is the only compliant path for non-void actions on `<form>`
+  elements. (R40 — confirmed MESSAGES.4 F2)
+
+□ Any expansion of `NotificationCounts` in `types/notifications.ts`: also update
+  the `EMPTY_COUNTS` fallback literal in `lib/actions/notifications.ts`. The
+  constant must be structurally complete for the type or TS2741 surfaces. This
+  cascade is predictable and must be pre-planned in the prompt that expands the
+  type. Check: `grep -n "EMPTY_COUNTS" lib/actions/notifications.ts`.
+  (MESSAGES.2 F1)
+
+□ Any new feature flag toggle added to `SetupPanel.tsx` Section 6: confirm four
+  changes are present — (1) `useState` state declaration, (2) `ToggleRow` JSX,
+  (3) `SetupPanelInitialValues` type widening (`feature_xyz: string`), AND
+  (4) `fd.append('feature_xyz', xyzEnabled ? 'true' : 'false')` in `handleSave()`.
+  There are no hidden inputs in `SetupPanel.tsx` — `fd.append()` is the only path
+  to `saveFeatureFlags()`. Missing it produces a silent runtime failure; the build
+  compiles cleanly. (MESSAGES.3 F1 — §7 pattern)
+
+□ Any new prop added to `Sidebar.tsx`: confirm BOTH the TypeScript interface type
+  AND the destructured parameter list (with an explicit default value) are updated.
+  Adding the interface without the destructuring default causes TS2304 in JSX.
+  Pattern: `forumUnreadCount = 0` / `messagesUnreadCount = 0`. Default value
+  belongs in the destructuring, not in the JSX body.
+  (MESSAGES.3 F3 — §7 pattern)
 ```
 
 ---
@@ -3748,6 +3872,71 @@ Phase NOTIFY — Notification System ✓ Complete
               NotificationPanel.tsx: three dynamic pluralization
               ternaries replace "(s)" literals. Commit 5e7656f.
 
+Phase MESSAGES — Private Messaging System (In Progress)
+  MESSAGES.A ✓ Read-only audit (13 tasks: proxy.ts, crew layout, TopBar,
+    Sidebar, lib/feature-flags.ts, SetupPanel.tsx, setup/page.tsx,
+    lib/actions/setup.ts, lib/email.ts, notifications CHECK constraint name
+    confirmed (`notifications_type_check`, 6 types), lib/data/notifications.ts,
+    lib/utils/notifications.ts, 4 context placement files (ThreadViewClient.tsx,
+    RehearsalDetailTabs.tsx, AuditionDetailTabs.tsx, UsersTable.tsx)). Key
+    findings: createNotification() param order = (adminUserId, type, title, href,
+    body, supabase) — body before supabase, both required positional; SetupPanel
+    uses fd.append() not hidden inputs (R13.3a); logEmailSent() uses volunteerId:
+    null for admin recipients (no schema change needed); thread_reads SELECT policy
+    intentionally asymmetric (both participants); stale openingprompt note absent
+    from Brief (already removed — Edit 0 not needed). No code. No commit.
+  MESSAGES.1 ✓ Migration 037: 4 new tables (message_threads, thread_replies,
+    thread_reads, thread_reply_attachments) with RLS on all four; direct_message
+    added to notifications_type_check (ALTER DROP/ADD CONSTRAINT, 6→7 values);
+    feature_messages seeded 'false'. Policy naming adapted from prompt draft to
+    live Migration 036 convention — unquoted snake_case + table prefix + TO
+    authenticated + WITH CHECK mirrors USING on UPDATE policies (now R39).
+    1 file. Commit 8a86d10.
+  MESSAGES.2 ✓ types/messages.ts (7 types). lib/data/messages.ts (import
+    'server-only', no 'use server', supabase as first param, all try/catch,
+    6 exported functions + stripHtmlForPreview() internal). lib/actions/messages.ts
+    ('use server', 5 exported async functions: createThread, createReply,
+    markThreadRead, archiveThread, searchUsers). sendDirectMessageEmail() appended
+    to lib/email.ts. Self-caught cascades: 'direct_message' added to NotificationType
+    union (required for createNotification() calls to compile — MESSAGES.2 self-
+    catch); messageUnread added to EMPTY_COUNTS literal in lib/actions/notifications.ts
+    (NotificationCounts cascade — now documented §7/§11); 'direct_message' case
+    added to exhaustive switch in NotificationPanel.tsx (Mail icon — TypeScript
+    exhaustiveness enforcement). 3 new files, 7 modified. Commit 72deeae.
+  MESSAGES.3 ✓ Feature flag 5-file pattern complete + proxy.ts + TopBar + Sidebar.
+    MessagesIcon.tsx (new — 'use client', Mail icon, unread badge, /crew/messages
+    link, conditional on flags.messages). lib/feature-flags.ts: messages: boolean
+    (8th flag). SetupPanel.tsx: type widening, messagesEnabled state, Private
+    Messaging ToggleRow, fd.append() call in handleSave() — NOT a hidden input
+    (R13.3a; confirmed §7 pattern). setup/page.tsx: 'feature_messages' in
+    SETUP_KEYS, fallback || 'false'. setup.ts: saveFeatureFlags() extended
+    (+2 revalidatePaths). proxy.ts: /crew/messages + /crew/users in needsFlagCheck
+    + 2 guard blocks (no matcher change — /crew/:path* already covers all
+    /crew/* routes). TopBar: messagesEnabled prop, MessagesIcon before
+    NotificationPanel. Sidebar: two three-part atomic edits (Messages: Inbox icon,
+    NAV_ITEMS, FLAG_GATED_HREFS, allowlist, badge; Directory: UserSearch icon,
+    NAV_ITEMS, FLAG_GATED_HREFS, allowlist); messagesUnreadCount?: number in
+    interface AND messagesUnreadCount = 0 in destructuring (F3 — now §7 pattern).
+    layout.tsx: messagesEnabled={flags.messages} on TopBar, messagesUnreadCount
+    on Sidebar. 1 new file, 8 modified. Commit 924f6e5.
+  MESSAGES.4 ✓ app/crew/(app)/users/page.tsx (new Server Component — auth +
+    flags.messages guard; getUsersForDirectory(); self-exclusion filter; initials
+    avatar; Message link per user). app/crew/(app)/messages/page.tsx (new Server
+    Component — three-tab URL-driven inbox via searchParams; activeTab validation;
+    three-way fetch; TABS const-asserted; unread dot always rendered bg-brand-
+    primary/bg-transparent; archive form sibling to Link inside <li>; archive
+    Thread.bind(null, id) per-thread; empty states all three tabs; formatCT 2 args).
+    Style Sandbox text tokens (text-gray-900/text-gray-500) are sandbox-only —
+    confirmed mismatch vs. live production system (text-dark/text-mid-gray); live
+    convention used in new pages (F1 — now §7 pattern). archiveThread.bind()
+    required as unknown as (formData: FormData) => Promise<void> double type
+    assertion (F2 — now R40). 2 new files. Commit 4dea6cf.
+Phase MESSAGES — In Progress (MESSAGES.5–8 pending)
+  MESSAGES.5 — /crew/messages/compose + /crew/messages/[threadId] thread view
+  MESSAGES.6 — File attachments (8th sanctioned XHR file, storage temp-key)
+  MESSAGES.7 — Context placements + logAction() audit diff fix + formatCT year fix
+  DOC.75 — Brief v5.7 + Process v5.4 post-completion update
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -4328,6 +4517,16 @@ Commit 02f4569.
 30BN-DOC.71 ✓ Brief v5.3 + Process v5.1 (FORUMS.5-FIX
 documented — §7 new pattern, §10 grep check, §11
 checklist item, §13 prompt log — this prompt).
+  30BN-STYLE.A    ✓ (see Phase STYLE above)
+  30BN-STYLE.1    ✓ (see Phase STYLE above)
+  30BN-STYLE.2    ✓ (see Phase STYLE above)
+  30BN-STYLE.3    ✓ (see Phase STYLE above)
+  30BN-STYLE.4    ✓ (see Phase STYLE above)
+  30BN-STYLE.5    ✓ (see Phase STYLE above)
+  30BN-STYLE.6    ✓ (see Phase STYLE above)
+  30BN-STYLE.7    ✓ (see Phase STYLE above)
+  30BN-STYLE.8    ✓ (see Phase STYLE above)
+  30BN-DOC.72     ✓ Brief v5.4 (see Phase STYLE above)
   30BN-NOTIFY.A   ✓ Read-only audit (7 targets). Findings above.
   30BN-NOTIFY.1   ✓ Migration 036 + sidebar/settings cleanup +
                     types/notifications.ts. Commits 26b2add +
@@ -4346,6 +4545,13 @@ checklist item, §13 prompt log — this prompt).
                     removed, unused type imports removed, dynamic
                     pluralization. Commit 5e7656f.
   30BN-DOC.73     ✓ Process v5.3 (this prompt)
+  30BN-MESSAGES.A ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.1 ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.2 ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.3 ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.4 ✓ (see Phase MESSAGES above)
+  30BN-DOC.74     ✓ Brief v5.6 + Process v5.4 (Phase MESSAGES.A–4
+                    documented — this prompt pair)
 ```
 
 ---
@@ -5053,6 +5259,153 @@ value would violate the `'use server'` constraint; exporting
 an async function would promote it to a public server action
 endpoint, which these helpers are not.
 
+### SetupPanel.tsx Feature Flag Toggle Pattern (confirmed MESSAGES.3 F1)
+
+`SetupPanel.tsx` has no `<form>` element (R13.3a — no form elements in Client
+Components). Feature flag values are submitted by calling
+`fd.append('feature_[key]', enabled ? 'true' : 'false')` in `handleSave()`.
+There are no hidden inputs.
+
+When adding a new feature flag toggle to Section 6, four changes are required:
+1. State declaration: `const [xyzEnabled, setXyzEnabled] = useState(initialValues.feature_xyz === 'true')`
+2. `ToggleRow` JSX in Section 6 (`label`, `description`, `enabled={xyzEnabled}`, `onToggle`)
+3. `SetupPanelInitialValues` type widening: add `feature_xyz: string` (type declared in `SetupPanel.tsx`, not in `setup/page.tsx`)
+4. `fd.append('feature_xyz', xyzEnabled ? 'true' : 'false')` in `handleSave()`
+
+The `fd.append()` call is the only path for the value to reach `saveFeatureFlags()`. Its absence produces a silent runtime failure — the value is never sent, the build compiles cleanly, TypeScript raises no error. Missing it is indistinguishable from success until the feature flag actually needs to be toggled in production.
+
+Note: `setup/page.tsx` also needs `'feature_xyz'` added to `SETUP_KEYS` and `feature_xyz: settingsMap.get('feature_xyz') || 'false'` to the `initialValues` object — but the `SetupPanelInitialValues` type itself lives inside `SetupPanel.tsx` and is imported by `setup/page.tsx`. The type widening happens in `SetupPanel.tsx`.
+
+### Sidebar.tsx Prop Addition — Both Interface and Destructuring (confirmed MESSAGES.3 F3)
+
+Adding a prop to `Sidebar.tsx` requires changes in two locations, not one:
+
+1. **TypeScript interface** (prop type declaration):
+```typescript
+interface SidebarProps {
+  // existing props
+  messagesUnreadCount?: number  ← ADD HERE
+}
+```
+
+2. **Destructured parameter list** (function signature):
+```typescript
+export default function Sidebar({
+  admin,
+  flags,
+  org,
+  forumUnreadCount = 0,
+  messagesUnreadCount = 0,  ← AND HERE with default
+}: SidebarProps) {
+```
+
+The default value in the destructuring brings the prop into scope as a variable. Without it, the prop is declared in the interface but never destructured — any JSX reference like `{messagesUnreadCount}` raises TS2304 ("Cannot find name 'messagesUnreadCount'"). The error surfaces in JSX, not at the interface definition.
+
+Pattern established: `forumUnreadCount = 0` (NOTIFY.2). Confirmed: `messagesUnreadCount = 0` (MESSAGES.3 F3). Apply this pattern to any future count or optional prop added to Sidebar.
+
+### `NotificationCounts` Expansion — `EMPTY_COUNTS` Cascade (confirmed MESSAGES.2 F1)
+
+`lib/actions/notifications.ts` contains an `EMPTY_COUNTS` constant — a fallback
+zero-value literal for the `NotificationCounts` type. Its structure must remain
+complete for the type at all times. When a new field is added to `NotificationCounts`
+in `types/notifications.ts`, TypeScript raises TS2741 (missing required property)
+on `EMPTY_COUNTS` because the constant no longer satisfies the type.
+
+This cascade is **predictable and pre-plannable**. Any prompt that expands
+`NotificationCounts` must include `EMPTY_COUNTS` as a required modification.
+Check current state: `grep -n "EMPTY_COUNTS" lib/actions/notifications.ts`.
+
+Confirmed fields added and their cascades:
+- `messageUnread: number` (MESSAGES.2) → `EMPTY_COUNTS` updated same prompt
+
+When writing the prompt plan for any `NotificationCounts` expansion, include
+the `EMPTY_COUNTS` update explicitly in the edit list — do not leave it for
+self-catching at TypeScript verification time (it will be caught, but it delays
+the build unnecessarily).
+
+### Style Sandbox Text Color Tokens vs. Live Production System (confirmed MESSAGES.4 F1)
+
+The Style Sandbox mockup files use Tailwind static tokens for text color:
+- Headings: `text-gray-900 dark:text-white`
+- Subtitles: `text-gray-500 dark:text-gray-400`
+
+These are **not** part of the live production token system. The live convention
+for crew admin pages (confirmed from Forums, Audit Log, Volunteers, Settings, and
+all active production crew pages):
+- Headings: `text-dark dark:text-dark-text`
+- Subtitles/descriptions: `text-mid-gray dark:text-dark-muted`
+
+When building production pages using the Style Sandbox as a design reference:
+- **Use from sandbox:** container classes, hover classes, border classes, layout patterns (these reference live tokens: `border-neutral-border`, `hover:bg-neutral-surface dark:hover:bg-dark-nav`, `bg-white dark:bg-dark-surface`, etc.)
+- **Do NOT use from sandbox:** `text-gray-*` classes for any heading or subtitle
+
+Replace sandbox text classes with live production convention before committing.
+
+**STYLE-ROLLOUT implication:** Phase STYLE-ROLLOUT cannot apply sandbox classes verbatim to production files. The rollout prompt must explicitly map sandbox text tokens → production text tokens as a reconciliation step before any global class replacement. Applying `text-gray-900` to production headings would break dark mode text on every admin page that is swept.
+
+### Private Messaging — DM Privacy Model and `getServerClient()` Exclusivity (established MESSAGES.2/MESSAGES.3)
+
+All read and write operations on the four Phase MESSAGES tables (`message_threads`,
+`thread_replies`, `thread_reads`, `thread_reply_attachments`) must use
+`getServerClient()`. The privacy model depends entirely on RLS enforcement —
+`getAdminClient()` bypasses RLS and would expose any user's DM threads to any
+authenticated caller regardless of role.
+
+**`getAdminClient()` is permitted only in these two confined uses within `lib/actions/messages.ts`:**
+
+1. Inside void IIFEs for `createNotification()` — notification inserts require
+   the service role because the notification is written for another user (not
+   `auth.uid()`):
+```typescript
+   void (async () => {
+     try {
+       const adminSupabase = getAdminClient()
+       await createNotification(recipientId, 'direct_message', ..., adminSupabase)
+       await sendDirectMessageEmail({ ... })
+     } catch {}
+   })()
+```
+
+2. `sendDirectMessageEmail()` → `resolveEmailSettings()` uses `getAdminClient()`
+   internally (established pattern for `app_settings` helpers — no change needed
+   at the call site).
+
+Any `getAdminClient()` call outside void IIFEs in message action files is a
+privacy violation. This constraint must be reviewed when adding any new message
+action or extending existing ones.
+
+**`thread_reads` SELECT policy intentional asymmetry (confirmed MESSAGES.1 — R2 verification):**
+The `thread_reads` table's SELECT RLS policy allows BOTH participants in a thread
+to read all read records for their shared thread:
+```sql
+CREATE POLICY message_threads_reads_select ON thread_reads
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM message_threads
+      WHERE id = thread_id
+        AND (creator_id = auth.uid() OR recipient_id = auth.uid())
+    )
+  );
+```
+This is NOT a mistake. It is required for read receipts: each participant must be
+able to read the other's `last_read_at` to compute and display "Read [time]" in
+the thread view. The policy comment in Migration 037 explicitly marks this as
+INTENTIONAL ASYMMETRY. Do not "fix" it to self-only scoping in any future sweep.
+
+**Additional DM behavioral patterns:**
+
+Sender mark-as-read (both `createThread()` and `createReply()`): after inserting
+the reply row, immediately upsert `thread_reads` for the sender with
+`last_read_at = new Date().toISOString()`. This prevents the sender's own message
+from appearing in their unread count. The upsert must happen AFTER the reply insert
+so `last_read_at >= last_reply_at` is guaranteed at the time of upsert.
+
+`createReply()` archive resurfacing: when a new reply is sent, clear the OTHER
+participant's `archived_at` column — not the sender's. This resurfaces archived
+threads in the other person's Inbox automatically. The correct field is
+`creator_id === admin.id ? 'recipient_archived_at' : 'creator_archived_at'`.
+Setting the wrong column silently archives the sender's own thread.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -5143,3 +5496,23 @@ DOC.73 added; §14 three new pattern notes (createNotification
 client-as-parameter, ephemeral/persistent distinction,
 private unexported helpers); document header bumped to v5.3;
 DOC.73 logged)*
+
+*v5.4 (August 2026 — DOC.74: Phase MESSAGES.A–4 documented — §2 header bumped
+to v5.4; §7 feature flag list updated (7→8, feature_messages added, first opt-
+in-default flag defaulting to 'false'); §7 six new MESSAGES pattern notes added:
+SetupPanel fd.append() for feature toggles (MESSAGES.3 F1), Sidebar prop double-
+location with destructuring default (MESSAGES.3 F3), EMPTY_COUNTS cascade on
+NotificationCounts expansion (MESSAGES.2 F1), Style Sandbox text tokens vs. live
+production system (MESSAGES.4 F1), DM privacy + getServerClient() exclusivity for
+message tables (MESSAGES.2/3), createNotification/sendDirectMessageEmail sibling
+void IIFE pattern (MESSAGES.2); §10 R32 grep updated (feature_messages added,
+7→8 flag count); §10 createNotification grep extended (lib/actions/messages.ts
+added as 4th file); §11 five new checklist items (R39 SQL policy naming,
+R40 .bind() type assertion, EMPTY_COUNTS cascade, SetupPanel fd.append(),
+Sidebar double-location); §13 10 missing STYLE flat log entries inserted before
+NOTIFY.A (STYLE.A–STYLE.8 + DOC.72 — gap from DOC.72/v5.2 now resolved);
+§13 Phase MESSAGES in-progress block added (MESSAGES.A–4 ✓, MESSAGES.5–8
+pending); §13 prompt log updated (MESSAGES.A–4 + DOC.74); §14 five new pattern
+notes (SetupPanel fd.append(), Sidebar double-location, EMPTY_COUNTS cascade,
+Style Sandbox text tokens, DM privacy model + thread_reads asymmetry + sender
+mark-as-read); DOC.74 logged)*
