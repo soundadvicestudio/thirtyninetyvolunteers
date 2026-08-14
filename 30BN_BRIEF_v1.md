@@ -1,6 +1,17 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.4
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.6
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
+### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
+current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
+Setup Panel Section 6 updated (7 → 8 toggles, feature_messages added, first opt-in-
+default flag); §8 Notification System updated (direct_message 7th type, MessagesIcon,
+messageUnread); §8 new Private Messaging section added (full forward spec + partial
+build summary MESSAGES.A–4); §9 4 new table schema blocks (message_threads,
+thread_replies, thread_reads, thread_reply_attachments); §9 notifications type CHECK
+updated (direct_message added); §9 Migration 037 status block added; §9
+feature_messages seed documented; §9 SETUP key counts updated (21 → 22); §11 Phase
+MESSAGES in-progress section added (MESSAGES.A–4 ✓, MESSAGES.5–8 pending); §11
+prompt log updated; §13 R39 + R40 added; DOC.74 logged)
 
 ---
 
@@ -20,7 +31,10 @@
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase NOTIFY complete (NOTIFY.A through NOTIFY.4-CLEANUP, commits 26b2add/c7e8000/6e363d3/80c7021/7ea1f19/5e7656f). Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase MESSAGES in progress (MESSAGES.A through
+MESSAGES.4 complete, commits 8a86d10/72deeae/924f6e5/4dea6cf). MESSAGES.5–8
+remaining. Phase 17 (Launch) follows Phase MESSAGES completion. Phase CAST
+planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -39,7 +53,9 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
-| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules), `/crew/auditions` (Audition Management — Phase AUDITIONS, feature_auditions flag; full read/write on assigned auditions and shows), and `/crew/forums` (Internal Forums — Phase FORUMS, feature_forums flag; access to forums they have been explicitly granted access to, same as all other non-SA/OA roles). Assignment is independent per resource: Production users are granted access to a show explicitly (via show editors assignment) OR to a standalone audition directly (via audition assignments). Both paths are independent. Show assignment grants access to all auditions linked to that show via show_id. Audition assignment grants access to that specific audition only. |
+| **Production** | New admin role (CAL.2). Directors and Stage Managers. No access to volunteer database or other Production Crew functions. Lands on `/crew/calendar` after login. Has access to `/crew/calendar`, `/crew/media` (Media Library — ADMIN.30), `/crew/help`, `/crew/rehearsals` (Rehearsal Management — Phase 21, feature_rehearsals flag; sees only assigned schedules), `/crew/auditions` (Audition Management — Phase AUDITIONS, feature_auditions flag; full read/write on assigned auditions and shows), and `/crew/forums` (Internal Forums — Phase FORUMS, feature_forums flag; access to forums they have been explicitly granted access to, same as all other non-SA/OA roles), and `/crew/messages` (Private Messaging — Phase MESSAGES, feature_messages flag;
+full send/receive access) and `/crew/users` (Crew Directory — Phase MESSAGES,
+feature_messages flag; browsable directory for composing messages to other users). Assignment is independent per resource: Production users are granted access to a show explicitly (via show editors assignment) OR to a standalone audition directly (via audition assignments). Both paths are independent. Show assignment grants access to all auditions linked to that show via show_id. Audition assignment grants access to that specific audition only. |
 | **Auditioner** | A person who signs up to audition for a show or production. Auditioners are NOT volunteers — they are a separate data entity stored in `audition_signups`, not in the `volunteers` table. Signing up to audition does not create a volunteer record. A "convert to volunteer" admin action (Phase AUDITIONS, status = Cast) can optionally create a linked volunteer record after casting. |
 | **Calendar Editor** | A boolean flag (`calendar_editor`) on Editor, Viewer, and Owner Admin accounts. When true: direct write access to calendar (events saved as approved). When false (default): submissions go to pending queue for Super Admin approval. |
 | **Inventory Manager** | A boolean flag (`inventory_manager`) on admin_users. When true on an Editor account: full write access to inventory (create/edit/deactivate items, manage categories/locations, create checkouts). SA and OA have full inventory write access always regardless of this flag. Viewer and Production roles have no inventory access at all. Toggle managed by SA/OA on the User Management page (same pattern as `calendar_editor`). Added Phase INVENTORY (Migration 034). |
@@ -1299,15 +1315,23 @@ constraint):
 - `forum_reply` — new post in a subscribed thread.
   Recipients: all subscribers in `forum_thread_subscriptions`
   (excluding the poster — same exclusion as the email send).
+- `direct_message` — sent to the recipient on new thread creation and on each
+  new reply (MESSAGES.1/MESSAGES.2)
 
 **NotificationPanel (TopBar):**
 `components/crew/NotificationPanel.tsx` — 'use client'.
 Rendered as the first child of the TopBar right-side div.
+— `MessagesIcon.tsx` ('use client') rendered before `NotificationPanel` in
+the TopBar right-side flex div. Conditional on `flags.messages`. Mail (`Mail`)
+icon from Lucide, unread count badge (capped at 99+), links to `/crew/messages`.
+`unreadCount` prop sourced from `notificationCounts.messageUnread` (MESSAGES.3).
 
 Bell badge: `totalEphemeral + unreadPersistent`. The forum
 unread count is intentionally excluded — it has its own
 badge on the sidebar Forums link. Badge capped at 99+ for
-display.
+display. `messageUnread: number` (unread DM thread
+count, derived from `getUnreadMessageCount()` in `lib/data/messages.ts`,
+included in `getNotificationCounts()` return when `flags.messages` is true)
 
 Dropdown (two sections):
 1. "Needs Action" — ephemeral items, role-filtered. Each
@@ -1411,6 +1435,154 @@ exception confirmed.
   unused type imports removed from layout.tsx; dynamic
   pluralization in NotificationPanel.tsx. npm run lint:
   0 errors, 0 warnings. Commit 5e7656f.
+
+**Private Messaging (`/crew/messages`, Phase MESSAGES — in progress):**
+Internal mail system for one-on-one private communication between all admin
+roles. Backend-only — no volunteer access. Gated behind `feature_messages`
+flag (R34 compliant, first opt-in-default flag — seeds as `'false'`).
+
+**Model:** Gmail-like subject-threaded mail system, NOT a chat system.
+`message_threads` holds metadata (subject, participants, archive timestamps).
+`thread_replies` holds all messages including the first. Multiple independent
+subject threads between the same two users are allowed — there is no unique
+pair constraint. Compose always creates a new thread. To change subjects, start
+a new thread. Replies nest under their thread; there is no nesting within replies.
+
+**All admin roles** (SA, OA, Editor, Viewer, Production) participate equally
+as both senders and receivers.
+
+**Inbox (`/crew/messages`):** Three URL-driven tabs (no client-side state):
+- **Inbox**: threads where the user is recipient, not archived
+- **Sent**: threads created by the user, not archived
+- **Archived**: threads where the user's archived timestamp IS NOT NULL
+
+Each thread row shows: subject, other person's name, last reply snippet
+(HTML stripped, 160 chars), timestamp (`formatCT(last_reply_at, 'MMM d')`),
+and an unread dot (always rendered — `bg-brand-primary` or `bg-transparent`
+— for stable layout). Archive button renders a `<form action={archiveWithId}>`
+sibling to the thread `<Link>` inside each `<li>` (never nested).
+"New Message" button at top right links to `/crew/messages/compose`.
+
+**Archive semantics (per-participant soft-delete):**
+`creator_archived_at` and `recipient_archived_at` nullable timestamps on
+`message_threads`. Archiving sets the caller's column to `now()`. A new
+reply via `createReply()` clears the other participant's archived timestamp —
+resurfacing the thread in their Inbox automatically. Archived threads are
+not deleted — they appear in the Archived tab.
+
+**Thread view (`/crew/messages/[threadId]`):**
+Flat chronological reply list. Each reply: sender name, timestamp, sanitized
+HTML body, attachment list (MESSAGES.7). TipTap rich text reply composer at
+bottom (`immediatelyRender: false`, `Editor | null`). Auto-refresh polling
+(`setInterval(() => router.refresh(), 15000)` — 15s interval, separate
+`useEffect` from mark-read). `markThreadRead()` fired on mount via
+`startTransition`, upserts `thread_reads`.
+
+**Read receipts:** "Read [time]" displayed below the most recent reply once
+the recipient has opened the thread after that reply was sent. Derived from
+`thread_reads.last_read_at` for the other participant. The `thread_reads`
+SELECT policy is **intentionally asymmetric** — both participants can read all
+read records for their shared thread (required for read receipts). This is a
+deliberate departure from the self-only scoping used on all other tables.
+Do NOT change it to self-only.
+
+**Compose (`/crew/messages/compose`):**
+Accepts optional `?to=[userId]` param (pre-fills and locks recipient).
+Subject input (varchar 150 — DB-level cap, first use of `varchar(n)` in
+schema vs. bare `text`). TipTap body. Calls `createThread()` on submit.
+Always creates a new thread — never redirects to an existing thread.
+
+**User Directory (`/crew/users`):**
+All active admin users except the current user (self-excluded at page level).
+Per-user row: initials avatar, name, "Message" link to
+`/crew/messages/compose?to=[userId]`. Accessible to all roles when
+`feature_messages` is on. Feature-flag-gated sidebar link ("Directory",
+`UserSearch` icon from Lucide, three-part atomic edit MESSAGES.3).
+
+**"Message" entry points (context placements — MESSAGES.8 pending):**
+All navigate to `/crew/messages/compose?to=[userId]`:
+- User Directory (`/crew/users`) — per-user row
+- SA/OA Users page (`/crew/settings/users`) — per-user row
+- Forum posts (`ThreadViewClient.tsx`) — next to post author
+- Rehearsal schedule (`RehearsalDetailTabs.tsx` RosterTab) — next to crew member
+- Audition assignments (`AuditionDetailTabs.tsx` Settings tab) — next to assigned editor
+- Show detail assigned editors (`ShowDetail.tsx`) — next to editor name
+
+All context placements guard: `feature_messages` must be on AND target user ID
+≠ current user ID (self-exclusion enforced at render level).
+
+**Notification integration:**
+- Bell badge (Track B): `direct_message` persistent notification type. Written
+  via `createNotification()` inside void IIFEs in `createThread()` (notifies
+  recipient) and `createReply()` (notifies other participant). Non-blocking,
+  never throws.
+- Email: `sendDirectMessageEmail()` in `lib/email.ts` — called alongside
+  `createNotification()` in the same void IIFE. Single recipient per call
+  (`resend.emails.send()` directly). `recipientType: 'transactional'`,
+  `recipients: [{ email: to, volunteerId: null }]` (R8 compliant — single
+  recipient send, not batch).
+
+**RLS and privacy:**
+All message table operations use `getServerClient()` exclusively — privacy
+guarantee is RLS-enforced. `getAdminClient()` is used ONLY inside void IIFEs
+for `createNotification()` (requires service role to write notifications for
+other users). Using `getAdminClient()` for message table reads would bypass
+RLS and break the privacy model.
+
+**Sender mark-as-read:** After inserting a reply (in both `createThread()` and
+`createReply()`), the sender's `thread_reads` record is upserted with
+`last_read_at = now()` — prevents the sender's own message from appearing in
+their unread count.
+
+**Prompt structure (9 prompts):**
+- MESSAGES.A ✓ — Read-only audit (13 tasks: proxy.ts, layout, Sidebar,
+  feature-flags.ts, SetupPanel.tsx, setup/page.tsx, setup.ts, lib/email.ts,
+  notifications CHECK constraint, notifications data files, context placement
+  files). No code.
+- MESSAGES.1 ✓ — Migration 037 (4 new tables, `direct_message` added to
+  notifications CHECK, `feature_messages` seeded 'false'). Commit 8a86d10.
+- MESSAGES.2 ✓ — Types, data layer, server actions, email function. 3 new files,
+  4 modified. `direct_message` added to NotificationType union (self-caught,
+  required for TypeScript). `messageUnread` added to NotificationCounts. Commit 72deeae.
+- MESSAGES.3 ✓ — Feature flag 5-file pattern, proxy.ts guards, MessagesIcon.tsx,
+  Sidebar (two three-part atomic edits: Messages + Directory), layout prop threading.
+  1 new file, 8 modified. Commit 924f6e5.
+- MESSAGES.4 ✓ — User Directory page (`/crew/users`) + Messages Inbox page
+  (`/crew/messages`, three-tab). 2 new Server Component pages. Commit 4dea6cf.
+- MESSAGES.5 — `/crew/messages/compose` + `/crew/messages/[threadId]` thread view
+  (TipTap reply composer, read receipts, auto-refresh polling)
+- MESSAGES.6 — File attachments (P-DC XHR, 8th sanctioned XHR file, storage
+  temp-key, thread_reply_attachments wiring)
+- MESSAGES.7 — Context placements (forum posts, rehearsal schedule, audition
+  assignments, show editors, SA/OA Users page). logAction() audit diff fix.
+  formatCT year disambiguation fix.
+- DOC.75 — Brief v5.7 + Process v5.4 (post-build update after all MESSAGES
+  prompts complete)
+
+**Key files (MESSAGES.1–4 — built):**
+- `types/messages.ts` — MessageThread, ThreadReply, ThreadReplyAttachment,
+  ThreadRead, InboxThreadRow, ThreadReplyWithDetails, ThreadDetail, AdminUserBasic
+- `lib/data/messages.ts` — data layer (no 'use server', import 'server-only';
+  supabase client as first param; all try/catch zero-value fallbacks):
+  `stripHtmlForPreview()` (internal), `getInboxThreads()`, `getSentThreads()`,
+  `getArchivedThreads()`, `getThreadData()`, `getUnreadMessageCount()`,
+  `getUsersForDirectory()`
+- `lib/actions/messages.ts` — ('use server', 5 async exports only):
+  `createThread()`, `createReply()`, `markThreadRead()`, `archiveThread()`,
+  `searchUsers()`
+- `components/crew/MessagesIcon.tsx` — 'use client'; Mail icon; badge (99+ cap);
+  links to /crew/messages; `unreadCount` prop
+- `app/crew/(app)/users/page.tsx` — Server Component; auth + flags.messages guard;
+  self-exclusion filter; initials avatar; "Message" link per user
+- `app/crew/(app)/messages/page.tsx` — Server Component; three-tab URL-driven
+  inbox; "New Message" button; unread dot always rendered; archive form sibling
+  to thread Link; empty states for all three tabs
+
+Note: `lib/email.ts` extended with `sendDirectMessageEmail()`;
+`types/notifications.ts` extended with `messageUnread: number` on
+`NotificationCounts` and `'direct_message'` on `NotificationType`;
+`lib/feature-flags.ts` now has 8 flags (messages: boolean as 8th);
+`lib/data/notifications.ts` now calls `getUnreadMessageCount()`.
 
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
@@ -1576,7 +1748,7 @@ Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 s
 
 Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 6 — Feature Flags: Seven toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, and `/crew/forums` alongside existing paths.
+Section 6 — Feature Flags: Eight toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, and `/crew/users` alongside existing paths.
 
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
@@ -1587,6 +1759,10 @@ Section 6 — Feature Flags: Seven toggles, one per flag, one Save button. Each 
 | Audition Management | `feature_auditions` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/auditions/*`, `/auditions/*`, `/audition-checkin/*`, all audition server action guards, Auditions sidebar link |
 | Inventory Management | `feature_inventory` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/inventory/*`, all inventory server action guards, Inventory sidebar link |
 | Internal Forums | `feature_forums` | `''` (enabled by default — `!== 'false'` evaluates truthy) | `/crew/forums/*`, all forum server action guards, Forums sidebar link |
+| Private Messaging | `feature_messages` | `'false'` (disabled by default — first
+and only flag that defaults to OFF; opt-in only) | `/crew/messages/*`, `/crew/users`,
+message server action guards in `lib/actions/messages.ts`, Messages + Directory
+sidebar links |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -2092,7 +2268,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 037 (none currently planned — all pre-launch migrations applied through 036). Migrations 033, 034, 035, and 036 are applied.
+**Next migration:** 038 (none currently planned). Migrations 033, 034, 035, 036, and 037 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -3596,8 +3772,20 @@ Value `''` evaluates as enabled (`!== 'false'`). Added to
 `lib/feature-flags.ts`. Setup Panel Section 6 has a seventh
 toggle row for this flag. `saveFeatureFlags()` revalidates
 `/crew/forums` alongside existing routes.
-Total active SETUP keys: 21. Setup Panel fetches 22 keys
-total (21 SETUP keys + default_reply_to).
+Total active SETUP keys: 22. Setup Panel fetches 23 keys
+total (22 SETUP keys + default_reply_to).
+
+**`feature_messages` key added in Migration 037 (Phase MESSAGES):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_messages', 'false') ON CONFLICT (key) DO NOTHING`.
+Value `'false'` evaluates as DISABLED (`=== 'false'`). This is the
+**first and only feature flag that defaults to OFF** — all prior flags
+default to enabled (`''` or `'true'`). Private Messaging is opt-in; enabling
+it activates the Messages + Directory sidebar links, proxy.ts guards, and
+TopBar MessagesIcon. Added to `FeatureFlags` type and `getFeatureFlags()`
+in `lib/feature-flags.ts`. Setup Panel Section 6 has an eighth toggle row
+for this flag. `saveFeatureFlags()` revalidates `/crew/messages` and
+`/crew/users` alongside existing routes.
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
@@ -3612,7 +3800,7 @@ admin_user_id uuid NOT NULL REFERENCES admin_users(id)
 type          text NOT NULL CHECK (type IN (
                 'audition_signup','audition_material',
                 'calendar_approved','calendar_changed',
-                'calendar_cancelled','forum_reply'))
+                'calendar_cancelled','forum_reply','direct_message'))
 title         text NOT NULL
 body          text
 href          text NOT NULL
@@ -3626,7 +3814,104 @@ created_at    timestamptz NOT NULL DEFAULT now()
 -- INDEX: idx_notifications_created_at on (created_at DESC)
 -- No hard delete — rows accumulate; read_at IS NULL = unread.
 -- INSERT via getAdminClient() in server actions (service role).
+-- 'direct_message' type added Migration 037 (ALTER ... DROP CONSTRAINT
+--   notifications_type_check / ADD CONSTRAINT with 7th value).
 -- Migration 036 (036_notifications.sql)
+```
+
+**Migration 037 status:** Applied — `037_private_messaging.sql` (commit 8a86d10).
+Four new tables for Phase MESSAGES private messaging system. `direct_message`
+added to `notifications_type_check`. `feature_messages` seeded `'false'` in
+`app_settings`.
+
+### message_threads
+```sql
+id                    uuid PRIMARY KEY DEFAULT gen_random_uuid()
+creator_id            uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE
+recipient_id          uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE
+subject               varchar(150) NOT NULL
+created_at            timestamptz NOT NULL DEFAULT now()
+last_reply_at         timestamptz NOT NULL DEFAULT now()
+creator_archived_at   timestamptz
+recipient_archived_at timestamptz
+-- INDEX: idx_message_threads_creator_id
+-- INDEX: idx_message_threads_recipient_id
+-- INDEX: idx_message_threads_last_reply_at (DESC — inbox sort order)
+-- RLS: SELECT for creator or recipient (creator_id = auth.uid() OR
+--   recipient_id = auth.uid()); INSERT with auth.uid() = creator_id;
+--   UPDATE for both participants (archive flags + last_reply_at)
+-- No UNIQUE constraint on participant pair — multiple independent threads
+--   between the same two users are explicitly allowed (one per subject).
+--   Compose always creates a new thread; no de-duplication logic.
+-- Column-level immutability (subject, creator_id, recipient_id) enforced
+--   at application layer, not RLS.
+-- Migration 037 (037_private_messaging.sql)
+```
+
+### thread_replies
+```sql
+id         uuid PRIMARY KEY DEFAULT gen_random_uuid()
+thread_id  uuid NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE
+sender_id  uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE
+body       text NOT NULL
+created_at timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_thread_replies_thread_id_created_at (composite — primary read
+--   pattern: all replies for a thread in chronological order)
+-- INDEX: idx_thread_replies_sender_id
+-- RLS: SELECT via EXISTS on message_threads participant check;
+--   INSERT: auth.uid() = sender_id AND participant EXISTS check
+--   (both conditions required — participant check prevents unauthorized
+--   reply injection by non-participants who know a thread_id);
+--   No UPDATE policy (replies immutable once sent);
+--   No DELETE policy (thread archive is the user removal path)
+-- All replies including the first message are stored here — message_threads
+--   holds metadata only.
+-- Migration 037 (037_private_messaging.sql)
+```
+
+### thread_reads
+```sql
+thread_id    uuid NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE
+user_id      uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE
+last_read_at timestamptz NOT NULL DEFAULT now()
+-- PRIMARY KEY: (thread_id, user_id)
+-- INDEX: idx_thread_reads_user_id — for unread count query (user_id-first
+--   lookup without a known thread_id; the composite PK cannot serve this
+--   efficiently since thread_id is the leading column)
+-- RLS SELECT: BOTH participants can read ALL read records for their shared
+--   thread. INTENTIONAL ASYMMETRY — do not change to self-only. Required
+--   for read receipts: each participant must see the other's last_read_at
+--   to display "Read [time]" in the thread view.
+-- RLS INSERT / UPDATE: self-scoped (user_id = auth.uid()). Both policies
+--   required because markThreadRead() uses upsert (INSERT ... ON CONFLICT
+--   DO UPDATE) — Supabase evaluates both paths.
+-- Migration 037 (037_private_messaging.sql)
+```
+
+### thread_reply_attachments
+```sql
+id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
+reply_id     uuid NOT NULL REFERENCES thread_replies(id) ON DELETE CASCADE
+file_path    text NOT NULL
+file_name    text NOT NULL
+file_size    integer NOT NULL
+content_type text NOT NULL
+created_at   timestamptz NOT NULL DEFAULT now()
+-- INDEX: idx_thread_reply_attachments_reply_id
+-- RLS SELECT: two-level EXISTS subquery —
+--   EXISTS (SELECT 1 FROM thread_replies tr
+--     JOIN message_threads mt ON mt.id = tr.thread_id
+--     WHERE tr.id = reply_id
+--     AND (mt.creator_id = auth.uid() OR mt.recipient_id = auth.uid()))
+-- RLS INSERT: reply sender only —
+--   EXISTS (SELECT 1 FROM thread_replies
+--     WHERE id = reply_id AND sender_id = auth.uid())
+-- Storage path (MESSAGES.6): messages/[replyId]/[uuid].[ext] in media bucket.
+--   Temp path: messages/temp/[tempKey]/[uuid].[ext] → moved at reply creation
+--   via adminClient.storage.from('media').move(). Storage calls use
+--   getAdminClient() — storage.objects has no RLS (established dual-client
+--   pattern from INVENTORY.3/FORUMS.4).
+-- Migration 037 (037_private_messaging.sql)
 ```
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
@@ -4676,7 +4961,8 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase 17 (Launch) is next.*
+*Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES in
+progress (MESSAGES.A–4 complete, MESSAGES.5–8 pending). Phase 17 (Launch) follows.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -5627,6 +5913,19 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
                removed, unused type imports removed, dynamic
                pluralization. Commit 5e7656f.
   30BN-DOC.73  ✓ Brief v5.5 (this prompt)
+  30BN-MESSAGES.A ✓ Read-only audit (13 tasks). Key findings
+               above. No code.
+  30BN-MESSAGES.1 ✓ Migration 037 (4 new tables, direct_message
+               added to notifications CHECK, feature_messages
+               seeded 'false'). Commit 8a86d10.
+  30BN-MESSAGES.2 ✓ Types, data layer, server actions, email
+               function. Commit 72deeae.
+  30BN-MESSAGES.3 ✓ Feature flag 5-file pattern + proxy.ts +
+               MessagesIcon.tsx + Sidebar two three-part atomic
+               edits. Commit 924f6e5.
+  30BN-MESSAGES.4 ✓ User Directory page + Messages Inbox page
+               (three-tab). Commit 4dea6cf.
+  30BN-DOC.74  ✓ Brief v5.6 (this prompt)
 
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
@@ -5850,6 +6149,107 @@ return types). `NotificationPanel.tsx`: three "(s)" string
 literals replaced with dynamic pluralization ternaries. npm
 run lint: empty output — clean baseline. tsc --noEmit: 0
 errors. Commit 5e7656f.
+
+### Phase MESSAGES — Private Messaging System (In Progress)
+
+**Architecture (confirmed via MESSAGES.A audit + build):**
+- All admin roles participate. Backend-only — no volunteer access.
+- Gmail-like model: `message_threads` (subject + metadata) + flat
+  chronological `thread_replies`. Multiple independent threads between
+  the same two users are allowed — no unique pair constraint.
+- `message_threads.creator_archived_at` / `recipient_archived_at` nullable
+  timestamps — per-participant soft-delete. New reply clears the other
+  participant's archived timestamp, resurfacing the thread in their Inbox.
+- `thread_reads` SELECT policy is intentionally asymmetric (both participants
+  can read each other's `last_read_at` — required for read receipts). Note this
+  asymmetry pattern (already documented in §8) — do not duplicate an R-rule for it.
+- `getServerClient()` only for all message table operations. `getAdminClient()`
+  only inside void IIFEs for `createNotification()`.
+- `feature_messages` flag: first opt-in-default flag (seeds as `'false'`).
+- Policy naming: unquoted snake_case with table prefix, `TO authenticated`,
+  `WITH CHECK` mirrors `USING` on UPDATE (confirmed MESSAGES.1, now R39).
+
+**MESSAGES.A ✓** Read-only audit. 13 tasks covering proxy.ts, crew layout,
+TopBar, Sidebar, lib/feature-flags.ts, SetupPanel.tsx, setup/page.tsx,
+lib/actions/setup.ts, lib/email.ts, notifications CHECK constraint
+(`notifications_type_check`, 6 types confirmed), lib/data/notifications.ts,
+lib/utils/notifications.ts, and all 4 context placement files. Key findings:
+`createNotification()` param order confirmed as (adminUserId, type, title, href,
+body, supabase) — body before supabase, both required positional; SetupPanel.tsx
+uses `fd.append()` not hidden inputs (R13.3a pattern); logEmailSent() has no
+admin_user_id concept (volunteerId: null workaround confirmed safe);
+`thread_reads` SELECT policy designed asymmetric for read receipts; no
+openingprompt file found at repo root (already removed — Brief stale note
+cleared). No code. Commit none (audit only).
+
+**MESSAGES.1 ✓** Migration 037 written and applied:
+4 new tables (`message_threads`, `thread_replies`, `thread_reads`,
+`thread_reply_attachments`) with RLS on all four; `direct_message` added to
+`notifications_type_check` (ALTER DROP + ADD CONSTRAINT, 6 → 7 values);
+`feature_messages` seeded `'false'`. Policy names follow Migration 036
+convention (unquoted snake_case + table prefix + `TO authenticated` +
+`WITH CHECK` on UPDATE policies). 5 verification queries all passed.
+1 file. Commit 8a86d10.
+
+**MESSAGES.2 ✓** Backend layer built. `types/messages.ts` (7 types).
+`lib/data/messages.ts` (import 'server-only', no 'use server', supabase client
+as first param, all try/catch, 6 exported functions + `stripHtmlForPreview()`
+internal). `lib/actions/messages.ts` ('use server', 5 exported async functions:
+`createThread()`, `createReply()`, `markThreadRead()`, `archiveThread()`,
+`searchUsers()`). `sendDirectMessageEmail()` added to `lib/email.ts` as final
+function. Self-caught additions: `'direct_message'` added to NotificationType
+union (required for TypeScript — createNotification() calls in createThread/Reply
+would not compile otherwise); `messageUnread` added to `EMPTY_COUNTS` fallback
+literal in `lib/actions/notifications.ts` (NotificationCounts field cascade);
+`'direct_message'` case added to exhaustive switch in
+`NotificationPanel.tsx` (Mail icon — non-behavioral TypeScript fix). 3 new
+files, 7 modified (including 2 cascade fixes outside planned scope).
+Commit 72deeae.
+
+**MESSAGES.3 ✓** Feature flag 5-file pattern complete + proxy.ts + TopBar
++ Sidebar. `components/crew/MessagesIcon.tsx` (new — 'use client', Mail icon,
+badge, link to /crew/messages). `lib/feature-flags.ts`: messages: boolean
+(required, 8th flag). `SetupPanel.tsx`: feature_messages type widening,
+messagesEnabled state, Private Messaging ToggleRow in Section 6, `fd.append()`
+call in handleSave(). `setup/page.tsx`: 'feature_messages' in SETUP_KEYS,
+fallback `|| 'false'`. `lib/actions/setup.ts` saveFeatureFlags(): messages
+extraction, validation, keys array, upsert row, two new revalidatePaths.
+`proxy.ts`: /crew/messages + /crew/users added to needsFlagCheck, two new
+guard blocks (no matcher change — /crew/:path* already covers all /crew/*).
+`TopBar.tsx`: messagesEnabled?: boolean prop, MessagesIcon renders before
+NotificationPanel when messagesEnabled. `Sidebar.tsx`: two three-part atomic
+edits (Messages: Inbox icon, NAV_ITEMS, FLAG_GATED_HREFS, allowlist, badge;
+Directory: UserSearch icon, NAV_ITEMS, FLAG_GATED_HREFS, allowlist);
+messagesUnreadCount?: number prop + destructured default = 0. `layout.tsx`:
+messagesEnabled={flags.messages} on TopBar, messagesUnreadCount={notificationCounts.messageUnread}
+on Sidebar. Self-caught: Sidebar destructuring default = 0 required alongside
+prop type (TS2304 ×3). F1: SetupPanel uses fd.append() not hidden inputs (adapted
+correctly). F2: Production allowlist trailing-|| style followed. 1 new file,
+8 modified. Commit 924f6e5.
+
+**MESSAGES.4 ✓** User Directory page + Messages Inbox page.
+`app/crew/(app)/users/page.tsx` (Server Component; auth + flags.messages guard;
+self-exclusion filter; getUsersForDirectory(); initials avatar; "Message" link
+to /crew/messages/compose?to=[id]; Option A heading zone). `app/crew/(app)/messages/page.tsx`
+(Server Component; three-tab URL-driven inbox via searchParams; activeTab
+validation; three-way fetch; TABS array const-asserted; unread dot always
+rendered bg-brand-primary/bg-transparent; Thread Link and archive form siblings;
+archiveThread.bind(null, thread.id) per thread; empty states all three tabs;
+formatCT 2 args). F1: Style Sandbox text colors (text-gray-900/text-gray-400)
+are sandbox-only; live convention (text-dark/text-mid-gray) used instead for
+production pages. F2: archiveThread.bind() required `as unknown as (formData:
+FormData) => Promise<void>` (now R40 — route through unknown for non-void Server
+Actions on form actions). 2 new files, 0 modified. Commit 4dea6cf.
+
+**Pending prompts (MESSAGES.5–8):**
+- MESSAGES.5 — `/crew/messages/compose` + `/crew/messages/[threadId]` thread view
+  (TipTap reply composer, read receipts, auto-refresh polling, markThreadRead on mount)
+- MESSAGES.6 — File attachments (8th sanctioned XHR file `DirectMessageComposer.tsx`,
+  storage temp-key pattern, thread_reply_attachments wiring, signed URL generation)
+- MESSAGES.7 — Context placements (forum posts, rehearsal schedule, audition assignments,
+  show editors list, SA/OA Users page) + logAction() audit diff fix for feature_messages
+  + formatCT year disambiguation fix on thread list
+- DOC.75 — Brief v5.7 + Process v5.4 (post-MESSAGES completion)
 
 ### Phase 17 — Launch
 
@@ -6365,6 +6765,25 @@ The audition email template system uses a custom TipTap extension to render merg
 - **Never use regex in email HTML:** The substitution utility uses `String.prototype.replaceAll()` on known merge tag strings — not a general regex against the full HTML string. Escaping is applied to substituted values via `escapeHtml()` per the existing email escaping rule. Merge tag names themselves are system-controlled (not user-supplied) and do not need escaping.
 - **Established AUDITIONS.4a.** Apply this pattern to any future template system that needs inline merge tags in a TipTap editor context.
 
+### R39 — SQL Policy Naming Convention
+Migration policy names use **unquoted snake_case with table prefix** (e.g.
+`message_threads_select_participant`, not `"select_participant_threads"`).
+`TO authenticated` on every policy. `WITH CHECK` mirrors `USING` on UPDATE
+policies. When a prompt specifies a different naming style, the live file's
+convention (read in Task A of the migration prompt) takes precedence — confirmed
+MESSAGES.1 deviation from prompt draft. Always read the nearest prior migration
+before writing a new one.
+
+### R40 — Server Action .bind() Type Assertion for Form Actions
+Server Actions bound via `.bind(null, id)` and passed to `<form action>`
+require `as unknown as (formData: FormData) => Promise<void>` when the
+action's return type is non-void. A single direct cast produces TS2352
+("insufficient overlap") — route through `unknown` as TypeScript itself
+recommends. This is not a general `@ts-ignore` suppression. It is the only
+compliant path when: (a) the action returns a value type (e.g. `{ error?: string }`),
+(b) the action is bound with `.bind()`, and (c) the result is passed to a form
+action prop. Established MESSAGES.4 F2.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -6487,3 +6906,22 @@ NOTIFY.4-CLEANUP all ✓ with commits and key findings);
 §11 prompt log: NOTIFY.A–NOTIFY.4-CLEANUP + DOC.73 added;
 §13 TOOLTIP_ANCHOR_MAP removal note (if applicable);
 DOC.73 logged)*
+
+*v5.6 (August 2026 — DOC.74: Phase MESSAGES.A–4 documented — §1 current
+phase updated (Phase MESSAGES in progress, MESSAGES.A–4 complete); §2
+Production role updated (/crew/messages + /crew/users added); §8 Setup Panel
+Section 6 updated (7 → 8 toggles, feature_messages added as first opt-in-
+default flag defaulting to 'false'); §8 Notification System updated
+(direct_message as 7th type, MessagesIcon documented, messageUnread in
+NotificationCounts); §8 new Private Messaging section added (full architecture,
+archive semantics, thread_reads asymmetric RLS note, prompt structure
+MESSAGES.A–4 ✓ / MESSAGES.5–8 pending, key files); §9 4 new table schema
+blocks (message_threads, thread_replies, thread_reads,
+thread_reply_attachments); §9 notifications type CHECK updated
+(direct_message added); §9 Migration 037 status block added (commit 8a86d10);
+§9 next migration pointer updated (037 → 038); §9 feature_messages seed
+paragraph added; §9 SETUP key counts updated (21 → 22, 22 → 23 total);
+§11 Phase MESSAGES in-progress section added (MESSAGES.A–4 build summaries,
+MESSAGES.5–8 pending listed); §11 header updated; §11 prompt log updated
+(MESSAGES.A–4 + DOC.74); §13 R39 (SQL policy naming) + R40 (Server Action
+.bind() assertion) added; DOC.74 logged)*
