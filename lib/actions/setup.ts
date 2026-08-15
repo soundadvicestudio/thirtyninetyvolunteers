@@ -373,6 +373,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_auditions: previousMap.get('feature_auditions') ?? '',
       feature_inventory: previousMap.get('feature_inventory') ?? '',
       feature_forums: previousMap.get('feature_forums') ?? '',
+      feature_messages: previousMap.get('feature_messages') ?? '',
     },
     {
       feature_calendar: calendar,
@@ -382,6 +383,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_auditions: auditions,
       feature_inventory: inventory,
       feature_forums: forums,
+      feature_messages: messages,
     }
   )
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import CreateUserModal from '@/components/crew/settings/CreateUserModal'
 import UsersTable from '@/components/crew/settings/UsersTable'
 import PendingRegistrations from '@/components/crew/settings/PendingRegistrations'
@@ -25,6 +26,7 @@ export default async function UsersPage({
   const registrationDeclined = notice === 'registration_declined'
 
   const supabase = await getServerClient()
+  const flags = await getFeatureFlags(supabase)
   const { data: users } = await supabase
     .from('admin_users')
     .select('id, name, email, role, is_active, calendar_editor, inventory_manager, last_login, created_at')
@@ -71,7 +73,7 @@ export default async function UsersPage({
 
       <PendingRegistrations registrations={pendingRegistrations ?? []} callerRole={admin.role} />
 
-      <UsersTable users={users ?? []} currentAdminId={admin.id} />
+      <UsersTable users={users ?? []} currentAdminId={admin.id} messagesEnabled={flags.messages} />
     </div>
   )
 }

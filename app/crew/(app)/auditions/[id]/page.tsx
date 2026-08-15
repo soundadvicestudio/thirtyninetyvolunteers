@@ -44,6 +44,7 @@ export default async function AuditionDetailPage({ params }: { params: Promise<{
         adminId={admin.id}
         checkInQrSvg={checkInQrSvg}
         checkInQrPng={checkInQrPng}
+        messagesEnabled={flags.messages}
       />
     </div>
   )

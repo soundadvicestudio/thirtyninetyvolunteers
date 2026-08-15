@@ -23,7 +23,6 @@ export async function GET(request: Request) {
   // Extract params
   const url = new URL(request.url)
   const fileName = url.searchParams.get('fileName') ?? 'file'
-  const contentType = url.searchParams.get('contentType') ?? 'application/octet-stream'
   const fileSizeParam = url.searchParams.get('fileSize')
   const fileSize = fileSizeParam ? parseInt(fileSizeParam, 10) : 0
 

@@ -3,7 +3,7 @@
 import { useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Mail } from 'lucide-react'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { markAttendance, bulkMarkAttendance } from '@/lib/actions/attendance'
 import { addShowEditor, removeShowEditor, updateShowStatus, sendShowNotifications } from '@/lib/actions/shows'
@@ -648,11 +648,15 @@ function SettingsTab({
   showEditors,
   allAdminUsers,
   canEdit,
+  adminId,
+  messagesEnabled,
 }: {
   show: Show
   showEditors: ShowEditor[]
   allAdminUsers: AdminUserSummary[]
   canEdit: boolean
+  adminId: string
+  messagesEnabled?: boolean
 }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -773,6 +777,15 @@ function SettingsTab({
                   <span className="text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase">
                     {editor.role.replace('_', ' ')}
                   </span>
+                  {messagesEnabled && editor.admin_id !== adminId && (
+                    <Link
+                      href={`/crew/messages/compose?to=${editor.admin_id}`}
+                      className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:underline"
+                    >
+                      <Mail size={12} />
+                      Message
+                    </Link>
+                  )}
                   {canEdit && (
                     <button
                       type="button"
@@ -908,10 +921,12 @@ export default function ShowDetail({
   checkinQr,
   dateCheckinQrs,
   adminRole,
+  adminId,
   reportData,
   bulkEmailRecipientCount,
   defaultReplyTo,
   defaultSubject,
+  messagesEnabled,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -930,6 +945,7 @@ export default function ShowDetail({
   bulkEmailRecipientCount: number
   defaultReplyTo: string
   defaultSubject: string
+  messagesEnabled?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
@@ -990,7 +1006,14 @@ export default function ShowDetail({
         <PostShowReport data={reportData} />
       )}
       {activeTab === 'settings' && (
-        <SettingsTab show={show} showEditors={showEditors} allAdminUsers={allAdminUsers} canEdit={canEdit} />
+        <SettingsTab
+          show={show}
+          showEditors={showEditors}
+          allAdminUsers={allAdminUsers}
+          canEdit={canEdit}
+          adminId={adminId}
+          messagesEnabled={messagesEnabled}
+        />
       )}
     </div>
   )

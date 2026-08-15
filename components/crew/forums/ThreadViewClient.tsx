@@ -7,7 +7,7 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TiptapLink from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
-import { Pin, Lock, Bell, BellOff, Paperclip, Pencil, Trash2 } from 'lucide-react'
+import { Pin, Lock, Bell, BellOff, Paperclip, Pencil, Trash2, Mail } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { toggleThreadSubscription } from '@/lib/actions/forum-posts'
 import {
@@ -87,7 +87,13 @@ function EditEditorToolbar({ editor }: { editor: Editor | null }) {
   )
 }
 
-export default function ThreadViewClient({ data }: { data: ThreadViewData }) {
+export default function ThreadViewClient({
+  data,
+  messagesEnabled,
+}: {
+  data: ThreadViewData
+  messagesEnabled?: boolean
+}) {
   const router = useRouter()
   const { thread, forum, posts } = data
   const [isSubscribed, setIsSubscribed] = useState(data.isSubscribed)
@@ -325,6 +331,15 @@ export default function ThreadViewClient({ data }: { data: ThreadViewData }) {
                   {formatCT(post.created_at, 'MMM d, yyyy h:mm a')}
                 </p>
                 {post.edited_at && <p className="text-xs text-mid-gray dark:text-dark-muted italic">(edited)</p>}
+                {messagesEnabled && !post.is_deleted && post.author_id !== data.adminId && (
+                  <Link
+                    href={`/crew/messages/compose?to=${post.author_id}`}
+                    className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:underline mt-1"
+                  >
+                    <Mail size={12} />
+                    Message
+                  </Link>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 {post.is_deleted ? (

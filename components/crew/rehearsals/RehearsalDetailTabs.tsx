@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Trash2, Mail } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import {
@@ -76,11 +77,15 @@ function RosterTab({
   scheduleAssignees,
   productionUsers,
   adminRole,
+  adminId,
+  messagesEnabled,
 }: {
   batchId: string
   scheduleAssignees: RehearsalScheduleAssignee[]
   productionUsers: ProductionUser[]
   adminRole: AdminRole
+  adminId: string
+  messagesEnabled?: boolean
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -153,17 +158,28 @@ function RosterTab({
                     </p>
                   )}
                 </div>
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(a.adminUserId)}
-                    disabled={isPending}
-                    aria-label="Remove"
-                    className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-2 cursor-pointer disabled:opacity-50"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {messagesEnabled && a.adminUserId !== adminId && (
+                    <Link
+                      href={`/crew/messages/compose?to=${a.adminUserId}`}
+                      className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:underline"
+                    >
+                      <Mail size={12} />
+                      Message
+                    </Link>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(a.adminUserId)}
+                      disabled={isPending}
+                      aria-label="Remove"
+                      className="text-mid-gray dark:text-dark-muted hover:text-brand-accent transition-colors p-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </li>
             )
           })}
@@ -812,12 +828,14 @@ export default function RehearsalDetailTabs({
   adminId,
   productionUsers,
   qrData,
+  messagesEnabled,
 }: {
   detail: RehearsalScheduleDetail
   adminRole: AdminRole
   adminId: string
   productionUsers: ProductionUser[]
   qrData: Map<string, { svg: string; pngBase64: string }>
+  messagesEnabled?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<'roster' | 'dates' | 'attendance'>('roster')
 
@@ -858,6 +876,8 @@ export default function RehearsalDetailTabs({
             scheduleAssignees={detail.scheduleAssignees}
             productionUsers={productionUsers}
             adminRole={adminRole}
+            adminId={adminId}
+            messagesEnabled={messagesEnabled}
           />
         )}
         {activeTab === 'dates' && (

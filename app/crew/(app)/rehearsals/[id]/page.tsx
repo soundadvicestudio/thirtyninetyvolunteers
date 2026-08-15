@@ -68,6 +68,7 @@ export default async function RehearsalDetailPage({ params }: { params: Promise<
         adminId={admin.id}
         productionUsers={productionUsers}
         qrData={qrData}
+        messagesEnabled={flags.messages}
       />
     </div>
   )

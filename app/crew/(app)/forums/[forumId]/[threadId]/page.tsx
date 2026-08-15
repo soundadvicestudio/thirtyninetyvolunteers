@@ -30,5 +30,5 @@ export default async function ThreadViewPage({
 
   await markThreadRead(threadId)
 
-  return <ThreadViewClient data={data} />
+  return <ThreadViewClient data={data} messagesEnabled={flags.messages} />
 }

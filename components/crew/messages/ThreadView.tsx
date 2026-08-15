@@ -15,7 +15,6 @@ interface ThreadViewProps {
     other_person_name: string
   }
   replies: ThreadReplyWithDetails[]
-  myLastReadAt: string | null
   otherLastReadAt: string | null
   currentAdminId: string
 }

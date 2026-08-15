@@ -120,7 +120,12 @@ export default async function MessagesPage({
                         {thread.subject}
                       </p>
                       <span className="text-xs text-mid-gray dark:text-dark-muted flex-shrink-0">
-                        {formatCT(thread.last_reply_at, 'MMM d')}
+                        {formatCT(
+                          thread.last_reply_at,
+                          new Date(thread.last_reply_at).getFullYear() === new Date().getFullYear()
+                            ? 'MMM d'
+                            : 'MMM d, yyyy'
+                        )}
                       </span>
                     </div>
                     <p className="text-xs text-mid-gray dark:text-dark-muted truncate mt-0.5">

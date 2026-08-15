@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/feature-flags'
 import { generateQR } from '@/lib/qr'
 import { getPostShowReportData } from '@/lib/data/showReport'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
@@ -37,6 +38,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
 
   const { id } = await params
   const supabase = await getServerClient()
+  const flags = await getFeatureFlags(supabase)
 
   // Production access guard (AUDITIONS.2a) — Production users may reach
   // /crew/shows/[id] via the proxy.ts trailing-slash exception, but that
@@ -215,6 +217,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       bulkEmailRecipientCount={bulkEmailRecipientCount}
       defaultReplyTo={defaultReplyTo}
       defaultSubject={defaultSubject}
+      messagesEnabled={flags.messages}
     />
   )
 }

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Mail } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { changeRole, deactivateUser, reactivateUser, toggleCalendarEditor, toggleInventoryManager } from '@/lib/actions/users'
 import type { AdminRole } from '@/types/admin'
@@ -29,9 +31,11 @@ const ROLE_BADGE: Record<AdminUserRow['role'], { label: string; className: strin
 function UserRow({
   user,
   isSelf,
+  messagesEnabled,
 }: {
   user: AdminUserRow
   isSelf: boolean
+  messagesEnabled?: boolean
 }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -108,6 +112,15 @@ function UserRow({
       <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
+          {messagesEnabled && !isSelf && (
+            <Link
+              href={`/crew/messages/compose?to=${user.id}`}
+              className="flex items-center gap-1.5 text-sm font-medium text-brand-primary hover:underline"
+            >
+              <Mail size={14} />
+              Message
+            </Link>
+          )}
           {user.role === 'super_admin' ? (
             <span className="text-sm text-mid-gray dark:text-dark-muted">—</span>
           ) : (
@@ -194,9 +207,11 @@ function UserRow({
 export default function UsersTable({
   users,
   currentAdminId,
+  messagesEnabled,
 }: {
   users: AdminUserRow[]
   currentAdminId: string
+  messagesEnabled?: boolean
 }) {
   return (
     <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
@@ -216,7 +231,7 @@ export default function UsersTable({
         </thead>
         <tbody>
           {users.map((user) => (
-            <UserRow key={user.id} user={user} isSelf={user.id === currentAdminId} />
+            <UserRow key={user.id} user={user} isSelf={user.id === currentAdminId} messagesEnabled={messagesEnabled} />
           ))}
         </tbody>
       </table>

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Mail } from 'lucide-react'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -982,6 +983,8 @@ type MaterialToggles = {
 function SettingsTab({
   detail,
   adminRole,
+  adminId,
+  messagesEnabled,
   selectData,
   settingsLoaded,
   settType,
@@ -1023,6 +1026,8 @@ function SettingsTab({
 }: {
   detail: AuditionDetailData
   adminRole: AdminRole
+  adminId: string
+  messagesEnabled?: boolean
   selectData: { shows: { id: string; name: string }[]; otherAuditions: { id: string; title: string }[] } | null
   settingsLoaded: boolean
   settType: AuditionType
@@ -1425,13 +1430,24 @@ function SettingsTab({
                     {a.admin.full_name}{' '}
                     <span className="text-xs text-mid-gray dark:text-dark-muted">({a.admin.role})</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAssignment(a.admin_user_id)}
-                    className="text-xs font-semibold text-red-600 hover:underline cursor-pointer"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {messagesEnabled && a.admin_user_id !== adminId && (
+                      <Link
+                        href={`/crew/messages/compose?to=${a.admin_user_id}`}
+                        className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:underline"
+                      >
+                        <Mail size={12} />
+                        Message
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAssignment(a.admin_user_id)}
+                      className="text-xs font-semibold text-red-600 hover:underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -1727,14 +1743,17 @@ type TabKey = 'overview' | 'signups' | 'materials' | 'communication' | 'template
 export default function AuditionDetailTabs({
   detail,
   adminRole,
+  adminId,
   checkInQrSvg,
   checkInQrPng,
+  messagesEnabled,
 }: {
   detail: AuditionDetailData
   adminRole: AdminRole
   adminId: string
   checkInQrSvg: string
   checkInQrPng: string
+  messagesEnabled?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [signups, setSignups] = useState<AuditionSignupWithDetails[] | null>(null)
@@ -2022,6 +2041,8 @@ export default function AuditionDetailTabs({
           <SettingsTab
             detail={detail}
             adminRole={adminRole}
+            adminId={adminId}
+            messagesEnabled={messagesEnabled}
             selectData={selectData}
             settingsLoaded={settingsLoaded}
             settType={settType}

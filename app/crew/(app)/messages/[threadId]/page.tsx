@@ -30,7 +30,6 @@ export default async function ThreadPage({
     <ThreadView
       thread={data.thread}
       replies={data.replies}
-      myLastReadAt={data.my_last_read_at}
       otherLastReadAt={data.other_last_read_at}
       currentAdminId={admin.id}
     />
