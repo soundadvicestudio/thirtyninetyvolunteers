@@ -772,6 +772,8 @@ export default function InventoryDetailTabs({
   categories,
   checkouts,
   availableItems,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  adminRole,
   canWrite,
   canDelete,
   canSeeNotes,

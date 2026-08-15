@@ -917,6 +917,8 @@ export default function ShowDetail({
   attendance,
   showEditors,
   allAdminUsers,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  defaultHours,
   qr,
   checkinQr,
   dateCheckinQrs,
