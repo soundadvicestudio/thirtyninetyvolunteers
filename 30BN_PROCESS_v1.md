@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.4
+## 30BN_PROCESS_v1.md — v5.5
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 ### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
 — §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
@@ -13,6 +13,16 @@ flat log entries inserted (STYLE.A–STYLE.8 + DOC.72 — gap from DOC.72/73 now
 resolved); §13 Phase MESSAGES in-progress block added (MESSAGES.A–4 ✓,
 MESSAGES.5–8 pending); §13 prompt log updated; §14 five new pattern notes;
 DOC.74 logged)
+### Last Updated: August 2026 — v5.5 (DOC.75: Phase MESSAGES complete —
+§7 XHR list 7→8 (DirectMessageComposer.tsx 8th); §7 storage paths updated
+(messages/ namespace added); §7 six new patterns added (@tailwindcss/typography
+absent, forwardRef+useImperativeHandle for editor components, latent dead prop
+detection, sub-component prop threading chain, void-in-useEffect, router.push
+R12 clarification); §8 XHR list 7→8; §10 XHR grep 7→8; §11 three new checklist
+items (@tailwindcss/typography, prop threading chain, logAction() diff update);
+§13 Phase MESSAGES ✓ Complete — MESSAGES.5–7 build summaries added, pending
+block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
+pattern notes; DOC.75 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -473,6 +483,8 @@ Two sanctioned storage buckets exist in this project:
 - `inventory/[item_id]/[uuid].[ext]` — inventory item photo uploads (Phase INVENTORY.3)
 - `forums/[post_id]/[uuid].[ext]` — forum post attachments (Phase FORUMS.4); final path after temp-key move
 - `forums/temp/[tempKey]/[uuid].[ext]` — forum post attachment staging (temp-key pre-post upload — moved to final path at post creation via `adminClient.storage.from('media').move()`)
+- `messages/temp/[tempKey]/[uuid].[ext]` — DM message attachment temp upload staging (Phase MESSAGES.6)
+- `messages/[replyId]/[uuid].[ext]` — final path after `adminClient.storage.from('media').move()` at submit time. Per-attachment move errors are swallowed with `continue` — the message is already sent when the loop runs.
 
 `brand` (public) — brand asset files uploaded via the Setup Panel. Direct URL access without auth. Namespaced paths:
 - `brand/logo/[uuid].png` — org logo uploads
@@ -1262,6 +1274,124 @@ void (async () => {
 
 Both share a single `getAdminClient()` instance created inside the IIFE. `createNotification()` receives it as a parameter (companion-module pattern from NOTIFY.2); `sendDirectMessageEmail()` calls `resolveEmailSettings()` internally which creates its own admin client. The try/catch wraps both — either failure is non-fatal. Established MESSAGES.2.
 
+**`@tailwindcss/typography` is NOT installed — use arbitrary CSS variant selectors for TipTap HTML (confirmed MESSAGES.5/MESSAGES.6):**
+The `@tailwindcss/typography` plugin is not installed in this project. The `prose`, `prose-sm`, `prose-invert`, and `dark:prose-invert` classes appear in some existing files (`ThreadViewClient.tsx`) but produce **zero CSS output** — they are completely inert. Do not add `prose` classes to new production pages expecting them to style TipTap-rendered HTML.
+
+For any page that renders TipTap-generated HTML via `dangerouslySetInnerHTML`, use Tailwind arbitrary CSS variant selectors:
+
+```tsx
+className="text-sm text-dark dark:text-dark-text leading-relaxed
+  [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2
+  [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5
+  [&_strong]:font-semibold [&_em]:italic
+  [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-border
+  [&_blockquote]:pl-3 [&_blockquote]:text-mid-gray
+  [&_a]:text-brand-primary [&_a]:underline [&_hr]:my-3"
+```
+
+Established for DM reply rendering in MESSAGES.5. The `ThreadViewClient.tsx` forum post body rendering also uses inert `prose` classes — a pre-existing gap deferred to STYLE-ROLLOUT. Do not copy that pattern. Do not add `@tailwindcss/typography` to `package.json` without explicit owner approval — it would change the styling behavior of any existing `prose` class in the codebase.
+
+**`forwardRef + useImperativeHandle` for shared rich-text editor components (established MESSAGES.6):**
+When a TipTap editor with attachment support must be reused across multiple parent components (each with different submit logic), use `forwardRef + useImperativeHandle` to expose a controlled API rather than duplicating TipTap setup or prop-drilling state.
+
+```typescript
+// Export the handle interface so TypeScript catches call-site errors
+export interface DirectMessageComposerHandle {
+  getBody(): string
+  getAttachments(): AttachmentInput[]
+  clear(): void
+  isEmpty(): boolean
+}
+
+const DirectMessageComposer = forwardRef<
+  DirectMessageComposerHandle,
+  DirectMessageComposerProps
+>(function DirectMessageComposer({ disabled = false }, ref) {
+  const editor: Editor | null = useEditor({ ..., immediatelyRender: false })
+
+  useImperativeHandle(ref, () => ({
+    getBody: () => editor?.getHTML() ?? '',
+    getAttachments: () => attachments,
+    clear: () => { editor?.commands.clearContent(); setAttachments([]) },
+    isEmpty: () => !editor || editor.getText().trim().length === 0,
+  }))
+  // ...
+})
+export default DirectMessageComposer
+```
+
+Parents use `useRef<DirectMessageComposerHandle>(null)` and call `composerRef.current?.getBody()` in their submit handlers. The exported handle type is required — without it TypeScript cannot verify call-site method names or argument types. Established `DirectMessageComposer.tsx` MESSAGES.6. This is the correct pattern for any shared editor component where multiple parents need to trigger submit independently.
+
+**Prop typed but not destructured — latent dead prop pattern (confirmed MESSAGES.7):**
+A prop declared in a component's TypeScript type annotation but absent from the function's destructured parameter list is silently dropped — values passed by the parent are discarded, and no TypeScript error is thrown.
+
+```typescript
+// WRONG — adminId declared in type but never destructured
+export default function Component({
+  detail, adminRole
+}: {
+  detail: DetailData
+  adminRole: AdminRole
+  adminId: string   // ← declared in type but not received by the function
+}) { ... }
+
+// CORRECT
+export default function Component({
+  detail, adminRole, adminId  // ← now actually in scope
+}: {
+  detail: DetailData
+  adminRole: AdminRole
+  adminId: string
+}) { ... }
+```
+
+Detection:
+```bash
+grep -n "\badminId\b" components/crew/auditions/AuditionDetailTabs.tsx
+# If it only appears in the type annotation — it is a dead prop
+```
+
+Confirmed pre-existing in both `AuditionDetailTabs` and `ShowDetail` (MESSAGES.7 — required fixing before the self-exclusion Message button guard could reference `adminId`). Required audit in Task A for any build that passes new props to components with complex existing type signatures.
+
+**Sub-component prop threading chain for tabbed detail views (established MESSAGES.7):**
+Large tabbed detail components (`AuditionDetailTabs`, `ShowDetail`, `RehearsalDetailTabs`) contain inline-typed sub-components (e.g., `RosterTab`, `SettingsTab`). Adding a new prop to the top-level component does NOT automatically reach sub-components — each level must be explicitly threaded. The full chain is:
+
+1. **Parent page**: add prop to `<TopLevelComponent propName={value} />` JSX
+2. **Top-level component type**: add to type annotation
+3. **Top-level component destructuring**: add to destructured parameter list (latent dead prop risk)
+4. **Sub-component call site**: add `propName={propName}` to `<SubComponent />` render
+5. **Sub-component inline type**: add to sub-component's own type annotation AND destructured params
+
+Missing any level: the prop is silently dropped. No TypeScript error surfaces until the variable is referenced in the deepest component. Audit all five levels in Task A before any build that adds data to a sub-component inside a tabbed view. Confirmed ×3 in MESSAGES.7 (RosterTab, AuditionDetailTabs SettingsTab, ShowDetail SettingsTab).
+
+**`void functionName()` in `useEffect` for async server action calls (established MESSAGES.5):**
+When calling an async server action (or any async function) from inside a `useEffect` body, use the `void` keyword to explicitly discard the returned Promise:
+
+```typescript
+// CORRECT — void discards Promise, prevents @typescript-eslint/no-floating-promises
+useEffect(() => {
+  void markThreadRead(thread.id)
+}, [thread.id])
+
+// WRONG — awaiting inside useEffect requires async callback, which is a React antipattern
+useEffect(async () => {
+  await markThreadRead(thread.id)  // ← async useEffect has cleanup/race-condition issues
+}, [thread.id])
+```
+
+The `useEffect` callback must remain synchronous — its return value is a cleanup function, not a Promise. The `void` keyword is the idiomatic solution for TypeScript's `@typescript-eslint/no-floating-promises` rule in `useEffect` contexts. Do not chain `.then()` just to avoid the lint warning. Established `ThreadView.tsx` MESSAGES.5.
+
+**`router.push()` after createThread() — R12 clarification (established MESSAGES.5):**
+R12 prohibits `router.push()` as a substitute for `router.refresh()` for in-place re-renders after mutations on the same route. This prohibition does NOT apply to navigation to a newly created entity's URL.
+
+After `createThread()` succeeds, `router.push('/crew/messages/${result.threadId}')` is correct — the thread is a new URL the user has not yet visited. This is genuine navigation, not a mutation re-render.
+
+The distinction:
+- `router.refresh()` — re-fetch Server Component data for the **same URL** (in-place update)
+- `router.push(newUrl)` — navigate to a **different URL** (genuine navigation)
+
+R12's prohibition: `router.push('/crew/dashboard')` after updating a volunteer record on `/crew/volunteers/[id]` is wrong — use `router.refresh()` to stay on the same page. Creating a new resource and navigating to it is correct use of `router.push()`. Established MESSAGES.5.
+
 ---
 
 ## 8. Build Report Format
@@ -1376,7 +1506,7 @@ Note: earlier prompts used "Step tracker: ☐ Step 1" format. Both formats work;
 Every build prompt must be delivered as a single fenced code block — not as a Session Starter Block followed by a separate prompt block. The doc-read instruction ("Before writing any code, read these two files...") and the full prompt content (SCOPE, TASK A, TASK B, etc., Quality Gate, Build Report format) must all appear inside one continuous fenced code block. Splitting them into two blocks creates ambiguity: it implies the session starter is a standalone step that can be skipped or separated from the build context, which undermines its purpose. This rule was confirmed as a correction during Phase 13 after multiple prompts were flagged for having the session starter as a separate block. The owner's direction: "all prompts must be completely contained within a single code block." Applies to all future prompts including DOC and ADMIN prompts.
 
 **XHR over fetch for upload progress (established 15.2; extended 15.3, SETUP.2, Phase AUDITIONS, Phase INVENTORY, Phase FORUMS):**
-The project's default HTTP pattern is `fetch()`. There are seven sanctioned deviations,
+The project's default HTTP pattern is `fetch()`. There are eight sanctioned deviations,
 all in file upload components with progress tracking:
 - `components/consent/ConsentUploadForm.tsx` — consent form upload (established 15.2)
 - `components/crew/media/MediaLibrary.tsx` — media library file upload (established 15.3)
@@ -1385,8 +1515,9 @@ all in file upload components with progress tracking:
 - `components/audition/AuditionUploadClient.tsx` — late material upload via upload_token link (Phase AUDITIONS)
 - `components/crew/inventory/InventoryPhotoUploader.tsx` — inventory item photo upload (Phase INVENTORY.3)
 - `components/crew/forums/ForumPostComposer.tsx` — forum post attachment upload, including attachments on thread replies (Phase FORUMS.4 — 7th sanctioned XHR file; uses sequential upload mirroring InventoryPhotoUploader.tsx's `uploadWithProgress()` pattern)
+- `components/crew/messages/DirectMessageComposer.tsx` — DM message composer with file attachment upload, including TipTap editor + P-DC file upload via XHR + forwardRef handle (Phase MESSAGES.6 — **8th sanctioned XHR file**)
 
-Body format for all seven: FormData with `cacheControl: '3600'` and file appended under
+Body format for all eight: FormData with `cacheControl: '3600'` and file appended under
 empty field name `''` — not a raw file body with explicit Content-Type header.
 
 `fetch()` does not support upload progress events in any browser. `XHR.upload.onprogress`
@@ -1705,7 +1836,7 @@ grep -n "getServerClient" \
 ```bash
 # Confirm XHR usage is intentional (established 15.2/15.3/SETUP.2)
 grep -rn "XMLHttpRequest\|new XHR" components/ app/
-# Sanctioned XHR locations (upload progress tracking — seven total):
+# Sanctioned XHR locations (upload progress tracking — eight total):
 #   - components/consent/ConsentUploadForm.tsx (15.2)
 #   - components/crew/media/MediaLibrary.tsx (15.3)
 #   - components/crew/settings/BrandImageUploader.tsx (SETUP.2)
@@ -1713,11 +1844,12 @@ grep -rn "XMLHttpRequest\|new XHR" components/ app/
 #   - components/audition/AuditionUploadClient.tsx (Phase AUDITIONS)
 #   - components/crew/inventory/InventoryPhotoUploader.tsx (Phase INVENTORY.3)
 #   - components/crew/forums/ForumPostComposer.tsx (Phase FORUMS.4 — 7th sanctioned XHR file)
-# All seven use XHR because fetch() does not support upload progress
+#   - components/crew/messages/DirectMessageComposer.tsx (Phase MESSAGES.6 — 8th sanctioned XHR file)
+# All eight use XHR because fetch() does not support upload progress
 # events. All must include the deviation comment. Body format:
 # FormData with cacheControl + file under '' field name (not raw
 # file body with Content-Type header).
-# Any hit outside these seven files requires review.
+# Any hit outside these eight files requires review.
 ```
 
 ```bash
@@ -2510,6 +2642,29 @@ lib/actions/forum-posts.ts)
   Pattern: `forumUnreadCount = 0` / `messagesUnreadCount = 0`. Default value
   belongs in the destructuring, not in the JSX body.
   (MESSAGES.3 F3 — §7 pattern)
+
+□ Any page that renders TipTap-generated HTML via `dangerouslySetInnerHTML`:
+  confirm `@tailwindcss/typography` is NOT assumed — it is not installed in
+  this project. `prose`, `prose-sm`, `dark:prose-invert` produce zero output.
+  Use Tailwind arbitrary CSS variant selectors instead:
+  `[&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-0.5 [&_strong]:font-semibold`
+  etc. Do not copy the `prose` usage from `ThreadViewClient.tsx` — those classes
+  are inert (pre-existing gap). (MESSAGES.5/MESSAGES.6)
+
+□ Any new prop intended for a sub-component inside a tabbed detail view
+  (`AuditionDetailTabs`, `ShowDetail`, `RehearsalDetailTabs`, or similar):
+  audit and confirm all five threading levels in Task A before any edit —
+  (1) parent page JSX, (2) top-level component type annotation, (3) top-level
+  component destructuring (latent dead prop risk), (4) sub-component call site,
+  (5) sub-component inline type + destructuring. Missing any level is a silent
+  drop with no TypeScript error. (MESSAGES.7)
+
+□ When `saveFeatureFlags()` is extended with a new feature flag: confirm the
+  `logAction()` call inside the same function also has the new flag in both its
+  `before` and `after` diff objects. The flag extraction, validation, upsert,
+  and revalidatePath additions are clearly required — the `logAction()` diff
+  update is easy to miss and produces a silent audit log gap with no build error.
+  Check: `grep -n "logAction" lib/actions/setup.ts`. (MESSAGES.7 — B1 fix)
 ```
 
 ---
@@ -3872,7 +4027,7 @@ Phase NOTIFY — Notification System ✓ Complete
               NotificationPanel.tsx: three dynamic pluralization
               ternaries replace "(s)" literals. Commit 5e7656f.
 
-Phase MESSAGES — Private Messaging System (In Progress)
+Phase MESSAGES — Private Messaging System ✓ Complete
   MESSAGES.A ✓ Read-only audit (13 tasks: proxy.ts, crew layout, TopBar,
     Sidebar, lib/feature-flags.ts, SetupPanel.tsx, setup/page.tsx,
     lib/actions/setup.ts, lib/email.ts, notifications CHECK constraint name
@@ -3931,11 +4086,61 @@ Phase MESSAGES — Private Messaging System (In Progress)
     convention used in new pages (F1 — now §7 pattern). archiveThread.bind()
     required as unknown as (formData: FormData) => Promise<void> double type
     assertion (F2 — now R40). 2 new files. Commit 4dea6cf.
-Phase MESSAGES — In Progress (MESSAGES.5–8 pending)
-  MESSAGES.5 — /crew/messages/compose + /crew/messages/[threadId] thread view
-  MESSAGES.6 — File attachments (8th sanctioned XHR file, storage temp-key)
-  MESSAGES.7 — Context placements + logAction() audit diff fix + formatCT year fix
-  DOC.75 — Brief v5.7 + Process v5.4 post-completion update
+  MESSAGES.5 ✓ sanitize-at-write-time added to lib/actions/messages.ts
+    (DM_SANITIZE_OPTIONS constant; both createThread() and createReply()
+    sanitize body before thread_replies insert). compose/page.tsx (new —
+    Server Component; auth + flags.messages; ?to= param with self/inactive-
+    exclusion; renders ComposeForm). ComposeForm.tsx (new — useRef<Direct
+    MessageComposerHandle> post-MESSAGES.6 refactor; initially had inline
+    TipTap; recipient search + 300ms debounce; subject input maxLength 150;
+    createThread() submit; router.push() to new thread — correct per R12
+    clarification). [threadId]/page.tsx (new — Server Component; notFound()
+    on null). ThreadView.tsx (new — 'use client'; two separate useEffects:
+    void markThreadRead on mount + setInterval 15s polling with clearInterval
+    cleanup; showReadReceipt computed outside JSX map; arbitrary CSS variant
+    selectors for TipTap HTML — @tailwindcss/typography not installed).
+    ReplyComposer.tsx (new — useRef<DirectMessageComposerHandle> post-refactor).
+    5 new files, 1 modified (lib/actions/messages.ts — sanitize).
+    Commit f99d8cc.
+  MESSAGES.6 ✓ File attachments pipeline. types/messages.ts extended
+    (AttachmentInput 4 fields; ThreadReplyAttachmentWithUrl 6 fields;
+    ThreadReplyWithDetails.attachments added). lib/data/messages.ts extended
+    (getThreadData: thread_reply_attachments fetched + signed download URLs
+    via getAdminClient().storage.createSignedUrl, TTL 3600, non-fatal try/catch).
+    lib/actions/messages.ts extended (optional attachments?: AttachmentInput[]
+    on createThread/createReply; loop: storage.list() → move() → insert per
+    attachment; per-iteration try/catch + continue). app/api/messages/upload/
+    route.ts (new — GET handler; auth + flags.messages guard via getServerClient();
+    10MB size guard; createSignedUploadUrl via getAdminClient(); returns
+    { signedUrl, path, tempKey }). DirectMessageComposer.tsx (new — 8th
+    sanctioned XHR file; forwardRef + useImperativeHandle; DirectMessage
+    ComposerHandle ref type exports getBody/getAttachments/clear/isEmpty;
+    formData.append('', file) 2-arg pattern confirmed from live reference).
+    ComposeForm.tsx + ReplyComposer.tsx: both refactored off inline TipTap onto
+    composerRef — all TipTap/useEditor imports removed from both parents.
+    ThreadView.tsx: attachment display (Paperclip icon, signed URL links, KB).
+    Prompt authoring errors caught pre-build (malformed reduce generic, missing
+    <a tag in JSX spec) — both fixed before writing code. 2 new files, 6
+    modified. Commit 178698f.
+  MESSAGES.7 ✓ Context placements + minor fixes. Forum: ThreadViewClient.tsx
+    — Message link after author block (text-xs, size 12); guard includes
+    messagesEnabled && !post.is_deleted && post.author_id !== data.adminId;
+    parent thread page passes messagesEnabled={flags.messages}. Rehearsal:
+    adminId threaded RehearsalDetailTabs → RosterTab (was completely absent from
+    RosterTab before this build). Audition + ShowDetail: pre-existing latent dead
+    prop fixed in both (adminId: string declared in type but never destructured
+    — silently dropped despite parent pages passing it correctly — now fixed);
+    both adminId + messagesEnabled threaded into SettingsTab at both its call
+    site and inline type. ShowDetail uses editor.admin_id (standing schema rule).
+    shows/[id]/page.tsx: only parent page lacking getFeatureFlags — import +
+    fetch added. UsersTable: messagesEnabled added; UserRow guards with !isSelf
+    (existing computed boolean — not a fresh comparison). settings/users/page.tsx:
+    getFeatureFlags import + fetch added. Minor fixes: feature_messages added to
+    saveFeatureFlags() logAction() before/after diff (B1); year-aware formatCT
+    on thread list (B2); unused contentType variable removed from upload route
+    (B3 — MESSAGES.6 Q1); myLastReadAt removed from ThreadViewProps + page prop
+    pass (B4/B5 — MESSAGES.5 Q2). Phase MESSAGES ✓ Complete (MESSAGES.A–7).
+    0 new files, 15 modified. Commit b0ed62b.
 
 Phase 17 — Launch                   (pending)
 
@@ -4552,6 +4757,11 @@ checklist item, §13 prompt log — this prompt).
   30BN-MESSAGES.4 ✓ (see Phase MESSAGES above)
   30BN-DOC.74     ✓ Brief v5.6 + Process v5.4 (Phase MESSAGES.A–4
                     documented — this prompt pair)
+  30BN-MESSAGES.5 ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.6 ✓ (see Phase MESSAGES above)
+  30BN-MESSAGES.7 ✓ (see Phase MESSAGES above)
+  30BN-DOC.75     ✓ Brief v5.7 + Process v5.5 (Phase MESSAGES complete
+                    — this prompt pair)
 ```
 
 ---
@@ -5406,6 +5616,87 @@ threads in the other person's Inbox automatically. The correct field is
 `creator_id === admin.id ? 'recipient_archived_at' : 'creator_archived_at'`.
 Setting the wrong column silently archives the sender's own thread.
 
+### `@tailwindcss/typography` Is Not Installed — Arbitrary CSS Variant Selectors for TipTap HTML (confirmed MESSAGES.5/MESSAGES.6)
+
+`@tailwindcss/typography` is not installed in this project. The `prose`, `prose-sm`, `prose-invert`, and `dark:prose-invert` classes appear in existing files (`ThreadViewClient.tsx`) but produce zero CSS output — they are completely inert without the plugin.
+
+For any new production page that renders TipTap-generated HTML via `dangerouslySetInnerHTML`:
+Use Tailwind arbitrary CSS variant selectors. The confirmed pattern for DM reply bodies (MESSAGES.5):
+
+```tsx
+className="text-sm text-dark dark:text-dark-text leading-relaxed
+  [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2
+  [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5
+  [&_strong]:font-semibold [&_em]:italic
+  [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-border
+  [&_blockquote]:pl-3 [&_blockquote]:text-mid-gray
+  [&_a]:text-brand-primary [&_a]:underline [&_hr]:my-3"
+```
+
+Do not copy `prose` class usage from `ThreadViewClient.tsx` (forum post bodies) — those are the same inert classes. This is a pre-existing gap that STYLE-ROLLOUT or a future ADMIN prompt should address holistically. Until then, use arbitrary selectors for all new TipTap HTML rendering.
+
+### `forwardRef` + `useImperativeHandle` for Reusable Editor Components (established MESSAGES.6)
+
+When a TipTap editor with attachment support must be shared across multiple parent components, use `forwardRef` + `useImperativeHandle` instead of prop drilling or duplicating editor setup.
+
+The pattern:
+- Define and export the handle interface (`DirectMessageComposerHandle`) so TypeScript catches call-site errors
+- The component wraps with `forwardRef<Handle, Props>(function Name(props, ref) { ... })`
+- `useImperativeHandle(ref, () => ({ ... }))` exposes the controlled API
+- Parents use `useRef<DirectMessageComposerHandle>(null)` and call `composerRef.current?.getBody()` etc. in submit handlers
+
+Key details:
+- The handle interface must be a named export (not inline) for TypeScript safety at every call site
+- `editor?.commands.clearContent()` in `clear()` — optional chain needed (editor may be null)
+- `editor.getText().trim().length === 0` in `isEmpty()` — more robust than `body === '<p></p>'`
+- The component is still `'use client'` and still follows `immediatelyRender: false` + explicit `Editor | null` typing
+
+Established `DirectMessageComposer.tsx` MESSAGES.6. Apply to any future shared rich-text component where multiple parents need independent submit control.
+
+### Prop Typed But Not Destructured — Latent Dead Prop Pattern (confirmed MESSAGES.7)
+
+When a prop is declared in a component's TypeScript type annotation but not included in the destructured parameter list, it is silently dropped — the parent's value never reaches the component body. No TypeScript error is thrown anywhere in the chain.
+
+Confirmed pre-existing instances (fixed MESSAGES.7):
+- `AuditionDetailTabs.tsx`: `adminId: string` in type, absent from destructured params
+- `ShowDetail.tsx`: same issue
+
+Detection during Task A audit:
+```bash
+grep -n "\badminId\b" components/crew/auditions/AuditionDetailTabs.tsx
+# If it only appears on the type annotation line and nowhere else — dead prop
+```
+
+Fix: Add the prop name to the function's destructured parameter list. This is the prerequisite for threading the prop into sub-components.
+
+Prevention: In any Task A audit step that reads a component's prop interface, immediately check whether each prop in the type also appears in the destructured parameter list. This gap is common when a prop is added to a type during planning but the destructuring is forgotten, or when a refactor removes the body usage without cleaning up the type.
+
+### Sub-Component Prop Threading Chain for Tabbed Detail Views (established MESSAGES.7)
+
+Tabbed detail components with inline sub-components require explicit prop threading through all levels. The full chain for adding `adminId` + `messagesEnabled` to a deeply nested sub-component:
+
+1. Parent page (`/auditions/[id]/page.tsx`): add `adminId={admin.id}` + `messagesEnabled={flags.messages}` to `<AuditionDetailTabs />`
+2. Top-level component type (`AuditionDetailTabs`): add to type annotation
+3. Top-level component destructuring: add to destructured params (see latent dead prop pattern above)
+4. Sub-component call site: add `adminId={adminId}` + `messagesEnabled={messagesEnabled}` to `<SettingsTab />`
+5. Sub-component inline type + destructuring: add to both
+
+Missing any level = silent prop drop with no TypeScript error at the missed level. TypeScript only catches the gap when the variable is referenced in the deepest component.
+
+Task A requirement for any build touching deeply nested components:
+Read BOTH the top-level component AND the sub-component's prop types and destructuring before planning any edits. Confirm all five levels are covered in the edit plan. Established ×3 MESSAGES.7 (RosterTab/AuditionDetailTabs SettingsTab/ShowDetail SettingsTab).
+
+### Complex Build Execution — Direct Terminal Required, No Sub-Agent Delegation
+
+Claude Code's automatic sub-agent delegation mode — where it creates an autonomous background process for a task — bypasses the per-task read-before-write discipline this project depends on. In sub-agent mode, Task A audit findings may be skipped or not carried forward correctly to subsequent edit steps. The build may succeed but with planning assumptions rather than live-file-confirmed values in every str_replace.
+
+For any build involving: multiple new files, TipTap editor instances, inter-component prop threading, attachment pipelines, or significant TypeScript typing complexity — include this instruction explicitly at the top of the prompt before the fenced code block:
+
+Execute this prompt directly in the terminal. Do not delegate to a subagent.
+Complete Task A fully and stop — report findings before proceeding to Task B.
+
+The mid-prompt "wait for confirmation" instruction after Task A is equally important — it forces the Task A findings to be surfaced before any code is written, enabling the planning session to review them and catch discrepancies before they become build defects. Established MESSAGES.5 (MESSAGES.5 was initially sub-delegated before this instruction was added; all subsequent MESSAGES prompts included it explicitly).
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -5516,3 +5807,21 @@ pending); §13 prompt log updated (MESSAGES.A–4 + DOC.74); §14 five new patte
 notes (SetupPanel fd.append(), Sidebar double-location, EMPTY_COUNTS cascade,
 Style Sandbox text tokens, DM privacy model + thread_reads asymmetry + sender
 mark-as-read); DOC.74 logged)*
+
+*v5.5 (August 2026 — DOC.75: Phase MESSAGES complete — §2 header bumped to
+v5.5; §7 XHR list updated 7→8 (DirectMessageComposer.tsx 8th sanctioned XHR
+file, Phase MESSAGES.6); §7 storage paths updated (messages/temp/ + messages/
+[replyId]/ namespaces added, MESSAGES.6); §7 six new patterns added:
+@tailwindcss/typography absent — use arbitrary CSS variant selectors for
+TipTap HTML (MESSAGES.5/6); forwardRef+useImperativeHandle for shared editor
+components (MESSAGES.6); prop typed but not destructured — latent dead prop
+pattern (MESSAGES.7); sub-component prop threading chain for tabbed detail
+views (MESSAGES.7 ×3); void-in-useEffect for server action calls (MESSAGES.5);
+router.push() R12 clarification — genuine navigation not a mutation substitute
+(MESSAGES.5); §8 XHR count and list 7→8; §10 XHR grep 7→8 with
+DirectMessageComposer.tsx; §11 three new checklist items (@tailwindcss/
+typography, prop threading chain audit, logAction() diff update for new flags);
+§13 Phase MESSAGES ✓ Complete — MESSAGES.5–7 build summaries added, pending
+block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
+pattern notes (see §7 above + complex build direct terminal execution); DOC.75
+logged)*
