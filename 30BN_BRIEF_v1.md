@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.6
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.7
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -12,6 +12,16 @@ updated (direct_message added); §9 Migration 037 status block added; §9
 feature_messages seed documented; §9 SETUP key counts updated (21 → 22); §11 Phase
 MESSAGES in-progress section added (MESSAGES.A–4 ✓, MESSAGES.5–8 pending); §11
 prompt log updated; §13 R39 + R40 added; DOC.74 logged)
+### Last Updated: August 2026 — v5.7 (DOC.75: Phase MESSAGES complete —
+§1 current phase updated (MESSAGES complete, Phase 17 next); §5 media
+bucket messages/ path namespaces added; §8 Private Messaging section fully
+updated (thread view attachment reference corrected, context placements
+marked ✓ complete, sanitize-at-write-time sub-section added,
+file attachments sub-section added, prompt structure 9 → 8 prompts with
+MESSAGES.5–7 all ✓, key files updated to MESSAGES.1–7); §11 Phase MESSAGES
+marked ✓ Complete, build summaries for MESSAGES.5–7 added, prompt log
+updated; §11 Phase 17.1 flag count 7 → 8 (feature_messages noted as
+new opt-in); §13 version history v5.7; DOC.75 logged)
 
 ---
 
@@ -31,10 +41,9 @@ prompt log updated; §13 R39 + R40 added; DOC.74 logged)
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase MESSAGES in progress (MESSAGES.A through
-MESSAGES.4 complete, commits 8a86d10/72deeae/924f6e5/4dea6cf). MESSAGES.5–8
-remaining. Phase 17 (Launch) follows Phase MESSAGES completion. Phase CAST
-planned post-launch.
+**Current phase:** Phase MESSAGES complete (MESSAGES.A through
+MESSAGES.7, commits 8a86d10/72deeae/924f6e5/4dea6cf/f99d8cc/178698f/b0ed62b).
+Phase 17 (Launch) is next. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -161,7 +170,7 @@ CRON_SECRET=                     # Secret for Vercel Cron Job auth — must matc
 - Authorized redirect URIs: all four Supabase/local/Vercel/production callback URLs above
 
 **Storage Buckets:**
-- `media` — all platform media files (private; signed URLs required for access). Created Phase 15.2. Path namespacing within the bucket: `consent-forms/[volunteer_id]/[submission_id]/` for consent submissions; `library/[folder_id]/[document_id]/` for media library files (Phase 15.3); `attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments (future phases); `inventory/[item_id]/[uuid].[ext]` for inventory item photo uploads (Phase INVENTORY). `forums/[post_id]/[uuid].[ext]` for forum post attachments (Phase FORUMS); `forums/temp/[tempKey]/[uuid].[ext]` for temp-key pre-post attachment staging (cleaned up at post creation time via storage .move()). Storage calls for the forums namespace (createSignedUrl, createSignedUploadUrl, move) use `getAdminClient()` — same dual-client pattern as inventory (storage.objects has no RLS policies). NOTE: storage calls for the inventory namespace (createSignedUrl, createSignedUploadUrl, remove) use `getAdminClient()` — confirmed INVENTORY.3 F1; storage.objects has no RLS policies so service role key is required regardless of session context. No public access — all reads go through the `/documents/[token]` redirect route which enforces access tier and generates signed URLs.
+- `media` — all platform media files (private; signed URLs required for access). Created Phase 15.2. Path namespacing within the bucket: `consent-forms/[volunteer_id]/[submission_id]/` for consent submissions; `library/[folder_id]/[document_id]/` for media library files (Phase 15.3); `attachments/[type]/[record_id]/[document_id]/` for show/rehearsal/audition attachments (future phases); `inventory/[item_id]/[uuid].[ext]` for inventory item photo uploads (Phase INVENTORY). `forums/[post_id]/[uuid].[ext]` for forum post attachments (Phase FORUMS); `forums/temp/[tempKey]/[uuid].[ext]` for temp-key pre-post attachment staging (cleaned up at post creation time via storage .move()). `messages/temp/[tempKey]/[uuid].[ext]` for DM message attachment temp upload staging (Phase MESSAGES.6); `messages/[replyId]/[uuid].[ext]` for final DM attachment path after `adminClient.storage.from('media').move()` at submit time. Storage calls for the forums namespace (createSignedUrl, createSignedUploadUrl, move) use `getAdminClient()` — same dual-client pattern as inventory (storage.objects has no RLS policies). NOTE: storage calls for the inventory namespace (createSignedUrl, createSignedUploadUrl, remove) use `getAdminClient()` — confirmed INVENTORY.3 F1; storage.objects has no RLS policies so service role key is required regardless of session context. No public access — all reads go through the `/documents/[token]` redirect route which enforces access tier and generates signed URLs.
 - `brand` — brand asset files (public; direct URL access without auth). Created SETUP.2. Stores logo and favicon uploads from the Setup Panel. Path namespacing: `brand/logo/[uuid].png` for logo uploads, `brand/favicon/[uuid].png` for favicon uploads. Public because these assets are served directly on public pages (landing page logo, browser favicon `<link rel="icon">`) without any auth layer. Never use this bucket for sensitive or access-controlled content.
 
 ---
@@ -1472,7 +1481,7 @@ not deleted — they appear in the Archived tab.
 
 **Thread view (`/crew/messages/[threadId]`):**
 Flat chronological reply list. Each reply: sender name, timestamp, sanitized
-HTML body, attachment list (MESSAGES.7). TipTap rich text reply composer at
+HTML body, attachment list (MESSAGES.6, complete). TipTap rich text reply composer at
 bottom (`immediatelyRender: false`, `Editor | null`). Auto-refresh polling
 (`setInterval(() => router.refresh(), 15000)` — 15s interval, separate
 `useEffect` from mark-read). `markThreadRead()` fired on mount via
@@ -1499,17 +1508,35 @@ Per-user row: initials avatar, name, "Message" link to
 `feature_messages` is on. Feature-flag-gated sidebar link ("Directory",
 `UserSearch` icon from Lucide, three-part atomic edit MESSAGES.3).
 
-**"Message" entry points (context placements — MESSAGES.8 pending):**
+**"Message" entry points (context placements — MESSAGES.7
+complete):**
 All navigate to `/crew/messages/compose?to=[userId]`:
 - User Directory (`/crew/users`) — per-user row
-- SA/OA Users page (`/crew/settings/users`) — per-user row
-- Forum posts (`ThreadViewClient.tsx`) — next to post author
-- Rehearsal schedule (`RehearsalDetailTabs.tsx` RosterTab) — next to crew member
-- Audition assignments (`AuditionDetailTabs.tsx` Settings tab) — next to assigned editor
+- SA/OA Users page (`/crew/settings/users`) — per-user row (via `!isSelf`
+  guard using the already-computed boolean, not a fresh `user.id !==
+  currentAdminId` comparison)
+- Forum posts (`ThreadViewClient.tsx`) — next to post author; guard
+  includes `!post.is_deleted`
+- Rehearsal schedule (`RehearsalDetailTabs.tsx` RosterTab) — next to crew
+  member; `adminId` threaded from parent → `RehearsalDetailTabs` →
+  `RosterTab` (was not passed to RosterTab before MESSAGES.7)
+- Audition assignments (`AuditionDetailTabs.tsx` Settings tab) — next to
+  assigned editor; `adminId` added to destructured params (pre-existing
+  latent bug: declared in type but never destructured — fixed MESSAGES.7)
 - Show detail assigned editors (`ShowDetail.tsx`) — next to editor name
+  using `editor.admin_id` (NOT `editor.admin_user_id` — show_editors
+  column rule); `adminId` added to destructured params (same latent bug
+  as auditions — fixed MESSAGES.7)
 
-All context placements guard: `feature_messages` must be on AND target user ID
-≠ current user ID (self-exclusion enforced at render level).
+All context placements guard: `feature_messages` must be on AND target
+user ID ≠ current user ID (self-exclusion enforced at render level).
+
+Two pre-existing latent bugs found and fixed in MESSAGES.7:
+`AuditionDetailTabs` and `ShowDetail` both declared `adminId: string` in
+their prop types but never destructured it — silently dropped despite
+parent pages passing it correctly. Both parent pages `shows/[id]/page.tsx`
+and `settings/users/page.tsx` also lacked `getFeatureFlags` entirely and
+received full import + fetch additions in MESSAGES.7.
 
 **Notification integration:**
 - Bell badge (Track B): `direct_message` persistent notification type. Written
@@ -1534,7 +1561,71 @@ RLS and break the privacy model.
 `last_read_at = now()` — prevents the sender's own message from appearing in
 their unread count.
 
-**Prompt structure (9 prompts):**
+**Sanitization at write time (MESSAGES.5):**
+`DM_SANITIZE_OPTIONS` constant defined in `lib/actions/messages.ts`. Both
+`createThread()` and `createReply()` call `sanitizeHtml(body, DM_SANITIZE_OPTIONS)`
+before inserting into `thread_replies`. Allowlist: `p`, `strong`, `em`, `u`,
+`ul`, `ol`, `li`, `br`, `h1`–`h3`, `blockquote`, `a[href, rel, target]`, `hr`.
+Schemes: `http`, `https`, `mailto`. `ThreadView.tsx` renders reply bodies via
+`dangerouslySetInnerHTML` safely — sanitization already occurred at write time.
+Import pattern: `import sanitizeHtml from 'sanitize-html'` + `import type {
+IOptions } from 'sanitize-html'` (matches `lib/actions/forum-post-sanitize.ts`
+— same package, same type import path).
+
+`@tailwindcss/typography` is **not installed** in this project. TipTap-generated
+HTML in reply bodies is styled via Tailwind arbitrary CSS variant selectors
+(`[&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-4` etc.) — not `prose` classes.
+Do not add `prose` or `prose-sm` to DM message rendering containers; they
+produce zero CSS output without the plugin. Note: `ThreadViewClient.tsx` in
+the forums module also uses `prose prose-sm max-w-none dark:prose-invert` —
+these are equally inert (pre-existing gap, out of MESSAGES scope, deferred
+to a future ADMIN or STYLE-ROLLOUT prompt).
+
+**File attachments (MESSAGES.6):**
+P-DC pattern — client XHR PUT directly to Supabase Storage; no file bytes
+through Next.js (R9). Storage paths: temp `messages/temp/[tempKey]/[uuid].[ext]`
+→ final `messages/[replyId]/[uuid].[ext]` via `adminClient.storage.from('media').move()`
+at submit time. Per-attachment errors are swallowed via `continue` — the
+message is already sent when the attachment loop runs.
+
+`app/api/messages/upload/route.ts` — GET handler. Auth check + `feature_messages`
+flag guard (uses `getServerClient()` for flag check — authenticated context,
+consistent with established pattern). 10MB file size guard. Calls
+`createSignedUploadUrl()` (not `createSignedUrl()`). Returns
+`{ signedUrl, path, tempKey }`. `getAdminClient()` used only for the
+`createSignedUploadUrl()` storage call (storage API requires service role key
+regardless of session context).
+
+`components/crew/messages/DirectMessageComposer.tsx` — **8th sanctioned XHR
+file** (required header comment: "XHR used instead of fetch() — fetch() does
+not support upload progress events. xhr.upload.onprogress is the only
+browser-native way to report upload progress."). `forwardRef` +
+`useImperativeHandle` wrapping TipTap editor + file upload UI. Exposes four
+methods via `DirectMessageComposerHandle` ref type: `getBody(): string`,
+`getAttachments(): AttachmentInput[]`, `clear(): void`, `isEmpty(): boolean`.
+`ComposeForm.tsx` and `ReplyComposer.tsx` both refactored in MESSAGES.6 to
+`useRef<DirectMessageComposerHandle>` — all TipTap imports removed from both
+parents. Attach button triggers `<input type="file">` via `fileInputRef`;
+XHR upload on file select; `FormData` body with `cacheControl: '3600'` and
+file appended under empty field name `''` (confirmed P-DC pattern — same as
+all 7 prior sanctioned XHR files).
+
+Signed download URLs (TTL 3600s) generated in `getThreadData()` in
+`lib/data/messages.ts` via `getAdminClient().storage.from('media').createSignedUrl()`.
+`getAdminClient()` used here because `storage.objects` has zero RLS — the
+established dual-client pattern. Rendered in `ThreadView.tsx` as file links
+with Paperclip icon and KB file size.
+
+`types/messages.ts` extended in MESSAGES.6: `AttachmentInput` type (4 fields:
+`tempKey`, `fileName`, `fileSize`, `contentType`) and `ThreadReplyAttachmentWithUrl`
+type (6 fields: `id`, `reply_id`, `file_name`, `file_size`, `content_type`,
+`signed_url`). `ThreadReplyWithDetails` extended with `attachments:
+ThreadReplyAttachmentWithUrl[]`.
+
+**Prompt structure (8 build prompts):**
+Note: Compose page and thread view were combined into MESSAGES.5 (originally
+planned as two prompts — compose only and thread view only). This collapsed
+the numbering from the original 9-prompt plan by one.
 - MESSAGES.A ✓ — Read-only audit (13 tasks: proxy.ts, layout, Sidebar,
   feature-flags.ts, SetupPanel.tsx, setup/page.tsx, setup.ts, lib/email.ts,
   notifications CHECK constraint, notifications data files, context placement
@@ -1549,40 +1640,84 @@ their unread count.
   1 new file, 8 modified. Commit 924f6e5.
 - MESSAGES.4 ✓ — User Directory page (`/crew/users`) + Messages Inbox page
   (`/crew/messages`, three-tab). 2 new Server Component pages. Commit 4dea6cf.
-- MESSAGES.5 — `/crew/messages/compose` + `/crew/messages/[threadId]` thread view
-  (TipTap reply composer, read receipts, auto-refresh polling)
-- MESSAGES.6 — File attachments (P-DC XHR, 8th sanctioned XHR file, storage
-  temp-key, thread_reply_attachments wiring)
-- MESSAGES.7 — Context placements (forum posts, rehearsal schedule, audition
-  assignments, show editors, SA/OA Users page). logAction() audit diff fix.
-  formatCT year disambiguation fix.
-- DOC.75 — Brief v5.7 + Process v5.4 (post-build update after all MESSAGES
-  prompts complete)
+- MESSAGES.5 ✓ — `/crew/messages/compose` (ComposeForm.tsx with recipient
+  search/select, subject, TipTap body) + `/crew/messages/[threadId]` thread
+  view (ThreadView.tsx: two independent useEffects — mark-read on mount +
+  15s polling; read receipt logic; arbitrary CSS variant selectors for rich
+  text rendering — `@tailwindcss/typography` not installed).
+  Sanitize-at-write-time added (`DM_SANITIZE_OPTIONS`). 5 new files,
+  1 modified. Commit f99d8cc.
+- MESSAGES.6 ✓ — File attachments. `DirectMessageComposer.tsx` (8th
+  sanctioned XHR file; `forwardRef` + `useImperativeHandle`; exposes
+  `getBody/getAttachments/clear/isEmpty` via ref). `app/api/messages/upload/route.ts`
+  (GET handler, P-DC signed upload URL, 10MB guard). `ComposeForm.tsx` and
+  `ReplyComposer.tsx` both refactored off inline TipTap onto composerRef.
+  `types/messages.ts`: `AttachmentInput` + `ThreadReplyAttachmentWithUrl` added.
+  `getThreadData()` extended with signed download URLs. 2 new files, 6 modified.
+  Commit 178698f.
+- MESSAGES.7 ✓ — Context placements (forum posts with `!post.is_deleted` guard,
+  rehearsal RosterTab, audition SettingsTab, show editors SettingsTab via
+  `editor.admin_id`, SA/OA Users page via `!isSelf`). Fixed two pre-existing
+  latent bugs (`adminId` declared but not destructured in `AuditionDetailTabs`
+  and `ShowDetail`). Minor fixes: `feature_messages` in `logAction()` audit diff,
+  year-aware `formatCT` on thread list. 0 new files, 15 modified.
+  Commit b0ed62b. Phase MESSAGES complete.
 
-**Key files (MESSAGES.1–4 — built):**
-- `types/messages.ts` — MessageThread, ThreadReply, ThreadReplyAttachment,
-  ThreadRead, InboxThreadRow, ThreadReplyWithDetails, ThreadDetail, AdminUserBasic
-- `lib/data/messages.ts` — data layer (no 'use server', import 'server-only';
-  supabase client as first param; all try/catch zero-value fallbacks):
-  `stripHtmlForPreview()` (internal), `getInboxThreads()`, `getSentThreads()`,
-  `getArchivedThreads()`, `getThreadData()`, `getUnreadMessageCount()`,
-  `getUsersForDirectory()`
-- `lib/actions/messages.ts` — ('use server', 5 async exports only):
-  `createThread()`, `createReply()`, `markThreadRead()`, `archiveThread()`,
-  `searchUsers()`
+**Key files (MESSAGES.1–7 — complete):**
+- `types/messages.ts` — 9 types: MessageThread, ThreadReply,
+  ThreadReplyAttachment, ThreadRead, InboxThreadRow,
+  ThreadReplyWithDetails (now includes `attachments` field),
+  ThreadDetail, AdminUserBasic, AttachmentInput, ThreadReplyAttachmentWithUrl
+- `lib/data/messages.ts` — data layer (import 'server-only', no 'use server',
+  supabase as first param, all try/catch): `stripHtmlForPreview()` (internal),
+  `getInboxThreads()`, `getSentThreads()`, `getArchivedThreads()`,
+  `getThreadData()` (extended MESSAGES.6: fetches `thread_reply_attachments`
+  + generates signed download URLs via `getAdminClient()`),
+  `getUnreadMessageCount()`, `getUsersForDirectory()`
+- `lib/actions/messages.ts` — ('use server', 5 async exports + DM_SANITIZE_OPTIONS
+  constant): `createThread()`, `createReply()` (both sanitize body + accept
+  optional `attachments?: AttachmentInput[]`), `markThreadRead()`,
+  `archiveThread()`, `searchUsers()`
 - `components/crew/MessagesIcon.tsx` — 'use client'; Mail icon; badge (99+ cap);
   links to /crew/messages; `unreadCount` prop
 - `app/crew/(app)/users/page.tsx` — Server Component; auth + flags.messages guard;
   self-exclusion filter; initials avatar; "Message" link per user
-- `app/crew/(app)/messages/page.tsx` — Server Component; three-tab URL-driven
-  inbox; "New Message" button; unread dot always rendered; archive form sibling
-  to thread Link; empty states for all three tabs
+- `app/crew/(app)/messages/page.tsx` — Server Component; three-tab URL-driven inbox;
+  "New Message" button; unread dot always rendered; archive form sibling to thread
+  Link; year-aware `formatCT` (MESSAGES.7 fix)
+- `app/crew/(app)/messages/compose/page.tsx` — Server Component; auth + flag guard;
+  `?to=` param resolution with self/inactive-exclusion; renders ComposeForm
+- `components/crew/messages/ComposeForm.tsx` — 'use client'; recipient search/select/lock;
+  subject input (maxLength 150); `useRef<DirectMessageComposerHandle>` for TipTap +
+  attachments; `createThread()` submit → `router.push()` to new thread
+- `app/crew/(app)/messages/[threadId]/page.tsx` — Server Component; auth + flag guard;
+  `notFound()` on missing/inaccessible thread; 5 props to ThreadView
+- `components/crew/messages/ThreadView.tsx` — 'use client'; two separate `useEffect`s
+  (mark-read on mount + 15s polling — never coupled); read receipt logic (sender check
+  + timestamp comparison, shown only on most recent reply); archive action;
+  attachment display (Paperclip icon, KB size, signed URL links)
+- `components/crew/messages/ReplyComposer.tsx` — 'use client';
+  `useRef<DirectMessageComposerHandle>`; `createReply()` submit; `clear()` on success;
+  `router.refresh()`
+- `app/api/messages/upload/route.ts` — GET handler; auth + flag guard; 10MB size
+  guard; `createSignedUploadUrl()` → returns `{ signedUrl, path, tempKey }`
+- `components/crew/messages/DirectMessageComposer.tsx` — **8th sanctioned XHR file**;
+  `forwardRef` + `useImperativeHandle`; TipTap editor (7-button toolbar, `Editor | null`
+  explicit, `immediatelyRender: false`) + P-DC file upload via XHR FormData;
+  exposes `DirectMessageComposerHandle` ref type
+
+Context placements modified in MESSAGES.7:
+- `components/crew/forums/ThreadViewClient.tsx` — Message link after post author
+- `components/crew/rehearsals/RehearsalDetailTabs.tsx` — Message link in RosterTab
+- `components/crew/auditions/AuditionDetailTabs.tsx` — Message link in SettingsTab
+- `components/crew/shows/ShowDetail.tsx` — Message link in show editors row
+- `components/crew/settings/UsersTable.tsx` — Message link in user row
 
 Note: `lib/email.ts` extended with `sendDirectMessageEmail()`;
 `types/notifications.ts` extended with `messageUnread: number` on
 `NotificationCounts` and `'direct_message'` on `NotificationType`;
-`lib/feature-flags.ts` now has 8 flags (messages: boolean as 8th);
-`lib/data/notifications.ts` now calls `getUnreadMessageCount()`.
+`lib/feature-flags.ts` has 8 flags (`messages: boolean` as 8th);
+`lib/data/notifications.ts` calls `getUnreadMessageCount()`.
 
 **Communication (`/crew/communication`, built Phase 13.3a/b):**
 Full email blast composer. Editor and Super Admin only
@@ -4961,8 +5096,8 @@ Migration 015 applied.
 
 ## 11. Beta Build — Phases & Prompts (Overview)
 
-*Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES in
-progress (MESSAGES.A–4 complete, MESSAGES.5–8 pending). Phase 17 (Launch) follows.*
+*Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES
+complete (MESSAGES.A–7, 8 prompts). Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -5927,6 +6062,14 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
                (three-tab). Commit 4dea6cf.
   30BN-DOC.74  ✓ Brief v5.6 (this prompt)
 
+**30BN-MESSAGES.5 ✓** See Phase MESSAGES section above for full build summary. 5 new files, 1 modified. Commit f99d8cc.
+
+**30BN-MESSAGES.6 ✓** See Phase MESSAGES section above for full build summary. 2 new files, 6 modified. Commit 178698f.
+
+**30BN-MESSAGES.7 ✓** See Phase MESSAGES section above for full build summary. Phase MESSAGES complete. 0 new files, 15 modified. Commit b0ed62b.
+
+**30BN-DOC.75 ✓** Brief v5.7 (this prompt)
+
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
 **STYLE.A ✓** — Token extension. `lib/utils/color.ts`:
@@ -6150,7 +6293,7 @@ literals replaced with dynamic pluralization ternaries. npm
 run lint: empty output — clean baseline. tsc --noEmit: 0
 errors. Commit 5e7656f.
 
-### Phase MESSAGES — Private Messaging System (In Progress)
+### Phase MESSAGES — Private Messaging System ✓ Complete
 
 **Architecture (confirmed via MESSAGES.A audit + build):**
 - All admin roles participate. Backend-only — no volunteer access.
@@ -6241,15 +6384,67 @@ production pages. F2: archiveThread.bind() required `as unknown as (formData:
 FormData) => Promise<void>` (now R40 — route through unknown for non-void Server
 Actions on form actions). 2 new files, 0 modified. Commit 4dea6cf.
 
-**Pending prompts (MESSAGES.5–8):**
-- MESSAGES.5 — `/crew/messages/compose` + `/crew/messages/[threadId]` thread view
-  (TipTap reply composer, read receipts, auto-refresh polling, markThreadRead on mount)
-- MESSAGES.6 — File attachments (8th sanctioned XHR file `DirectMessageComposer.tsx`,
-  storage temp-key pattern, thread_reply_attachments wiring, signed URL generation)
-- MESSAGES.7 — Context placements (forum posts, rehearsal schedule, audition assignments,
-  show editors list, SA/OA Users page) + logAction() audit diff fix for feature_messages
-  + formatCT year disambiguation fix on thread list
-- DOC.75 — Brief v5.7 + Process v5.4 (post-MESSAGES completion)
+**MESSAGES.5 ✓** Sanitize-at-write-time added to
+`lib/actions/messages.ts` (`DM_SANITIZE_OPTIONS`; body sanitized in both
+`createThread()` and `createReply()` before `thread_replies` insert). Compose
+page (`/crew/messages/compose`): Server Component shell + `ComposeForm.tsx`
+('use client'; recipient search with 300ms debounce via `useRef` +
+`setTimeout`; subject input maxLength 150; TipTap body; `createThread()`
+submit; `router.push()` to new thread on success; self-exclusion via
+`.neq('id', admin.id)` server-side). Thread view (`/crew/messages/[threadId]`):
+Server Component shell + `ThreadView.tsx` ('use client'; two separate
+`useEffect`s — `void markThreadRead()` fires once on mount, `setInterval(
+() => router.refresh(), 15000)` fires with 15s polling; `clearInterval`
+cleanup; read receipt computed as `showReadReceipt` outside JSX map;
+arbitrary CSS variant selectors for TipTap HTML display — `@tailwindcss/
+typography` not installed). Style Sandbox text tokens (`text-gray-900
+dark:text-white`) confirmed not suitable for production pages — live
+convention (`text-dark dark:text-dark-text`) used throughout. 5 new files,
+1 modified. Commit f99d8cc.
+
+**MESSAGES.6 ✓** File attachment pipeline. `types/messages.ts`: `AttachmentInput`
+(4 fields) + `ThreadReplyAttachmentWithUrl` (6 fields) added;
+`ThreadReplyWithDetails.attachments` field added. `lib/data/messages.ts`:
+`getThreadData()` extended — fetches `thread_reply_attachments` for all
+replies, generates signed download URLs via `getAdminClient().storage.
+createSignedUrl()` (TTL 3600s), non-fatal try/catch. `lib/actions/messages.ts`:
+`createThread()` and `createReply()` accept optional `attachments?:
+AttachmentInput[]`; loop: `storage.list()` → `storage.move()` →
+`thread_reply_attachments.insert()` per attachment; per-iteration
+try/catch with `continue`. `app/api/messages/upload/route.ts` (new —
+GET handler; auth + flag + 10MB guard; `createSignedUploadUrl()`;
+returns `{ signedUrl, path, tempKey }`). `DirectMessageComposer.tsx` (new —
+8th sanctioned XHR file; `forwardRef` + `useImperativeHandle`; 4-method
+`DirectMessageComposerHandle` ref type; FormData: `cacheControl: '3600'`
++ file under `''` field name). `ComposeForm.tsx` + `ReplyComposer.tsx`
+refactored off inline TipTap onto `composerRef` — all TipTap imports
+removed from both parents. `ThreadView.tsx`: attachment list after reply
+body (Paperclip icon, signed URL links, KB size). Prompt authoring errors
+caught pre-build: reduce generic missing `<`, malformed `<a>` tag in
+JSX spec — both fixed before code was written. 2 new files, 6 modified.
+Commit 178698f.
+
+**MESSAGES.7 ✓** Context placements + minor fixes. Forum: `ThreadViewClient.tsx`
+— Message link after author block, guarded by `messagesEnabled && !post.is_deleted
+&& post.author_id !== data.adminId`; parent thread page passes
+`messagesEnabled={flags.messages}`. Rehearsal: `adminId` threaded from
+`RehearsalDetailTabs` → `RosterTab` (was not passed before); Message link
+before Remove, guarded by `a.adminUserId !== adminId`. Audition: pre-existing
+latent bug fixed — `adminId` declared in type but never destructured; fixed
+destructuring; both `adminId` + `messagesEnabled` threaded into `SettingsTab`.
+ShowDetail: same latent bug fixed; Message link uses `editor.admin_id` (NOT
+`admin_user_id` — standing schema rule); both threaded into `SettingsTab`.
+`shows/[id]/page.tsx` was the only parent lacking `getFeatureFlags` entirely —
+added import + fetch. `UsersTable.tsx`: `messagesEnabled` added to interface;
+`UserRow` guards with existing `isSelf` boolean (not a fresh `user.id !==
+currentAdminId` comparison). `settings/users/page.tsx`: same `getFeatureFlags`
+addition. Minor fixes: `feature_messages` added to `saveFeatureFlags()`
+`logAction()` before/after diff (`lib/actions/setup.ts`); year-aware
+`formatCT` on thread list timestamp; unused `contentType` variable removed
+from upload route (MESSAGES.6 Q1); `myLastReadAt` prop removed from
+ThreadViewProps interface + page prop pass (MESSAGES.5 Q2). 0 new files,
+15 modified. Commit b0ed62b.
+Phase MESSAGES — Private Messaging System ✓ Complete (MESSAGES.A–7)
 
 ### Phase 17 — Launch
 
@@ -6262,7 +6457,13 @@ Actions on form actions). 2 new files, 0 modified. Commit 4dea6cf.
 - Run through all 8 Setup Panel sections and populate with
   production 30BN values (org identity, brand colors, logo,
   favicon, email config, feature flags, instance label, 404 page)
-- Confirm all seven feature flags enabled for launch (`feature_calendar`, `feature_checkin`, `feature_blast`, `feature_rehearsals`, `feature_auditions`, `feature_inventory`, `feature_forums`)
+- Confirm all eight feature flags are configured for launch.
+  The original seven operational flags should be enabled:
+  `feature_calendar`, `feature_checkin`, `feature_blast`,
+  `feature_rehearsals`, `feature_auditions`, `feature_inventory`,
+  `feature_forums`. `feature_messages` (Private Messaging — added
+  MESSAGES.1) defaults to `'false'` (opt-in only) — enable
+  separately when ready to roll out Private Messaging to the crew.
 - Work through Deferred Verifications document (v15, 774 items)
 
 **17.2 — Domain & DNS**
@@ -6925,3 +7126,20 @@ paragraph added; §9 SETUP key counts updated (21 → 22, 22 → 23 total);
 MESSAGES.5–8 pending listed); §11 header updated; §11 prompt log updated
 (MESSAGES.A–4 + DOC.74); §13 R39 (SQL policy naming) + R40 (Server Action
 .bind() assertion) added; DOC.74 logged)*
+
+*v5.7 (August 2026 — DOC.75: Phase MESSAGES complete — §1 current phase
+updated (Phase MESSAGES complete, MESSAGES.A–7 all ✓); §5 media bucket
+messages/ path namespaces added (temp + final); §8 Private Messaging section
+fully updated: thread view attachment reference corrected (MESSAGES.6),
+context placements marked ✓ complete with latent bug note (AuditionDetailTabs
++ ShowDetail adminId destructuring fix), sanitize-at-write-time sub-section
+added (DM_SANITIZE_OPTIONS, @tailwindcss/typography absent note), file
+attachments sub-section added (DirectMessageComposer 8th sanctioned XHR,
+upload route, storage paths, AttachmentInput/ThreadReplyAttachmentWithUrl
+types, forwardRef+useImperativeHandle pattern), prompt structure updated
+(9 → 8 prompts, MESSAGES.5–7 ✓ with build summaries), key files updated
+(MESSAGES.1–7, 9 types in types/messages.ts, all new/modified files listed);
+§11 Phase MESSAGES ✓ Complete, build summaries for MESSAGES.5–7 added,
+prompt log updated (MESSAGES.5–7 + DOC.75); §11 Phase 17.1 flag count
+updated (7 → 8, feature_messages noted as new opt-in defaulting to 'false');
+§13 version history v5.7; DOC.75 logged)*
