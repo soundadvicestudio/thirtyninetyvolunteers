@@ -17,6 +17,7 @@ export default function ReplyComposer({ threadId }: ReplyComposerProps) {
   const [error, setError] = useState<string | null>(null)
 
   const composerRef = useRef<DirectMessageComposerHandle>(null)
+  const [isComposerEmpty, setIsComposerEmpty] = useState(true)
 
   function handleSubmit() {
     if (!composerRef.current || isPending) return
@@ -41,7 +42,12 @@ export default function ReplyComposer({ threadId }: ReplyComposerProps) {
     <div className="border-t border-neutral-border dark:border-dark-border pt-6 mt-2">
       <h2 className="text-sm font-semibold text-dark dark:text-dark-text mb-3">Reply</h2>
 
-      <DirectMessageComposer ref={composerRef} disabled={isPending} minHeight="100px" />
+      <DirectMessageComposer
+        ref={composerRef}
+        disabled={isPending}
+        minHeight="100px"
+        onEmptyChange={setIsComposerEmpty}
+      />
 
       {/* Error */}
       {error && <p className="text-red-600 dark:text-red-400 text-sm mt-2">{error}</p>}
@@ -51,7 +57,7 @@ export default function ReplyComposer({ threadId }: ReplyComposerProps) {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={isPending || !composerRef.current}
+          disabled={isPending || isComposerEmpty}
           className="px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? 'Sending...' : 'Send Reply'}

@@ -7,7 +7,7 @@ import { Loader2, Mail } from 'lucide-react'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { markAttendance, bulkMarkAttendance } from '@/lib/actions/attendance'
 import { addShowEditor, removeShowEditor, updateShowStatus, sendShowNotifications } from '@/lib/actions/shows'
-import { SHOW_STATUS_LABEL, SHOW_STATUS_BADGE } from '@/lib/utils/showDisplay'
+import { SHOW_STATUS_LABEL, SHOW_STATUS_BADGE, getLocationHoursBucket } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
 import BulkEmailSection from '@/components/crew/shows/BulkEmailSection'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
@@ -647,6 +647,7 @@ function SettingsTab({
   show,
   showEditors,
   allAdminUsers,
+  defaultHours,
   canEdit,
   adminId,
   messagesEnabled,
@@ -654,6 +655,7 @@ function SettingsTab({
   show: Show
   showEditors: ShowEditor[]
   allAdminUsers: AdminUserSummary[]
+  defaultHours: { mainstage: number; studio_x: number; one_off: number }
   canEdit: boolean
   adminId: string
   messagesEnabled?: boolean
@@ -672,6 +674,8 @@ function SettingsTab({
   const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
   const showLivePanel = statusValue === 'live' && statusValue !== show.status
+
+  const resolvedDefaultHours = show.default_hours ?? defaultHours[getLocationHoursBucket(show.location?.name)]
 
   const assignedIds = new Set(showEditors.map((e) => e.admin_id))
   const searchTerm = search.trim().toLowerCase()
@@ -758,6 +762,14 @@ function SettingsTab({
 
   return (
     <div className="space-y-8 max-w-2xl">
+      <section>
+        <p className="text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide mb-1">
+          Default Hours per Volunteer
+        </p>
+        <p className="text-dark dark:text-dark-text">{resolvedDefaultHours ?? '—'}</p>
+        <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">Edit via the show edit form.</p>
+      </section>
+
       <section>
         <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">Assigned Editors</h2>
         {showEditors.length === 0 ? (
@@ -917,7 +929,6 @@ export default function ShowDetail({
   attendance,
   showEditors,
   allAdminUsers,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   defaultHours,
   qr,
   checkinQr,
@@ -1012,6 +1023,7 @@ export default function ShowDetail({
           show={show}
           showEditors={showEditors}
           allAdminUsers={allAdminUsers}
+          defaultHours={defaultHours}
           canEdit={canEdit}
           adminId={adminId}
           messagesEnabled={messagesEnabled}

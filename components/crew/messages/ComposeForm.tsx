@@ -30,6 +30,7 @@ export default function ComposeForm({ initialRecipient }: ComposeFormProps) {
   const [subject, setSubject] = useState('')
 
   const composerRef = useRef<DirectMessageComposerHandle>(null)
+  const [isComposerEmpty, setIsComposerEmpty] = useState(true)
 
   function handleSearchChange(query: string) {
     setSearchQuery(query)
@@ -152,7 +153,12 @@ export default function ComposeForm({ initialRecipient }: ComposeFormProps) {
       {/* Message body with attachment support */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-dark dark:text-dark-text mb-1.5">Message</label>
-        <DirectMessageComposer ref={composerRef} disabled={isPending} minHeight="140px" />
+        <DirectMessageComposer
+          ref={composerRef}
+          disabled={isPending}
+          minHeight="140px"
+          onEmptyChange={setIsComposerEmpty}
+        />
       </div>
 
       {/* Error */}
@@ -163,7 +169,7 @@ export default function ComposeForm({ initialRecipient }: ComposeFormProps) {
         <button
           type="button"
           onClick={handleSend}
-          disabled={isPending || !selectedRecipient || !subject.trim() || !composerRef.current}
+          disabled={isPending || !selectedRecipient || !subject.trim() || isComposerEmpty}
           className="px-5 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:bg-brand-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? 'Sending...' : 'Send Message'}

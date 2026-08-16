@@ -27,10 +27,11 @@ export interface DirectMessageComposerHandle {
 interface DirectMessageComposerProps {
   disabled?: boolean
   minHeight?: string
+  onEmptyChange?: (isEmpty: boolean) => void
 }
 
 const DirectMessageComposer = forwardRef<DirectMessageComposerHandle, DirectMessageComposerProps>(
-  function DirectMessageComposer({ disabled = false, minHeight = '100px' }, ref) {
+  function DirectMessageComposer({ disabled = false, minHeight = '100px', onEmptyChange }, ref) {
     // Attachment state stores metadata + temp identifier
     const [attachments, setAttachments] = useState<(AttachmentInput & { _tempPath: string })[]>([])
     const [uploadError, setUploadError] = useState<string | null>(null)
@@ -49,6 +50,12 @@ const DirectMessageComposer = forwardRef<DirectMessageComposerHandle, DirectMess
       ],
       content: '',
       immediatelyRender: false,
+      onCreate: ({ editor }) => {
+        onEmptyChange?.(editor.getText().trim().length === 0)
+      },
+      onUpdate: ({ editor }) => {
+        onEmptyChange?.(editor.getText().trim().length === 0)
+      },
     })
 
     // Expose imperative API to parents
@@ -57,7 +64,12 @@ const DirectMessageComposer = forwardRef<DirectMessageComposerHandle, DirectMess
         return editor?.getHTML() ?? ''
       },
       getAttachments(): AttachmentInput[] {
-        return attachments.map(({ _tempPath: _unused, ...rest }) => rest)
+        return attachments.map((a) => ({
+          tempKey: a.tempKey,
+          fileName: a.fileName,
+          fileSize: a.fileSize,
+          contentType: a.contentType,
+        }))
       },
       clear(): void {
         editor?.commands.clearContent()
