@@ -11,6 +11,7 @@ import {
   saveNotFoundPage,
 } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
+import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -20,6 +21,7 @@ export type SetupPanelInitialValues = {
   org_contact_email: string
   org_website_url: string
   org_location: string
+  org_timezone: string
   brand_primary: string
   brand_accent: string
   org_logo_url: string
@@ -61,6 +63,7 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
   const [orgContactEmail, setOrgContactEmail] = useState(initialValues.org_contact_email)
   const [orgWebsiteUrl, setOrgWebsiteUrl] = useState(initialValues.org_website_url)
   const [orgLocation, setOrgLocation] = useState(initialValues.org_location)
+  const [orgTimezone, setOrgTimezone] = useState(initialValues.org_timezone || 'America/Chicago')
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -72,6 +75,7 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
     formData.append('org_contact_email', orgContactEmail)
     formData.append('org_website_url', orgWebsiteUrl)
     formData.append('org_location', orgLocation)
+    formData.append('org_timezone', orgTimezone)
 
     const result = await saveOrgIdentity(formData)
     if ('error' in result) {
@@ -142,6 +146,16 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
           placeholder="New Orleans, LA"
           className={inputClasses}
         />
+      </div>
+      <div>
+        <label className={labelClasses}>Organization Timezone</label>
+        <select value={orgTimezone} onChange={(e) => setOrgTimezone(e.target.value)} className={inputClasses}>
+          {TIMEZONE_OPTIONS.map((tz) => (
+            <option key={tz.value} value={tz.value}>
+              {tz.label}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="flex items-center gap-4">
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>

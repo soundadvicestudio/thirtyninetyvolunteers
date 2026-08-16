@@ -6,6 +6,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { logAction } from '@/lib/audit'
+import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
 
 type ActionResult = { success: true } | { error: string }
 
@@ -36,6 +37,7 @@ export async function saveOrgIdentity(formData: FormData): Promise<ActionResult>
   const orgContactEmail = (formData.get('org_contact_email') as string | null)?.trim() || ''
   const orgWebsiteUrl = (formData.get('org_website_url') as string | null)?.trim() || ''
   const orgLocation = (formData.get('org_location') as string | null)?.trim() || ''
+  const orgTimezone = (formData.get('org_timezone') as string | null)?.trim() || ''
 
   if (!orgName) {
     return { error: 'Organization name is required.' }
@@ -55,10 +57,20 @@ export async function saveOrgIdentity(formData: FormData): Promise<ActionResult>
   if (orgLocation.length > 100) {
     return { error: 'City / State must be 100 characters or fewer.' }
   }
+  if (!TIMEZONE_OPTIONS.some((o) => o.value === orgTimezone)) {
+    return { error: 'Invalid timezone selection.' }
+  }
 
   const supabase = await getServerClient()
 
-  const keys = ['org_name', 'org_tagline', 'org_contact_email', 'org_website_url', 'org_location']
+  const keys = [
+    'org_name',
+    'org_tagline',
+    'org_contact_email',
+    'org_website_url',
+    'org_location',
+    'org_timezone',
+  ]
   const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
   const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
 
@@ -68,6 +80,7 @@ export async function saveOrgIdentity(formData: FormData): Promise<ActionResult>
     org_contact_email: orgContactEmail,
     org_website_url: orgWebsiteUrl,
     org_location: orgLocation,
+    org_timezone: orgTimezone,
   }
 
   const results = await Promise.all(
@@ -79,6 +92,7 @@ export async function saveOrgIdentity(formData: FormData): Promise<ActionResult>
   }
 
   revalidatePath('/')
+  revalidatePath('/', 'layout')
   revalidatePath('/crew/settings/setup')
 
   await logAction(

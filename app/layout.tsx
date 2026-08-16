@@ -28,19 +28,21 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-async function resolveBrandColors(): Promise<{
+async function resolveLayoutSettings(): Promise<{
   primary: string
   accent: string
+  timezone: string
 }> {
   const supabase = getAdminClient()
   const { data } = await supabase
     .from('app_settings')
     .select('key, value')
-    .in('key', ['brand_primary', 'brand_accent'])
+    .in('key', ['brand_primary', 'brand_accent', 'org_timezone'])
   const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
   return {
     primary: map['brand_primary'] || '#293994',
     accent: map['brand_accent'] || '#F26522',
+    timezone: map['org_timezone'] || 'America/Chicago',
   }
 }
 
@@ -49,11 +51,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const brand = await resolveBrandColors()
+  const brand = await resolveLayoutSettings()
 
   return (
     <html lang="en">
-      <body className={openSans.className}>
+      <body className={openSans.className} data-timezone={brand.timezone}>
         <style>{`
           :root {
             --brand-primary: ${brand.primary};
