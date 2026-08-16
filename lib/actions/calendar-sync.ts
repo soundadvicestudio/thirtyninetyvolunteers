@@ -2,8 +2,7 @@ import 'server-only'
 import { fromZonedTime } from 'date-fns-tz'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getFeatureFlags } from '@/lib/feature-flags'
-
-const CT = 'America/Chicago'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 
 type AuditionRow = {
   id: string
@@ -58,17 +57,18 @@ export async function syncShowDateToCalendar(
     if (!showDate.show) return
 
     // show_date is a bare date and show_time is a time-without-timezone —
-    // both are Central Time wall-clock values with no offset attached.
-    // fromZonedTime() anchors them to CT (DST-safe) before converting to
-    // UTC for storage, matching the confirmed pattern in
+    // both are org-timezone wall-clock values with no offset attached.
+    // fromZonedTime() anchors them to the org timezone (DST-safe) before
+    // converting to UTC for storage, matching the confirmed pattern in
     // lib/utils/date.ts's formatWallClockCT() (space separator, not "T").
+    const tz = await getOrgTimezone(supabase)
     const wallClock = `${showDate.show_date} ${showDate.show_time}`
-    const startTime = fromZonedTime(wallClock, CT)
+    const startTime = fromZonedTime(wallClock, tz)
 
     const FALLBACK_DURATION_MS = 3 * 60 * 60 * 1000
     let endTime: Date
     if (showDate.end_time) {
-      endTime = fromZonedTime(`${showDate.show_date} ${showDate.end_time}`, CT)
+      endTime = fromZonedTime(`${showDate.show_date} ${showDate.end_time}`, tz)
       if (endTime.getTime() <= startTime.getTime()) {
         console.warn(
           `show_date ${showDateId}: end_time is not after show_time — using 3hr fallback`
@@ -136,16 +136,18 @@ export async function syncAuditionToCalendar(auditionId: string, supabase: Supab
     if (audition.calendar_visibility !== 'public') return
 
     // date_start is a bare date and time_start is a time-without-timezone —
-    // both are Central Time wall-clock values with no offset attached.
-    // fromZonedTime() anchors them to CT (DST-safe) before converting to
-    // UTC for storage — same pattern as syncShowDateToCalendar() above.
+    // both are org-timezone wall-clock values with no offset attached.
+    // fromZonedTime() anchors them to the org timezone (DST-safe) before
+    // converting to UTC for storage — same pattern as
+    // syncShowDateToCalendar() above.
+    const tz = await getOrgTimezone(supabase)
     const wallClock = `${audition.date_start} ${audition.time_start ?? '19:00'}`
-    const startTime = fromZonedTime(wallClock, CT)
+    const startTime = fromZonedTime(wallClock, tz)
 
     const FALLBACK_DURATION_MS = 3 * 60 * 60 * 1000
     let endTime: Date
     if (audition.time_end) {
-      endTime = fromZonedTime(`${audition.date_start} ${audition.time_end}`, CT)
+      endTime = fromZonedTime(`${audition.date_start} ${audition.time_end}`, tz)
       if (endTime.getTime() <= startTime.getTime()) {
         console.warn(
           `audition ${auditionId}: time_end is not after time_start — using 3hr fallback`

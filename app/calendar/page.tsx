@@ -6,9 +6,8 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getMonthGridDays } from '@/lib/utils/calendar-availability'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import PublicCalendarGrid from '@/components/calendar/PublicCalendarGrid'
-
-const CT = 'America/Chicago'
 
 type RawEventRow = {
   id: string
@@ -31,15 +30,16 @@ export default async function PublicCalendarPage({
   searchParams: Promise<{ month?: string }>
 }) {
   const params = await searchParams
-  const todayMonthCT = formatInTimeZone(new Date(), CT, 'yyyy-MM')
+  const supabase = getAdminClient()
+  const tz = await getOrgTimezone(supabase)
+
+  const todayMonthCT = formatInTimeZone(new Date(), tz, 'yyyy-MM')
   const monthStr = params.month && /^\d{4}-\d{2}$/.test(params.month) ? params.month : todayMonthCT
   const [year, month] = monthStr.split('-').map(Number)
 
   const gridDays = getMonthGridDays(`${monthStr}-01`)
   const rangeStartStr = gridDays[0]
   const rangeEndStr = gridDays[gridDays.length - 1]
-
-  const supabase = getAdminClient()
 
   const flags = await getFeatureFlags(supabase)
   if (!flags.calendar) redirect('/')

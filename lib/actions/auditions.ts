@@ -11,6 +11,7 @@ import { toZonedTime } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/utils/phone'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { createNotification } from '@/lib/utils/notifications'
 import {
   sendAuditionSignupConfirmation,
@@ -745,7 +746,8 @@ export async function getUpcomingAuditions(): Promise<UpcomingAudition[]> {
     const flagEnabled = flagRow?.value !== 'false'
     if (!flagEnabled) return []
 
-    const todayCT = format(toZonedTime(new Date(), 'America/Chicago'), 'yyyy-MM-dd')
+    const tz = await getOrgTimezone(supabase)
+    const todayCT = format(toZonedTime(new Date(), tz), 'yyyy-MM-dd')
 
     const { data: auditions, error } = await supabase
       .from('auditions')

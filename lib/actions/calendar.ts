@@ -11,6 +11,7 @@ import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import { generateOccurrenceDates } from '@/lib/utils/calendar-recurrence'
 import { createNotification } from '@/lib/utils/notifications'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import {
   calendarEventSubmitSchema,
   rehearsalBatchSchema,
@@ -20,11 +21,14 @@ import {
   type RecurringEventFormData,
 } from '@/lib/validations/calendar'
 
-const CT = 'America/Chicago'
-
-function buildEventTimes(date: string, startTime: string, endTime: string): { startUTC: Date; endUTC: Date } {
-  const startUTC = fromZonedTime(`${date} ${startTime}:00`, CT)
-  const endUTC = fromZonedTime(`${date} ${endTime}:00`, CT)
+function buildEventTimes(
+  date: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): { startUTC: Date; endUTC: Date } {
+  const startUTC = fromZonedTime(`${date} ${startTime}:00`, timezone)
+  const endUTC = fromZonedTime(`${date} ${endTime}:00`, timezone)
   return { startUTC, endUTC }
 }
 
@@ -108,8 +112,9 @@ export async function checkEventConflict(
       return { conflict: false, error: 'Unauthorized' }
     }
 
-    const { startUTC, endUTC } = buildEventTimes(date, startTime, endTime)
     const supabase = await getServerClient()
+    const tz = await getOrgTimezone(supabase)
+    const { startUTC, endUTC } = buildEventTimes(date, startTime, endTime, tz)
 
     const conflict = await hasConflict(locationId, startUTC, endUTC, supabase, excludeEventId)
     return { conflict }
@@ -140,8 +145,6 @@ export async function createCalendarEvent(formData: CalendarEventFormData): Prom
     return { success: false, error: 'Location is required' }
   }
 
-  const { startUTC, endUTC } = buildEventTimes(value.date, value.start_time, value.end_time)
-
   const contacts = (value.contacts ?? []).map((c) => ({ ...c, phone: normalizePhone(c.phone) }))
 
   const supabase = await getServerClient()
@@ -150,6 +153,9 @@ export async function createCalendarEvent(formData: CalendarEventFormData): Prom
   if (!flags.calendar) {
     return { success: false, error: 'Feature not enabled.' }
   }
+
+  const tz = await getOrgTimezone(supabase)
+  const { startUTC, endUTC } = buildEventTimes(value.date, value.start_time, value.end_time, tz)
 
   const { data: event, error: eventError } = await supabase
     .from('calendar_events')
@@ -213,8 +219,6 @@ export async function updateCalendarEvent(
     return { success: false, error: 'Location is required' }
   }
 
-  const { startUTC, endUTC } = buildEventTimes(value.date, value.start_time, value.end_time)
-
   const contacts = (value.contacts ?? []).map((c) => ({ ...c, phone: normalizePhone(c.phone) }))
 
   const supabase = await getServerClient()
@@ -223,6 +227,9 @@ export async function updateCalendarEvent(
   if (!flags.calendar) {
     return { success: false, error: 'Feature not enabled.' }
   }
+
+  const tz = await getOrgTimezone(supabase)
+  const { startUTC, endUTC } = buildEventTimes(value.date, value.start_time, value.end_time, tz)
 
   const { error: updateError } = await supabase
     .from('calendar_events')
@@ -320,11 +327,17 @@ export async function createRehearsalBatch(formData: RehearsalBatchFormData): Pr
   const approvedBy = canDirectCreate ? admin.id : null
   const contacts = (value.contacts ?? []).map((c) => ({ ...c, phone: normalizePhone(c.phone) }))
 
+  const tz = await getOrgTimezone(supabase)
   let createdCount = 0
   const failedDates: { date: string; error: string }[] = []
 
   for (const rehearsalDate of value.dates) {
-    const { startUTC, endUTC } = buildEventTimes(rehearsalDate.date, rehearsalDate.start_time, rehearsalDate.end_time)
+    const { startUTC, endUTC } = buildEventTimes(
+      rehearsalDate.date,
+      rehearsalDate.start_time,
+      rehearsalDate.end_time,
+      tz
+    )
 
     if (canDirectCreate && value.location_id) {
       const conflict = await hasConflict(value.location_id, startUTC, endUTC, supabase)
@@ -641,7 +654,8 @@ export async function findAvailableSlots(
 
   const targetLocations = locationId ? (locationRows ?? []).filter((l) => l.id === locationId) : (locationRows ?? [])
 
-  const { startUTC, endUTC } = buildEventTimes(date, startTime, endTime)
+  const tz = await getOrgTimezone(supabase)
+  const { startUTC, endUTC } = buildEventTimes(date, startTime, endTime, tz)
 
   const slots: LocationAvailability[] = []
   for (const loc of targetLocations) {
@@ -762,8 +776,9 @@ export async function createRecurringEvent(formData: RecurringEventFormData): Pr
     return { success: false, error: groupError?.message ?? 'Something went wrong creating the series.' }
   }
 
+  const tz = await getOrgTimezone(supabase)
   const eventRows = dates.map((date) => {
-    const { startUTC, endUTC } = buildEventTimes(date, data.start_time, data.end_time)
+    const { startUTC, endUTC } = buildEventTimes(date, data.start_time, data.end_time, tz)
     return {
       title: data.title,
       event_type: data.event_type,
@@ -849,6 +864,8 @@ export async function editRecurringOccurrence(
     return { success: false, error: 'Event not found' }
   }
 
+  const tz = await getOrgTimezone(supabase)
+
   // No parent series: any requested scope collapses to 'this'.
   const effectiveScope: 'this' | 'future' | 'all' = targetEvent.recurrence_group_id ? scope : 'this'
 
@@ -865,10 +882,10 @@ export async function editRecurringOccurrence(
   if (effectiveScope === 'this') {
     const thisUpdate: Record<string, unknown> = { ...scalarUpdate }
     if (hasTimeChange) {
-      const eventDate = formatInTimeZone(new Date(targetEvent.start_time), CT, 'yyyy-MM-dd')
-      const startTime = formData.start_time ?? formatInTimeZone(new Date(targetEvent.start_time), CT, 'HH:mm')
-      const endTime = formData.end_time ?? formatInTimeZone(new Date(targetEvent.end_time), CT, 'HH:mm')
-      const { startUTC, endUTC } = buildEventTimes(eventDate, startTime, endTime)
+      const eventDate = formatInTimeZone(new Date(targetEvent.start_time), tz, 'yyyy-MM-dd')
+      const startTime = formData.start_time ?? formatInTimeZone(new Date(targetEvent.start_time), tz, 'HH:mm')
+      const endTime = formData.end_time ?? formatInTimeZone(new Date(targetEvent.end_time), tz, 'HH:mm')
+      const { startUTC, endUTC } = buildEventTimes(eventDate, startTime, endTime, tz)
       thisUpdate.start_time = startUTC.toISOString()
       thisUpdate.end_time = endUTC.toISOString()
     }
@@ -895,10 +912,10 @@ export async function editRecurringOccurrence(
       (affectedEvents ?? []).map((ev) => {
         const evUpdate: Record<string, unknown> = { ...scalarUpdate }
         if (hasTimeChange) {
-          const evDate = formatInTimeZone(new Date(ev.start_time), CT, 'yyyy-MM-dd')
-          const startTime = formData.start_time ?? formatInTimeZone(new Date(ev.start_time), CT, 'HH:mm')
-          const endTime = formData.end_time ?? formatInTimeZone(new Date(ev.end_time), CT, 'HH:mm')
-          const { startUTC, endUTC } = buildEventTimes(evDate, startTime, endTime)
+          const evDate = formatInTimeZone(new Date(ev.start_time), tz, 'yyyy-MM-dd')
+          const startTime = formData.start_time ?? formatInTimeZone(new Date(ev.start_time), tz, 'HH:mm')
+          const endTime = formData.end_time ?? formatInTimeZone(new Date(ev.end_time), tz, 'HH:mm')
+          const { startUTC, endUTC } = buildEventTimes(evDate, startTime, endTime, tz)
           evUpdate.start_time = startUTC.toISOString()
           evUpdate.end_time = endUTC.toISOString()
         }

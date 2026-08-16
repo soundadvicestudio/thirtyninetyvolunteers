@@ -1,9 +1,8 @@
 import { formatInTimeZone } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { buildReminderEmailPayload, sendBatchEmails } from '@/lib/email'
-
-const CT = 'America/Chicago'
 
 export async function GET(request: Request) {
   try {
@@ -13,12 +12,14 @@ export async function GET(request: Request) {
     }
 
     const client = getAdminClient()
+    const tz = await getOrgTimezone(client)
 
-    // A. Target date: CURRENT_DATE + 1 in CT (DST-safe — same pattern as
-    // app/api/cron/thankyou/route.ts). show_date is a bare date column, so
-    // once we have the correct CT calendar day, plain UTC date arithmetic
-    // on it is safe (no further timezone conversion needed).
-    const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+    // A. Target date: CURRENT_DATE + 1 in the org timezone (DST-safe — same
+    // pattern as app/api/cron/thankyou/route.ts). show_date is a bare date
+    // column, so once we have the correct org-timezone calendar day, plain
+    // UTC date arithmetic on it is safe (no further timezone conversion
+    // needed).
+    const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
     const targetDateObj = new Date(`${todayCT}T00:00:00Z`)
     targetDateObj.setUTCDate(targetDateObj.getUTCDate() + 1)
     const targetDate = targetDateObj.toISOString().slice(0, 10)

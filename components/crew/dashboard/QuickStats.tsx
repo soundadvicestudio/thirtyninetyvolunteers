@@ -2,9 +2,8 @@ import { Users, CalendarDays, ClipboardList, UserPlus } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getServerClient } from '@/lib/supabase/server'
 import { getActiveVolunteerCount } from '@/lib/volunteers/list'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
-
-const CT = 'America/Chicago'
 
 type RoleStaffing = {
   slots_available: number
@@ -14,13 +13,15 @@ type RoleStaffing = {
 async function getUpcomingShowsThisMonth(
   supabase: Awaited<ReturnType<typeof getServerClient>>
 ): Promise<number> {
-  // "This month" is anchored to CT, not server UTC — a naive `new Date()`
-  // month boundary would be wrong near a month rollover for part of the
-  // day (R23 / 10.1 DST-aware pattern). show_date is a bare date column
-  // with no time zone of its own, so once we know the correct CT calendar
-  // month, plain 'YYYY-MM-DD' string bounds are sufficient — no UTC
-  // instant conversion needed (unlike timestamptz columns).
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  // "This month" is anchored to the org timezone, not server UTC — a naive
+  // `new Date()` month boundary would be wrong near a month rollover for
+  // part of the day (R23 / 10.1 DST-aware pattern). show_date is a bare
+  // date column with no time zone of its own, so once we know the correct
+  // org-timezone calendar month, plain 'YYYY-MM-DD' string bounds are
+  // sufficient — no UTC instant conversion needed (unlike timestamptz
+  // columns).
+  const tz = await getOrgTimezone(supabase)
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
   const [year, month] = todayCT.split('-').map(Number)
   const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
   const lastDay = new Date(year, month, 0).getDate()

@@ -4,6 +4,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getMonthGridDays, getWeekGridDays } from '@/lib/utils/calendar-availability'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CalendarShell from '@/components/crew/calendar/CalendarShell'
 import type {
   CalendarEvent,
@@ -13,8 +14,6 @@ import type {
   ShowDateBuffer,
 } from '@/types/calendar'
 import type { Location } from '@/types/show'
-
-const CT = 'America/Chicago'
 
 type RawCalendarEventRow = {
   id: string
@@ -58,8 +57,11 @@ export default async function CalendarPage({
   }
 
   const params = await searchParams
+  const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
+
   const view = params.view ?? 'month'
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
   const date = params.date ?? todayCT
   const locationsFilter = params.locations ? params.locations.split(',').filter(Boolean) : []
   const typesFilter = params.types ? params.types.split(',').filter(Boolean) : []
@@ -84,10 +86,8 @@ export default async function CalendarPage({
     rangeEndStr = gridDays[gridDays.length - 1]
   }
 
-  const rangeStart = fromZonedTime(`${rangeStartStr} 00:00:00`, CT)
-  const rangeEnd = fromZonedTime(`${rangeEndStr} 23:59:59`, CT)
-
-  const supabase = await getServerClient()
+  const rangeStart = fromZonedTime(`${rangeStartStr} 00:00:00`, tz)
+  const rangeEnd = fromZonedTime(`${rangeEndStr} 23:59:59`, tz)
 
   const flags = await getFeatureFlags(supabase)
   if (!flags.calendar) redirect('/crew/dashboard')

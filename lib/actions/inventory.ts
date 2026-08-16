@@ -5,11 +5,13 @@
 // Write: SA, OA, or Editor with inventory_manager = true
 
 import { revalidatePath } from 'next/cache'
+import { formatInTimeZone } from 'date-fns-tz'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminUser, type AdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { logAction } from '@/lib/audit'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import type {
   CreateItemData,
   InventoryItemWithStatus,
@@ -98,7 +100,8 @@ async function attachCheckoutStatus(
     .select('item_id, checkout_id')
     .in('checkout_id', activeCheckoutIds)
 
-  const today = new Date().toISOString().split('T')[0]
+  const tz = await getOrgTimezone(supabase)
+  const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
   const overdueByItemId = new Map<string, boolean>()
   const checkedOutItemIds = new Set<string>()
 

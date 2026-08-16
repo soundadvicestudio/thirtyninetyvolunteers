@@ -3,12 +3,12 @@ import { redirect } from 'next/navigation'
 import { fromZonedTime } from 'date-fns-tz'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import AuditLogFilters from '@/components/crew/settings/AuditLogFilters'
 import AuditLogTable, { type AuditLogEntry } from '@/components/crew/settings/AuditLogTable'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
 const PAGE_SIZE = 25
-const CT = 'America/Chicago'
 
 type RawSearchParams = {
   page?: string
@@ -28,19 +28,16 @@ type Filters = {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyAuditFilters(query: any, filters: Filters) {
+function applyAuditFilters(query: any, filters: Filters, timezone: string) {
   let q = query
   if (filters.adminId) q = q.eq('admin_id', filters.adminId)
   if (filters.action) q = q.eq('action', filters.action)
   if (filters.targetType) q = q.eq('target_type', filters.targetType)
   if (filters.dateFrom) {
-    // DST-aware CT day boundary — a hardcoded UTC offset would be wrong for
-    // roughly 8 months of the year (CDT is -05:00, not -06:00). Same
-    // fromZonedTime() primitive lib/utils/date.ts's formatWallClockCT() uses.
-    q = q.gte('created_at', fromZonedTime(`${filters.dateFrom} 00:00:00`, CT).toISOString())
+    q = q.gte('created_at', fromZonedTime(`${filters.dateFrom} 00:00:00`, timezone).toISOString())
   }
   if (filters.dateTo) {
-    q = q.lte('created_at', fromZonedTime(`${filters.dateTo} 23:59:59.999`, CT).toISOString())
+    q = q.lte('created_at', fromZonedTime(`${filters.dateTo} 23:59:59.999`, timezone).toISOString())
   }
   return q
 }
@@ -81,6 +78,7 @@ export default async function AuditLogPage({
   }
 
   const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
 
   const entriesQuery = applyAuditFilters(
     supabase
@@ -95,7 +93,8 @@ export default async function AuditLogPage({
       )
       .order('created_at', { ascending: false })
       .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1),
-    filters
+    filters,
+    tz
   )
 
   const [{ data: entries, count }, { data: allAdmins }] = await Promise.all([

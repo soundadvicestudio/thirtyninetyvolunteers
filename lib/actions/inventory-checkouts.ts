@@ -5,10 +5,12 @@
 // Read access: all authenticated admins
 
 import { revalidatePath } from 'next/cache'
+import { formatInTimeZone } from 'date-fns-tz'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminUser, type AdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import type { CreateCheckoutData, InventoryCheckout } from '@/types/inventory'
 
 export type ActionResult = { success: true } | { error: string }
@@ -94,7 +96,8 @@ async function enrichCheckouts(
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const tz = await getOrgTimezone(client)
+  const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   return checkouts.map((checkout) => ({
     ...checkout,

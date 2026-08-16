@@ -1,8 +1,7 @@
 import { fromZonedTime } from 'date-fns-tz'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { buildClaimICalEvent, wrapInCalendar } from '@/lib/utils/ical'
-
-const CT = 'America/Chicago'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 
 type ClaimRow = {
   id: string
@@ -68,9 +67,10 @@ export async function GET(request: Request) {
   const sd = typedClaim.volunteer_role.show_date
   const show = sd.show!
 
-  const startTime = fromZonedTime(`${sd.show_date} ${sd.show_time}`, CT)
+  const tz = await getOrgTimezone(supabase)
+  const startTime = fromZonedTime(`${sd.show_date} ${sd.show_time}`, tz)
   const endTime = sd.end_time
-    ? fromZonedTime(`${sd.show_date} ${sd.end_time}`, CT)
+    ? fromZonedTime(`${sd.show_date} ${sd.end_time}`, tz)
     : new Date(startTime.getTime() + 3 * 3600000)
 
   const vevent = buildClaimICalEvent({
