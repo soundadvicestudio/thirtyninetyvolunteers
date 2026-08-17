@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.7
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.8
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -22,6 +22,16 @@ MESSAGES.5–7 all ✓, key files updated to MESSAGES.1–7); §11 Phase MESSAGE
 marked ✓ Complete, build summaries for MESSAGES.5–7 added, prompt log
 updated; §11 Phase 17.1 flag count 7 → 8 (feature_messages noted as
 new opt-in); §13 version history v5.7; DOC.75 logged)
+### Last Updated: August 2026 — v5.8 (DOC.76: ADMIN.45/46 + Phase TZ TZ.A–
+TZ.4b documented — §1 current phase updated (Phase TZ in active execution,
+TZ.5a/5b/TZ.6 remaining); §8 Setup Panel Section 1 updated (org_timezone
+select field added, SETUP_KEYS 23→24); §8 QuickStats/Audit Log/Check-In
+CT references updated; §8 ShowDetail defaultHours display added (ADMIN.46);
+§8 Private Messaging onEmptyChange/isComposerEmpty pattern added (ADMIN.46);
+§9 org_timezone key + Migration 038 added; §11 Phase TZ section added
+(TZ.A–TZ.4b ✓, TZ.5a/5b/TZ.6 remaining); §11 ADMIN.45 + ADMIN.46 logged;
+§13 resolveLayoutSettings rename + getOrgTimezone pattern + TZ phase notes
+added; version history v5.8)
 
 ---
 
@@ -510,8 +520,9 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   tiles at the top of the dashboard. Total Active
   Volunteers (count WHERE status = 'active'); Upcoming
   Shows This Month (live shows with at least one
-  show_date in the current CT calendar month, computed
-  via `date-fns-tz` with 'America/Chicago' — DST-safe);
+  show_date in the current org-timezone calendar month,
+  computed via `date-fns-tz` with the resolved org timezone
+  via getOrgTimezone() — DST-safe);
   Volunteers Needed (sum of open slots across all live
   shows); New Volunteers (7 Days) (created_at in last
   7 days). Uses `getServerClient()`. Components:
@@ -683,6 +694,15 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     scanability requirement). Generated server-side via `generateQR()` in `lib/qr.ts`.
     Both `check_in_token` columns added in Migration 024.
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
+    Also in Settings tab: a read-only "Default Hours per Volunteer" field showing
+    the effective default hours for this show. Resolved value: `show.default_hours`
+    (per-show override) if set; otherwise `defaultHours[getLocationHoursBucket(
+    show.location?.name)]` (org-level bucket fallback). Displays "—" if neither
+    resolves. A note reads "Edit via the show edit form." The `defaultHours`
+    prop (the org-level bucket object) is passed from the parent page and threaded
+    through to `SettingsTab`. Fixed in ADMIN.46 (the prop was previously declared
+    in the type annotation but never destructured — the latent dead prop pattern
+    from ADMIN.45).
 - Post-event attendance marking (Editors only, only available after show date has passed):
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
@@ -865,8 +885,9 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   "Editor & Super Admin only" for Viewers. Added in 30BN-10.1 as a necessary undocumented
   addition — the page would have been unreachable without it.
 - Filters: Admin User dropdown, Action Type dropdown (grouped by category), Target Type
-  dropdown, Date From/To (DST-aware CT boundary via `fromZonedTime()` from `date-fns-tz` —
-  not a hardcoded UTC offset, since Central Time alternates CST/CDT seasonally). Native
+  dropdown, Date From/To (DST-aware org-timezone boundary via `fromZonedTime()` from
+  `date-fns-tz` with the resolved org timezone — not a hardcoded offset, since
+  timezone varies per deployment and alternates seasonally for DST zones). Native
   `<form method="GET">` — filter changes update URL params, triggering server re-fetch.
 - Columns: Date (`formatCT`) | Admin (name, "Public" for null admin_id) | Action
   (human-readable label) | Target (type + truncated id, linked to detail page where possible) |
@@ -1603,6 +1624,17 @@ browser-native way to report upload progress."). `forwardRef` +
 `useImperativeHandle` wrapping TipTap editor + file upload UI. Exposes four
 methods via `DirectMessageComposerHandle` ref type: `getBody(): string`,
 `getAttachments(): AttachmentInput[]`, `clear(): void`, `isEmpty(): boolean`.
+
+ADMIN.46 fix: `DirectMessageComposer.tsx` gained an `onEmptyChange?: (isEmpty:
+boolean) => void` prop wired via TipTap's `onCreate` and `onUpdate` hooks —
+fires whenever the editor's empty state changes. `ComposeForm.tsx` and
+`ReplyComposer.tsx` replaced direct `composerRef.current?.isEmpty()` reads in
+their `disabled={}` JSX expressions with a `const [isComposerEmpty, setIsComposerEmpty]
+= useState(true)` state, driven by `onEmptyChange={setIsComposerEmpty}`. This
+was a behavioral correctness fix: refs are not reactive and reading them during
+render produces stale values. Send buttons now correctly disable/enable in
+response to composer content changes.
+
 `ComposeForm.tsx` and `ReplyComposer.tsx` both refactored in MESSAGES.6 to
 `useRef<DirectMessageComposerHandle>` — all TipTap imports removed from both
 parents. Attach button triggers `<input type="file">` via `fileInputRef`;
@@ -1875,6 +1907,18 @@ Eight independently-saving sections (each has its own Save button — no "Save A
 
 Section 1 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
+Also in Section 1: `org_timezone` — Organization Timezone select field.
+Populated from `TIMEZONE_OPTIONS` in `lib/utils/org-timezone.ts` (~69 entries,
+worldwide coverage — Americas, Europe, Africa, Middle East, Asia, Oceania).
+Each entry has an IANA timezone string as value and a city/region name as label
+(no hardcoded UTC offset — DST handled automatically by `date-fns-tz`).
+Setting is Super Admin only (Setup Panel access is already SA-restricted).
+Stored in `app_settings` as `org_timezone`. Seeded `'America/Chicago'` in
+Migration 038. `saveOrgIdentity()` extended to handle this field with
+imperative validation (must match a value in TIMEZONE_OPTIONS), DB upsert,
+and `revalidatePath('/', 'layout')` to propagate the new `data-timezone`
+body attribute on next page render.
+
 Section 2 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME complete — brand colors now propagate dynamically across all rendering surfaces: public pages and admin UI via CSS custom properties injected in `app/layout.tsx` (THEME.1/2); email templates via string interpolation at send time using `resolveEmailSettings()` (THEME.3/3b); PDF exports via `createStyles()` factory props (THEME.4). Changing these values in the Setup Panel immediately affects all surfaces on next page render / email send.
 
 Section 3 — Logo: `org_logo_url`. Two input modes: (a) URL input (paste any public image URL), or (b) file upload via BrandImageUploader — P-DC pattern to `brand/logo/` in the `brand` public bucket, crop editor (react-easy-crop, free aspect ratio, PNG output). Whichever was used last wins. Falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset. Used in email templates (via `resolveEmailSettings()`) and public landing page.
@@ -1906,13 +1950,17 @@ Section 7 — Platform Identity: `instance_label`. Internal deployment label (e.
 Section 8 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 22 `app_settings` keys (21 SETUP keys + `default_reply_to`)
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 24 `app_settings` keys (23 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, eight sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
 - `lib/actions/setup.ts` — nine server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `getSignedBrandUploadUrl()`
 - `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
 - `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
+- `lib/utils/org-timezone.ts` — TIMEZONE_OPTIONS array (~69 entries, worldwide
+  IANA timezone list) + getOrgTimezone(supabase: SupabaseClient): Promise<string>
+  helper with 'America/Chicago' fallback. No 'use server'. Used by all server-
+  side TZ consumers and as the source for the Setup Panel timezone select.
 - `app/layout.tsx` — `generateMetadata()` reads `favicon_url`, `org_name`, and `org_tagline` from `app_settings` (ADMIN.34)
 
 ---
@@ -2165,7 +2213,7 @@ every 10 seconds via `router.refresh()` + `setInterval`. "Last updated Xs ago"
 counter between refreshes.
 
 **Layout:** Top section = full roster for the show with the nearest upcoming
-show_date (today or future, CT-aware). Below = all other future shows in
+show_date (today or future, org-timezone-aware). Below = all other future shows in
 chronological accordion, each collapsed showing show name + date + "X / Y checked in"
 summary. Only one accordion can be expanded at a time.
 
@@ -3850,6 +3898,11 @@ instance_label            → '30 By Ninety Theatre'
 favicon_url               → ''
 ```
 
+**`org_timezone` key added in Migration 038 (Phase TZ — TZ.1):**
+`org_timezone → 'America/Chicago'`. Configurable via Setup Panel Section 1
+(Super Admin only, `TIMEZONE_OPTIONS` select). See §8 Platform Setup Section 1
+and the Migration 038 status block above.
+
 Note: feature_opportunities, feature_hours_milestones,
 and feature_documents were seeded in Migration 023 but
 deleted in Migration 026 — these are core features, not
@@ -3921,6 +3974,10 @@ TopBar MessagesIcon. Added to `FeatureFlags` type and `getFeatureFlags()`
 in `lib/feature-flags.ts`. Setup Panel Section 6 has an eighth toggle row
 for this flag. `saveFeatureFlags()` revalidates `/crew/messages` and
 `/crew/users` alongside existing routes.
+Total active SETUP keys: 24 (23 prior + `org_timezone` added Migration 038 /
+TZ.1). `SETUP_KEYS.length = 24` — `default_reply_to` is already included
+within the `SETUP_KEYS` array, not a separate addition (confirmed ADMIN.46
+Task A4). Setup Panel page (`setup/page.tsx`) fetches 24 keys total.
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
@@ -3958,6 +4015,15 @@ created_at    timestamptz NOT NULL DEFAULT now()
 Four new tables for Phase MESSAGES private messaging system. `direct_message`
 added to `notifications_type_check`. `feature_messages` seeded `'false'` in
 `app_settings`.
+
+**Migration 038 status:** Applied — `038_org_timezone.sql` (TZ.1):
+Seeds `org_timezone = 'America/Chicago'` in `app_settings` via
+`INSERT INTO app_settings (key, value) VALUES ('org_timezone', 'America/Chicago')
+ON CONFLICT (key) DO NOTHING`. Preserves existing behavior on the 30BN deployment
+— no visible change on deploy. Configurable via Setup Panel Section 1 (Super
+Admin only). Client-side: read from `document.body.dataset.timezone` (injected
+by `resolveLayoutSettings()` in `app/layout.tsx`). Server-side: read via
+`getOrgTimezone(supabase)` in `lib/utils/org-timezone.ts`.
 
 ### message_threads
 ```sql
@@ -5097,7 +5163,9 @@ Migration 015 applied.
 ## 11. Beta Build — Phases & Prompts (Overview)
 
 *Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES
-complete (MESSAGES.A–7, 8 prompts). Phase 17 (Launch) is next.*
+complete (MESSAGES.A–7, 8 prompts). Phase TZ in active
+execution (TZ.A–TZ.4b complete; TZ.5a, TZ.5b, TZ.6 remaining). Phase 17
+(Launch) is next after Phase TZ completes.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -6070,6 +6138,38 @@ DOC.59 Brief v4.7 + Process v4.5 (post-build update after all 10 prompts complet
 
 **30BN-DOC.75 ✓** Brief v5.7 (this prompt)
 
+30BN-ADMIN.45 ✓ Dead prop audit — 10 component files, 2 dead
+props fixed (defaultHours in ShowDetail,
+adminRole in InventoryDetailTabs with suppression).
+Pre-existing F1 lint breach discovered.
+Commit: 671a6d4.
+30BN-ADMIN.46 ✓ Q1 implementation (defaultHours display in
+ShowDetail Settings tab) + F1 lint baseline
+restored (onEmptyChange on DirectMessageComposer,
+isComposerEmpty state in ComposeForm +
+ReplyComposer). Commit: 796af84.
+30BN-TZ.A ✓ Read-only timezone audit. No code. 7 grep passes,
+12 file reads, full classification table.
+6 unexpected findings (C5#1–C5#6).
+30BN-TZ.1 ✓ Foundation: Migration 038, lib/utils/org-timezone
+.ts, date.ts timezone param, app/layout.tsx
+resolveLayoutSettings() + data-timezone body attr,
+Setup Panel Section 1 org_timezone select.
+Commit: ce19f45.
+30BN-TZ.2 ✓ Server-side business logic sweep (12 files,
+absorbed TZ.3). All const CT + fromZonedTime()
+call sites. C5#1 inventory bug fixed. Commit:
+c166112.
+30BN-TZ.4a ✓ Display layer: Server Component pages (15 files
++ 1 companion). All formatCT/formatWallClockCT
+pass tz. C5#5 year boundary bug fixed. Commit:
+bfae0f6.
+30BN-TZ.4b ✓ Display layer: Server actions + lib/ (13 files).
+resolveEmailSettings() extended with timezone.
+csv.ts + VolunteerListPDF timezone params. Commit:
+cff97ab.
+30BN-DOC.76 ✓ Brief Update v5.8 (this prompt)
+
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
 **STYLE.A ✓** — Token extension. `lib/utils/color.ts`:
@@ -6445,6 +6545,128 @@ from upload route (MESSAGES.6 Q1); `myLastReadAt` prop removed from
 ThreadViewProps interface + page prop pass (MESSAGES.5 Q2). 0 new files,
 15 modified. Commit b0ed62b.
 Phase MESSAGES — Private Messaging System ✓ Complete (MESSAGES.A–7)
+
+### Phase TZ — Configurable Organization Timezone (in progress)
+
+**TZ.A ✓** — Read-only audit. No code. Complete timezone inventory across
+entire codebase via 7 grep passes + 12 targeted file reads. Identified:
+~2 TZ.1 foundation files, ~11 TZ.2 server-side business logic files, ~30 TZ.4
+display layer server files, ~47 TZ.5 display layer client files. Six unexpected
+findings (C5#1–C5#6): C5#1 — inventory overdue bug (new Date().toISOString()
+compared against bare date column, wrong for ~5–6 UTC evening hours daily);
+C5#2 — resolveOrgIdentity() in crew layout cannot reach Server Component pages
+beneath it (Next.js layout constraint — independent getOrgTimezone() calls
+required per page); C5#3 — 9 calendar Client Components with their own
+local const CT bypassing lib/utils/date.ts entirely; C5#4 — partial exemptions
+in calendar-availability.ts (getAvailableWindows is timezone-sensitive) and
+calendar-layout.ts (computeEventPosition is timezone-sensitive); C5#5 —
+messages/page.tsx year-boundary bug (UTC year vs org-timezone year); C5#6 —
+auditions.ts inline literal inconsistency. No code. Commit: none (audit only).
+
+**TZ.1 ✓** — Foundation. Migration 038 (org_timezone seeded 'America/Chicago').
+`lib/utils/org-timezone.ts` (new): `TIMEZONE_OPTIONS` (~69 IANA entries,
+worldwide) + `getOrgTimezone(supabase)` helper. `lib/utils/date.ts`: optional
+`timezone?: string` parameter (last position, default 'America/Chicago') added
+to `formatCT()` and `formatWallClockCT()`; module-level `const CT` removed —
+all 165 existing call sites continue to work unchanged (default preserves CT).
+`app/layout.tsx`: `resolveBrandColors()` renamed to `resolveLayoutSettings()`,
+extended to fetch `org_timezone` and inject `data-timezone={brand.timezone}` on
+`<body>` (first server-rendered `data-*` attribute — client components read via
+`document.body.dataset.timezone || 'America/Chicago'`). Setup Panel Section 1:
+`org_timezone` `<select>` field + `fd.append()` + `saveOrgIdentity()` extended +
+`setup/page.tsx` SETUP_KEYS 23→24. Commit: ce19f45.
+
+**TZ.2 ✓** — Server-side business logic sweep (12 files, absorbed former TZ.3
+iCal scope). All `const CT` declarations and `fromZonedTime()`/`formatInTimeZone()`
+call sites in server actions and route handlers replaced with `getOrgTimezone(supabase)`.
+Key complexities: `calendar.ts` — `buildEventTimes()` private helper gained
+`timezone: string` parameter, threaded through 9 call sites in 7 exported
+functions, 3 callers needed client construction reordering before first use;
+`audit-log/page.tsx` — `applyAuditFilters()` gained `timezone` parameter,
+stale CDT offset comment removed. C5#1 inventory overdue bug fixed in
+`inventory.ts` and `inventory-checkouts.ts` (replaced UTC date slice with
+`formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')`). `auditions.ts` line 748
+inline literal normalized. `claim.ics/route.ts` CT replaced. `lib/utils/ical.ts`
+confirmed entirely EXEMPT (uses UTC Z-suffix instants — no timezone coupling).
+Recurring pattern documented: client-before-usage reordering needed in multiple
+files where the Supabase client was constructed lazily. Commit: c166112.
+
+**TZ.4a ✓** — Display layer sweep: Server Component pages (15 files + 1
+companion edit). All `formatCT()`/`formatWallClockCT()` call sites in Server
+Component page files now pass `tz` as final argument. Nested Server Component
+helpers that receive formatted data received `timezone: string` prop:
+`SeasonAtAGlance.tsx` (from dashboard page), `QRHistoryPanel.tsx` (+ companion
+edit to `qr-generator/page.tsx`), `CallHistoryTable.tsx` (from volunteers/[id]
+page), `PostShowReport.tsx` (optional `timezone?: string` with 'America/Chicago'
+default — parent `ShowDetail.tsx` is a Client Component, will be wired in
+TZ.5a). Same-file helpers (`ShowCard` in callboard, `dateRangeLabel`/
+`UpcomingAuditionsCard` in shows) received `timezone` parameter threading.
+C5#5 year-boundary bug fixed in `messages/page.tsx`: both sides of year
+comparison now use `getYear(toZonedTime(..., tz))`. `audit-log/page.tsx`: PASS
+(no display-layer formatCT calls — TZ.2 was the only CT usage in this file).
+`email-activity/page.tsx`: supabase client was block-scoped inside conditional;
+hoisted `let tz = 'America/Chicago'` outer declaration, consistent with file's
+own pattern for similar conditionally-scoped values. Commit: bfae0f6.
+
+**TZ.4b ✓** — Display layer sweep: Server actions + lib/ utilities (13 files).
+`resolveEmailSettings()` extended: fetches `org_timezone` from `app_settings`,
+returns `timezone: string` in its result object — zero additional DB cost
+(extends existing query). All send functions that call `resolveEmailSettings()`
+destructure `timezone` and pass it into `formatCT()`/`formatWallClockCT()`
+calls. `lib/data/checkin.ts` `getCheckInDashboardData()` gained required
+`timezone: string` parameter; companion edit to `tools/checkin/page.tsx`.
+`lib/utils/csv.ts` `buildVolunteersCsv()` + `csvExportFilename()` gained
+optional `timezone: string = 'America/Chicago'` parameter (Client Component
+callers `ExportAllButton.tsx` + `VolunteersTable.tsx` deferred to TZ.5a).
+`lib/volunteers/VolunteerListPDF.tsx`: `timezone: string` prop added; companion
+edit to `export/route.tsx` extends inline `app_settings` fetch to include
+`org_timezone` and passes `timezone={tz}` as prop. Cron routes: trivial (tz
+already resolved from TZ.2 — only `formatWallClockCT()` calls needed `, tz`
+appended). Commit: cff97ab.
+
+**TZ.5a — PENDING** — Display layer sweep: Client Components using
+`formatCT()`/`formatWallClockCT()` (~38 files). Each reads
+`document.body.dataset.timezone || 'America/Chicago'` and passes to format
+calls. Also: wire `ShowDetail.tsx` → `<PostShowReport timezone={...}>`;
+wire `ExportAllButton.tsx` and `VolunteersTable.tsx` to pass `timezone` into
+`csv.ts` functions. SSR guard required:
+`typeof document !== 'undefined' ? document.body.dataset.timezone || 'America/Chicago' : 'America/Chicago'`
+
+**TZ.5b — PENDING** — Calendar Client Component sweep (~9 files + 2 partial
+exemptions). The 9 calendar Client Components that have their own `const CT`
+and call `date-fns-tz` directly (bypassing `lib/utils/date.ts`) need their
+local CT replaced with `document.body.dataset.timezone` read. Also:
+`getAvailableWindows()` in `calendar-availability.ts` and
+`computeEventPosition()` in `calendar-layout.ts` (C5#4 partial exemptions —
+each has timezone-sensitive logic that was incorrectly marked fully EXEMPT in
+TZ.A planning).
+
+**TZ.6 — PENDING** — Brief + Process DOC update for Phase TZ completion.
+
+**ADMIN.45 ✓** — Dead Prop Systematic Audit & Fix. Audited ~30 component
+and sub-component prop type signatures across 10 target files. Two dead props
+found and fixed: `defaultHours` in `ShowDetail.tsx` (declared in type, never
+destructured — ESLint suppression added as the prop was not yet used in the
+body) and `adminRole` in `InventoryDetailTabs.tsx` (same pattern — ESLint
+suppression added; usage deferred). All other 8 files: PASS. Pre-existing
+lint baseline breach discovered (F1): 6 errors + 1 warning in
+`ComposeForm.tsx`, `ReplyComposer.tsx`, `DirectMessageComposer.tsx`
+(react-hooks/refs violations from reading `composerRef.current` directly in
+JSX render expressions). Commit: 671a6d4.
+
+**ADMIN.46 ✓** — Q1 Implementation + F1 Lint Baseline Restoration.
+`ShowDetail.tsx` Settings tab: "Default Hours per Volunteer" read-only field
+added, resolving `show.default_hours ?? defaultHours[getLocationHoursBucket(
+show.location?.name)]` with "—" fallback; note "Edit via the show edit form."
+ADMIN.45 ESLint suppression for `defaultHours` removed (now used).
+`InventoryDetailTabs.tsx` `adminRole`: ADMIN.45 suppression left in place —
+Outcome A confirmed (canWrite/canDelete/canSeeNotes already cover all write
+gates; adminRole is genuinely redundant), cleanup deferred.
+F1 resolved: `DirectMessageComposer.tsx` gained `onEmptyChange` callback prop;
+`ComposeForm.tsx` + `ReplyComposer.tsx` replaced stale ref reads in JSX with
+`isComposerEmpty` state; unused `_unused` var removed from
+DirectMessageComposer. Zero lint errors, zero tsc errors.
+4 files modified. Commit: 796af84.
 
 ### Phase 17 — Launch
 
@@ -6985,6 +7207,43 @@ compliant path when: (a) the action returns a value type (e.g. `{ error?: string
 (b) the action is bound with `.bind()`, and (c) the result is passed to a form
 action prop. Established MESSAGES.4 F2.
 
+**resolveLayoutSettings() — renamed from resolveBrandColors() (TZ.1):**
+`resolveBrandColors()` in `app/layout.tsx` was renamed to `resolveLayoutSettings()`
+and extended to also fetch `org_timezone`. Its return type now includes
+`timezone: string` alongside the brand color fields. Any reference in future
+prompts or documentation to `resolveBrandColors()` should be updated to
+`resolveLayoutSettings()`. The function is internal to `app/layout.tsx` and
+not exported.
+
+**getOrgTimezone(supabase) — org timezone resolution pattern (TZ.1):**
+`getOrgTimezone(supabase: SupabaseClient): Promise<string>` in
+`lib/utils/org-timezone.ts`. Accepts any Supabase client as its first parameter
+(companion-module pattern — caller constructs the client, the helper never
+creates its own). Returns the `org_timezone` value from `app_settings`, or
+`'America/Chicago'` as fallback. Used by all server-side entry points that need
+the org timezone. Client Components read `document.body.dataset.timezone ||
+'America/Chicago'` instead (injected by `resolveLayoutSettings()` at root
+layout render time). SSR guard required for Client Components:
+`typeof document !== 'undefined' ? document.body.dataset.timezone ||
+'America/Chicago' : 'America/Chicago'`
+
+**formatCT() / formatWallClockCT() timezone parameter (TZ.1):**
+Both functions now accept an optional final `timezone?: string` parameter
+defaulting to `'America/Chicago'`. All 165 existing call sites remain valid
+unchanged — they simply continue to use CT by default until explicitly updated
+in the Phase TZ sweep prompts. New call sites and updated sweep call sites pass
+the resolved `tz` value as the final argument.
+
+**Client-before-usage reordering (Phase TZ recurring pattern):**
+Multiple files in the TZ sweep had their Supabase client constructed lazily
+(mid-function, after the first CT-dependent computation). Adding `const tz =
+await getOrgTimezone(supabase)` before those computations required moving
+`getServerClient()` / `getAdminClient()` calls to the top of the function.
+This is safe in all cases — `getServerClient()` / `getAdminClient()` have
+no ordering dependency on anything preceding them in these functions. Detected
+in: `calendar.ts` (3 functions), `app/calendar/page.tsx`,
+`app/crew/(app)/calendar/page.tsx`, `lib/actions/checkin.ts` (2 functions).
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -7143,3 +7402,16 @@ types, forwardRef+useImperativeHandle pattern), prompt structure updated
 prompt log updated (MESSAGES.5–7 + DOC.75); §11 Phase 17.1 flag count
 updated (7 → 8, feature_messages noted as new opt-in defaulting to 'false');
 §13 version history v5.7; DOC.75 logged)*
+
+*v5.8 (August 2026 — DOC.76: ADMIN.45 + ADMIN.46 + Phase TZ TZ.A–TZ.4b
+documented — §1 version + current phase (Phase TZ in active execution, TZ.5a/
+5b/TZ.6 remaining); §8 Setup Panel Section 1 (org_timezone select field, SETUP_KEYS
+23→24, lib/utils/org-timezone.ts key file); §8 QuickStats "CT" → org-timezone;
+§8 ShowDetail Settings tab defaultHours display (ADMIN.46); §8 Private Messaging
+onEmptyChange/isComposerEmpty pattern (ADMIN.46); §8 Check-In Dashboard CT →
+org-timezone; §8 Audit Log CT → org-timezone; §9 Migration 038 status block;
+§9 org_timezone key in app_settings; §9 SETUP_KEYS count corrected to 24; §11
+Phase TZ section added (TZ.A–TZ.4b ✓ with commits + TZ.5a/5b/TZ.6 pending;
+ADMIN.45 + ADMIN.46 build summaries); §11 prompt log through DOC.76; §13
+resolveLayoutSettings rename + getOrgTimezone pattern + formatCT timezone param
++ client-before-usage reordering pattern; DOC.76 logged)*
