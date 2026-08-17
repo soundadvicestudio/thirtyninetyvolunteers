@@ -25,7 +25,13 @@ function StatTile({
   )
 }
 
-export default function PostShowReport({ data }: { data: PostShowReportData }) {
+export default function PostShowReport({
+  data,
+  timezone = 'America/Chicago',
+}: {
+  data: PostShowReportData
+  timezone?: string
+}) {
   if (data.totalClaimedAppearances === 0) {
     return (
       <p className="text-sm text-mid-gray dark:text-dark-muted">
@@ -95,7 +101,7 @@ export default function PostShowReport({ data }: { data: PostShowReportData }) {
                   className={`${i % 2 === 1 ? 'bg-gray-50 dark:bg-dark-bg' : ''} border-b border-divider dark:border-dark-border last:border-b-0`}
                 >
                   <td className="px-4 py-2 text-dark dark:text-dark-text">
-                    {formatWallClockCT(d.showDate, d.showTime, 'MMM d, yyyy')}
+                    {formatWallClockCT(d.showDate, d.showTime, 'MMM d, yyyy', timezone)}
                   </td>
                   <td className="px-4 py-2 text-right text-dark dark:text-dark-text">{d.totalClaimed}</td>
                   <td className="px-4 py-2 text-right text-dark dark:text-dark-text">{d.showedCount}</td>

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CopyUrlButton from '@/components/crew/opportunities/CopyUrlButton'
 import type { StandingOpportunity, ClaimType, OpportunityStatus } from '@/types/opportunity'
 
@@ -43,6 +44,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
   const { id } = await params
   const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
 
   const { data: opportunity } = await supabase
     .from('standing_opportunities')
@@ -157,7 +159,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
                       )}
                     </td>
                     <td className="px-4 py-2 text-dark dark:text-dark-text">
-                      {formatCT(s.submitted_at, 'MMM d, yyyy h:mm a')}
+                      {formatCT(s.submitted_at, 'MMM d, yyyy h:mm a', tz)}
                     </td>
                     <td className="px-4 py-2">
                       <span

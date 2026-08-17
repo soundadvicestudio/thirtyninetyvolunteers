@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CancelForm from './CancelForm'
 
 function PublicHeader({ org }: { org: OrgIdentity }) {
@@ -86,10 +87,11 @@ export default async function CancelPage({
     return <InfoPage title="This cancel link is not valid or has already been used." org={org} />
   }
 
-  const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy')
+  const tz = await getOrgTimezone(client)
+  const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy', tz)
   const formattedTime = showDate.end_time
-    ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a')}`
-    : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
+    ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a', tz)} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a', tz)}`
+    : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a', tz)
   const maskedEmail = maskEmail(claim.volunteer_email)
   const claimStatus = claim.status as 'claimed' | 'waitlisted'
 

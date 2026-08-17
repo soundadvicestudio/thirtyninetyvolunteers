@@ -5,17 +5,18 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
 import type { PublicShow } from '@/types/show-public'
 import type { UpcomingAudition } from '@/lib/actions/auditions'
 
-function dateRangeLabel(show: PublicShow): string | null {
+function dateRangeLabel(show: PublicShow, timezone: string): string | null {
   if (show.dates.length === 0) return null
   const first = show.dates[0]
   const last = show.dates[show.dates.length - 1]
-  const firstLabel = formatWallClockCT(first.show_date, first.show_time, 'MMM d, yyyy')
+  const firstLabel = formatWallClockCT(first.show_date, first.show_time, 'MMM d, yyyy', timezone)
   if (show.dates.length === 1) return firstLabel
-  const lastLabel = formatWallClockCT(last.show_date, last.show_time, 'MMM d, yyyy')
+  const lastLabel = formatWallClockCT(last.show_date, last.show_time, 'MMM d, yyyy', timezone)
   return `${firstLabel} – ${lastLabel}`
 }
 
@@ -32,8 +33,8 @@ function openRolesSummary(show: PublicShow): { role_name: string; open: number }
   return [...openByRole.entries()].map(([role_name, open]) => ({ role_name, open }))
 }
 
-function ShowCard({ show }: { show: PublicShow }) {
-  const dateRange = dateRangeLabel(show)
+function ShowCard({ show, timezone }: { show: PublicShow; timezone: string }) {
+  const dateRange = dateRangeLabel(show, timezone)
   const openRoles = openRolesSummary(show)
 
   return (
@@ -70,7 +71,7 @@ function ShowCard({ show }: { show: PublicShow }) {
   )
 }
 
-function UpcomingAuditionsCard({ auditions }: { auditions: UpcomingAudition[] }) {
+function UpcomingAuditionsCard({ auditions, timezone }: { auditions: UpcomingAudition[]; timezone: string }) {
   return (
     <div className="mb-6 rounded-lg border border-divider bg-white p-5">
       <h2 className="text-lg font-semibold text-dark mb-3">Upcoming Auditions</h2>
@@ -81,8 +82,10 @@ function UpcomingAuditionsCard({ auditions }: { auditions: UpcomingAudition[] })
               <p className="font-medium text-dark">{a.title}</p>
               {a.show_title && <p className="text-sm text-mid-gray">{a.show_title}</p>}
               <p className="text-sm text-mid-gray">
-                {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy')}
-                {a.date_end && a.date_end !== a.date_start && ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy')}`}
+                {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy', timezone)}
+                {a.date_end &&
+                  a.date_end !== a.date_start &&
+                  ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy', timezone)}`}
               </p>
             </div>
             <Link href={`/auditions/${a.id}`} className="shrink-0 text-sm font-medium text-brand-accent hover:underline">
@@ -99,6 +102,7 @@ export default async function ShowsListingPage() {
   const shows = await getPublicShows()
   const flags = await getFeatureFlags(getAdminClient())
   const org = await resolveOrgIdentity()
+  const tz = await getOrgTimezone(getAdminClient())
   const upcomingAuditions = await getUpcomingAuditions()
 
   return (
@@ -126,7 +130,7 @@ export default async function ShowsListingPage() {
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
-          {upcomingAuditions.length > 0 && <UpcomingAuditionsCard auditions={upcomingAuditions} />}
+          {upcomingAuditions.length > 0 && <UpcomingAuditionsCard auditions={upcomingAuditions} timezone={tz} />}
 
           {shows.length === 0 ? (
             <div className="text-center py-12">
@@ -140,7 +144,7 @@ export default async function ShowsListingPage() {
           ) : (
             <div className="space-y-6">
               {shows.map((show) => (
-                <ShowCard key={show.id} show={show} />
+                <ShowCard key={show.id} show={show} timezone={tz} />
               ))}
             </div>
           )}

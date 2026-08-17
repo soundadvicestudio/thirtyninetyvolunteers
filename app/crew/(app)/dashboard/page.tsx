@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import ActivityFeed from '@/components/crew/dashboard/ActivityFeed'
 import AddToHomeScreenCard from '@/components/crew/AddToHomeScreenCard'
 import QuickStats from '@/components/crew/dashboard/QuickStats'
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
   }
 
   const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
 
   // All five queries below are mutually independent — none depends on
   // another's result (the two role-gated ones only need admin.role, already
@@ -106,7 +108,7 @@ export default async function DashboardPage() {
     volunteerName: row.volunteer?.full_name ?? 'Unknown Volunteer',
   }))
 
-  const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+  const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
   const pendingHoursRows: PendingHoursRow[] = (
     (pendingRows ?? []) as unknown as RawPendingHoursRow[]
   )
@@ -131,6 +133,7 @@ export default async function DashboardPage() {
       <SeasonAtAGlance
         seasonId={pinnedSeasonId}
         seasonName={pinnedSeasonName}
+        timezone={tz}
         selectorSlot={
           <SeasonSelector
             seasons={seasonList}

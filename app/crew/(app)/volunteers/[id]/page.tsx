@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import VolunteerProfileForm from '@/components/crew/volunteers/VolunteerProfileForm'
 import CallHistoryTable from '@/components/crew/volunteers/CallHistoryTable'
 import EditorNotes from '@/components/crew/volunteers/EditorNotes'
@@ -87,6 +88,7 @@ export default async function VolunteerProfilePage({
 
   const { id } = await params
   const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
 
   const { data: volunteer } = await supabase
     .from('volunteers')
@@ -283,7 +285,7 @@ export default async function VolunteerProfilePage({
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold text-dark mb-4">Call History</h2>
-        <CallHistoryTable calls={calls} />
+        <CallHistoryTable calls={calls} timezone={tz} />
       </section>
 
       <section className="mt-10">
@@ -348,8 +350,8 @@ export default async function VolunteerProfilePage({
                   {hoursLog.map((entry) => {
                     const dateLabel =
                       entry.source_type === 'manual' && entry.logged_date
-                        ? formatWallClockCT(entry.logged_date, null, 'MMM d, yyyy')
-                        : formatCT(entry.created_at, 'MMM d, yyyy')
+                        ? formatWallClockCT(entry.logged_date, null, 'MMM d, yyyy', tz)
+                        : formatCT(entry.created_at, 'MMM d, yyyy', tz)
                     const hoursValue = Number(entry.hours)
                     return (
                       <tr key={entry.id} className="border-b border-divider dark:border-dark-border last:border-0">
@@ -392,7 +394,7 @@ export default async function VolunteerProfilePage({
                 className="flex justify-between text-sm border-b border-divider dark:border-dark-border pb-2"
               >
                 <span className="text-dark dark:text-dark-text font-medium">{m.milestone_label}</span>
-                <span className="text-mid-gray dark:text-dark-muted">{formatCT(m.triggered_at, 'MMM d, yyyy')}</span>
+                <span className="text-mid-gray dark:text-dark-muted">{formatCT(m.triggered_at, 'MMM d, yyyy', tz)}</span>
               </li>
             ))}
           </ul>

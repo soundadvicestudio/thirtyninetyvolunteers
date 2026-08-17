@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Archive } from 'lucide-react'
+import { getYear } from 'date-fns'
+import { toZonedTime } from 'date-fns-tz'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getInboxThreads, getSentThreads, getArchivedThreads } from '@/lib/data/messages'
 import { archiveThread } from '@/lib/actions/messages'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import type { InboxThreadRow } from '@/types/messages'
 
 const TABS = [
@@ -30,6 +33,9 @@ export default async function MessagesPage({
   if (!flags.messages) {
     redirect('/crew/dashboard')
   }
+
+  const tz = await getOrgTimezone(supabase)
+  const currentYear = getYear(toZonedTime(new Date(), tz))
 
   const params = await searchParams
   const rawTab = params?.tab
@@ -122,9 +128,10 @@ export default async function MessagesPage({
                       <span className="text-xs text-mid-gray dark:text-dark-muted flex-shrink-0">
                         {formatCT(
                           thread.last_reply_at,
-                          new Date(thread.last_reply_at).getFullYear() === new Date().getFullYear()
+                          getYear(toZonedTime(new Date(thread.last_reply_at), tz)) === currentYear
                             ? 'MMM d'
-                            : 'MMM d, yyyy'
+                            : 'MMM d, yyyy',
+                          tz
                         )}
                       </span>
                     </div>

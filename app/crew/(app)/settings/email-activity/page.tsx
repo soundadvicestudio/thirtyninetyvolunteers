@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import AboutSystemEmails from '@/components/crew/settings/AboutSystemEmails'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
@@ -75,9 +76,11 @@ export default async function EmailActivityPage({
 
   let entries: EmailLogRow[] = []
   let totalCount = 0
+  let tz = 'America/Chicago'
 
   if (tab !== 'about') {
     const supabase = await getServerClient()
+    tz = await getOrgTimezone(supabase)
     let query = supabase
       .from('email_log')
       .select(
@@ -143,7 +146,7 @@ export default async function EmailActivityPage({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-mid-gray dark:text-dark-muted">
-                    {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a')}
+                    {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a', tz)}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-dark-border text-brand-primary dark:text-brand-primary-mid font-medium">
                     {getEmailTypeLabel(entry.recipient_type, entry.recipient_filter, entry.sent_by)}
@@ -202,7 +205,7 @@ export default async function EmailActivityPage({
                     }`}
                   >
                     <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
-                      {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a')}
+                      {formatCT(entry.sent_at, 'MMM d, yyyy h:mm a', tz)}
                     </td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text">{entry.subject}</td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">

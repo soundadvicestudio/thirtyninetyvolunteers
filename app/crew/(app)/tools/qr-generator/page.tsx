@@ -1,11 +1,13 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { getQRHistory } from '@/lib/data/qr'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import QRGeneratorForm from '@/components/crew/tools/QRGeneratorForm'
 import QRHistoryPanel from '@/components/crew/tools/QRHistoryPanel'
 
 export default async function QRGeneratorPage() {
   const supabase = await getServerClient()
   const history = await getQRHistory(supabase)
+  const tz = await getOrgTimezone(supabase)
 
   return (
     <div className="max-w-xl">
@@ -17,7 +19,7 @@ export default async function QRGeneratorPage() {
 
       <QRGeneratorForm />
 
-      <QRHistoryPanel history={history} />
+      <QRHistoryPanel history={history} timezone={tz} />
     </div>
   )
 }

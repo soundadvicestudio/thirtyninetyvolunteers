@@ -3,6 +3,7 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
@@ -16,6 +17,7 @@ export default async function HomePage() {
   // helpers that construct their own admin client internally.
   const supabase = getAdminClient()
   const flags = await getFeatureFlags(supabase)
+  const tz = await getOrgTimezone(supabase)
   const [org, upcomingAuditions] = await Promise.all([resolveOrgIdentity(), getUpcomingAuditions()])
 
   // Banner settings
@@ -118,10 +120,10 @@ export default async function HomePage() {
                       <p className="font-medium text-dark">{a.title}</p>
                       {a.show_title && <p className="text-sm text-mid-gray">{a.show_title}</p>}
                       <p className="text-sm text-mid-gray">
-                        {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy')}
+                        {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy', tz)}
                         {a.date_end &&
                           a.date_end !== a.date_start &&
-                          ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy')}`}
+                          ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy', tz)}`}
                       </p>
                     </div>
                     <Link href={`/auditions/${a.id}`} className="shrink-0 text-sm font-medium text-brand-accent hover:underline">

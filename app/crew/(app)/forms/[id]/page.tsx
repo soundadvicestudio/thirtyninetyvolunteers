@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
+import { getServerClient } from '@/lib/supabase/server'
 import { getFormDetail } from '@/lib/data/forms'
 import { generateQR } from '@/lib/qr'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { FORM_STATUS_LABEL, FORM_STATUS_BADGE } from '@/lib/utils/formDisplay'
 import FormDetailActions from './FormDetailActions'
 
@@ -12,6 +14,9 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
   if (!admin) {
     redirect('/crew/login')
   }
+
+  const supabase = await getServerClient()
+  const tz = await getOrgTimezone(supabase)
 
   const { id } = await params
   const form = await getFormDetail(id)
@@ -60,11 +65,11 @@ export default async function FormDetailPage({ params }: { params: Promise<{ id:
           <dl className="space-y-2 text-sm">
             <div className="flex gap-2">
               <dt className="text-mid-gray dark:text-dark-muted">Created:</dt>
-              <dd className="text-dark dark:text-dark-text">{formatCT(form.created_at, 'MMM d, yyyy h:mm a')}</dd>
+              <dd className="text-dark dark:text-dark-text">{formatCT(form.created_at, 'MMM d, yyyy h:mm a', tz)}</dd>
             </div>
             <div className="flex gap-2">
               <dt className="text-mid-gray dark:text-dark-muted">Last updated:</dt>
-              <dd className="text-dark dark:text-dark-text">{formatCT(form.updated_at, 'MMM d, yyyy h:mm a')}</dd>
+              <dd className="text-dark dark:text-dark-text">{formatCT(form.updated_at, 'MMM d, yyyy h:mm a', tz)}</dd>
             </div>
             <div className="flex gap-2 items-center">
               <dt className="text-mid-gray dark:text-dark-muted">Responses:</dt>

@@ -36,10 +36,12 @@ function indicatorColor(claimed: number, total: number): string {
 export default async function SeasonAtAGlance({
   seasonId,
   seasonName,
+  timezone,
   selectorSlot,
 }: {
   seasonId: string | null
   seasonName: string | null
+  timezone: string
   selectorSlot?: ReactNode
 }) {
   const supabase = await getServerClient()
@@ -87,11 +89,12 @@ export default async function SeasonAtAGlance({
               sortedDates.length === 0
                 ? 'No dates'
                 : sortedDates.length === 1
-                  ? formatWallClockCT(sortedDates[0].show_date, null, 'MMM d, yyyy')
-                  : `${formatWallClockCT(sortedDates[0].show_date, null, 'MMM d')} – ${formatWallClockCT(
+                  ? formatWallClockCT(sortedDates[0].show_date, null, 'MMM d, yyyy', timezone)
+                  : `${formatWallClockCT(sortedDates[0].show_date, null, 'MMM d', timezone)} – ${formatWallClockCT(
                       sortedDates[sortedDates.length - 1].show_date,
                       null,
-                      'MMM d, yyyy'
+                      'MMM d, yyyy',
+                      timezone
                     )}`
 
             return (
@@ -122,7 +125,7 @@ export default async function SeasonAtAGlance({
                         <div key={date.id}>
                           {sortedDates.length > 1 && (
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted mb-1">
-                              {formatWallClockCT(date.show_date, date.show_time, 'MMM d')}
+                              {formatWallClockCT(date.show_date, date.show_time, 'MMM d', timezone)}
                             </p>
                           )}
                           {roles.length === 0 ? (

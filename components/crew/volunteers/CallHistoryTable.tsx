@@ -22,7 +22,13 @@ const ATTENDANCE_CLASSES: Record<'showed' | 'no_show' | 'excused', string> = {
   excused: 'text-mid-gray',
 }
 
-export default function CallHistoryTable({ calls }: { calls: CallHistoryRow[] }) {
+export default function CallHistoryTable({
+  calls,
+  timezone,
+}: {
+  calls: CallHistoryRow[]
+  timezone: string
+}) {
   if (calls.length === 0) {
     return (
       <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg py-16 px-6 flex flex-col items-center text-center">
@@ -52,7 +58,7 @@ export default function CallHistoryTable({ calls }: { calls: CallHistoryRow[] })
             >
               <td className="px-4 py-3 text-dark dark:text-dark-text">{call.show_name}</td>
               <td className="px-4 py-3 text-dark dark:text-dark-text">
-                {call.show_date ? formatWallClockCT(call.show_date, null, 'MMM d, yyyy') : '—'}
+                {call.show_date ? formatWallClockCT(call.show_date, null, 'MMM d, yyyy', timezone) : '—'}
               </td>
               <td className="px-4 py-3 text-dark dark:text-dark-text">{call.role_name}</td>
               <td className="px-4 py-3">

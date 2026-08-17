@@ -6,6 +6,7 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
 import VolunteerCard from '@/components/callboard/VolunteerCard'
 import type { PublicShow } from '@/types/show-public'
@@ -158,7 +159,15 @@ async function getCallHistory(volunteerId: string, email: string): Promise<Callb
 
 type SignedUpEntry = { role_name: string; show_date: string }
 
-function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<string, SignedUpEntry[]> }) {
+function ShowCard({
+  show,
+  signedUpMap,
+  timezone,
+}: {
+  show: PublicShow
+  signedUpMap: Map<string, SignedUpEntry[]>
+  timezone: string
+}) {
   const signedUp = signedUpMap.get(show.id) ?? []
 
   return (
@@ -179,7 +188,7 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
         <div className="mb-3 flex flex-wrap gap-1">
           {signedUp.map((s, i) => (
             <span key={i} className="inline-block text-xs font-semibold text-brand-primary bg-brand-primary-light rounded-full px-3 py-1">
-              You&apos;re signed up for {s.role_name} on {formatWallClockCT(s.show_date, null, 'MMM d')}
+              You&apos;re signed up for {s.role_name} on {formatWallClockCT(s.show_date, null, 'MMM d', timezone)}
             </span>
           ))}
         </div>
@@ -192,8 +201,8 @@ function ShowCard({ show, signedUpMap }: { show: PublicShow; signedUpMap: Map<st
           return (
             <li key={date.id} className="text-sm">
               <span className="font-semibold text-dark">
-                {formatWallClockCT(date.show_date, date.show_time, 'MMM d, yyyy · h:mm a')}
-                {date.end_time && ` – ${formatWallClockCT(date.show_date, date.end_time, 'h:mm a')}`}
+                {formatWallClockCT(date.show_date, date.show_time, 'MMM d, yyyy · h:mm a', timezone)}
+                {date.end_time && ` – ${formatWallClockCT(date.show_date, date.end_time, 'h:mm a', timezone)}`}
               </span>
               {allFull ? (
                 <span className="ml-2 text-mid-gray">Full</span>
@@ -251,6 +260,7 @@ export default async function CallboardPage() {
 
   const flags = await getFeatureFlags(getAdminClient())
   const org = await resolveOrgIdentity()
+  const tz = await getOrgTimezone(getAdminClient())
 
   const [shows, opportunities] = await Promise.all([getPublicShows(), getActiveOpportunities()])
 
@@ -321,7 +331,7 @@ export default async function CallboardPage() {
                 <h2 className="text-brand-primary font-bold text-xl mb-4">Upcoming Shows</h2>
                 <div className="space-y-4">
                   {shows.map((show) => (
-                    <ShowCard key={show.id} show={show} signedUpMap={signedUpMap} />
+                    <ShowCard key={show.id} show={show} signedUpMap={signedUpMap} timezone={tz} />
                   ))}
                 </div>
               </div>
