@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.5
+## 30BN_PROCESS_v1.md — v5.6
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 ### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
 — §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
@@ -23,6 +23,15 @@ items (@tailwindcss/typography, prop threading chain, logAction() diff update);
 §13 Phase MESSAGES ✓ Complete — MESSAGES.5–7 build summaries added, pending
 block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
 pattern notes; DOC.75 logged)
+### Last Updated: August 2026 — v5.6 (DOC.77: ADMIN.45/46 + Phase TZ TZ.A–
+TZ.4b documented — §7 DST-aware date filtering updated (getOrgTimezone());
+§7 calendar-availability.ts + calendar-layout.ts partial exemption corrections;
+§7 resolveEmailSettings() return type updated (+timezone); §7 six new TZ
+patterns (getOrgTimezone, resolveLayoutSettings rename, formatCT timezone
+param, client-before-usage ordering, onEmptyChange ref-reactivity fix,
+data-timezone body attribute); §10 new 'America/Chicago' hardcoded grep
+check; §11 five new checklist items (TZ patterns); §13 ADMIN.45 + ADMIN.46 +
+Phase TZ in-progress block; §14 six new pattern notes; version history v5.6)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -235,8 +244,12 @@ When filtering records by a CT date boundary (e.g., "all records from this date 
 use `fromZonedTime()` from `date-fns-tz` to compute the correct UTC boundary — never a
 hardcoded UTC offset (`-06:00` or `-05:00`). Central Time alternates between CST (-06:00)
 and CDT (-05:00) seasonally. A hardcoded offset is wrong for approximately 8 months of
-the year. This is the same principle as R23 — use the date-fns-tz primitives, never raw
-offsets. Confirmed failure mode avoided in 10.1 Q3.
+the year. After Phase TZ (TZ.1), the timezone identifier itself must also be dynamic —
+resolved via `getOrgTimezone(supabase)` from `lib/utils/org-timezone.ts` rather than
+hardcoded to `'America/Chicago'`. The pattern: `const tz = await
+getOrgTimezone(supabase)`, then `fromZonedTime(new Date(), tz)`. This is the same
+principle as R23 — use the date-fns-tz primitives with the org timezone, never raw
+offsets or hardcoded IANA strings. Confirmed failure mode avoided in 10.1 Q3.
 
 **Phone normalization at all write paths (established
 ADMIN.21):**
@@ -276,6 +289,14 @@ no server-only imports. They are safe to import from Client Components — same 
 dependent behavior from `date-fns` primitives like `startOfMonth()` which silently depend on
 the runtime's local timezone.
 
+**Partial exemption (Phase TZ C5#4):** `getAvailableWindows()` in this file
+IS timezone-sensitive — it hardcodes a '7 AM–10 PM' business-day window using
+`fromZonedTime()` with `'America/Chicago'`. It requires a timezone parameter
+update in TZ.5b. The UTC-anchored grid helpers (`startOfWeekUTC()`,
+`endOfWeekUTC()`, `enumerateDays()`, `getMonthGridDays()`, `getWeekGridDays()`)
+remain truly timezone-agnostic and exempt. Only `getAvailableWindows()` needs
+the Phase TZ fix.
+
 **`lib/utils/calendar-recurrence.ts` is pure client-safe (established CAL.10a):**
 `generateOccurrenceDates()` and `describeRecurrence()` make no DB calls and have no server-only
 imports. Safe to import from Client Components — required for the live N-events preview in
@@ -288,6 +309,12 @@ dependency.
 imports. Used by `UnifiedWeekGrid.tsx` (Client Component) for the column-splitting algorithm and
 absolute-position math. The `EventWithLayout` type is exported from this file. Safe to import
 from any Client Component.
+
+**Partial exemption (Phase TZ C5#4):** `computeEventPosition()` IS timezone-
+sensitive — it calls `toZonedTime(time, CT)` with a hardcoded `'America/Chicago'`
+const to compute an event's hour-of-day for pixel positioning. It requires a
+timezone parameter update in TZ.5b. `computeColumnLayout()` remains truly
+timezone-agnostic and exempt.
 
 **iCalendar route handlers use `getAdminClient()` (established CAL.7):**
 `/api/calendar/feed.ics/route.ts` and `/api/calendar/claim.ics/route.ts` use `getAdminClient()` —
@@ -1322,6 +1349,24 @@ export default DirectMessageComposer
 
 Parents use `useRef<DirectMessageComposerHandle>(null)` and call `composerRef.current?.getBody()` in their submit handlers. The exported handle type is required — without it TypeScript cannot verify call-site method names or argument types. Established `DirectMessageComposer.tsx` MESSAGES.6. This is the correct pattern for any shared editor component where multiple parents need to trigger submit independently.
 
+**Refs are not reactive — use state for disabled conditions (established ADMIN.46):**
+Reading `composerRef.current?.isEmpty()` (or any ref value) directly in a JSX
+`disabled={}` expression produces a stale value that never triggers re-renders.
+Refs do not participate in React's render cycle — their contents can change without
+causing a re-render. The ESLint rule `react-hooks/refs` flags this correctly.
+
+Fix pattern: add an `onEmptyChange?: (isEmpty: boolean) => void` callback prop to
+the shared editor component. Wire it via TipTap's `onCreate` and `onUpdate` hooks.
+In the parent component, declare `const [isComposerEmpty, setIsComposerEmpty] =
+useState(true)` and pass `onEmptyChange={setIsComposerEmpty}` to the editor
+component. Use `isComposerEmpty` in the `disabled={}` expression instead of the
+stale ref read.
+
+This pattern was applied in ADMIN.46 to `DirectMessageComposer.tsx` (added
+`onEmptyChange` prop), `ComposeForm.tsx` and `ReplyComposer.tsx` (added
+`isComposerEmpty` state, replaced ref reads). The fix is a correctness improvement:
+Send buttons now correctly respond to composer content changes.
+
 **Prop typed but not destructured — latent dead prop pattern (confirmed MESSAGES.7):**
 A prop declared in a component's TypeScript type annotation but absent from the function's destructured parameter list is silently dropped — values passed by the parent are discarded, and no TypeScript error is thrown.
 
@@ -1391,6 +1436,73 @@ The distinction:
 - `router.push(newUrl)` — navigate to a **different URL** (genuine navigation)
 
 R12's prohibition: `router.push('/crew/dashboard')` after updating a volunteer record on `/crew/volunteers/[id]` is wrong — use `router.refresh()` to stay on the same page. Creating a new resource and navigating to it is correct use of `router.push()`. Established MESSAGES.5.
+
+**`getOrgTimezone(supabase)` — org timezone resolution (established TZ.1):**
+Server-side timezone resolution helper in `lib/utils/org-timezone.ts` (NO
+`'use server'` — this file exports `TIMEZONE_OPTIONS`, a plain array constant;
+`'use server'` would cause a Vercel build failure per the FORUMS.5-FIX constraint).
+Accepts any Supabase client as its first parameter (companion-module pattern).
+Fetches `org_timezone` from `app_settings`. Returns the IANA string, or
+`'America/Chicago'` as fallback via `||` (not `??` — R18).
+
+Every server-side entry point that needs the org timezone calls this once:
+```typescript
+const tz = await getOrgTimezone(supabase)
+```
+Client Components do NOT call this. Instead they read:
+```typescript
+const tz = typeof document !== 'undefined'
+  ? (document.body.dataset.timezone || 'America/Chicago')
+  : 'America/Chicago'
+```
+The `typeof document !== 'undefined'` SSR guard is required — Client Components
+render server-side during the initial pass where `document` is not available.
+
+**`resolveLayoutSettings()` — renamed from `resolveBrandColors()` (TZ.1):**
+`resolveBrandColors()` in `app/layout.tsx` was renamed to `resolveLayoutSettings()`
+and extended to also fetch `org_timezone`. Its return type now includes `timezone:
+string` alongside the brand color fields. Return values are bound as `brand.primary`,
+`brand.accent`, and `brand.timezone` in the template literal — NOT as `brandPrimary`
+/ `brandAccent` / `brandTimezone` local variables (same pattern as the pre-existing
+STYLE.A F2 note). Any future extension of this function must maintain this binding
+convention. Any prior reference to `resolveBrandColors()` in prompts or planning
+must use `resolveLayoutSettings()` going forward.
+
+**`formatCT()` and `formatWallClockCT()` timezone parameter (TZ.1):**
+Both functions now accept an optional final `timezone?: string` parameter defaulting
+to `'America/Chicago'`. This parameter is ALWAYS LAST — inserting it in any other
+position would break all 165 existing call sites which pass positional arguments.
+All existing call sites remain valid unchanged. New and updated call sites pass the
+resolved `tz` value:
+```typescript
+// Old (still valid — uses CT default)
+formatCT(date, 'MMM d, yyyy')
+// Updated (explicitly configurable)
+formatCT(date, 'MMM d, yyyy', tz)
+
+// Old (still valid)
+formatWallClockCT(dateStr, null, 'MMM d, yyyy')
+// Updated
+formatWallClockCT(dateStr, null, 'MMM d, yyyy', tz)
+```
+
+**Client-before-usage reordering (Phase TZ recurring pattern):**
+When adding `const tz = await getOrgTimezone(supabase)` to a function, the
+Supabase client construction must precede the `getOrgTimezone()` call. In
+multiple files during TZ.2 and TZ.4b, the client was constructed lazily
+(mid-function, after the first CT-dependent computation). Moving `getServerClient()`
+or `getAdminClient()` to the top of the function body is always safe — these
+constructors have no ordering dependencies. Confirmed in TZ.2: `calendar.ts`
+(3 functions), `app/calendar/page.tsx`, `app/crew/(app)/calendar/page.tsx`.
+Confirmed in TZ.4b: `lib/actions/checkin.ts` (2 functions).
+
+**`data-timezone` body attribute — client timezone distribution (TZ.1):**
+`resolveLayoutSettings()` in `app/layout.tsx` injects `data-timezone={brand.timezone}`
+on the `<body>` tag — the first server-rendered `data-*` attribute on `<body>` in this
+project. Client Components read it via `document.body.dataset.timezone`. The crew
+layout sets `data-theme` on `document.body` at runtime via an inline script — this
+is a separate mechanism and does not conflict. The `data-timezone` value is injected
+once at root layout render time and available on all routes including public pages.
 
 ---
 
@@ -2003,6 +2115,24 @@ grep -n "Promise<{ notifiedUserIds" lib/email.ts
 # All return paths (including the early-return path where
 # subscribers have no email) must return { notifiedUserIds }
 # — not { notifiedUserIds: [] }.
+```
+
+```bash
+# Confirm no hardcoded 'America/Chicago' remains outside
+# lib/utils/org-timezone.ts and setup/page.tsx (Phase TZ)
+grep -rn "'America/Chicago'" \
+  app/ components/ lib/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "lib/utils/org-timezone.ts" \
+  | grep -v "setup/page.tsx"
+# Expected: zero results after TZ.5a + TZ.5b complete.
+# Acceptable remaining hits:
+#   lib/utils/org-timezone.ts — TIMEZONE_OPTIONS array entry +
+#     getOrgTimezone() fallback (|| 'America/Chicago')
+#   setup/page.tsx — initialValues fallback (|| 'America/Chicago')
+#     per R18 pattern
+# Any other hit = Phase TZ missed a call site — fix before
+# Phase TZ.6 DOC update is declared complete.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -2665,6 +2795,45 @@ lib/actions/forum-posts.ts)
   and revalidatePath additions are clearly required — the `logAction()` diff
   update is easy to miss and produces a silent audit log gap with no build error.
   Check: `grep -n "logAction" lib/actions/setup.ts`. (MESSAGES.7 — B1 fix)
+
+□ Any server-side code that needs the org timezone: call
+  `getOrgTimezone(supabase)` from `lib/utils/org-timezone.ts`.
+  Accepts any Supabase client as parameter (companion-module pattern).
+  Returns the IANA timezone string, or 'America/Chicago' fallback.
+  Never hardcode 'America/Chicago' in server actions or route handlers.
+  (Phase TZ — TZ.1)
+
+□ Any client component that needs the org timezone: read
+  `document.body.dataset.timezone || 'America/Chicago'` with
+  the required SSR guard:
+  `typeof document !== 'undefined'
+    ? (document.body.dataset.timezone || 'America/Chicago')
+    : 'America/Chicago'`
+  Never call `getOrgTimezone()` from a Client Component. Never
+  prop-drill timezone from a Server Component to a Client Component
+  — the body attribute is the established distribution mechanism.
+  (Phase TZ — TZ.1, TZ.5a)
+
+□ Any new function that calls `getOrgTimezone()`: ensure the
+  Supabase client is constructed BEFORE the call. Lazy client
+  construction (creating the client mid-function after other work)
+  requires reordering when `getOrgTimezone()` is added. The client
+  constructors have no ordering dependencies — moving them to the
+  top of the function is always safe. Recurring failure mode across
+  TZ.2 and TZ.4b. (Phase TZ client-before-usage ordering pattern)
+
+□ Any new `formatCT()` or `formatWallClockCT()` call site (or any
+  existing call site updated during Phase TZ sweep): pass the resolved
+  `tz` as the final optional argument. Both functions default to
+  'America/Chicago' when the argument is omitted — the default
+  preserves backward compatibility but is not configurable. Updated
+  call sites must explicitly pass `tz`. (Phase TZ — TZ.1)
+
+□ `resolveEmailSettings()` now returns `timezone: string` alongside
+  its other fields. Any send function that calls both
+  `resolveEmailSettings()` and `formatCT()`/`formatWallClockCT()`:
+  confirm `timezone` is destructured from the result and passed as
+  the final argument to the format calls. (Phase TZ — TZ.4b)
 ```
 
 ---
@@ -4142,6 +4311,87 @@ Phase MESSAGES — Private Messaging System ✓ Complete
     pass (B4/B5 — MESSAGES.5 Q2). Phase MESSAGES ✓ Complete (MESSAGES.A–7).
     0 new files, 15 modified. Commit b0ed62b.
 
+ADMIN.45 ✓ — Dead Prop Systematic Audit & Fix. Audited ~30 component
+signatures across 10 target files. Two dead props fixed: `defaultHours` in
+`ShowDetail.tsx` and `adminRole` in `InventoryDetailTabs.tsx` (both declared in
+type annotation, never destructured — ESLint suppression added). All other 8 files
+PASS. Discovered pre-existing lint baseline breach (F1): 6 errors + 1 warning in
+`ComposeForm.tsx`, `ReplyComposer.tsx`, `DirectMessageComposer.tsx`
+(react-hooks/refs violations). Commit: 671a6d4.
+
+ADMIN.46 ✓ — Q1 Implementation + F1 Lint Baseline Restoration.
+`ShowDetail.tsx` Settings tab: "Default Hours per Volunteer" read-only field added
+(`show.default_hours ?? defaultHours[getLocationHoursBucket(show.location?.name)]`,
+fallback "—"). F1 resolved: `DirectMessageComposer.tsx` gained `onEmptyChange?`
+callback prop (TipTap `onCreate`/`onUpdate`); `ComposeForm.tsx` + `ReplyComposer.tsx`
+replaced stale `composerRef.current` reads in JSX with `isComposerEmpty` state;
+unused `_unused` var removed. Lesson: refs are not reactive — reading them in
+`disabled={}` JSX expressions produces stale values. 4 files. Commit: 796af84.
+
+Phase TZ — Configurable Organization Timezone (in progress)
+  TZ.A ✓ Read-only audit. 7 grep passes + 12 targeted file reads across entire
+    codebase. Complete classification table: ~2 TZ.1, ~11 TZ.2, ~30 TZ.4, ~47 TZ.5
+    NEEDS_CHANGE files. Six unexpected findings (C5#1–C5#6): C5#1 inventory overdue
+    UTC date bug; C5#2 resolveOrgIdentity() cannot reach Server Component pages in
+    Next.js layout (each page must call getOrgTimezone() independently); C5#3 nine
+    calendar Client Components with their own local `const CT` bypassing lib/utils/date.ts;
+    C5#4 partial exemptions in calendar-availability.ts (getAvailableWindows) and
+    calendar-layout.ts (computeEventPosition); C5#5 messages/page.tsx year-boundary bug;
+    C5#6 auditions.ts inline literal inconsistency. No code. No commit.
+
+  TZ.1 ✓ Foundation. Migration 038 (org_timezone seeded 'America/Chicago').
+    `lib/utils/org-timezone.ts` (new — NO 'use server'; TIMEZONE_OPTIONS ~69 IANA
+    entries worldwide + getOrgTimezone(supabase) helper). `lib/utils/date.ts`: optional
+    `timezone?: string` last parameter added to `formatCT()` and `formatWallClockCT()`;
+    module-level `const CT` removed. `app/layout.tsx`: `resolveBrandColors()` renamed to
+    `resolveLayoutSettings()`, extended to fetch org_timezone, `data-timezone={brand.timezone}`
+    added to `<body>` (first server-rendered `data-*` attribute). Setup Panel Section 1:
+    org_timezone select field + fd.append() + saveOrgIdentity() extended + SETUP_KEYS
+    23→24. Commit: ce19f45.
+
+  TZ.2 ✓ Server-side business logic sweep (12 files, absorbed former TZ.3).
+    All `const CT` + `fromZonedTime()`/`formatInTimeZone()` call sites in server
+    actions and route handlers replaced with `getOrgTimezone(supabase)`. Key complexity:
+    `calendar.ts` — `buildEventTimes()` private helper gained `timezone` parameter,
+    threaded through 9 call sites in 7 exported functions, 3 callers required
+    client-before-usage reordering. C5#1 inventory overdue bug fixed in `inventory.ts`
+    + `inventory-checkouts.ts` (replaced `new Date().toISOString().split('T')[0]` with
+    `formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')`). `lib/utils/ical.ts` confirmed
+    entirely EXEMPT (UTC Z-suffix instants — no timezone coupling at all). Stale CDT
+    comment in audit-log page removed. Commit: c166112.
+
+  TZ.4a ✓ Display layer: Server Component pages (15 files + 1 companion).
+    All `formatCT()`/`formatWallClockCT()` call sites pass `tz` as final argument.
+    Nested components received `timezone: string` prop (SeasonAtAGlance, QRHistoryPanel
+    + qr-generator/page.tsx companion, CallHistoryTable, PostShowReport with optional
+    prop + default pending TZ.5a). C5#5 year-boundary bug fixed in messages/page.tsx
+    (both sides of year comparison use `getYear(toZonedTime(..., tz))`). Same-file
+    helpers (ShowCard/callboard, dateRangeLabel+UpcomingAuditionsCard/shows) received
+    timezone threading. audit-log/page.tsx: PASS (TZ.2 was its only CT usage).
+    email-activity/page.tsx: hoisted outer `let tz` due to block-scoped client.
+    Commit: bfae0f6.
+
+  TZ.4b ✓ Display layer: Server actions + lib/ (13 files).
+    `resolveEmailSettings()` extended: fetches `org_timezone`, returns `timezone: string`
+    (zero additional DB cost — extends existing query). All affected send functions
+    destructure and pass `timezone` into format calls. `lib/data/checkin.ts`
+    `getCheckInDashboardData()` gained required `timezone` parameter + companion edit to
+    `tools/checkin/page.tsx`. `lib/utils/csv.ts` `buildVolunteersCsv()` + `csvExportFilename()`
+    gained optional `timezone: string = 'America/Chicago'` (Client Component callers
+    deferred to TZ.5a). `lib/volunteers/VolunteerListPDF.tsx`: `timezone` prop added;
+    `export/route.tsx` fetches `org_timezone` and passes `timezone={tz}` prop. Cron
+    routes: trivial (tz already resolved from TZ.2). `lib/actions/checkin.ts` (PUBLIC
+    ROUTE): 2 of 3 functions needed client-before-usage reordering. Commit: cff97ab.
+
+  TZ.5a — PENDING — Client Components using formatCT/formatWallClockCT (~38 files).
+    SSR guard required. Also: wire ShowDetail.tsx → PostShowReport timezone prop; wire
+    ExportAllButton.tsx + VolunteersTable.tsx to pass timezone into csv.ts functions.
+
+  TZ.5b — PENDING — Nine calendar Client Components with own local `const CT` +
+    getAvailableWindows() + computeEventPosition() (C5#3 + C5#4).
+
+  TZ.6 — PENDING — DOC update for Phase TZ completion.
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -4762,6 +5012,23 @@ checklist item, §13 prompt log — this prompt).
   30BN-MESSAGES.7 ✓ (see Phase MESSAGES above)
   30BN-DOC.75     ✓ Brief v5.7 + Process v5.5 (Phase MESSAGES complete
                     — this prompt pair)
+  30BN-ADMIN.45   ✓ Dead prop audit (10 files, 2 fixes,
+                    F1 discovered). Commit 671a6d4.
+  30BN-ADMIN.46   ✓ Q1 (defaultHours display) + F1 restored
+                    (onEmptyChange, isComposerEmpty state).
+                    Commit 796af84.
+  30BN-TZ.A       ✓ Read-only timezone audit (no code).
+  30BN-TZ.1       ✓ Foundation: Migration 038, org-timezone.ts,
+                    date.ts params, body attr, Setup Panel.
+                    Commit ce19f45.
+  30BN-TZ.2       ✓ Server-side sweep (12 files, absorbed TZ.3).
+                    C5#1 bug fixed. Commit c166112.
+  30BN-TZ.4a      ✓ Server Component pages (15 + 1 companion).
+                    C5#5 bug fixed. Commit bfae0f6.
+  30BN-TZ.4b      ✓ Server actions + lib/ (13 files).
+                    resolveEmailSettings() +timezone. Commit cff97ab.
+  30BN-DOC.76     ✓ Brief Update v5.8 (this phase).
+  30BN-DOC.77     ✓ Process Update v5.6 (this prompt).
 ```
 
 ---
@@ -5156,7 +5423,7 @@ Cross-reference §7 for the dual-client pattern detail.
 
 Two new `app_settings` helper functions were introduced in SETUP.3 and ADMIN.31. Both use `getAdminClient()` internally — not `getServerClient()`:
 
-`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, `org_contact_email`, `brand_primary`, and `brand_accent` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string, brandPrimary: string, brandAccent: string, brandPrimaryLight: string }` with 30BN defaults when keys are absent. `brandPrimaryLight` is derived server-side via `lightenHex(brandPrimary, 0.08)` from `lib/utils/color.ts` — an 8% tint of `brand_primary` (see lightenHex pattern below). Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. Extended ADMIN.33 (orgName), ADMIN.34 (orgContactEmail), THEME.3 (brandPrimary, brandAccent), THEME.3b (brandPrimaryLight). The `FROM_ADDRESS` and `REPLY_TO` module-level constants in `lib/email.ts` were deleted in ADMIN.34 — the 4 payload builders (`buildReminderEmailPayload`, `buildThankYouEmailPayload`, `buildShowBulkEmailPayload`, `buildCategoryMatchNotificationPayload`) now accept explicit `from?: string`, `replyTo?: string`, `brandPrimary?: string`, and `brandAccent?: string` params with inline 30BN string defaults as fallback. All call sites in `lib/actions/shows.ts` and both cron routes pass the dynamic values from their inline `app_settings` fetches. Email client constraint: Email clients do not support CSS custom properties (`var()`) or `color-mix()`. Brand hex values must be string-interpolated at send time — this is distinct from the CSS custom property approach used in the web UI. Never hardcode `#293994` or `#F26522` in email body copy or template helpers; always use the values destructured from `resolveEmailSettings()`.
+`resolveEmailSettings()` (internal to `lib/email.ts`, never exported): Fetches `email_from_address`, `email_from_name`, `org_logo_url`, `org_name`, `org_contact_email`, `brand_primary`, `brand_accent`, and `org_timezone` from `app_settings` in a single query. Returns `{ from: string, logoUrl: string, orgName: string, orgContactEmail: string, brandPrimary: string, brandAccent: string, brandPrimaryLight: string, timezone: string }` with 30BN defaults when keys are absent. `brandPrimaryLight` is derived server-side via `lightenHex(brandPrimary, 0.08)` from `lib/utils/color.ts` — an 8% tint of `brand_primary` (see lightenHex pattern below). `timezone` is the org timezone IANA string fetched from `app_settings.org_timezone`, with `'America/Chicago'` fallback — extended TZ.4b; all send functions that call `formatCT()` or `formatWallClockCT()` now destructure `timezone` and pass it as the final argument. Uses `getAdminClient()` because it is called from multiple contexts: cron routes (no session), `lib/email.ts` send functions (may be called from either context), and server actions. Extended ADMIN.33 (orgName), ADMIN.34 (orgContactEmail), THEME.3 (brandPrimary, brandAccent), THEME.3b (brandPrimaryLight), TZ.4b (timezone). The `FROM_ADDRESS` and `REPLY_TO` module-level constants in `lib/email.ts` were deleted in ADMIN.34 — the 4 payload builders (`buildReminderEmailPayload`, `buildThankYouEmailPayload`, `buildShowBulkEmailPayload`, `buildCategoryMatchNotificationPayload`) now accept explicit `from?: string`, `replyTo?: string`, `brandPrimary?: string`, and `brandAccent?: string` params with inline 30BN string defaults as fallback. All call sites in `lib/actions/shows.ts` and both cron routes pass the dynamic values from their inline `app_settings` fetches. Email client constraint: Email clients do not support CSS custom properties (`var()`) or `color-mix()`. Brand hex values must be string-interpolated at send time — this is distinct from the CSS custom property approach used in the web UI. Never hardcode `#293994` or `#F26522` in email body copy or template helpers; always use the values destructured from `resolveEmailSettings()`.
 
 `resolveOrgIdentity()` (exported from `lib/utils/org-identity.ts`): Fetches `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`, and `org_logo_url` from `app_settings`. Returns `OrgIdentity` with 30BN defaults. Uses `getAdminClient()` because it is called from public Server Components (`app/page.tsx`) and cron routes with no Supabase Auth session. Extended ADMIN.33 to include `org_logo_url` — required for all public pages that display the org logo dynamically. Never import `resolveOrgIdentity()` from a Client Component. When a Client Component needs org identity data (e.g., `Sidebar.tsx`), the parent Server Component layout (`app/crew/(app)/layout.tsx`) calls `resolveOrgIdentity()` and passes the result as a prop — same pattern as flags and admin. This is the correct pattern for any Client Component that needs `getAdminClient()` data.
 
@@ -5697,6 +5964,87 @@ Complete Task A fully and stop — report findings before proceeding to Task B.
 
 The mid-prompt "wait for confirmation" instruction after Task A is equally important — it forces the Task A findings to be surfaced before any code is written, enabling the planning session to review them and catch discrepancies before they become build defects. Established MESSAGES.5 (MESSAGES.5 was initially sub-delegated before this instruction was added; all subsequent MESSAGES prompts included it explicitly).
 
+**`getOrgTimezone()` / `document.body.dataset.timezone` pair — Phase TZ:**
+
+The established org timezone distribution pattern after TZ.1:
+
+Server-side (Server Components, Server Actions, route handlers, cron routes):
+```typescript
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
+const tz = await getOrgTimezone(supabase) // any client
+```
+
+Client-side (Client Components):
+```typescript
+const tz = typeof document !== 'undefined'
+  ? (document.body.dataset.timezone || 'America/Chicago')
+  : 'America/Chicago'
+```
+
+The SSR guard is required because Next.js renders Client Components on the server
+during the initial pass — `document` does not exist in that context.
+
+`lib/utils/org-timezone.ts` must NOT have `'use server'` — it exports
+`TIMEZONE_OPTIONS` (a plain array constant). Exporting a non-function value from
+a `'use server'` file causes a Vercel build failure (FORUMS.5-FIX constraint).
+The file is a pure utility module in the same class as `lib/utils/color.ts` and
+`lib/utils/phone.ts`.
+
+**`resolveLayoutSettings()` renamed from `resolveBrandColors()` — TZ.1:**
+The function `resolveBrandColors()` in `app/layout.tsx` was renamed to
+`resolveLayoutSettings()` in TZ.1 and extended to also fetch and return
+`org_timezone`. Its values are bound as `brand.primary`, `brand.accent`, and
+`brand.timezone` in the template literal — never as flat local variables. Any
+future extension of this function must maintain this binding convention. Do not
+reference `resolveBrandColors()` in new prompts — use `resolveLayoutSettings()`.
+
+**`formatCT()` / `formatWallClockCT()` optional timezone parameter — TZ.1:**
+Both functions' signatures now end with an optional `timezone?: string` parameter
+defaulting to `'America/Chicago'`. The parameter is ALWAYS LAST — changing its
+position would break all existing call sites. The default preserves backward
+compatibility for all 165 pre-TZ call sites. New call sites and Phase TZ sweep
+updates must pass the resolved `tz` explicitly. Never insert timezone in any
+position other than the last argument. Cross-reference: §7 pattern note.
+
+**Client-before-usage reordering — Phase TZ recurring pattern:**
+Adding `getOrgTimezone()` to a function that constructs its Supabase client
+lazily (after the first operation) requires reordering so the client comes first.
+Confirmed across TZ.2 (`calendar.ts` 3 functions, `app/calendar/page.tsx`,
+`app/crew/(app)/calendar/page.tsx`) and TZ.4b (`lib/actions/checkin.ts` 2
+functions). The client constructors (`getServerClient()`, `getAdminClient()`) have
+no ordering dependency — they may be moved to the top of any function body safely.
+Always audit the function's current client construction position before inserting
+a `getOrgTimezone()` call.
+
+**Refs are not reactive in JSX — `onEmptyChange` callback pattern (ADMIN.46):**
+Reading a ref value (e.g. `composerRef.current?.isEmpty()`) directly in a JSX
+attribute expression (e.g. `disabled={composerRef.current?.isEmpty()}`) produces
+a stale value. Refs are mutable containers that do not trigger re-renders when
+their content changes. The `react-hooks/refs` ESLint rule correctly flags this.
+
+Correct pattern: add an `onEmptyChange?: (isEmpty: boolean) => void` callback prop
+to the shared editor component. Fire it via TipTap's `onCreate` and `onUpdate` hooks
+whenever the editor's empty state changes. In the parent component, declare a
+`const [isComposerEmpty, setIsComposerEmpty] = useState(true)` state variable and
+pass `onEmptyChange={setIsComposerEmpty}`. Use `isComposerEmpty` in `disabled={}`.
+
+This pattern applies to any shared editor component that multiple parents need to
+query for content state. Confirmed failure mode: the `ComposeForm.tsx` and
+`ReplyComposer.tsx` Send buttons were using stale ref reads — could have been
+wrong in either direction (stuck disabled or stuck enabled). Fixed ADMIN.46.
+
+**`lib/utils/ical.ts` is fully EXEMPT from Phase TZ (confirmed TZ.A/TZ.2):**
+Despite initial planning assumptions, `lib/utils/ical.ts` has zero timezone
+coupling. It formats every DTSTART/DTEND as `yyyyMMdd'T'HHmmss'Z'` (UTC instant
+with Z suffix). No TZID parameter. No VTIMEZONE block. No `'America/Chicago'`
+reference. All its functions (`generateVEvent()`, `wrapInCalendar()`,
+`buildClaimICalEvent()`, `buildAdminCalendarEvents()`) operate on already-resolved
+UTC Date objects. The only Phase TZ change in the iCal pipeline was in
+`app/api/calendar/claim.ics/route.ts` — upstream of `lib/utils/ical.ts` — where
+wall-clock show times are converted to UTC via `fromZonedTime(date, tz)` before
+being passed to the iCal builder. Do not attempt to add timezone parameters to
+`lib/utils/ical.ts` — it is correctly and intentionally timezone-agnostic.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -5825,3 +6173,20 @@ typography, prop threading chain audit, logAction() diff update for new flags);
 block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
 pattern notes (see §7 above + complex build direct terminal execution); DOC.75
 logged)*
+
+*v5.6 (August 2026 — DOC.77: ADMIN.45/46 + Phase TZ TZ.A–TZ.4b documented —
+§2 version + Last Updated; §7 DST-aware date filtering updated (getOrgTimezone()
+not hardcoded CT); §7 calendar-availability.ts partial exemption correction
+(getAvailableWindows is timezone-sensitive); §7 calendar-layout.ts partial
+exemption correction (computeEventPosition is timezone-sensitive); §7
+resolveEmailSettings() return type updated (+timezone); §7 six new Phase TZ
++ ADMIN.46 patterns (getOrgTimezone/data-timezone pair, resolveLayoutSettings
+rename, formatCT timezone param + last-position constraint, client-before-usage
+reordering, onEmptyChange ref-reactivity fix, data-timezone body attribute); §10
+new 'America/Chicago' hardcoded grep check; §11 five new checklist items (TZ
+server-side resolution, TZ client-side read with SSR guard, client-before-usage
+ordering, formatCT tz argument, resolveEmailSettings timezone destructuring); §13
+ADMIN.45 + ADMIN.46 + Phase TZ in-progress block (TZ.A–TZ.4b ✓ with commits,
+TZ.5a/5b/TZ.6 pending); §13 prompt log through DOC.77; §14 six new pattern notes
+(getOrgTimezone pair, resolveLayoutSettings rename, formatCT param, client-before-
+usage, refs-not-reactive/onEmptyChange, ical.ts exempt); DOC.77 logged)*
