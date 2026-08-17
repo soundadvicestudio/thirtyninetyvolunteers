@@ -89,6 +89,7 @@ export type VolunteerListPDFProps = {
   volunteers: VolunteerListRow[]
   filters: string
   generatedAt: string
+  timezone: string
   brandPrimary?: string
   brandPrimaryLight?: string
 }
@@ -97,6 +98,7 @@ export default function VolunteerListPDF({
   volunteers,
   filters,
   generatedAt,
+  timezone,
   brandPrimary = '#293994',
   brandPrimaryLight = '#EEF1FA',
 }: VolunteerListPDFProps) {
@@ -144,7 +146,7 @@ export default function VolunteerListPDF({
                 {v.status === 'active' ? 'Active' : 'Archived'}
               </Text>
               <Text style={[styles.cell, styles.colJoined]}>
-                {formatCT(v.created_at, 'MMM d, yyyy')}
+                {formatCT(v.created_at, 'MMM d, yyyy', timezone)}
               </Text>
             </View>
           ))}

@@ -6,6 +6,7 @@ import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { checkFirstCall, checkMilestones } from '@/lib/milestones'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 
 export type MarkAttendanceParams = {
@@ -38,7 +39,8 @@ export async function markAttendance(params: MarkAttendanceParams): Promise<Mark
     return { error: 'Could not find this show date.' }
   }
 
-  const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+  const tz = await getOrgTimezone(supabase)
+  const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
   if (showDate.show_date >= todayCT) {
     return { error: 'Attendance can only be marked for past dates.' }
   }

@@ -35,24 +35,26 @@ export async function GET(request: Request) {
   const [{ volunteers }, filterSummary, { data: brandRows }] = await Promise.all([
     getVolunteersList(supabase, state, { fetchAll: true }),
     buildFilterSummary(supabase, state),
-    supabase.from('app_settings').select('key, value').in('key', ['brand_primary']),
+    supabase.from('app_settings').select('key, value').in('key', ['brand_primary', 'org_timezone']),
   ])
 
   const brandMap = Object.fromEntries((brandRows ?? []).map((r) => [r.key, r.value]))
   const brandPrimary = brandMap['brand_primary'] || '#293994'
   const brandPrimaryLight = lightenHex(brandPrimary, 0.08)
+  const tz = brandMap['org_timezone'] || 'America/Chicago'
 
   const buffer = await renderToBuffer(
     <VolunteerListPDF
       volunteers={volunteers}
       filters={filterSummary}
-      generatedAt={formatCT(new Date(), 'MMM d, yyyy h:mm a')}
+      generatedAt={formatCT(new Date(), 'MMM d, yyyy h:mm a', tz)}
+      timezone={tz}
       brandPrimary={brandPrimary}
       brandPrimaryLight={brandPrimaryLight}
     />
   )
 
-  const date = formatCT(new Date(), 'yyyy-MM-dd')
+  const date = formatCT(new Date(), 'yyyy-MM-dd', tz)
 
   return new Response(new Uint8Array(buffer), {
     status: 200,

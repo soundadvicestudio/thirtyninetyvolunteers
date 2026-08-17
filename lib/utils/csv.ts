@@ -43,7 +43,7 @@ export function escapeCsvField(value: string): string {
   return value
 }
 
-export function buildVolunteersCsv(rows: VolunteerListRow[]): string {
+export function buildVolunteersCsv(rows: VolunteerListRow[], timezone: string = 'America/Chicago'): string {
   const lines = [CSV_HEADERS.map(escapeCsvField).join(',')]
 
   for (const row of rows) {
@@ -65,7 +65,7 @@ export function buildVolunteersCsv(rows: VolunteerListRow[]): string {
       String(row.total_hours),
       String(row.calls),
       row.status === 'active' ? 'Active' : 'Archived',
-      formatCT(row.created_at, 'MMM d, yyyy'),
+      formatCT(row.created_at, 'MMM d, yyyy', timezone),
       row.referral_source ?? '',
     ]
     lines.push(fields.map((f) => escapeCsvField(String(f))).join(','))
@@ -74,8 +74,8 @@ export function buildVolunteersCsv(rows: VolunteerListRow[]): string {
   return lines.join('\r\n')
 }
 
-export function csvExportFilename(): string {
-  return `volunteers-export-${formatCT(new Date(), 'yyyy-MM-dd')}.csv`
+export function csvExportFilename(timezone: string = 'America/Chicago'): string {
+  return `volunteers-export-${formatCT(new Date(), 'yyyy-MM-dd', timezone)}.csv`
 }
 
 export function downloadCsv(filename: string, content: string): void {

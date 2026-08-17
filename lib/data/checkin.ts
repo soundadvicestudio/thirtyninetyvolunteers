@@ -31,9 +31,13 @@ type RawOtherDateRow = {
 // Follows the getPostShowReportData() pattern (lib/data/showReport.ts) —
 // receives the Supabase client as a parameter rather than constructing its
 // own; the caller (app/crew/(app)/tools/checkin/page.tsx) already has an
-// authenticated-session client from getServerClient().
-export async function getCheckInDashboardData(supabase: SupabaseClient): Promise<CheckInDashboardData> {
-  const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+// authenticated-session client from getServerClient(). timezone is resolved
+// once by the caller via getOrgTimezone() and passed in here.
+export async function getCheckInDashboardData(
+  supabase: SupabaseClient,
+  timezone: string
+): Promise<CheckInDashboardData> {
+  const todayCT = formatCT(new Date(), 'yyyy-MM-dd', timezone)
 
   const { data: nearestDateRow } = await supabase
     .from('show_dates')

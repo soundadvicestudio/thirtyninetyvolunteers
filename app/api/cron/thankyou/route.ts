@@ -120,7 +120,7 @@ export async function GET(request: Request) {
       }
 
       // D. Build payloads.
-      const formattedDate = formatWallClockCT(date.show_date, null, 'MMMM d, yyyy')
+      const formattedDate = formatWallClockCT(date.show_date, null, 'MMMM d, yyyy', tz)
       const payloads = recipients.map((r) =>
         buildThankYouEmailPayload({
           recipientEmail: r.email,

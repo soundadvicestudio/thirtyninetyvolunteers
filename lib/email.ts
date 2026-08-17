@@ -29,6 +29,7 @@ type EmailSettings = {
   brandPrimary: string
   brandAccent: string
   brandPrimaryLight: string
+  timezone: string
 }
 
 async function resolveEmailSettings(): Promise<EmailSettings> {
@@ -44,6 +45,7 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
       'org_contact_email',
       'brand_primary',
       'brand_accent',
+      'org_timezone',
     ])
   const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
   const address = map['email_from_address'] || 'volunteers@30byninetyvolunteers.com'
@@ -54,6 +56,7 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
   const brandPrimary = map['brand_primary'] || '#293994'
   const brandAccent = map['brand_accent'] || '#F26522'
   const brandPrimaryLight = lightenHex(brandPrimary, 0.08)
+  const timezone = map['org_timezone'] || 'America/Chicago'
   return {
     from: `${name} <${address}>`,
     logoUrl,
@@ -62,6 +65,7 @@ async function resolveEmailSettings(): Promise<EmailSettings> {
     brandPrimary,
     brandAccent,
     brandPrimaryLight,
+    timezone,
   }
 }
 
@@ -1930,7 +1934,7 @@ export async function sendAuditionStatusEmail({ signupId, auditionId, status }: 
     auditioner_name: signup.name,
     show_title: show?.name,
     audition_title: audition.title,
-    audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+    audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy', emailSettings.timezone),
     audition_location: location?.name,
     cast_role: signup.cast_role ?? undefined,
     org_name: emailSettings.orgName,

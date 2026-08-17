@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import {
@@ -55,6 +56,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
 
     const client = getAdminClient()
     const flags = await getFeatureFlags(client)
+    const tz = await getOrgTimezone(client)
 
     // A. Fetch role and show context
     const { data: role, error: roleError } = await client
@@ -153,7 +155,7 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
       if (matchedDateIds.size > 0) {
         const existingDates = (otherDates ?? [])
           .filter((d) => matchedDateIds.has(d.id))
-          .map((d) => formatWallClockCT(d.show_date, d.show_time, 'MMM d, yyyy'))
+          .map((d) => formatWallClockCT(d.show_date, d.show_time, 'MMM d, yyyy', tz))
         return { status: 'duplicate_show', existingDates }
       }
     }
@@ -217,8 +219,8 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
     revalidatePath(`/shows/${show.id}`)
 
     // H + I. Confirmation email + email_log — non-blocking, claim is already inserted.
-    const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'MMMM d, yyyy')
-    const formattedTime = formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
+    const formattedDate = formatWallClockCT(showDate.show_date, showDate.show_time, 'MMMM d, yyyy', tz)
+    const formattedTime = formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a', tz)
     const cancelUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/cancel?token=${inserted.claim_token}`
 
     try {
@@ -294,6 +296,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
   try {
     const client = getAdminClient()
     const flags = await getFeatureFlags(client)
+    const tz = await getOrgTimezone(client)
 
     // A. Look up claim by claim_token.
     const { data: claim, error: claimError } = await client
@@ -419,8 +422,8 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
             editorEmails = (editors ?? []).map((e) => e.email)
           }
 
-          const formattedShowDate = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'MMMM d, yyyy')
-          const formattedShowTime = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'h:mm a')
+          const formattedShowDate = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'MMMM d, yyyy', tz)
+          const formattedShowTime = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'h:mm a', tz)
 
           if (promotedClaim && showRow && roleRow) {
             try {

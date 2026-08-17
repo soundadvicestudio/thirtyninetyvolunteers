@@ -98,14 +98,14 @@ export async function GET(request: Request) {
         if (!showDate || !show || !role) return null
 
         const showTime = showDate.end_time
-          ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a')}`
-          : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a')
+          ? `${formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a', tz)} – ${formatWallClockCT(showDate.show_date, showDate.end_time, 'h:mm a', tz)}`
+          : formatWallClockCT(showDate.show_date, showDate.show_time, 'h:mm a', tz)
 
         return buildReminderEmailPayload({
           to: claim.volunteer_email,
           volunteerName: claim.volunteer_name,
           showName: show.name,
-          showDate: formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy'),
+          showDate: formatWallClockCT(showDate.show_date, showDate.show_time, 'EEEE, MMMM d, yyyy', tz),
           showTime,
           roleName: role.role_name,
           volunteerInstructions: show.volunteer_instructions,

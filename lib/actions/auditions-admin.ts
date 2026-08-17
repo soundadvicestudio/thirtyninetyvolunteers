@@ -11,6 +11,7 @@ import { sendBatchEmails, sendAuditionStatusEmail } from '@/lib/email'
 import { syncAuditionToCalendar } from '@/lib/actions/calendar-sync'
 import { substituteMergeTags, type MergeTagValues } from '@/lib/utils/merge-tags'
 import { formatWallClockCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import type {
   Audition,
   AuditionAssignment,
@@ -1110,6 +1111,7 @@ export async function previewAuditionEmailTemplate(
     )
     const orgName = settingsMap['org_name'] || '30 By Ninety Theatre'
     const brandPrimary = settingsMap['brand_primary'] || '#293994'
+    const tz = await getOrgTimezone(supabase)
 
     // Supabase normalizes to-one FK joins as either an object or a
     // single-element array depending on relation inference — same
@@ -1122,7 +1124,7 @@ export async function previewAuditionEmailTemplate(
       auditioner_name: 'Alex Sample',
       show_title: show?.name ?? 'Sample Show',
       audition_title: audition.title,
-      audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+      audition_date: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy', tz),
       audition_location: location?.name ?? 'Main Theater',
       role_name: 'Sample Role',
       cast_role: 'Sample Role',

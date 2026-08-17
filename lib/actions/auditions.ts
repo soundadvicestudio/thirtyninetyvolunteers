@@ -170,6 +170,7 @@ export async function submitAuditionSignup(
     const data = parsed.data
 
     const supabase = getAdminClient()
+    const tz = await getOrgTimezone(supabase)
 
     const { data: audition } = await supabase
       .from('auditions')
@@ -309,7 +310,7 @@ export async function submitAuditionSignup(
       to: data.email,
       name: data.name,
       auditionTitle: audition.title,
-      auditionDate: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy'),
+      auditionDate: formatWallClockCT(audition.date_start, null, 'MMMM d, yyyy', tz),
       auditionTime: formatAuditionTime(audition.time_start),
       locationName: location?.name ?? null,
       cancelToken: signup.cancel_token,

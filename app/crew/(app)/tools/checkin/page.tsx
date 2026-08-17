@@ -3,6 +3,7 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getCheckInDashboardData } from '@/lib/data/checkin'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { CheckInDashboard } from '@/components/crew/tools/CheckInDashboard'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 
@@ -17,7 +18,8 @@ export default async function CheckInPage() {
   const flags = await getFeatureFlags(supabase)
   if (!flags.checkin) redirect('/crew/dashboard')
 
-  const data = await getCheckInDashboardData(supabase)
+  const tz = await getOrgTimezone(supabase)
+  const data = await getCheckInDashboardData(supabase, tz)
 
   return (
     <div>

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { formatCT } from '@/lib/utils/date'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { normalizePhone } from '@/lib/utils/phone'
 import { getLocationHoursBucket } from '@/lib/utils/showDisplay'
 import { logAction } from '@/lib/audit'
@@ -60,7 +61,8 @@ export async function resolveCheckInToken(token: string): Promise<CheckInTokenRe
     .maybeSingle()
 
   if (showMatch) {
-    const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+    const tz = await getOrgTimezone(supabase)
+    const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
     const { data: dates } = await supabase
       .from('show_dates')
       .select('id, show_date, show_time, end_time')
@@ -183,12 +185,12 @@ export async function checkInVolunteer(
     }
     const { targetDate, show } = targetResolved
 
-    const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+    const supabase = getAdminClient()
+    const tz = await getOrgTimezone(supabase)
+    const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
     if (targetDate.show_date < todayCT) {
       return { error: 'date_passed' }
     }
-
-    const supabase = getAdminClient()
 
     const flags = await getFeatureFlags(supabase)
     if (!flags.checkin) {
@@ -315,12 +317,12 @@ export async function checkInNewVolunteer(
     }
     const { targetDate, show } = targetResolved
 
-    const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+    const supabase = getAdminClient()
+    const tz = await getOrgTimezone(supabase)
+    const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
     if (targetDate.show_date < todayCT) {
       return { error: 'date_passed' }
     }
-
-    const supabase = getAdminClient()
 
     const flags = await getFeatureFlags(supabase)
     if (!flags.checkin) {
