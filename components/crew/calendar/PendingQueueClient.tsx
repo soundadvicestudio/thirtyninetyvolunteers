@@ -12,8 +12,6 @@ import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
 import type { RecurrenceGroup } from '@/types/calendar'
 
-const CT = 'America/Chicago'
-
 const TYPE_LABELS: Record<string, string> = {
   performance: 'Performance',
   rehearsal: 'Rehearsal',
@@ -33,8 +31,8 @@ const FREQ_LABELS: Record<string, string> = {
 const selectClasses =
   'rounded-lg border border-divider dark:border-dark-border px-2 py-1.5 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
-function eventDateLabel(startTime: string): string {
-  return formatInTimeZone(new Date(startTime), CT, 'EEE, MMM d, yyyy')
+function eventDateLabel(startTime: string, timezone: string): string {
+  return formatInTimeZone(new Date(startTime), timezone, 'EEE, MMM d, yyyy')
 }
 
 function eventTimeLabel(event: { start_time: string; end_time: string }, timezone: string): string {
@@ -197,9 +195,9 @@ export default function PendingQueueClient({
       setConflictStatus((prev) => ({ ...prev, [eventId]: false }))
       return
     }
-    const date = formatInTimeZone(new Date(startTime), CT, 'yyyy-MM-dd')
-    const startCT = formatInTimeZone(new Date(startTime), CT, 'HH:mm')
-    const endCT = formatInTimeZone(new Date(endTime), CT, 'HH:mm')
+    const date = formatInTimeZone(new Date(startTime), tz, 'yyyy-MM-dd')
+    const startCT = formatInTimeZone(new Date(startTime), tz, 'HH:mm')
+    const endCT = formatInTimeZone(new Date(endTime), tz, 'HH:mm')
     const result = await checkEventConflict(locationId, date, startCT, endCT, eventId)
     setConflictStatus((prev) => ({ ...prev, [eventId]: result.conflict }))
   }
@@ -217,9 +215,9 @@ export default function PendingQueueClient({
 
     setBatchConflictChecking(true)
     for (const event of batch.events) {
-      const date = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
-      const startCT = formatInTimeZone(new Date(event.start_time), CT, 'HH:mm')
-      const endCT = formatInTimeZone(new Date(event.end_time), CT, 'HH:mm')
+      const date = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
+      const startCT = formatInTimeZone(new Date(event.start_time), tz, 'HH:mm')
+      const endCT = formatInTimeZone(new Date(event.end_time), tz, 'HH:mm')
       const result = await checkEventConflict(defaultLoc, date, startCT, endCT, event.id)
       setConflictStatus((prev) => ({ ...prev, [event.id]: result.conflict }))
     }
@@ -369,7 +367,7 @@ export default function PendingQueueClient({
                           className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-divider dark:border-dark-border p-3"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>
+                            <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time, tz)}</p>
                             <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event, tz)}</p>
                           </div>
                           <LocationSelect
@@ -469,7 +467,7 @@ export default function PendingQueueClient({
                           className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-divider dark:border-dark-border p-3"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>
+                            <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time, tz)}</p>
                             <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event, tz)}</p>
                           </div>
                           <LocationSelect
@@ -524,7 +522,7 @@ export default function PendingQueueClient({
                 <div>
                   <p className="font-semibold text-dark dark:text-dark-text">{event.title}</p>
                   <p className="text-sm text-mid-gray dark:text-dark-muted">
-                    {TYPE_LABELS[event.event_type] ?? event.event_type} · {eventDateLabel(event.start_time)} ·{' '}
+                    {TYPE_LABELS[event.event_type] ?? event.event_type} · {eventDateLabel(event.start_time, tz)} ·{' '}
                     {eventTimeLabel(event, tz)}
                   </p>
                   <p className="text-xs text-mid-gray dark:text-dark-muted">

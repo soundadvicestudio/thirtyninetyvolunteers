@@ -24,7 +24,6 @@ import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -91,6 +90,7 @@ export default function CalendarShell({
   initialTypeFilter: string[]
   initialSeason: string | null
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [view, setView] = useState<CalendarView>(
     initialView === 'week' || initialView === 'agenda' ? initialView : 'month'
@@ -130,7 +130,7 @@ export default function CalendarShell({
     return () => document.removeEventListener('click', handleClick)
   }, [])
 
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   function buildUrl(nextView: CalendarView, nextDate: string, locs: string[], types: string[], season: string | null) {
     const params = new URLSearchParams()
@@ -248,7 +248,7 @@ export default function CalendarShell({
   // Day panel always shows real availability regardless of active filters,
   // so it reads from the unfiltered events array.
   const dayPanelEvents = selectedDate
-    ? events.filter((e) => formatInTimeZone(new Date(e.start_time), CT, 'yyyy-MM-dd') === selectedDate)
+    ? events.filter((e) => formatInTimeZone(new Date(e.start_time), tz, 'yyyy-MM-dd') === selectedDate)
     : []
 
   const periodLabel = getPeriodLabel(view, focusedDate)

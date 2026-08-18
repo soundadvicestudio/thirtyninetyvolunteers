@@ -8,8 +8,6 @@ import type { CalendarEvent } from '@/types/calendar'
 import type { Location } from '@/types/show'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
-
 export default function CalendarDayPanel({
   date,
   events,
@@ -32,7 +30,7 @@ export default function CalendarDayPanel({
   onCancelEvent?: (event: CalendarEvent) => void
 }) {
   const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
-  const headerDate = formatInTimeZone(fromZonedTime(`${date} 07:00:00`, CT), CT, 'EEEE, MMMM d, yyyy')
+  const headerDate = formatInTimeZone(fromZonedTime(`${date} 07:00:00`, tz), tz, 'EEEE, MMMM d, yyyy')
 
   const sortedEvents = events
     .slice()
@@ -128,7 +126,7 @@ export default function CalendarDayPanel({
             </h3>
             <ul className="space-y-2">
               {locations.map((location) => {
-                const windows = getAvailableWindows(events, location.id, date)
+                const windows = getAvailableWindows(events, location.id, date, tz)
                 const hasAnyApprovedEvent = events.some(
                   (e) => e.location_id === location.id && e.status === 'approved'
                 )
@@ -142,7 +140,7 @@ export default function CalendarDayPanel({
                   windowsLabel = windows
                     .map(
                       (w) =>
-                        `${formatInTimeZone(w.start, CT, 'h:mm a')} – ${formatInTimeZone(w.end, CT, 'h:mm a')}`
+                        `${formatInTimeZone(w.start, tz, 'h:mm a')} – ${formatInTimeZone(w.end, tz, 'h:mm a')}`
                     )
                     .join(', ')
                 }

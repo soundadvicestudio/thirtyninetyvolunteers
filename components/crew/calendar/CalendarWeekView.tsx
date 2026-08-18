@@ -7,7 +7,6 @@ import WeekAgendaView from './WeekAgendaView'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function CalendarWeekView({
@@ -22,8 +21,9 @@ export default function CalendarWeekView({
   onDayClick: (dateStr: string) => void
   adminRole: AdminRole
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const days = getWeekGridDays(focusedDate)
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   return (
     <div>

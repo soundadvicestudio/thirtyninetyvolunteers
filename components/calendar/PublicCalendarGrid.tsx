@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { formatInTimeZone } from 'date-fns-tz'
 import { getMonthGridDays } from '@/lib/utils/calendar-availability'
 
-const CT = 'America/Chicago'
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -33,13 +32,14 @@ export default function PublicCalendarGrid({
   prevMonthUrl: string
   nextMonthUrl: string
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const monthDateStr = `${focusedMonth.year}-${String(focusedMonth.month).padStart(2, '0')}-01`
   const gridDays = getMonthGridDays(monthDateStr)
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   const eventsByDay = new Map<string, PublicCalendarEvent[]>()
   for (const event of events) {
-    const dayKey = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+    const dayKey = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
     const list = eventsByDay.get(dayKey) ?? []
     list.push(event)
     eventsByDay.set(dayKey, list)

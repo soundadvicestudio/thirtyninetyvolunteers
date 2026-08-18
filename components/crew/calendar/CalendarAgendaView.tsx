@@ -5,8 +5,6 @@ import CalendarEventChip from './CalendarEventChip'
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
-
 const TYPE_BADGE_COLORS: Record<CalendarEventType, string> = {
   performance: '#293994',
   rehearsal: '#729ABF',
@@ -36,11 +34,12 @@ export default function CalendarAgendaView({
   onDayClick: (dateStr: string) => void
   adminRole: AdminRole
 }) {
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   const eventsByDay = new Map<string, CalendarEvent[]>()
   for (const event of events) {
-    const dayStr = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+    const dayStr = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
     const list = eventsByDay.get(dayStr) ?? []
     list.push(event)
     eventsByDay.set(dayStr, list)

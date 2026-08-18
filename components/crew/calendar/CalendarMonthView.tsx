@@ -6,7 +6,6 @@ import CalendarEventChip from './CalendarEventChip'
 import type { CalendarEvent } from '@/types/calendar'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MAX_VISIBLE_CHIPS = 3
 
@@ -20,13 +19,14 @@ export default function CalendarMonthView({
   onDayClick: (dateStr: string) => void
   adminRole: AdminRole
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const gridDays = getMonthGridDays(focusedDate)
   const [focusYear, focusMonth] = focusedDate.split('-').map(Number)
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   const eventsByDay = new Map<string, CalendarEvent[]>()
   for (const event of events) {
-    const dayStr = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+    const dayStr = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
     const list = eventsByDay.get(dayStr) ?? []
     list.push(event)
     eventsByDay.set(dayStr, list)

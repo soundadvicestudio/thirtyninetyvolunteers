@@ -4,8 +4,6 @@ import { formatInTimeZone } from 'date-fns-tz'
 import CalendarEventChip from './CalendarEventChip'
 import type { CalendarEvent } from '@/types/calendar'
 
-const CT = 'America/Chicago'
-
 export default function WeekAgendaView({
   events,
   days,
@@ -15,11 +13,12 @@ export default function WeekAgendaView({
   days: string[]
   onEventClick?: (dateStr: string) => void
 }) {
-  const todayCT = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   const eventsByDay = new Map<string, CalendarEvent[]>()
   for (const event of events) {
-    const dayStr = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+    const dayStr = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
     if (!days.includes(dayStr)) continue
     const list = eventsByDay.get(dayStr) ?? []
     list.push(event)

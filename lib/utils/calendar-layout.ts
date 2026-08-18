@@ -1,8 +1,6 @@
 import { toZonedTime } from 'date-fns-tz'
 import type { CalendarEvent } from '@/types/calendar'
 
-const CT = 'America/Chicago'
-
 export type EventWithLayout = CalendarEvent & {
   columnIndex: number
   columnCount: number
@@ -66,10 +64,11 @@ export function computeEventPosition(
   startTime: Date,
   endTime: Date,
   hourHeight: number,
-  dayStartHour: number
+  dayStartHour: number,
+  timezone: string
 ): { topPx: number; heightPx: number } {
-  const startCT = toZonedTime(startTime, CT)
-  const endCT = toZonedTime(endTime, CT)
+  const startCT = toZonedTime(startTime, timezone)
+  const endCT = toZonedTime(endTime, timezone)
   const startMinutes = startCT.getHours() * 60 + startCT.getMinutes()
   const endMinutes = endCT.getHours() * 60 + endCT.getMinutes()
   const topPx = ((startMinutes - dayStartHour * 60) / 60) * hourHeight

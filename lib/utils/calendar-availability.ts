@@ -1,7 +1,6 @@
 import { fromZonedTime } from 'date-fns-tz'
 import type { CalendarEvent } from '@/types/calendar'
 
-const CT = 'America/Chicago'
 const DAY_START_HOUR = 7 // 7:00 AM CT
 const DAY_END_HOUR = 22 // 10:00 PM CT
 
@@ -13,10 +12,11 @@ export type AvailableWindow = {
 export function getAvailableWindows(
   events: CalendarEvent[],
   locationId: string,
-  dateStr: string
+  dateStr: string,
+  timezone: string
 ): AvailableWindow[] {
-  const dayStart = fromZonedTime(`${dateStr} ${String(DAY_START_HOUR).padStart(2, '0')}:00:00`, CT)
-  const dayEnd = fromZonedTime(`${dateStr} ${String(DAY_END_HOUR).padStart(2, '0')}:00:00`, CT)
+  const dayStart = fromZonedTime(`${dateStr} ${String(DAY_START_HOUR).padStart(2, '0')}:00:00`, timezone)
+  const dayEnd = fromZonedTime(`${dateStr} ${String(DAY_END_HOUR).padStart(2, '0')}:00:00`, timezone)
 
   const sortedEvents = events
     .filter((e) => e.location_id === locationId && e.status === 'approved')

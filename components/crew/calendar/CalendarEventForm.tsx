@@ -10,8 +10,6 @@ import { createCalendarEvent, updateCalendarEvent, checkEventConflict, editRecur
 import type { CalendarEvent } from '@/types/calendar'
 import type { AdminRole } from '@/types/admin'
 
-const CT = 'America/Chicago'
-
 const TYPE_LABELS: Record<string, string> = {
   rehearsal: 'Rehearsal',
   teaching: 'Teaching',
@@ -54,6 +52,7 @@ export default function CalendarEventForm({
   onClose: () => void
   onSuccess: () => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const isEdit = !!initialData
   const isSuperAdmin = adminRole === 'super_admin'
   const canDirectCreate = isSuperAdmin || calendarEditor
@@ -76,13 +75,13 @@ export default function CalendarEventForm({
       custom_type_label: initialData?.custom_type_label ?? '',
       location_id: initialData?.location_id ?? initialBooking?.location_id ?? '',
       date: initialData
-        ? formatInTimeZone(new Date(initialData.start_time), CT, 'yyyy-MM-dd')
+        ? formatInTimeZone(new Date(initialData.start_time), tz, 'yyyy-MM-dd')
         : (initialBooking?.date ?? initialDate ?? ''),
       start_time: initialData
-        ? formatInTimeZone(new Date(initialData.start_time), CT, 'HH:mm')
+        ? formatInTimeZone(new Date(initialData.start_time), tz, 'HH:mm')
         : (initialBooking?.start_time ?? ''),
       end_time: initialData
-        ? formatInTimeZone(new Date(initialData.end_time), CT, 'HH:mm')
+        ? formatInTimeZone(new Date(initialData.end_time), tz, 'HH:mm')
         : (initialBooking?.end_time ?? ''),
       description: initialData?.description ?? '',
       requirements: initialData?.requirements ?? '',

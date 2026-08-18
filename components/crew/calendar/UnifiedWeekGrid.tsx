@@ -5,7 +5,6 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { computeColumnLayout, computeEventPosition } from '@/lib/utils/calendar-layout'
 import type { CalendarEvent, ShowDateBuffer } from '@/types/calendar'
 
-const CT = 'America/Chicago'
 const HOUR_HEIGHT = 64
 const DAY_START = 7
 const DAY_END = 22
@@ -23,18 +22,18 @@ function clampToGrid(px: number): number {
   return Math.min(Math.max(px, 0), GRID_HEIGHT)
 }
 
-function useNowPosition(days: string[]) {
+function useNowPosition(days: string[], timezone: string) {
   const [nowMinutes, setNowMinutes] = useState<number | null>(null)
 
   useEffect(() => {
     function update() {
-      const todayStr = formatInTimeZone(new Date(), CT, 'yyyy-MM-dd')
+      const todayStr = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd')
       if (!days.includes(todayStr)) {
         setNowMinutes(null)
         return
       }
-      const nowHour = Number(formatInTimeZone(new Date(), CT, 'H'))
-      const nowMin = Number(formatInTimeZone(new Date(), CT, 'm'))
+      const nowHour = Number(formatInTimeZone(new Date(), timezone, 'H'))
+      const nowMin = Number(formatInTimeZone(new Date(), timezone, 'm'))
       setNowMinutes(nowHour * 60 + nowMin)
     }
     update()
@@ -44,7 +43,7 @@ function useNowPosition(days: string[]) {
     // effect on every render would be harmless but wasteful; the interval
     // itself keeps the indicator fresh regardless.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [timezone])
 
   if (nowMinutes === null) return null
   if (nowMinutes < DAY_START * 60 || nowMinutes >= DAY_END * 60) return null
@@ -62,13 +61,14 @@ export default function UnifiedWeekGrid({
   days: string[]
   onEventClick?: (dateStr: string) => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const bufferByShowDateId = new Map(bufferData.map((b) => [b.show_date_id, b]))
-  const nowTopPx = useNowPosition(days)
+  const nowTopPx = useNowPosition(days, tz)
   const hourMarks = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => DAY_START + i)
 
   const eventsByDay = new Map<string, CalendarEvent[]>()
   for (const event of events) {
-    const dayStr = formatInTimeZone(new Date(event.start_time), CT, 'yyyy-MM-dd')
+    const dayStr = formatInTimeZone(new Date(event.start_time), tz, 'yyyy-MM-dd')
     const list = eventsByDay.get(dayStr) ?? []
     list.push(event)
     eventsByDay.set(dayStr, list)
@@ -122,7 +122,8 @@ export default function UnifiedWeekGrid({
                       new Date(event.start_time),
                       new Date(event.end_time),
                       HOUR_HEIGHT,
-                      DAY_START
+                      DAY_START,
+                      tz
                     )
                     const colWidth = 100 / event.columnCount
                     const leftPercent = event.columnIndex * colWidth
@@ -195,8 +196,8 @@ export default function UnifiedWeekGrid({
                           )}
                           {heightPx >= 64 && (
                             <p className="text-xs text-white/70 truncate leading-tight">
-                              {formatInTimeZone(new Date(event.start_time), CT, 'h:mm a')} –{' '}
-                              {formatInTimeZone(new Date(event.end_time), CT, 'h:mm a')}
+                              {formatInTimeZone(new Date(event.start_time), tz, 'h:mm a')} –{' '}
+                              {formatInTimeZone(new Date(event.end_time), tz, 'h:mm a')}
                             </p>
                           )}
                         </div>
