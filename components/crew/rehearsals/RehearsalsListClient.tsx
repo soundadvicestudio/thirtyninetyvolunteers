@@ -26,11 +26,11 @@ function statusBadge(status: RehearsalScheduleRow['status']) {
   }
 }
 
-function dateRangeLabel(row: RehearsalScheduleRow): string {
+function dateRangeLabel(row: RehearsalScheduleRow, timezone: string): string {
   if (!row.dateRangeStart || !row.dateRangeEnd) return '—'
-  const start = formatCT(row.dateRangeStart, 'MMM d')
-  const end = formatCT(row.dateRangeEnd, 'MMM d, yyyy')
-  if (row.dateRangeStart === row.dateRangeEnd) return formatCT(row.dateRangeStart, 'MMM d, yyyy')
+  const start = formatCT(row.dateRangeStart, 'MMM d', timezone)
+  const end = formatCT(row.dateRangeEnd, 'MMM d, yyyy', timezone)
+  if (row.dateRangeStart === row.dateRangeEnd) return formatCT(row.dateRangeStart, 'MMM d, yyyy', timezone)
   return `${start} – ${end}`
 }
 
@@ -45,6 +45,7 @@ export default function RehearsalsListClient({
   calendarEditor: boolean
   locations: Location[]
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [filter, setFilter] = useState<'active' | 'all'>('active')
   const [formOpen, setFormOpen] = useState(false)
@@ -137,10 +138,10 @@ export default function RehearsalsListClient({
                 return (
                   <tr key={row.id} className="border-b border-divider dark:border-dark-border last:border-0">
                     <td className="px-4 py-3 text-dark dark:text-dark-text font-medium">{row.title}</td>
-                    <td className="px-4 py-3 text-dark dark:text-dark-text">{dateRangeLabel(row)}</td>
+                    <td className="px-4 py-3 text-dark dark:text-dark-text">{dateRangeLabel(row, tz)}</td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text">{row.assigneeCount}</td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text">
-                      {row.nextDate ? formatCT(row.nextDate, 'MMM d, yyyy') : '—'}
+                      {row.nextDate ? formatCT(row.nextDate, 'MMM d, yyyy', tz) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${badge.className}`}>

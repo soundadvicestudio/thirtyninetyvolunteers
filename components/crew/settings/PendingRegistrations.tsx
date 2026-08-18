@@ -33,6 +33,7 @@ function PendingRow({
   registration: PendingRegistrationRow
   callerRole: CallerAdminRole
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [role, setRole] = useState<RegistrationRole>('viewer')
   // Both Super Admin and Owner Admin callers can approve requests as Owner
   // Admin. Only Super Admin can approve into Super Admin — that role can
@@ -74,7 +75,7 @@ function PendingRow({
       <td className="px-4 py-3 text-dark dark:text-dark-text font-medium">{registration.name}</td>
       <td className="px-4 py-3 text-mid-gray dark:text-dark-muted text-sm">{registration.email}</td>
       <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">
-        {formatCT(registration.requested_at, 'MMM d, yyyy h:mm a')}
+        {formatCT(registration.requested_at, 'MMM d, yyyy h:mm a', tz)}
       </td>
       <td className="px-4 py-3">
         <select

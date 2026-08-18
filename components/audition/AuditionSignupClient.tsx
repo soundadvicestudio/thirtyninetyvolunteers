@@ -68,6 +68,7 @@ const inputClasses =
   'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 
 export default function AuditionSignupClient({ data, orgName }: { data: AuditionPublicData; orgName: string }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [pageState, setPageState] = useState<PageState>('form')
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -300,8 +301,8 @@ export default function AuditionSignupClient({ data, orgName }: { data: Audition
       <div className="mb-8">
         <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-2">{data.audition.title}</h1>
         <p className="text-dark text-sm">
-          {formatWallClockCT(data.audition.date_start, null, 'MMMM d, yyyy')}
-          {data.audition.date_end ? ` – ${formatWallClockCT(data.audition.date_end, null, 'MMMM d, yyyy')}` : ''}
+          {formatWallClockCT(data.audition.date_start, null, 'MMMM d, yyyy', tz)}
+          {data.audition.date_end ? ` – ${formatWallClockCT(data.audition.date_end, null, 'MMMM d, yyyy', tz)}` : ''}
         </p>
         {(data.audition.time_start || data.audition.time_end) && (
           <p className="text-dark text-sm">
@@ -343,7 +344,7 @@ export default function AuditionSignupClient({ data, orgName }: { data: Audition
                           : 'border-divider hover:border-brand-primary cursor-pointer'
                     }`}
                   >
-                    <p className="font-semibold text-dark">{formatCT(slot.start_time, 'h:mm a')}</p>
+                    <p className="font-semibold text-dark">{formatCT(slot.start_time, 'h:mm a', tz)}</p>
                     <p className="text-xs text-mid-gray mt-0.5">
                       {isFull ? 'Full' : `${remaining} of ${slot.cap} spots remaining`}
                     </p>

@@ -321,7 +321,15 @@ function checkoutItemsLabel(checkout: InventoryCheckout): string {
   return items.map((i) => `${i.item_number ?? ''} ${i.item_name ?? ''}`.trim()).join(', ')
 }
 
-function ActiveCheckoutRow({ checkout, canWrite }: { checkout: InventoryCheckout; canWrite: boolean }) {
+function ActiveCheckoutRow({
+  checkout,
+  canWrite,
+  timezone,
+}: {
+  checkout: InventoryCheckout
+  canWrite: boolean
+  timezone: string
+}) {
   const router = useRouter()
   const [returning, setReturning] = useState(false)
   const [returnNotes, setReturnNotes] = useState('')
@@ -347,7 +355,7 @@ function ActiveCheckoutRow({ checkout, canWrite }: { checkout: InventoryCheckout
         <td className="px-4 py-3 text-dark dark:text-dark-text">{checkoutItemsLabel(checkout)}</td>
         <td className="px-4 py-3 text-dark dark:text-dark-text">{checkoutTargetLabel(checkout)}</td>
         <td className="px-4 py-3 text-dark dark:text-dark-text">
-          {formatCT(checkout.checked_out_at, 'MMM d, yyyy')}
+          {formatCT(checkout.checked_out_at, 'MMM d, yyyy', timezone)}
         </td>
         <td className="px-4 py-3 text-dark dark:text-dark-text">{checkout.expected_return_date ?? '—'}</td>
         <td className="px-4 py-3">
@@ -417,9 +425,11 @@ function ActiveCheckoutRow({ checkout, canWrite }: { checkout: InventoryCheckout
 function ActiveCheckoutsPanel({
   checkouts,
   canWrite,
+  timezone,
 }: {
   checkouts: InventoryCheckout[]
   canWrite: boolean
+  timezone: string
 }) {
   const overdueCount = checkouts.filter((c) => c.is_overdue).length
   const [expanded, setExpanded] = useState(checkouts.length > 0)
@@ -468,7 +478,7 @@ function ActiveCheckoutsPanel({
             </thead>
             <tbody>
               {checkouts.map((checkout) => (
-                <ActiveCheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} />
+                <ActiveCheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} timezone={timezone} />
               ))}
             </tbody>
           </table>
@@ -492,6 +502,7 @@ export default function InventoryListClient({
   adminRole: AdminRole
   canWrite: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [allItems, setAllItems] = useState(items)
   const [showInactive, setShowInactive] = useState(false)
@@ -557,7 +568,7 @@ export default function InventoryListClient({
 
   return (
     <div className="space-y-4">
-      <ActiveCheckoutsPanel checkouts={activeCheckouts} canWrite={canWrite} />
+      <ActiveCheckoutsPanel checkouts={activeCheckouts} canWrite={canWrite} timezone={tz} />
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">

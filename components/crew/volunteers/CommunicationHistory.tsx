@@ -23,6 +23,7 @@ function truncatePreview(preview: string | null): string {
 }
 
 export default function CommunicationHistory({ history }: { history: CommunicationHistoryEntry[] }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
@@ -84,7 +85,7 @@ export default function CommunicationHistory({ history }: { history: Communicati
                       className={`border-b border-divider dark:border-dark-border ${i % 2 === 0 ? 'bg-gray-50 dark:bg-dark-bg' : ''}`}
                     >
                       <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
-                        {formatCT(entry.sentAt, 'MMM d, yyyy h:mm a')}
+                        {formatCT(entry.sentAt, 'MMM d, yyyy h:mm a', tz)}
                       </td>
                       <td className="px-4 py-3 text-dark dark:text-dark-text">{entry.subject}</td>
                       <td className="px-4 py-3 text-dark dark:text-dark-text">

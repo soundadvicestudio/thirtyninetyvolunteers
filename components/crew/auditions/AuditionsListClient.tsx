@@ -35,10 +35,10 @@ function statusBadge(status: AuditionStatus) {
   }
 }
 
-function dateLabel(dateStart: string, dateEnd: string | null): string {
-  const start = formatWallClockCT(dateStart, null, 'MMM d, yyyy')
+function dateLabel(dateStart: string, dateEnd: string | null, timezone: string): string {
+  const start = formatWallClockCT(dateStart, null, 'MMM d, yyyy', timezone)
   if (!dateEnd || dateEnd === dateStart) return start
-  const end = formatWallClockCT(dateEnd, null, 'MMM d, yyyy')
+  const end = formatWallClockCT(dateEnd, null, 'MMM d, yyyy', timezone)
   return `${start} – ${end}`
 }
 
@@ -49,6 +49,7 @@ export default function AuditionsListClient({
   auditions: AuditionListItem[]
   adminRole: AdminRole
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [showAll, setShowAll] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -171,7 +172,7 @@ export default function AuditionsListClient({
                     {a.show_title ?? 'Standalone'} · {typeLabel(a.type)}
                   </p>
                   <div className="flex items-center justify-between text-xs text-mid-gray dark:text-dark-muted">
-                    <span>{dateLabel(a.date_start, a.date_end)}</span>
+                    <span>{dateLabel(a.date_start, a.date_end, tz)}</span>
                     <span>
                       {a.signup_count} signup{a.signup_count === 1 ? '' : 's'}
                     </span>
@@ -218,7 +219,7 @@ export default function AuditionsListClient({
                       <td className="px-4 py-3 text-dark dark:text-dark-text font-medium">{a.title}</td>
                       <td className="px-4 py-3 text-dark dark:text-dark-text">{a.show_title ?? 'Standalone'}</td>
                       <td className="px-4 py-3 text-dark dark:text-dark-text">{typeLabel(a.type)}</td>
-                      <td className="px-4 py-3 text-dark dark:text-dark-text">{dateLabel(a.date_start, a.date_end)}</td>
+                      <td className="px-4 py-3 text-dark dark:text-dark-text">{dateLabel(a.date_start, a.date_end, tz)}</td>
                       <td className="px-4 py-3 text-dark dark:text-dark-text">{a.signup_count}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${badge.className}`}>

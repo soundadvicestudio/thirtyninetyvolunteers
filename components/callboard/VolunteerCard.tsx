@@ -55,6 +55,7 @@ function CallHistoryBreakdown({
   manualHoursEntries: CallboardManualHoursEntry[]
   calendarEnabled: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   if (showGroups.length === 0 && manualHoursEntries.length === 0) {
     return <p className="text-mid-gray text-sm py-4">No calls on record yet.</p>
   }
@@ -74,7 +75,7 @@ function CallHistoryBreakdown({
                   className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-sm"
                 >
                   <span className="text-mid-gray">
-                    {formatWallClockCT(call.show_date, null, 'MMM d, yyyy')} — {call.role_name}
+                    {formatWallClockCT(call.show_date, null, 'MMM d, yyyy', tz)} — {call.role_name}
                   </span>
                   <span className="flex items-center gap-2">
                     <span className={STATUS_COLOR[statusKey] ?? 'text-mid-gray'}>
@@ -118,7 +119,7 @@ function CallHistoryBreakdown({
               >
                 <span>{entry.note ?? '—'}</span>
                 <span>
-                  {formatWallClockCT(entry.logged_date, null, 'MMM d, yyyy')} — {formatHoursValue(entry.hours)} hrs
+                  {formatWallClockCT(entry.logged_date, null, 'MMM d, yyyy', tz)} — {formatHoursValue(entry.hours)} hrs
                 </span>
               </div>
             ))}

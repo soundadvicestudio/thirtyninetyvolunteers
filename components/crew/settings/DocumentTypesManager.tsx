@@ -35,6 +35,7 @@ function slugify(name: string): string {
 }
 
 function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; canManage: boolean }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [picking, setPicking] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -63,7 +64,7 @@ function ActiveDocumentSection({ type, canManage }: { type: DocumentTypeRow; can
           <p className="text-sm text-dark dark:text-dark-text">
             Active document: <span className="font-semibold">{activeDocument.title}</span>{' '}
             <span className="text-mid-gray dark:text-dark-muted">
-              (uploaded {formatCT(activeDocument.created_at, 'MMM d, yyyy')})
+              (uploaded {formatCT(activeDocument.created_at, 'MMM d, yyyy', tz)})
             </span>
           </p>
           {canManage && (

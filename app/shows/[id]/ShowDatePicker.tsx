@@ -10,6 +10,7 @@ function isDateFull(date: PublicShowDate): boolean {
 }
 
 export default function ShowDatePicker({ dates, showName }: { dates: PublicShowDate[]; showName: string }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const singleDate = dates.length === 1
 
   const firstOpenDate = dates.find((d) => !isDateFull(d)) ?? dates[0]
@@ -37,9 +38,9 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
     <div className="space-y-8">
       {singleDate ? (
         <p className="text-brand-primary font-bold text-lg">
-          {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'EEEE, MMMM d, yyyy')} at{' '}
-          {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'h:mm a')}
-          {dates[0].end_time && ` – ${formatWallClockCT(dates[0].show_date, dates[0].end_time, 'h:mm a')}`}
+          {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'EEEE, MMMM d, yyyy', tz)} at{' '}
+          {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'h:mm a', tz)}
+          {dates[0].end_time && ` – ${formatWallClockCT(dates[0].show_date, dates[0].end_time, 'h:mm a', tz)}`}
         </p>
       ) : (
         <div>
@@ -63,7 +64,7 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                         : 'rounded-full border border-brand-primary text-brand-primary text-sm font-semibold px-4 py-3 hover:bg-brand-primary-light transition-colors'
                   }
                 >
-                  {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy')}
+                  {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy', tz)}
                   {full ? ' — Full' : ''}
                 </button>
               )
@@ -75,7 +76,7 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
       {selectedDate && (
         <div className="space-y-4">
           <h2 className="text-brand-primary font-bold text-lg">
-            Roles for {formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy')}
+            Roles for {formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy', tz)}
           </h2>
 
           {selectedDate.roles.map((role) => {

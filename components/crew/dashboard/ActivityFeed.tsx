@@ -13,11 +13,11 @@ const EVENT_BORDER_COLOR: Record<ActivityEvent['event_type'], string> = {
   opportunity_submission: 'border-[#729ABF]',
 }
 
-function formatEventTime(occurredAt: string): string {
+function formatEventTime(occurredAt: string, timezone: string): string {
   const date = new Date(occurredAt)
   const daysAgo = differenceInDays(new Date(), date)
   if (daysAgo >= 7) {
-    return formatCT(occurredAt, 'MMM d, yyyy')
+    return formatCT(occurredAt, 'MMM d, yyyy', timezone)
   }
   return formatDistanceToNow(date, { addSuffix: true })
 }
@@ -91,6 +91,7 @@ export default function ActivityFeed({
   initialEvents: ActivityEvent[]
   activityClearedAt: string | null
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [events, setEvents] = useState<ActivityEvent[]>(initialEvents)
   const [offset, setOffset] = useState(10)
   const [hasMore, setHasMore] = useState(initialEvents.length === 10)
@@ -167,7 +168,7 @@ export default function ActivityFeed({
                   )}
                 </div>
                 <span className="text-xs text-mid-gray dark:text-dark-muted whitespace-nowrap shrink-0">
-                  {formatEventTime(event.occurred_at)}
+                  {formatEventTime(event.occurred_at, tz)}
                 </span>
               </li>
             )

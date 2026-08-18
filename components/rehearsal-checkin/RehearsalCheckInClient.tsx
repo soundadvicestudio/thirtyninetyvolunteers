@@ -12,6 +12,7 @@ export default function RehearsalCheckInClient({
   token: string
   data: RehearsalCheckInData
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [selectedUserId, setSelectedUserId] = useState('')
   const [result, setResult] = useState<CheckInToRehearsalResult | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -28,9 +29,9 @@ export default function RehearsalCheckInClient({
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
         <h1 className="text-brand-primary font-bold text-2xl mb-2">{`You're checked in!`}</h1>
         <p className="text-mid-gray text-base">
-          {`You're checked in to ${data.batchTitle} on ${formatCT(data.event.start_time, 'MMMM d')}.`}
+          {`You're checked in to ${data.batchTitle} on ${formatCT(data.event.start_time, 'MMMM d', tz)}.`}
         </p>
-        <p className="text-mid-gray text-base mt-1">{`Checked in at ${formatCT(result.checkedInAt, 'h:mm a')}.`}</p>
+        <p className="text-mid-gray text-base mt-1">{`Checked in at ${formatCT(result.checkedInAt, 'h:mm a', tz)}.`}</p>
       </div>
     )
   }
@@ -40,7 +41,7 @@ export default function RehearsalCheckInClient({
       <div className="max-w-[480px] mx-auto px-4 text-center py-10">
         <h1 className="text-brand-primary font-bold text-2xl mb-2">{`You're already checked in!`}</h1>
         <p className="text-mid-gray text-base">
-          {`You already checked in at ${formatCT(result.checkedInAt, 'h:mm a')}.`}
+          {`You already checked in at ${formatCT(result.checkedInAt, 'h:mm a', tz)}.`}
         </p>
       </div>
     )
@@ -68,9 +69,9 @@ export default function RehearsalCheckInClient({
     <div className="max-w-[480px] mx-auto px-4 space-y-5">
       <div className="text-center">
         <h1 className="text-brand-primary font-bold text-xl mb-1">{data.batchTitle}</h1>
-        <p className="text-dark text-sm">{formatCT(data.event.start_time, 'EEEE, MMMM d')}</p>
+        <p className="text-dark text-sm">{formatCT(data.event.start_time, 'EEEE, MMMM d', tz)}</p>
         <p className="text-dark text-sm">
-          {formatCT(data.event.start_time, 'h:mm a')} – {formatCT(data.event.end_time, 'h:mm a')}
+          {formatCT(data.event.start_time, 'h:mm a', tz)} – {formatCT(data.event.end_time, 'h:mm a', tz)}
         </p>
         <p className="text-mid-gray text-sm mt-1">{data.event.location_name ?? 'TBD'}</p>
       </div>

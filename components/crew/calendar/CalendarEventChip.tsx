@@ -12,6 +12,7 @@ export default function CalendarEventChip({
   compact: boolean
   onClick?: () => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   // Non-super-admin fetches only ever return status = 'approved' events
   // (Task C's role-aware filter) — a pending event reaching this component
   // implies the viewer is already a Super Admin, so no adminRole check
@@ -62,7 +63,7 @@ export default function CalendarEventChip({
         )}
       </div>
       <p className="text-sm text-mid-gray dark:text-dark-muted">
-        {formatCT(event.start_time, 'h:mm a')} – {formatCT(event.end_time, 'h:mm a')}
+        {formatCT(event.start_time, 'h:mm a', tz)} – {formatCT(event.end_time, 'h:mm a', tz)}
       </p>
       {event.recurrence_group_id && (
         <span className="text-xs text-mid-gray dark:text-dark-muted flex items-center gap-1">

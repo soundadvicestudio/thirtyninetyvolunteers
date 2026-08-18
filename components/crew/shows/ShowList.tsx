@@ -21,17 +21,17 @@ const selectClasses =
   'rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
-function formatDateRange(earliest: string | null, latest: string | null): string | null {
+function formatDateRange(earliest: string | null, latest: string | null, timezone: string): string | null {
   if (!earliest || !latest) return null
   if (earliest === latest) {
-    return formatWallClockCT(earliest, null, 'MMM d, yyyy')
+    return formatWallClockCT(earliest, null, 'MMM d, yyyy', timezone)
   }
-  const earliestYear = formatWallClockCT(earliest, null, 'yyyy')
-  const latestYear = formatWallClockCT(latest, null, 'yyyy')
+  const earliestYear = formatWallClockCT(earliest, null, 'yyyy', timezone)
+  const latestYear = formatWallClockCT(latest, null, 'yyyy', timezone)
   if (earliestYear === latestYear) {
-    return `${formatWallClockCT(earliest, null, 'MMM d')} – ${formatWallClockCT(latest, null, 'MMM d, yyyy')}`
+    return `${formatWallClockCT(earliest, null, 'MMM d', timezone)} – ${formatWallClockCT(latest, null, 'MMM d, yyyy', timezone)}`
   }
-  return `${formatWallClockCT(earliest, null, 'MMM d, yyyy')} – ${formatWallClockCT(latest, null, 'MMM d, yyyy')}`
+  return `${formatWallClockCT(earliest, null, 'MMM d, yyyy', timezone)} – ${formatWallClockCT(latest, null, 'MMM d, yyyy', timezone)}`
 }
 
 function staffingDisplay(show: ShowWithStaffing): { label: string; className: string } {
@@ -68,6 +68,7 @@ function ShowCard({
   onToggleStatus: () => void
   onCopyUrl: () => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const staffing = staffingDisplay(show)
 
   return (
@@ -88,7 +89,7 @@ function ShowCard({
           </span>
         </div>
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-2">
-          {formatDateRange(show.earliest_date, show.latest_date) ?? 'No dates scheduled'}
+          {formatDateRange(show.earliest_date, show.latest_date, tz) ?? 'No dates scheduled'}
         </p>
         <span
           className={`text-xs font-semibold rounded-full px-2.5 py-1 inline-block ${staffing.className}`}
@@ -154,6 +155,7 @@ export default function ShowList({
   locations: Location[]
   adminRole: AdminUser['role']
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
 
@@ -440,7 +442,7 @@ export default function ShowList({
             const isExpanded = expandedKeys.has(group.key)
             const title = group.season ? group.season.name : 'Unseasoned Shows'
             const dateRangeLabel = group.season
-              ? formatDateRange(group.season.start_date, group.season.end_date)
+              ? formatDateRange(group.season.start_date, group.season.end_date, tz)
               : null
 
             return (

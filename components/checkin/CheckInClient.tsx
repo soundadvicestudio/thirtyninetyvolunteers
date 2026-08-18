@@ -120,6 +120,7 @@ export default function CheckInClient({
   showSchool,
   showAgeRange,
 }: Props) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const hasMultipleDates = resolution.type === 'show' && resolution.dates.length > 1
   const initialDateId = resolution.type === 'show' ? resolution.selectedDate.id : resolution.showDate.id
 
@@ -293,7 +294,7 @@ export default function CheckInClient({
       {hasMultipleDates && resolution.type === 'show' && (
         <div className="text-center pb-2">
           <p className="text-dark text-sm">
-            Checking in for {formatWallClockCT(activeDate.show_date, activeDate.show_time, 'EEEE, MMM d')}.
+            Checking in for {formatWallClockCT(activeDate.show_date, activeDate.show_time, 'EEEE, MMM d', tz)}.
           </p>
           <label className="block mt-2">
             <span className="text-sm text-mid-gray">Different date?</span>
@@ -304,7 +305,7 @@ export default function CheckInClient({
             >
               {resolution.dates.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {formatWallClockCT(d.show_date, d.show_time, 'EEEE, MMM d — h:mm a')}
+                  {formatWallClockCT(d.show_date, d.show_time, 'EEEE, MMM d — h:mm a', tz)}
                 </option>
               ))}
             </select>

@@ -14,7 +14,15 @@ import { createThread } from '@/lib/actions/forum-moderation'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { ForumDetail, ThreadSummary } from '@/types/forums'
 
-function ThreadRow({ forumId, thread }: { forumId: string; thread: ThreadSummary }) {
+function ThreadRow({
+  forumId,
+  thread,
+  timezone,
+}: {
+  forumId: string
+  thread: ThreadSummary
+  timezone: string
+}) {
   return (
     <Link
       href={`/crew/forums/${forumId}/${thread.id}`}
@@ -34,7 +42,7 @@ function ThreadRow({ forumId, thread }: { forumId: string; thread: ThreadSummary
           {thread.is_locked && <Lock size={13} className="text-mid-gray" aria-label="Locked" />}
         </div>
         <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
-          {`Created by ${thread.created_by_name} on ${formatCT(thread.created_at, 'MMM d, yyyy h:mm a')}`}
+          {`Created by ${thread.created_by_name} on ${formatCT(thread.created_at, 'MMM d, yyyy h:mm a', timezone)}`}
         </p>
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0 text-right">
@@ -47,7 +55,7 @@ function ThreadRow({ forumId, thread }: { forumId: string; thread: ThreadSummary
         </div>
         <p className="text-xs text-mid-gray dark:text-dark-muted">
           {thread.last_post_at
-            ? `${formatCT(thread.last_post_at, 'MMM d, yyyy h:mm a')} by ${thread.last_post_author ?? 'Unknown'}`
+            ? `${formatCT(thread.last_post_at, 'MMM d, yyyy h:mm a', timezone)} by ${thread.last_post_author ?? 'Unknown'}`
             : 'No replies yet'}
         </p>
       </div>
@@ -289,6 +297,7 @@ export default function ThreadListClient({
   isModerator: boolean
   admin: { id: string; role: string; name: string }
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false)
   const [markAllError, setMarkAllError] = useState<string | null>(null)
@@ -375,7 +384,7 @@ export default function ThreadListClient({
               </p>
               <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-hidden">
                 {pinnedThreads.map((thread) => (
-                  <ThreadRow key={thread.id} forumId={forum.id} thread={thread} />
+                  <ThreadRow key={thread.id} forumId={forum.id} thread={thread} timezone={tz} />
                 ))}
               </div>
             </div>
@@ -383,7 +392,7 @@ export default function ThreadListClient({
           {otherThreads.length > 0 && (
             <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-hidden">
               {otherThreads.map((thread) => (
-                <ThreadRow key={thread.id} forumId={forum.id} thread={thread} />
+                <ThreadRow key={thread.id} forumId={forum.id} thread={thread} timezone={tz} />
               ))}
             </div>
           )}

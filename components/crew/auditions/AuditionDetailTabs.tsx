@@ -113,11 +113,13 @@ function OverviewTab({
   adminRole,
   checkInQrSvg,
   checkInQrPng,
+  timezone,
 }: {
   detail: AuditionDetailData
   adminRole: AdminRole
   checkInQrSvg: string
   checkInQrPng: string
+  timezone: string
 }) {
   const [status, setStatus] = useState<AuditionStatus>(detail.audition.status)
   const [statusSaving, setStatusSaving] = useState(false)
@@ -162,9 +164,9 @@ function OverviewTab({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">Date(s)</p>
           <p className="text-sm text-dark dark:text-dark-text">
-            {formatWallClockCT(detail.audition.date_start, null, 'MMM d, yyyy')}
+            {formatWallClockCT(detail.audition.date_start, null, 'MMM d, yyyy', timezone)}
             {detail.audition.date_end && detail.audition.date_end !== detail.audition.date_start
-              ? ` – ${formatWallClockCT(detail.audition.date_end, null, 'MMM d, yyyy')}`
+              ? ` – ${formatWallClockCT(detail.audition.date_end, null, 'MMM d, yyyy', timezone)}`
               : ''}
           </p>
         </div>
@@ -174,10 +176,10 @@ function OverviewTab({
             <p className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">Time</p>
             <p className="text-sm text-dark dark:text-dark-text">
               {detail.audition.time_start
-                ? formatWallClockCT(detail.audition.date_start, detail.audition.time_start, 'h:mm a')
+                ? formatWallClockCT(detail.audition.date_start, detail.audition.time_start, 'h:mm a', timezone)
                 : '—'}
               {detail.audition.time_end
-                ? ` – ${formatWallClockCT(detail.audition.date_start, detail.audition.time_end, 'h:mm a')}`
+                ? ` – ${formatWallClockCT(detail.audition.date_start, detail.audition.time_end, 'h:mm a', timezone)}`
                 : ''}
             </p>
           </div>
@@ -311,6 +313,7 @@ function SignupsTab({
   loading,
   adminRole,
   onReload,
+  timezone,
 }: {
   auditionType: string
   roleSelectionEnabled: boolean
@@ -319,6 +322,7 @@ function SignupsTab({
   loading: boolean
   adminRole: AdminRole
   onReload: () => void
+  timezone: string
 }) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({})
@@ -427,7 +431,7 @@ function SignupsTab({
                 <span className="text-mid-gray dark:text-dark-muted">{s.signup.email}</span>
                 {auditionType === 'timed_slots' && s.slot && (
                   <span className="text-mid-gray dark:text-dark-muted">
-                    {formatCT(s.slot.start_time, 'MMM d, h:mm a')}
+                    {formatCT(s.slot.start_time, 'MMM d, h:mm a', timezone)}
                   </span>
                 )}
                 {roleSelectionEnabled && s.role && (
@@ -523,7 +527,7 @@ function SignupsTab({
                           className="text-sm text-dark dark:text-dark-text bg-gray-50 dark:bg-dark-bg rounded-lg p-2"
                         >
                           <p className="text-xs text-mid-gray dark:text-dark-muted">
-                            {formatCT(note.created_at, 'MMM d, yyyy h:mm a')}
+                            {formatCT(note.created_at, 'MMM d, yyyy h:mm a', timezone)}
                           </p>
                           <p>{note.content}</p>
                         </li>
@@ -622,10 +626,12 @@ function MaterialsTab({
   signups,
   loading,
   enabledMaterialTypes,
+  timezone,
 }: {
   signups: AuditionSignupWithDetails[] | null
   loading: boolean
   enabledMaterialTypes: AuditionMaterialType[]
+  timezone: string
 }) {
   const [filter, setFilter] = useState<AuditionMaterialType | 'all'>('all')
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -717,7 +723,7 @@ function MaterialsTab({
                   </td>
                   <td className="px-2 py-2 text-dark dark:text-dark-text">{m.original_filename ?? '—'}</td>
                   <td className="px-2 py-2 text-mid-gray dark:text-dark-muted">
-                    {formatCT(m.uploaded_at, 'MMM d, yyyy')}
+                    {formatCT(m.uploaded_at, 'MMM d, yyyy', timezone)}
                   </td>
                   <td className="px-2 py-2 text-right">
                     <button
@@ -1755,6 +1761,7 @@ export default function AuditionDetailTabs({
   checkInQrPng: string
   messagesEnabled?: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [signups, setSignups] = useState<AuditionSignupWithDetails[] | null>(null)
   const [signupsLoading, setSignupsLoading] = useState(false)
@@ -1983,7 +1990,13 @@ export default function AuditionDetailTabs({
       <div>
         {activeTab === 'overview' && (
           <div className="p-4">
-            <OverviewTab detail={detail} adminRole={adminRole} checkInQrSvg={checkInQrSvg} checkInQrPng={checkInQrPng} />
+            <OverviewTab
+              detail={detail}
+              adminRole={adminRole}
+              checkInQrSvg={checkInQrSvg}
+              checkInQrPng={checkInQrPng}
+              timezone={tz}
+            />
           </div>
         )}
         {activeTab === 'signups' && (
@@ -1996,12 +2009,18 @@ export default function AuditionDetailTabs({
               loading={signupsLoading}
               adminRole={adminRole}
               onReload={loadSignups}
+              timezone={tz}
             />
           </div>
         )}
         {activeTab === 'materials' && (
           <div className="p-4">
-            <MaterialsTab signups={signups} loading={signupsLoading} enabledMaterialTypes={enabledMaterialTypes} />
+            <MaterialsTab
+              signups={signups}
+              loading={signupsLoading}
+              enabledMaterialTypes={enabledMaterialTypes}
+              timezone={tz}
+            />
           </div>
         )}
         {activeTab === 'communication' && (

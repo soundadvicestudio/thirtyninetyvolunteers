@@ -89,6 +89,7 @@ function HoursReviewRow({ row }: { row: PendingHoursRow }) {
 }
 
 export default function PendingHoursCard({ rows }: { rows: PendingHoursRow[] }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   if (rows.length === 0) return null
 
   const groups = new Map<string, { showName: string; showDate: string; rows: PendingHoursRow[] }>()
@@ -115,7 +116,7 @@ export default function PendingHoursCard({ rows }: { rows: PendingHoursRow[] }) 
         {groupList.map((group) => (
           <div key={`${group.showName}-${group.showDate}`}>
             <h3 className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid mb-2">
-              {group.showName} — {formatWallClockCT(group.showDate, null, 'MMM d, yyyy')}
+              {group.showName} — {formatWallClockCT(group.showDate, null, 'MMM d, yyyy', tz)}
             </h3>
             <div>
               {group.rows.map((row) => (

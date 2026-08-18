@@ -60,6 +60,7 @@ export default function VolunteersTable({
   role: AdminUser['role']
   state: VolunteersUrlState
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const pathname = usePathname()
   const canManage = role === 'super_admin' || role === 'owner_admin' || role === 'editor'
@@ -95,7 +96,7 @@ export default function VolunteersTable({
   function exportCsv(scope: 'selected' | 'page') {
     const rows =
       scope === 'selected' ? volunteers.filter((v) => selected.has(v.id)) : volunteers
-    downloadCsv(csvExportFilename(), buildVolunteersCsv(rows))
+    downloadCsv(csvExportFilename(tz), buildVolunteersCsv(rows, tz))
   }
 
   if (total === 0) {
@@ -281,7 +282,7 @@ export default function VolunteersTable({
                     {v.status === 'active' ? 'Active' : 'Archived'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-dark dark:text-dark-text">{formatCT(v.created_at, 'MMM d, yyyy')}</td>
+                <td className="px-4 py-3 text-dark dark:text-dark-text">{formatCT(v.created_at, 'MMM d, yyyy', tz)}</td>
               </tr>
             ))}
           </tbody>

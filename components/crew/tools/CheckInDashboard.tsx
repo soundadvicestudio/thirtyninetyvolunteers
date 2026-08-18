@@ -50,6 +50,7 @@ function StatusBadge({
 }
 
 function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDateLabel: string }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   if (roster.claims.length === 0 && roster.walkIns.length === 0) {
     return <p className="text-sm text-mid-gray dark:text-dark-muted">No volunteers rostered for this date.</p>
   }
@@ -128,7 +129,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
                 className="flex items-center justify-between text-sm text-dark dark:text-dark-text"
               >
                 <span>{walkIn.volunteerName}</span>
-                <span className="text-mid-gray dark:text-dark-muted">{formatCT(walkIn.markedAt, 'h:mm a')}</span>
+                <span className="text-mid-gray dark:text-dark-muted">{formatCT(walkIn.markedAt, 'h:mm a', tz)}</span>
               </li>
             ))}
           </ul>
@@ -139,6 +140,7 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
 }
 
 export function CheckInDashboard({ initialData }: Props) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
 
   const [selectedDateId, setSelectedDateId] = useState<string>(
@@ -267,7 +269,7 @@ export function CheckInDashboard({ initialData }: Props) {
           <select value={selectedDateId} onChange={(e) => handleDateChange(e.target.value)} className={selectClasses}>
             {topShow.upcomingDates.map((d) => (
               <option key={d.id} value={d.id}>
-                {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a")}
+                {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a", tz)}
               </option>
             ))}
           </select>
@@ -277,7 +279,9 @@ export function CheckInDashboard({ initialData }: Props) {
       <RosterTable
         roster={currentRoster ?? topShow.roster}
         showDateLabel={
-          selectedDate ? formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy — h:mm a') : ''
+          selectedDate
+            ? formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy — h:mm a', tz)
+            : ''
         }
       />
 
@@ -300,8 +304,8 @@ export function CheckInDashboard({ initialData }: Props) {
                     <div>
                       <p className="font-semibold text-dark dark:text-dark-text">{show.showName}</p>
                       <p className="text-xs text-mid-gray dark:text-dark-muted">
-                        {formatWallClockCT(show.nearestDate, show.nearestTime, 'EEE MMM d')} ·{' '}
-                        {formatWallClockCT(show.nearestDate, show.nearestTime, 'h:mm a')} · {show.checkedInCount} /{' '}
+                        {formatWallClockCT(show.nearestDate, show.nearestTime, 'EEE MMM d', tz)} ·{' '}
+                        {formatWallClockCT(show.nearestDate, show.nearestTime, 'h:mm a', tz)} · {show.checkedInCount} /{' '}
                         {show.totalRostered} checked in
                       </p>
                     </div>

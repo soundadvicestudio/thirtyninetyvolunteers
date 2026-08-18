@@ -159,6 +159,7 @@ function DiffPanel({ entry }: { entry: AuditLogEntry }) {
 }
 
 export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function toggleExpand(id: string) {
@@ -187,7 +188,7 @@ export default function AuditLogTable({ entries }: { entries: AuditLogEntry[] })
               <Fragment key={entry.id}>
                 <tr className="border-b border-divider dark:border-dark-border">
                   <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
-                    {formatCT(entry.created_at, 'MMM d, yyyy h:mm a')}
+                    {formatCT(entry.created_at, 'MMM d, yyyy h:mm a', tz)}
                   </td>
                   <td className="px-4 py-3">
                     {entry.admin ? (

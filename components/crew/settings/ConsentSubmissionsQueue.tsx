@@ -33,6 +33,7 @@ const EMPTY_MESSAGE: Record<Tab, string> = {
 }
 
 function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [rejecting, setRejecting] = useState(false)
   const [notes, setNotes] = useState('')
@@ -80,7 +81,7 @@ function SubmissionRow({ submission }: { submission: ConsentSubmissionRow }) {
       </td>
       <td className="px-4 py-2 align-top text-dark dark:text-dark-text">{submission.documentTypeName}</td>
       <td className="px-4 py-2 align-top text-dark dark:text-dark-text">
-        {submission.submittedAt ? formatCT(submission.submittedAt, 'MMM d, yyyy h:mm a') : '—'}
+        {submission.submittedAt ? formatCT(submission.submittedAt, 'MMM d, yyyy h:mm a', tz) : '—'}
       </td>
       <td className="px-4 py-2 align-top">
         {submission.submittedFilePath ? (

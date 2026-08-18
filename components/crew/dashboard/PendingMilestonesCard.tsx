@@ -16,6 +16,7 @@ export type PendingMilestoneRow = {
 }
 
 function MilestoneRow({ row }: { row: PendingMilestoneRow }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +50,7 @@ function MilestoneRow({ row }: { row: PendingMilestoneRow }) {
           <span className="text-dark dark:text-dark-text font-medium">{row.volunteerName}</span>
         )}
         <p className="text-xs text-mid-gray dark:text-dark-muted">
-          {row.milestoneLabel} — {formatCT(row.triggeredAt, 'MMM d, yyyy')}
+          {row.milestoneLabel} — {formatCT(row.triggeredAt, 'MMM d, yyyy', tz)}
         </p>
       </div>
 

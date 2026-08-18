@@ -236,6 +236,7 @@ function DateRow({
   onRemoveInclude,
   onAddToDate,
   error,
+  timezone,
 }: {
   event: RehearsalEventRow
   isExpanded: boolean
@@ -250,6 +251,7 @@ function DateRow({
   onRemoveInclude: (userId: string) => void
   onAddToDate: (userId: string) => void
   error?: string
+  timezone: string
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const badge = eventStatusBadge(event.status)
@@ -272,8 +274,8 @@ function DateRow({
           <span
             className={`font-medium text-dark dark:text-dark-text ${event.status === 'cancelled' ? 'line-through' : ''}`}
           >
-            {formatCT(event.start_time, 'EEE, MMM d')} · {formatCT(event.start_time, 'h:mm a')}–
-            {formatCT(event.end_time, 'h:mm a')}
+            {formatCT(event.start_time, 'EEE, MMM d', timezone)} · {formatCT(event.start_time, 'h:mm a', timezone)}–
+            {formatCT(event.end_time, 'h:mm a', timezone)}
           </span>
           <span className="text-mid-gray dark:text-dark-muted">{event.location_name ?? 'TBD'}</span>
           <span className="text-mid-gray dark:text-dark-muted">Roster: {event.rosterCount}</span>
@@ -420,12 +422,14 @@ function DatesTab({
   adminRole,
   productionUsers,
   scheduleAssignees,
+  timezone,
 }: {
   events: RehearsalEventRow[]
   qrData: Map<string, { svg: string; pngBase64: string }>
   adminRole: AdminRole
   productionUsers: ProductionUser[]
   scheduleAssignees: RehearsalScheduleAssignee[]
+  timezone: string
 }) {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [rosterCache, setRosterCache] = useState<Map<string, EffectiveRosterMember[]>>(new Map())
@@ -489,6 +493,7 @@ function DatesTab({
           onRemoveInclude={(userId) => withRefresh(event.id, () => removeDateOverride(event.id, userId))}
           onAddToDate={(userId) => withRefresh(event.id, () => addDateOverride(event.id, userId, 'include'))}
           error={errorByEvent[event.id]}
+          timezone={timezone}
         />
       ))}
     </div>
@@ -510,6 +515,7 @@ function AttendanceSection({
   isPending,
   error,
   markAllSuccess,
+  timezone,
 }: {
   event: RehearsalEventRow
   isExpanded: boolean
@@ -525,6 +531,7 @@ function AttendanceSection({
   isPending: boolean
   error?: string
   markAllSuccess?: number
+  timezone: string
 }) {
   const [confirmingMarkAll, setConfirmingMarkAll] = useState(false)
   const [changingUserId, setChangingUserId] = useState<string | null>(null)
@@ -541,8 +548,8 @@ function AttendanceSection({
       >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <span className="font-medium text-dark dark:text-dark-text">
-            {formatCT(event.start_time, 'EEE, MMM d')} · {formatCT(event.start_time, 'h:mm a')}–
-            {formatCT(event.end_time, 'h:mm a')}
+            {formatCT(event.start_time, 'EEE, MMM d', timezone)} · {formatCT(event.start_time, 'h:mm a', timezone)}–
+            {formatCT(event.end_time, 'h:mm a', timezone)}
           </span>
           <span className="text-mid-gray dark:text-dark-muted">{event.location_name ?? 'TBD'}</span>
         </div>
@@ -657,7 +664,7 @@ function AttendanceSection({
                           </div>
                         </td>
                         <td className="px-2 py-2 text-mid-gray dark:text-dark-muted">
-                          {entry.checkedInAt ? formatCT(entry.checkedInAt, 'h:mm a') : '—'}
+                          {entry.checkedInAt ? formatCT(entry.checkedInAt, 'h:mm a', timezone) : '—'}
                         </td>
                         {(canMarkAny || canMarkOwn) && (
                           <td className="px-2 py-2 text-right">
@@ -727,10 +734,12 @@ function AttendanceTab({
   events,
   adminRole,
   adminId,
+  timezone,
 }: {
   events: RehearsalEventRow[]
   adminRole: AdminRole
   adminId: string
+  timezone: string
 }) {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [attendanceCache, setAttendanceCache] = useState<Map<string, RehearsalAttendanceEntry[]>>(new Map())
@@ -816,6 +825,7 @@ function AttendanceTab({
           isPending={isPending}
           error={errorByEvent[event.id]}
           markAllSuccess={markAllSuccessByEvent[event.id]}
+          timezone={timezone}
         />
       ))}
     </div>
@@ -837,6 +847,7 @@ export default function RehearsalDetailTabs({
   qrData: Map<string, { svg: string; pngBase64: string }>
   messagesEnabled?: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [activeTab, setActiveTab] = useState<'roster' | 'dates' | 'attendance'>('roster')
 
   const tabClasses = (tab: typeof activeTab) =>
@@ -887,10 +898,11 @@ export default function RehearsalDetailTabs({
             adminRole={adminRole}
             productionUsers={productionUsers}
             scheduleAssignees={detail.scheduleAssignees}
+            timezone={tz}
           />
         )}
         {activeTab === 'attendance' && (
-          <AttendanceTab events={detail.events} adminRole={adminRole} adminId={adminId} />
+          <AttendanceTab events={detail.events} adminRole={adminRole} adminId={adminId} timezone={tz} />
         )}
       </div>
     </div>

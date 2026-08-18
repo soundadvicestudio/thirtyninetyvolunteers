@@ -13,6 +13,7 @@ export default function FormList({
   forms: FormListItem[]
   adminRole: AdminUser['role']
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
 
   return (
@@ -70,7 +71,7 @@ export default function FormList({
                     </td>
                     <td className="px-4 py-2 text-dark dark:text-dark-text">{form.response_count}</td>
                     <td className="px-4 py-2 text-dark dark:text-dark-text">
-                      {formatCT(form.created_at, 'MMM d, yyyy')}
+                      {formatCT(form.created_at, 'MMM d, yyyy', tz)}
                     </td>
                     <td className="px-4 py-2">
                       {canEdit ? (

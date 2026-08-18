@@ -5,8 +5,10 @@ import { buildVolunteersCsv, csvExportFilename, downloadCsv } from '@/lib/utils/
 import type { VolunteerListRow } from '@/types/volunteer'
 
 export default function ExportAllButton({ volunteers }: { volunteers: VolunteerListRow[] }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
+
   function handleExport() {
-    downloadCsv(csvExportFilename(), buildVolunteersCsv(volunteers))
+    downloadCsv(csvExportFilename(tz), buildVolunteersCsv(volunteers, tz))
   }
 
   return (

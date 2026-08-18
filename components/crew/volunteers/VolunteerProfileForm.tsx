@@ -61,6 +61,7 @@ export default function VolunteerProfileForm({
   allCategories: { id: string; name: string }[]
   role: AdminUser['role']
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const canEdit = role === 'super_admin' || role === 'owner_admin' || role === 'editor'
   const [isEditing, setIsEditing] = useState(false)
@@ -216,8 +217,8 @@ export default function VolunteerProfileForm({
           <section className="space-y-4 md:col-span-2">
             <h3 className="text-sm font-bold text-brand-primary dark:text-brand-primary-mid uppercase tracking-wide">Account</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Field label="Joined" value={formatCT(volunteer.created_at, 'MMM d, yyyy')} />
-              <Field label="Last Updated" value={formatCT(volunteer.updated_at, 'MMM d, yyyy')} />
+              <Field label="Joined" value={formatCT(volunteer.created_at, 'MMM d, yyyy', tz)} />
+              <Field label="Last Updated" value={formatCT(volunteer.updated_at, 'MMM d, yyyy', tz)} />
               <Field label="Status" value={volunteer.status === 'active' ? 'Active' : 'Archived'} />
             </div>
           </section>

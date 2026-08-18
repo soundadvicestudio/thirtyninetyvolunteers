@@ -49,11 +49,13 @@ function OverviewTab({
   categories,
   canWrite,
   canDelete,
+  timezone,
 }: {
   item: InventoryItemWithStatus
   categories: InventoryCategory[]
   canWrite: boolean
   canDelete: boolean
+  timezone: string
 }) {
   const router = useRouter()
   const activeCategories = categories.filter((c) => c.is_active)
@@ -201,7 +203,7 @@ function OverviewTab({
           </div>
 
           <p className="text-xs text-mid-gray dark:text-dark-muted">
-            Added {formatCT(item.created_at, 'MMM d, yyyy')}
+            Added {formatCT(item.created_at, 'MMM d, yyyy', timezone)}
           </p>
 
           {canWrite && (
@@ -516,10 +518,12 @@ function NotesTab({
   item,
   canWrite,
   canSeeNotes,
+  timezone,
 }: {
   item: InventoryItemWithStatus
   canWrite: boolean
   canSeeNotes: boolean
+  timezone: string
 }) {
   const router = useRouter()
   const [content, setContent] = useState('')
@@ -564,7 +568,7 @@ function NotesTab({
           {notes.map((note) => (
             <div key={note.id} className={`${cardClasses} p-3`}>
               <p className="text-xs text-mid-gray dark:text-dark-muted mb-1">
-                {note.author_name ?? 'Unknown'} · {formatCT(note.created_at, 'MMM d, yyyy h:mm a')}
+                {note.author_name ?? 'Unknown'} · {formatCT(note.created_at, 'MMM d, yyyy h:mm a', timezone)}
               </p>
               <p className="text-sm text-dark dark:text-dark-text whitespace-pre-wrap">{note.content}</p>
             </div>
@@ -617,10 +621,12 @@ function CheckoutRow({
   checkout,
   canWrite,
   canSeeNotes,
+  timezone,
 }: {
   checkout: InventoryCheckout
   canWrite: boolean
   canSeeNotes: boolean
+  timezone: string
 }) {
   const router = useRouter()
   const badge = checkoutStatusBadge(checkout)
@@ -649,7 +655,7 @@ function CheckoutRow({
         <span className="text-sm font-medium text-dark dark:text-dark-text">{checkoutTargetLabel(checkout)}</span>
       </div>
       <p className="text-xs text-mid-gray dark:text-dark-muted">
-        Checked out: {formatCT(checkout.checked_out_at, 'MMM d, yyyy')}
+        Checked out: {formatCT(checkout.checked_out_at, 'MMM d, yyyy', timezone)}
         {checkout.checked_out_by_name ? ` by ${checkout.checked_out_by_name}` : ''}
       </p>
       <p className="text-xs text-mid-gray dark:text-dark-muted">
@@ -657,7 +663,7 @@ function CheckoutRow({
       </p>
       {checkout.returned_at && (
         <p className="text-xs text-mid-gray dark:text-dark-muted">
-          Returned: {formatCT(checkout.returned_at, 'MMM d, yyyy')}
+          Returned: {formatCT(checkout.returned_at, 'MMM d, yyyy', timezone)}
         </p>
       )}
       {canSeeNotes && checkout.checkout_notes && (
@@ -722,12 +728,14 @@ function CheckoutsTab({
   canWrite,
   canSeeNotes,
   onOpenCheckoutModal,
+  timezone,
 }: {
   item: InventoryItemWithStatus
   checkouts: InventoryCheckout[]
   canWrite: boolean
   canSeeNotes: boolean
   onOpenCheckoutModal: () => void
+  timezone: string
 }) {
   return (
     <div className="p-4 space-y-4">
@@ -759,7 +767,7 @@ function CheckoutsTab({
       ) : (
         <div className="space-y-3">
           {checkouts.map((checkout) => (
-            <CheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} canSeeNotes={canSeeNotes} />
+            <CheckoutRow key={checkout.id} checkout={checkout} canWrite={canWrite} canSeeNotes={canSeeNotes} timezone={timezone} />
           ))}
         </div>
       )}
@@ -791,6 +799,7 @@ export default function InventoryDetailTabs({
   qrSvg: string
   qrPngBase64: string
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
 
@@ -824,10 +833,12 @@ export default function InventoryDetailTabs({
 
         <div>
           {activeTab === 'overview' && (
-            <OverviewTab item={item} categories={categories} canWrite={canWrite} canDelete={canDelete} />
+            <OverviewTab item={item} categories={categories} canWrite={canWrite} canDelete={canDelete} timezone={tz} />
           )}
           {activeTab === 'photos' && <PhotosTab item={item} canWrite={canWrite} />}
-          {activeTab === 'notes' && <NotesTab item={item} canWrite={canWrite} canSeeNotes={canSeeNotes} />}
+          {activeTab === 'notes' && (
+            <NotesTab item={item} canWrite={canWrite} canSeeNotes={canSeeNotes} timezone={tz} />
+          )}
           {activeTab === 'checkouts' && (
             <CheckoutsTab
               item={item}
@@ -835,6 +846,7 @@ export default function InventoryDetailTabs({
               canWrite={canWrite}
               canSeeNotes={canSeeNotes}
               onOpenCheckoutModal={() => setCheckoutModalOpen(true)}
+              timezone={tz}
             />
           )}
           {activeTab === 'qr' && (

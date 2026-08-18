@@ -14,6 +14,7 @@ type Note = {
 }
 
 function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [mode, setMode] = useState<'view' | 'edit' | 'delete-confirm'>('view')
   const [draftBody, setDraftBody] = useState(note.body)
@@ -58,7 +59,7 @@ function NoteItem({ note, isSuperAdmin }: { note: Note; isSuperAdmin: boolean })
             {note.admin_users?.name ?? 'Unknown'}
           </span>
           <span className="text-xs text-mid-gray dark:text-dark-muted">
-            {formatCT(note.created_at, 'MMM d, yyyy h:mm a')}
+            {formatCT(note.created_at, 'MMM d, yyyy h:mm a', tz)}
           </span>
         </div>
 

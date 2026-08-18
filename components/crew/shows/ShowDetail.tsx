@@ -64,6 +64,7 @@ function OverviewTab({
   bulkEmailRecipientCount,
   defaultReplyTo,
   defaultSubject,
+  timezone,
 }: {
   show: Show
   season: { id: string; name: string } | null
@@ -72,6 +73,7 @@ function OverviewTab({
   bulkEmailRecipientCount: number
   defaultReplyTo: string
   defaultSubject: string
+  timezone: string
 }) {
   const [copied, setCopied] = useState(false)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -169,7 +171,7 @@ function OverviewTab({
         </div>
       </div>
 
-      <NotificationsSection show={show} canEdit={canEdit} />
+      <NotificationsSection show={show} canEdit={canEdit} timezone={timezone} />
 
       {canEdit && (
         <BulkEmailSection
@@ -184,7 +186,15 @@ function OverviewTab({
   )
 }
 
-function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean }) {
+function NotificationsSection({
+  show,
+  canEdit,
+  timezone,
+}: {
+  show: Show
+  canEdit: boolean
+  timezone: string
+}) {
   const router = useRouter()
   const [sending, setSending] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -219,7 +229,7 @@ function NotificationsSection({ show, canEdit }: { show: Show; canEdit: boolean 
 
       {alreadySent && (
         <p className="text-sm text-mid-gray dark:text-dark-muted mb-3">
-          Notifications last sent {formatCT(show.notifications_sent_at!, 'MMM d, yyyy h:mm a')}
+          Notifications last sent {formatCT(show.notifications_sent_at!, 'MMM d, yyyy h:mm a', timezone)}
         </p>
       )}
 
@@ -278,6 +288,7 @@ function VolunteersTab({
   attendance,
   canEdit,
   todayCT,
+  timezone,
 }: {
   showId: string
   showDates: ShowDateWithRoles[]
@@ -285,6 +296,7 @@ function VolunteersTab({
   attendance: Record<string, AttendanceRecord>
   canEdit: boolean
   todayCT: string
+  timezone: string
 }) {
   const router = useRouter()
 
@@ -349,8 +361,8 @@ function VolunteersTab({
         >
           {showDates.map((d) => (
             <option key={d.id} value={d.id}>
-              {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a")}
-              {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
+              {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a", timezone)}
+              {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a', timezone)}`}
             </option>
           ))}
         </select>
@@ -414,7 +426,7 @@ function VolunteersTab({
                             </td>
                             <td className="px-4 py-2 text-dark dark:text-dark-text align-top">{claim.volunteer_email}</td>
                             <td className="px-4 py-2 text-dark dark:text-dark-text align-top">
-                              {formatCT(claim.claimed_at, 'MMM d, yyyy h:mm a')}
+                              {formatCT(claim.claimed_at, 'MMM d, yyyy h:mm a', timezone)}
                             </td>
                             <td className="px-4 py-2 align-top">
                               {record?.source === 'checkin' && (
@@ -465,7 +477,15 @@ function VolunteersTab({
   )
 }
 
-function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: SlotClaim[] }) {
+function WaitlistTab({
+  roles,
+  slotClaims,
+  timezone,
+}: {
+  roles: ShowRole[]
+  slotClaims: SlotClaim[]
+  timezone: string
+}) {
   const rolesWithWaitlist = roles
     .map((role) => ({
       role,
@@ -511,7 +531,7 @@ function WaitlistTab({ roles, slotClaims }: { roles: ShowRole[]; slotClaims: Slo
                     <td className="px-4 py-2 text-dark dark:text-dark-text">{claim.volunteer_name}</td>
                     <td className="px-4 py-2 text-dark dark:text-dark-text">{claim.volunteer_email}</td>
                     <td className="px-4 py-2 text-dark dark:text-dark-text">
-                      {formatCT(claim.claimed_at, 'MMM d, yyyy h:mm a')}
+                      {formatCT(claim.claimed_at, 'MMM d, yyyy h:mm a', timezone)}
                     </td>
                   </tr>
                 ))}
@@ -531,11 +551,13 @@ function DatesTab({
   todayCT,
   checkinQr,
   dateCheckinQrs,
+  timezone,
 }: {
   showDates: ShowDateWithRoles[]
   todayCT: string
   checkinQr: { svg: string; pngBase64: string } | null
   dateCheckinQrs: Record<string, { svg: string; pngBase64: string }>
+  timezone: string
 }) {
   if (showDates.length === 0) {
     return <p className="text-sm text-mid-gray dark:text-dark-muted">No show dates scheduled.</p>
@@ -595,19 +617,19 @@ function DatesTab({
                       isPast ? 'text-mid-gray dark:text-dark-muted' : 'text-dark dark:text-dark-text'
                     }`}
                   >
-                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}</td>
+                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'MMM d, yyyy', timezone)}</td>
                     <td className="px-4 py-2 align-top">
-                      {formatWallClockCT(d.show_date, d.show_time, 'h:mm a')}
-                      {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a')}`}
+                      {formatWallClockCT(d.show_date, d.show_time, 'h:mm a', timezone)}
+                      {d.end_time && ` – ${formatWallClockCT(d.show_date, d.end_time, 'h:mm a', timezone)}`}
                     </td>
-                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'EEEE')}</td>
+                    <td className="px-4 py-2 align-top">{formatWallClockCT(d.show_date, null, 'EEEE', timezone)}</td>
                   </tr>
                   {dateQr && (
                     <tr className={`${rowBg} border-b border-divider dark:border-dark-border last:border-b-0`}>
                       <td colSpan={3} className="px-4 pb-4">
                         <div className="pt-3 border-t border-divider dark:border-dark-border">
                           <p className="text-xs font-semibold text-mid-gray dark:text-dark-muted mb-2">
-                            Check-In QR — {formatWallClockCT(d.show_date, null, 'MMM d, yyyy')}
+                            Check-In QR — {formatWallClockCT(d.show_date, null, 'MMM d, yyyy', timezone)}
                           </p>
                           <div
                             className="w-[120px] h-[120px] [&>svg]:w-full [&>svg]:h-full bg-white p-1.5 rounded-lg border border-divider dark:border-dark-border"
@@ -960,9 +982,10 @@ export default function ShowDetail({
   defaultSubject: string
   messagesEnabled?: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const canEdit = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
-  const todayCT = formatCT(new Date(), 'yyyy-MM-dd')
+  const todayCT = formatCT(new Date(), 'yyyy-MM-dd', tz)
   const allRoles: ShowRole[] = showDates.flatMap((d) => d.roles)
   const visibleTabs = TABS.filter((tab) => tab.key !== 'report' || show.status === 'past')
 
@@ -994,6 +1017,7 @@ export default function ShowDetail({
           bulkEmailRecipientCount={bulkEmailRecipientCount}
           defaultReplyTo={defaultReplyTo}
           defaultSubject={defaultSubject}
+          timezone={tz}
         />
       )}
       {activeTab === 'volunteers' && (
@@ -1004,19 +1028,21 @@ export default function ShowDetail({
           attendance={attendance}
           canEdit={canEdit}
           todayCT={todayCT}
+          timezone={tz}
         />
       )}
-      {activeTab === 'waitlist' && <WaitlistTab roles={allRoles} slotClaims={slotClaims} />}
+      {activeTab === 'waitlist' && <WaitlistTab roles={allRoles} slotClaims={slotClaims} timezone={tz} />}
       {activeTab === 'dates' && (
         <DatesTab
           showDates={showDates}
           todayCT={todayCT}
           checkinQr={checkinQr}
           dateCheckinQrs={dateCheckinQrs}
+          timezone={tz}
         />
       )}
       {activeTab === 'report' && show.status === 'past' && reportData && (
-        <PostShowReport data={reportData} />
+        <PostShowReport data={reportData} timezone={tz} />
       )}
       {activeTab === 'settings' && (
         <SettingsTab

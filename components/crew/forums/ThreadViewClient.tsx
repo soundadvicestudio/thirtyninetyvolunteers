@@ -94,6 +94,7 @@ export default function ThreadViewClient({
   data: ThreadViewData
   messagesEnabled?: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const { thread, forum, posts } = data
   const [isSubscribed, setIsSubscribed] = useState(data.isSubscribed)
@@ -265,7 +266,7 @@ export default function ThreadViewClient({
             )}
           </div>
           <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
-            {`Posted by ${thread.created_by_name} on ${formatCT(thread.created_at, 'MMM d, yyyy h:mm a')}`}
+            {`Posted by ${thread.created_by_name} on ${formatCT(thread.created_at, 'MMM d, yyyy h:mm a', tz)}`}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -328,7 +329,7 @@ export default function ThreadViewClient({
               <div className="sm:w-40 shrink-0">
                 <p className="text-dark dark:text-dark-text font-bold text-sm">{post.author_name}</p>
                 <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
-                  {formatCT(post.created_at, 'MMM d, yyyy h:mm a')}
+                  {formatCT(post.created_at, 'MMM d, yyyy h:mm a', tz)}
                 </p>
                 {post.edited_at && <p className="text-xs text-mid-gray dark:text-dark-muted italic">(edited)</p>}
                 {messagesEnabled && !post.is_deleted && post.author_id !== data.adminId && (

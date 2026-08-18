@@ -19,6 +19,7 @@ export default function CalendarBookSpacePanel({
   onClose: () => void
   onBook: (booking: CalendarBookingPrefill) => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -142,8 +143,8 @@ export default function CalendarBookSpacePanel({
                         {r.conflictingEvent && (
                           <>
                             {' '}
-                            ({formatCT(r.conflictingEvent.start_time, 'h:mm a')} –{' '}
-                            {formatCT(r.conflictingEvent.end_time, 'h:mm a')})
+                            ({formatCT(r.conflictingEvent.start_time, 'h:mm a', tz)} –{' '}
+                            {formatCT(r.conflictingEvent.end_time, 'h:mm a', tz)})
                           </>
                         )}
                       </p>

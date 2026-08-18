@@ -12,6 +12,7 @@ export default function ForumIndexClient({
   categories: CategoryWithForumSummary[]
   admin: { id: string; role: string; name: string }
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const isSaOa = admin.role === 'super_admin' || admin.role === 'owner_admin'
 
   if (categories.length === 0) {
@@ -76,7 +77,7 @@ export default function ForumIndexClient({
                   </div>
                   <p className="text-xs text-mid-gray dark:text-dark-muted">
                     {forum.last_post_at
-                      ? `Last post ${formatCT(forum.last_post_at, 'MMM d, yyyy h:mm a')} by ${forum.last_post_author ?? 'Unknown'}`
+                      ? `Last post ${formatCT(forum.last_post_at, 'MMM d, yyyy h:mm a', tz)} by ${forum.last_post_author ?? 'Unknown'}`
                       : 'No posts yet'}
                   </p>
                 </div>

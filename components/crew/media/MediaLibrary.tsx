@@ -831,6 +831,7 @@ export function MediaLibrary({
   adminId: string
   documentTypes: MediaDocumentType[]
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const canManage = adminRole === 'super_admin' || adminRole === 'owner_admin' || adminRole === 'editor'
   const canDelete = adminRole === 'super_admin' || adminRole === 'owner_admin'
@@ -1078,7 +1079,7 @@ export function MediaLibrary({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
-                      {formatCT(doc.created_at, 'MMM d, yyyy')}
+                      {formatCT(doc.created_at, 'MMM d, yyyy', tz)}
                       {doc.uploaderName && (
                         <span className="text-mid-gray dark:text-dark-muted"> · {doc.uploaderName}</span>
                       )}

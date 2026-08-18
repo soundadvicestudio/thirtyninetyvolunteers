@@ -27,6 +27,7 @@ export default function AuditionCheckInClient({
   data: AuditionCheckInData
   checkInToken: string
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [selectedSignupId, setSelectedSignupId] = useState<string | null>(null)
   const [checkInState, setCheckInState] = useState<CheckInState>('idle')
   const [checkedInAt, setCheckedInAt] = useState<string | null>(null)
@@ -64,7 +65,7 @@ export default function AuditionCheckInClient({
         <h2 className="text-brand-primary font-bold text-2xl mb-2">{"You're checked in!"}</h2>
         <p className="text-dark text-base">{'See you soon.'}</p>
         {checkedInAt && (
-          <p className="text-mid-gray text-sm mt-1">{`Checked in at ${formatCT(checkedInAt, 'h:mm a')}`}</p>
+          <p className="text-mid-gray text-sm mt-1">{`Checked in at ${formatCT(checkedInAt, 'h:mm a', tz)}`}</p>
         )}
       </div>
     )
@@ -75,7 +76,7 @@ export default function AuditionCheckInClient({
       <div className="text-center py-10">
         <p className="text-dark text-base">
           {'You already checked in'}
-          {checkedInAt ? ` at ${formatCT(checkedInAt, 'h:mm a')}.` : '.'}
+          {checkedInAt ? ` at ${formatCT(checkedInAt, 'h:mm a', tz)}.` : '.'}
         </p>
         <p className="text-mid-gray text-sm mt-1">{'See you soon!'}</p>
       </div>
@@ -106,7 +107,9 @@ export default function AuditionCheckInClient({
     <div className="space-y-5">
       <div className="text-center">
         <h1 className="text-brand-primary font-bold text-xl mb-1">{data.audition.title}</h1>
-        <p className="text-dark text-sm">{formatWallClockCT(data.audition.date_start, null, 'EEEE, MMMM d, yyyy')}</p>
+        <p className="text-dark text-sm">
+          {formatWallClockCT(data.audition.date_start, null, 'EEEE, MMMM d, yyyy', tz)}
+        </p>
         {data.audition.time_start && <p className="text-dark text-sm">{formatTime(data.audition.time_start)}</p>}
         {data.location && <p className="text-mid-gray text-sm mt-1">{data.location.name}</p>}
       </div>

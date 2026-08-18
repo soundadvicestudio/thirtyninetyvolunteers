@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation'
 import { addManualHours } from '@/lib/actions/volunteers'
 import { formatCT } from '@/lib/utils/date'
 
-function todayCT(): string {
-  return formatCT(new Date(), 'yyyy-MM-dd')
+function todayCT(timezone: string): string {
+  return formatCT(new Date(), 'yyyy-MM-dd', timezone)
 }
 
 export default function ManualHoursForm({ volunteerId }: { volunteerId: string }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [hours, setHours] = useState('')
-  const [loggedDate, setLoggedDate] = useState(todayCT)
+  const [loggedDate, setLoggedDate] = useState(() => todayCT(tz))
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,7 +38,7 @@ export default function ManualHoursForm({ volunteerId }: { volunteerId: string }
     if ('success' in result) {
       setHours('')
       setNote('')
-      setLoggedDate(todayCT())
+      setLoggedDate(todayCT(tz))
       router.refresh()
       return
     }

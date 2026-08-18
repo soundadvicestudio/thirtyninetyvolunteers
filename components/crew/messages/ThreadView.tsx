@@ -25,6 +25,7 @@ export default function ThreadView({
   otherLastReadAt,
   currentAdminId,
 }: ThreadViewProps) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -109,7 +110,7 @@ export default function ThreadView({
                     {isOwnMessage ? 'You' : reply.sender_name}
                   </span>
                   <span className="text-xs text-mid-gray dark:text-dark-muted flex-shrink-0">
-                    {formatCT(reply.created_at, 'MMM d, yyyy h:mm a')}
+                    {formatCT(reply.created_at, 'MMM d, yyyy h:mm a', tz)}
                   </span>
                 </div>
 
@@ -152,7 +153,7 @@ export default function ThreadView({
                 {/* Read receipt — only on the last reply, only if we sent it */}
                 {isLast && showReadReceipt && (
                   <p className="text-xs text-mid-gray dark:text-dark-muted mt-2 text-right">
-                    Read {formatCT(otherLastReadAt!, 'h:mm a')}
+                    Read {formatCT(otherLastReadAt!, 'h:mm a', tz)}
                   </p>
                 )}
               </div>

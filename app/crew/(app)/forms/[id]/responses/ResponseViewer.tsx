@@ -44,6 +44,7 @@ export default function ResponseViewer({
   fields: FormFieldData[]
   responses: ResponseRow[]
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [matchFilter, setMatchFilter] = useState<MatchFilter>('all')
@@ -71,7 +72,7 @@ export default function ResponseViewer({
 
     for (const r of filtered) {
       const row = [
-        formatCT(r.submitted_at, 'MMM d, yyyy h:mm a'),
+        formatCT(r.submitted_at, 'MMM d, yyyy h:mm a', tz),
         r.volunteer_name ?? '',
         r.volunteer_email ?? '',
         ...fields.map((f) => displayValue(f, r.values[f.id!])),
@@ -149,7 +150,7 @@ export default function ResponseViewer({
                     className={`${i % 2 === 1 ? 'bg-gray-50 dark:bg-dark-bg' : ''} border-b border-divider dark:border-dark-border last:border-b-0`}
                   >
                     <td className="px-4 py-2 whitespace-nowrap text-dark dark:text-dark-text">
-                      {formatCT(r.submitted_at, 'MMM d, yyyy h:mm a')}
+                      {formatCT(r.submitted_at, 'MMM d, yyyy h:mm a', tz)}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       {r.volunteer_id ? (

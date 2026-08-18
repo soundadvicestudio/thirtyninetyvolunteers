@@ -37,8 +37,8 @@ function eventDateLabel(startTime: string): string {
   return formatInTimeZone(new Date(startTime), CT, 'EEE, MMM d, yyyy')
 }
 
-function eventTimeLabel(event: { start_time: string; end_time: string }): string {
-  return `${formatCT(event.start_time, 'h:mm a')} – ${formatCT(event.end_time, 'h:mm a')}`
+function eventTimeLabel(event: { start_time: string; end_time: string }, timezone: string): string {
+  return `${formatCT(event.start_time, 'h:mm a', timezone)} – ${formatCT(event.end_time, 'h:mm a', timezone)}`
 }
 
 function LocationSelect({
@@ -120,6 +120,7 @@ export default function PendingQueueClient({
   initialConflicts: Record<string, boolean>
   adminRole: AdminRole
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set())
   const [locationSelections, setLocationSelections] = useState<Record<string, string>>({})
@@ -369,7 +370,7 @@ export default function PendingQueueClient({
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>
-                            <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event)}</p>
+                            <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event, tz)}</p>
                           </div>
                           <LocationSelect
                             locations={locations}
@@ -440,7 +441,7 @@ export default function PendingQueueClient({
                       </div>
                       <p className="text-xs text-mid-gray dark:text-dark-muted">
                         {groupEvents.length} date{groupEvents.length === 1 ? '' : 's'} · submitted by {submitterName} ·{' '}
-                        {formatCT(group.created_at, 'MMM d, yyyy')}
+                        {formatCT(group.created_at, 'MMM d, yyyy', tz)}
                       </p>
                     </div>
                   </div>
@@ -469,7 +470,7 @@ export default function PendingQueueClient({
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-dark dark:text-dark-text">{eventDateLabel(event.start_time)}</p>
-                            <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event)}</p>
+                            <p className="text-sm text-mid-gray dark:text-dark-muted">{eventTimeLabel(event, tz)}</p>
                           </div>
                           <LocationSelect
                             locations={locations}
@@ -524,7 +525,7 @@ export default function PendingQueueClient({
                   <p className="font-semibold text-dark dark:text-dark-text">{event.title}</p>
                   <p className="text-sm text-mid-gray dark:text-dark-muted">
                     {TYPE_LABELS[event.event_type] ?? event.event_type} · {eventDateLabel(event.start_time)} ·{' '}
-                    {eventTimeLabel(event)}
+                    {eventTimeLabel(event, tz)}
                   </p>
                   <p className="text-xs text-mid-gray dark:text-dark-muted">
                     Submitted by {event.submitted_by_admin?.name ?? 'Unknown'}

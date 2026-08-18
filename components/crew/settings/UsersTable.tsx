@@ -37,6 +37,7 @@ function UserRow({
   isSelf: boolean
   messagesEnabled?: boolean
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isTogglingCalendarEditor, setIsTogglingCalendarEditor] = useState(false)
@@ -107,9 +108,9 @@ function UserRow({
         </span>
       </td>
       <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">
-        {user.last_login ? formatCT(user.last_login, 'MMM d, yyyy h:mm a') : 'Never'}
+        {user.last_login ? formatCT(user.last_login, 'MMM d, yyyy h:mm a', tz) : 'Never'}
       </td>
-      <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy')}</td>
+      <td className="px-4 py-3 text-dark dark:text-dark-text text-sm">{formatCT(user.created_at, 'MMM d, yyyy', tz)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           {messagesEnabled && !isSelf && (

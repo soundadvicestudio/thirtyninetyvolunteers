@@ -31,6 +31,7 @@ export default function CalendarDayPanel({
   onCancelRecurringEvent?: (event: CalendarEvent) => void
   onCancelEvent?: (event: CalendarEvent) => void
 }) {
+  const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const headerDate = formatInTimeZone(fromZonedTime(`${date} 07:00:00`, CT), CT, 'EEEE, MMMM d, yyyy')
 
   const sortedEvents = events
@@ -70,7 +71,7 @@ export default function CalendarDayPanel({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-mid-gray dark:text-dark-muted">
-                        {formatCT(event.start_time, 'h:mm a')} – {formatCT(event.end_time, 'h:mm a')}
+                        {formatCT(event.start_time, 'h:mm a', tz)} – {formatCT(event.end_time, 'h:mm a', tz)}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-dark dark:text-dark-text">{event.title}</p>
