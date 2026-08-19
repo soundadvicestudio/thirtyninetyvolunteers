@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.8
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.9
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -32,6 +32,14 @@ CT references updated; §8 ShowDetail defaultHours display added (ADMIN.46);
 (TZ.A–TZ.4b ✓, TZ.5a/5b/TZ.6 remaining); §11 ADMIN.45 + ADMIN.46 logged;
 §13 resolveLayoutSettings rename + getOrgTimezone pattern + TZ phase notes
 added; version history v5.8)
+### Last Updated: August 2026 — v5.9 (DOC.78: Phase TZ complete —
+§1 version + current phase (Phase TZ ✓ Complete, Phase 17 next);
+§8 Public Calendar org-timezone-safe default language; §8 Calendar key
+files getAvailableWindows() + computeEventPosition() timezone params noted;
+§9 Migration 038 marked applied, next migration 039; §11 Phase TZ ✓
+Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b build summaries); §11 prompt log
+through DOC.78; §13 useNowPosition() hook + module-level helper + TZ.5b
+split-state + sibling-helper asymmetry patterns; version history v5.9)
 
 ---
 
@@ -971,7 +979,9 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 Location selector onChange triggers live `checkEventConflict()` re-check. Approve button disabled when conflict confirmed. `approveCalendarEvent(eventId, locationId)` runs a final server-side conflict check before approving.
 Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent()` in `lib/actions/calendar.ts`.
 
-**Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Click pill → show name, time, "Sign up to volunteer →" link to `/shows/[id]`. Month navigation via `?month=YYYY-MM` URL param (CT-safe default). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link added to `/` landing page and `/shows` page. Component: `components/calendar/PublicCalendarGrid.tsx`.
+**Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Click pill → show name, time, "Sign up to volunteer →" link to `/shows/[id]`. Month navigation via `?month=YYYY-MM` URL param (org-timezone-safe
+  default — `PublicCalendarGrid.tsx` reads `document.body.dataset.timezone`
+  with SSR guard, updated TZ.5b alongside the admin calendar components). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link added to `/` landing page and `/shows` page. Component: `components/calendar/PublicCalendarGrid.tsx`.
 
 **Recurring Events (CAL.10a–c):**
 
@@ -1016,10 +1026,16 @@ Clicking Edit on a recurring event in the day panel opens the scope picker first
 **Key files (CAL phase):**
 - `lib/actions/calendar-sync.ts` — `syncShowDateToCalendar()`
 - `lib/utils/calendar-conflict.ts` — `hasConflict()`, `hasConflictWithBuffer()`
-- `lib/utils/calendar-availability.ts` — `getAvailableWindows()`, grid helpers
+- `lib/utils/calendar-availability.ts` — `getAvailableWindows(events,
+  locationId, dateStr, timezone)` (gained `timezone: string` parameter in
+  TZ.5b — caller passes resolved tz); grid helpers remain UTC-anchored
+  and timezone-agnostic (exempt from Phase TZ)
 - `types/admin.ts` — `AdminRole` type (consolidated from inline definitions in CAL.2; `lib/auth.ts` re-exports it)
 - `lib/utils/calendar-recurrence.ts` — `generateOccurrenceDates()`, `describeRecurrence()`
-- `lib/utils/calendar-layout.ts` — `computeColumnLayout()`, `computeEventPosition()`, `EventWithLayout` type (unified week grid layout)
+- `lib/utils/calendar-layout.ts` — `computeColumnLayout()` (timezone-
+  agnostic, exempt from Phase TZ); `computeEventPosition(startTime, endTime,
+  hourHeight, dayStartHour, timezone)` (gained `timezone: string` parameter
+  in TZ.5b — caller `UnifiedWeekGrid.tsx` passes tz); `EventWithLayout` type
 - `lib/utils/ical.ts` — `generateVEvent()`, `wrapInCalendar()`, `buildClaimICalEvent()`, `buildAdminCalendarEvents()` (iCalendar generation)
 - `lib/actions/calendar.ts` — all calendar server actions including `createRecurringEvent()`, `editRecurringOccurrence()`, `cancelRecurringOccurrence()`, `rotateCalendarToken()`
 - `lib/validations/calendar.ts` — `calendarEventSchema`, `calendarEventSubmitSchema`, `rehearsalBatchSchema`, `recurringEventSchema`
@@ -2451,7 +2467,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 038 (none currently planned). Migrations 033, 034, 035, 036, and 037 are applied.
+**Next migration:** 039 (none currently planned). Migrations 033, 034, 035, 036, 037, and 038 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -5163,9 +5179,8 @@ Migration 015 applied.
 ## 11. Beta Build — Phases & Prompts (Overview)
 
 *Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES
-complete (MESSAGES.A–7, 8 prompts). Phase TZ in active
-execution (TZ.A–TZ.4b complete; TZ.5a, TZ.5b, TZ.6 remaining). Phase 17
-(Launch) is next after Phase TZ completes.*
+complete (MESSAGES.A–7, 8 prompts). Phase TZ ✓ Complete (TZ.A through TZ.6,
+all prompts shipped). Phase 17 (Launch) is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -6169,6 +6184,19 @@ resolveEmailSettings() extended with timezone.
 csv.ts + VolunteerListPDF timezone params. Commit:
 cff97ab.
 30BN-DOC.76 ✓ Brief Update v5.8 (this prompt)
+30BN-TZ.5a-AUDIT ✓ Pre-TZ.5b verification grep (no code).
+Zero missed fixes. 10th calendar Client
+Component confirmed (PublicCalendarGrid).
+30BN-TZ.5a ✓ Client Component display layer sweep
+(40 files). PostShowReport wire, csv
+wire, sub-component threading, C5#5
+year-boundary bug. Commit c83b5ae.
+30BN-TZ.5b ✓ Calendar subsystem sweep (12 files).
+All const CT removed. getAvailableWindows()
++ computeEventPosition() timezone params.
+useNowPosition() hook. Commit e06d1c4.
+30BN-DOC.78 ✓ Brief Update v5.9 (Phase TZ complete —
+this prompt)
 
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
@@ -6546,7 +6574,7 @@ ThreadViewProps interface + page prop pass (MESSAGES.5 Q2). 0 new files,
 15 modified. Commit b0ed62b.
 Phase MESSAGES — Private Messaging System ✓ Complete (MESSAGES.A–7)
 
-### Phase TZ — Configurable Organization Timezone (in progress)
+### Phase TZ — Configurable Organization Timezone ✓ Complete
 
 **TZ.A ✓** — Read-only audit. No code. Complete timezone inventory across
 entire codebase via 7 grep passes + 12 targeted file reads. Identified:
@@ -6624,24 +6652,62 @@ edit to `export/route.tsx` extends inline `app_settings` fetch to include
 already resolved from TZ.2 — only `formatWallClockCT()` calls needed `, tz`
 appended). Commit: cff97ab.
 
-**TZ.5a — PENDING** — Display layer sweep: Client Components using
-`formatCT()`/`formatWallClockCT()` (~38 files). Each reads
-`document.body.dataset.timezone || 'America/Chicago'` and passes to format
-calls. Also: wire `ShowDetail.tsx` → `<PostShowReport timezone={...}>`;
-wire `ExportAllButton.tsx` and `VolunteersTable.tsx` to pass `timezone` into
-`csv.ts` functions. SSR guard required:
-`typeof document !== 'undefined' ? document.body.dataset.timezone || 'America/Chicago' : 'America/Chicago'`
+**TZ.5a-AUDIT ✓** — Pre-TZ.5b read-only verification grep. Confirmed zero
+missed fixes across all prior TZ sweeps (TZ.2, TZ.4a, TZ.4b, TZ.5a). Full
+grep: 67 total hits — 55 confirmed CORRECT SURVIVORS (SSR-guard fallback
+reads, function default parameters, server-side fallbacks), 12 TZ.5b TARGET
+hits across 12 files, 0 MISSED FIX. Key finding: `components/calendar/
+PublicCalendarGrid.tsx` is a 10th calendar Client Component with its own
+`const CT` — not counted in TZ.A's original "9 calendar Client Components"
+(C5#3) because it lives in `components/calendar/` (public `/calendar` route)
+not `components/crew/calendar/` (admin). Included in TZ.5b scope by explicit
+owner decision. No code. No commit.
 
-**TZ.5b — PENDING** — Calendar Client Component sweep (~9 files + 2 partial
-exemptions). The 9 calendar Client Components that have their own `const CT`
-and call `date-fns-tz` directly (bypassing `lib/utils/date.ts`) need their
-local CT replaced with `document.body.dataset.timezone` read. Also:
-`getAvailableWindows()` in `calendar-availability.ts` and
-`computeEventPosition()` in `calendar-layout.ts` (C5#4 partial exemptions —
-each has timezone-sensitive logic that was incorrectly marked fully EXEMPT in
-TZ.A planning).
+**TZ.5a ✓** — Display layer sweep: Client Components using
+`formatCT()`/`formatWallClockCT()` (40 files, commit c83b5ae). All call
+sites in Client Components now pass `tz` read from `document.body.dataset.timezone
+|| 'America/Chicago'` with required SSR guard. Three deferred carry-forwards
+resolved: `ShowDetail.tsx` passes `timezone={tz}` to `<PostShowReport>`;
+`ExportAllButton.tsx` and `VolunteersTable.tsx` pass `tz` into
+`buildVolunteersCsv()` and `csvExportFilename()`. Sub-component threading
+applied in `AuditionDetailTabs.tsx` (OverviewTab/SignupsTab/MaterialsTab),
+`RehearsalDetailTabs.tsx` (DatesTab→DateRow, AttendanceTab→AttendanceSection —
+2 levels), `InventoryDetailTabs.tsx` (OverviewTab/NotesTab, CheckoutsTab→
+CheckoutRow — 2 levels). C5#5 year-boundary bug fixed in `messages/page.tsx`
+(both sides of year comparison use `getYear(toZonedTime(..., tz))`).
+Self-caught F1: `RehearsalDetailTabs.tsx` `AttendanceSection` had `timezone`
+added to type annotation but not the destructured parameter list — a live
+recurrence of the MESSAGES.7 latent dead prop pattern. Caught by `npx tsc
+--noEmit` before ship, fixed immediately. F2: `ShowList.tsx` was in Task A
+hit list but missed during batch sweep — caught only by the Task E verification
+grep (not by lint or tsc, since `formatCT(date, fmt)` without tz is valid
+TypeScript). Zero lint errors, zero tsc errors.
 
-**TZ.6 — PENDING** — Brief + Process DOC update for Phase TZ completion.
+**TZ.5b ✓** — Calendar subsystem sweep (12 files, commit e06d1c4). Removed
+all remaining `const CT = 'America/Chicago'` from calendar utility modules
+and Client Components. Pattern A (utility modules — `timezone: string` param
+added): `lib/utils/calendar-availability.ts` `getAvailableWindows()`;
+`lib/utils/calendar-layout.ts` `computeEventPosition()`. Single caller each:
+`CalendarDayPanel.tsx` calls `getAvailableWindows()`; `UnifiedWeekGrid.tsx`
+calls `computeEventPosition()`. Pattern B (8 fresh SSR-guarded reads):
+`CalendarShell.tsx`, `CalendarEventForm.tsx` (tz declared BEFORE `useForm()`
+and all hooks), `CalendarMonthView.tsx`, `CalendarWeekView.tsx`, `CalendarAgendaView.tsx`,
+`WeekAgendaView.tsx`, `PublicCalendarGrid.tsx`, `UnifiedWeekGrid.tsx`.
+Pattern C (2 split-state files — reused existing TZ.5a tz, no second read):
+`CalendarDayPanel.tsx` (3 CT usages: headerDate + 2 Available Windows time
+labels + `getAvailableWindows()` call site), `PendingQueueClient.tsx`
+(`eventDateLabel()` module-level helper parameterized; `handleLocationChange()`
+/ `handleApplyDefaultLocation()` used tz directly). `UnifiedWeekGrid.tsx`
+special case: `useNowPosition(days)` custom hook gained `timezone: string` as
+second parameter; `timezone` added to `useEffect` deps array; existing
+`eslint-disable-next-line react-hooks/exhaustive-deps` comment preserved
+verbatim (covers intentional `days` exclusion). Verification grep N4: zero
+`'America/Chicago'` literals remaining outside `lib/utils/org-timezone.ts`
+and `setup/page.tsx` (canonical definition + R18 fallbacks). Phase TZ fully
+complete. Zero lint errors, zero tsc errors.
+
+**TZ.6 ✓** — Brief v5.9 (DOC.78) + Process v5.7 (DOC.79). Phase TZ
+documentation complete.
 
 **ADMIN.45 ✓** — Dead Prop Systematic Audit & Fix. Audited ~30 component
 and sub-component prop type signatures across 10 target files. Two dead props
@@ -7244,6 +7310,50 @@ no ordering dependency on anything preceding them in these functions. Detected
 in: `calendar.ts` (3 functions), `app/calendar/page.tsx`,
 `app/crew/(app)/calendar/page.tsx`, `lib/actions/checkin.ts` (2 functions).
 
+**`useNowPosition()` hook timezone parameter (TZ.5b):**
+`useNowPosition(days, timezone)` in `UnifiedWeekGrid.tsx` is the only custom
+hook in this codebase that accepts a `timezone: string` parameter. The hook
+uses `timezone` inside a `useEffect` to compute the current-time red-line
+indicator position. Key constraints:
+- `timezone` must be in the `useEffect` dependency array — it's a genuine dep
+  (a timezone change should trigger a re-run of the indicator calculation)
+- The existing `// eslint-disable-next-line react-hooks/exhaustive-deps`
+  comment is preserved verbatim — it covers the intentional exclusion of
+  `days` (not `timezone`). Do NOT add `timezone` to the disable exemption
+- At the call site: `useNowPosition(days, tz)` where `tz` is the
+  SSR-guarded body attribute read at the top of `UnifiedWeekGrid`
+
+**Module-level helper timezone parameterization (TZ.5b):**
+When a module-level pure helper function (outside a component function body)
+needs the org timezone, add `timezone: string` as a parameter — do NOT read
+`document.body.dataset.timezone` inside a module-level function. Module-level
+code may execute at initialization time before the DOM is available. Confirmed
+for `eventDateLabel(timezone)` in `PendingQueueClient.tsx` and similar helpers
+in `ManualHoursForm.tsx`, `AuditionsListClient.tsx`, `RehearsalsListClient.tsx`,
+`ShowList.tsx`. The component function reads `tz` via the SSR-guarded body
+attribute at the top of its body, then passes `tz` into module-level helper
+calls.
+
+**TZ.5b split-state pattern (established TZ.5b):**
+Two calendar Client Components (`CalendarDayPanel.tsx`, `PendingQueueClient.tsx`)
+were in a split state after TZ.5a: each had a TZ.5a `const tz = ...` SSR-
+guarded read for `formatCT`/`formatWallClockCT` calls, but still had a module-
+level `const CT = 'America/Chicago'` for their direct `date-fns-tz` calls
+(TZ.5b scope). The correct approach: remove `const CT`, reuse the existing
+`tz` variable. Do NOT add a second SSR-guarded `tz` read — exactly one
+`document.body.dataset.timezone` read per Client Component, at the top of the
+function body.
+
+**Sibling helper asymmetry audit (lesson from TZ.5b):**
+`PendingQueueClient.tsx` had two sibling module-level helpers: `eventTimeLabel()`
+was parameterized with `timezone` in TZ.5a; `eventDateLabel()` was not,
+because TZ.5a fixed `formatCT`/`formatWallClockCT` calls and `eventDateLabel`
+used direct `date-fns-tz`. This left the two helpers inconsistent until TZ.5b.
+Lesson: when parameterizing any helper function in a file, audit ALL sibling
+helpers in the same file for the same pattern. Leaving one parameterized and
+one using a hardcoded const creates an inconsistency that produces no error
+and is easy to miss.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -7415,3 +7525,12 @@ Phase TZ section added (TZ.A–TZ.4b ✓ with commits + TZ.5a/5b/TZ.6 pending;
 ADMIN.45 + ADMIN.46 build summaries); §11 prompt log through DOC.76; §13
 resolveLayoutSettings rename + getOrgTimezone pattern + formatCT timezone param
 + client-before-usage reordering pattern; DOC.76 logged)*
+
+*v5.9 (August 2026 — DOC.78: Phase TZ complete — §1 version + current phase
+(Phase TZ ✓ Complete); §8 Public Calendar CT→org-timezone language; §8
+calendar-availability.ts getAvailableWindows() + calendar-layout.ts
+computeEventPosition() timezone parameter notes; §9 Migration 038 applied,
+next migration 039; §11 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b
+build summaries, TZ.6 ✓); §11 prompt log through DOC.78; §13 useNowPosition()
+hook pattern, module-level helper parameterization, TZ.5b split-state pattern,
+sibling helper asymmetry audit lesson; DOC.78 logged)*
