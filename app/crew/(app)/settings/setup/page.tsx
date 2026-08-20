@@ -28,6 +28,9 @@ const SETUP_KEYS = [
   'instance_label',
   'not_found_heading',
   'not_found_body',
+  'maintenance_mode',
+  'maintenance_heading',
+  'maintenance_body',
 ] as const
 
 export default async function SetupPage() {
@@ -74,6 +77,9 @@ export default async function SetupPage() {
     instance_label: settingsMap.get('instance_label') ?? '',
     not_found_heading: settingsMap.get('not_found_heading') ?? 'Page Not Found',
     not_found_body: settingsMap.get('not_found_body') ?? "We couldn't find what you were looking for.",
+    maintenance_mode: settingsMap.get('maintenance_mode') || 'false',
+    maintenance_heading: settingsMap.get('maintenance_heading') || '',
+    maintenance_body: settingsMap.get('maintenance_body') || '',
   }
 
   const instanceLabel = settingsMap.get('instance_label') ?? ''

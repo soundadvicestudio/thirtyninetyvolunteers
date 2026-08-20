@@ -9,6 +9,7 @@ import {
   saveFeatureFlags,
   saveInstanceLabel,
   saveNotFoundPage,
+  saveMaintenanceMode,
 } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
 import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
@@ -40,6 +41,9 @@ export type SetupPanelInitialValues = {
   instance_label: string
   not_found_heading: string
   not_found_body: string
+  maintenance_mode: string
+  maintenance_heading: string
+  maintenance_body: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -55,6 +59,100 @@ function SaveFeedback({ status, errorMessage }: { status: SaveStatus; errorMessa
   if (status === 'saved') return <span className="text-sm text-green-600">✓ Saved</span>
   if (status === 'error') return <span className="text-sm text-red-600">{errorMessage}</span>
   return null
+}
+
+function MaintenanceModeSection({
+  initialValues,
+}: {
+  initialValues: SetupPanelInitialValues
+}) {
+  const [maintenanceEnabled, setMaintenanceEnabled] =
+    useState(initialValues.maintenance_mode === 'true')
+  const [maintenanceHeading, setMaintenanceHeading] = useState(
+    initialValues.maintenance_heading || 'System Maintenance'
+  )
+  const [maintenanceBody, setMaintenanceBody] = useState(
+    initialValues.maintenance_body ||
+      'The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon.'
+  )
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  async function handleSave() {
+    setStatus('saving')
+    setErrorMessage('')
+    const fd = new FormData()
+    fd.append('maintenance_mode', maintenanceEnabled ? 'true' : 'false')
+    fd.append('maintenance_heading', maintenanceHeading)
+    fd.append('maintenance_body', maintenanceBody)
+    const result = await saveMaintenanceMode(fd)
+    if ('error' in result) {
+      setErrorMessage(result.error)
+      setStatus('error')
+    } else {
+      setStatus('saved')
+    }
+  }
+
+  return (
+    <div className={cardClasses}>
+      <div>
+        <h2 className={headingClasses}>Maintenance Mode</h2>
+        <p className={descriptionClasses}>
+          {"Control crew portal access during updates and maintenance windows."}
+        </p>
+      </div>
+      <div className="space-y-4">
+        <ToggleRow
+          label={
+            maintenanceEnabled
+              ? '⚠ Maintenance Mode — ON'
+              : 'Maintenance Mode'
+          }
+          description={
+            'When ON, all non-Super Admin roles are redirected to the maintenance page and cannot access the crew portal.'
+          }
+          enabled={maintenanceEnabled}
+          onToggle={() => setMaintenanceEnabled((v) => !v)}
+        />
+        <div>
+          <label className={labelClasses}>
+            Maintenance Page Heading
+          </label>
+          <input
+            type="text"
+            value={maintenanceHeading}
+            onChange={(e) => setMaintenanceHeading(e.target.value)}
+            maxLength={100}
+            className={inputClasses}
+          />
+        </div>
+        <div>
+          <label className={labelClasses}>
+            Maintenance Page Message
+          </label>
+          <textarea
+            value={maintenanceBody}
+            onChange={(e) => setMaintenanceBody(e.target.value)}
+            maxLength={300}
+            rows={3}
+            className={inputClasses}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={status === 'saving'}
+          className={saveButtonClasses}
+        >
+          {status === 'saving' ? 'Saving...' : 'Save'}
+        </button>
+        <SaveFeedback status={status} errorMessage={errorMessage} />
+      </div>
+    </div>
+  )
 }
 
 function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitialValues }) {
@@ -567,6 +665,7 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
 
   return (
     <div className="space-y-6">
+      <MaintenanceModeSection initialValues={initialValues} />
       <OrgIdentitySection initialValues={initialValues} />
       <BrandColorsSection initialValues={initialValues} />
 
