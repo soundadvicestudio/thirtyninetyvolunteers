@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getNotificationCounts, getUserNotifications } from '@/lib/data/notifications'
@@ -38,11 +39,20 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
 
   const flags = await getFeatureFlags(supabase)
 
-  const [org, notificationCounts, initialNotifications] = await Promise.all([
-    resolveOrgIdentity(),
-    getNotificationCounts(admin, flags, supabase),
-    getUserNotifications(admin.id, supabase),
-  ])
+  const [org, notificationCounts, initialNotifications, maintenanceResult] =
+    await Promise.all([
+      resolveOrgIdentity(),
+      getNotificationCounts(admin, flags, supabase),
+      getUserNotifications(admin.id, supabase),
+      getAdminClient()
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'maintenance_mode')
+        .maybeSingle(),
+    ])
+
+  const maintenanceModeActive =
+    maintenanceResult.data?.value === 'true'
 
   return (
     <>
@@ -79,6 +89,13 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
                 initialNotifications={initialNotifications}
                 messagesEnabled={flags.messages}
               />
+              {maintenanceModeActive && (
+                <div className="bg-orange-500 text-white text-sm
+                  text-center py-2 px-4 shrink-0">
+                  ⚠ Maintenance Mode is ON — the crew portal is
+                  locked for all other roles.
+                </div>
+              )}
               <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-dark-bg p-6">{children}</main>
             </div>
           </div>

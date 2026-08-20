@@ -458,6 +458,72 @@ export async function saveNotFoundPage(formData: FormData): Promise<ActionResult
   return { success: true }
 }
 
+export async function saveMaintenanceMode(
+  formData: FormData
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  const mode = (formData.get('maintenance_mode') as string | null) ?? 'false'
+  const heading = (formData.get('maintenance_heading') as string | null)?.trim() ?? ''
+  const body = (formData.get('maintenance_body') as string | null)?.trim() ?? ''
+
+  if (!heading) {
+    return { error: 'Heading is required.' }
+  }
+  if (heading.length > 100) {
+    return { error: 'Heading must be 100 characters or fewer.' }
+  }
+  if (!body) {
+    return { error: 'Body text is required.' }
+  }
+  if (body.length > 300) {
+    return { error: 'Body text must be 300 characters or fewer.' }
+  }
+
+  const supabase = await getServerClient()
+
+  const keys = ['maintenance_mode', 'maintenance_heading', 'maintenance_body']
+  const { data: previousRows } = await supabase
+    .from('app_settings')
+    .select('key, value')
+    .in('key', keys)
+  const previousMap = new Map(
+    (previousRows ?? []).map((r) => [r.key, r.value])
+  )
+
+  const values: Record<string, string> = {
+    maintenance_mode: mode === 'true' ? 'true' : 'false',
+    maintenance_heading: heading,
+    maintenance_body: body,
+  }
+
+  const results = await Promise.all(
+    keys.map((key) => upsertSetting(supabase, key, values[key], admin.id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    return { error: failed.error.message }
+  }
+
+  revalidatePath('/crew/settings/setup')
+  revalidatePath('/crew', 'layout')
+  revalidatePath('/crew/maintenance')
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'maintenance_mode',
+    { ...Object.fromEntries(keys.map((k) => [k, previousMap.get(k) ?? ''])) },
+    values
+  )
+
+  return { success: true }
+}
+
 export async function saveInstanceLabel(formData: FormData): Promise<ActionResult> {
   const admin = await getAdminUser()
   if (!admin || admin.role !== 'super_admin') {

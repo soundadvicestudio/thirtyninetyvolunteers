@@ -36,6 +36,44 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Maintenance mode gate — fires before all other checks.
+  // Applies to /crew/* routes only, excluding /crew/login
+  // and /crew/maintenance (to avoid redirect loops).
+  // Super Admin always passes through transparently.
+  const isCrewRoute = pathname.startsWith('/crew/')
+  const isMaintenanceExempt =
+    pathname === '/crew/login' ||
+    pathname.startsWith('/crew/maintenance')
+  if (isCrewRoute && !isMaintenanceExempt) {
+    const maintenanceClient = getAdminClient()
+    const { data: maintenanceSetting } = await maintenanceClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'maintenance_mode')
+      .maybeSingle()
+    if (maintenanceSetting?.value === 'true') {
+      if (user) {
+        const { data: maintenanceAdminUser } = await maintenanceClient
+          .from('admin_users')
+          .select('role')
+          .eq('id', user.id)
+          .eq('is_active', true)
+          .maybeSingle()
+        if (maintenanceAdminUser?.role !== 'super_admin') {
+          return NextResponse.redirect(
+            new URL('/crew/maintenance', request.url)
+          )
+        }
+      } else {
+        // No session — redirect to login (standard auth flow
+        // will handle this; maintenance page is crew-only)
+        return NextResponse.redirect(
+          new URL('/crew/login', request.url)
+        )
+      }
+    }
+  }
+
   // Feature flags: fetched once per request, only when the path is one of
   // the seven guarded routes (perf — skips the app_settings query entirely
   // for every other request).
