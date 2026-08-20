@@ -5300,8 +5300,10 @@ Migration 015 applied.
 ## 11. Beta Build — Phases & Prompts (Overview)
 
 *Phase NOTIFY complete (NOTIFY.A–NOTIFY.4-CLEANUP, 6 prompts). Phase MESSAGES
-complete (MESSAGES.A–7, 8 prompts). Phase TZ ✓ Complete (TZ.A through TZ.6,
-all prompts shipped). Phase 17 (Launch) is next.*
+complete (MESSAGES.A–7, 8 prompts). Phase TZ ✓ Complete (TZ.A through TZ.6, all
+prompts shipped). Phase MM ✓ Complete (MM.A audit, MM.1, MM.2 — 3 prompts).
+Platform in active Beta (Executive Committee testing). Phase 17 (Launch)
+deferred pending Beta refinement.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -6318,6 +6320,21 @@ All const CT removed. getAvailableWindows()
 useNowPosition() hook. Commit e06d1c4.
 30BN-DOC.78 ✓ Brief Update v5.9 (Phase TZ complete —
 this prompt)
+30BN-MM.A ✓ Read-only audit (7 files: proxy.ts, setup.ts,
+SetupPanel.tsx, setup/page.tsx, layout.tsx, TopBar.tsx,
+not-found.tsx). Key findings: SetupPanel 8 independent
+sub-components; no literal section numeral text in code;
+SaveStatus uses 'saved' not 'success'; settingsMap is Map
+instance; ActionResult needs 'error' in result check.
+No code. No commit.
+30BN-MM.1 ✓ Migration 039 + saveMaintenanceMode() + proxy.ts
+gate + /crew/maintenance page + layout banner. 5 files.
+Commit 4196623.
+30BN-MM.2 ✓ MaintenanceModeSection sub-component in
+SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
+2 files. Commit 769ecdd.
+30BN-DOC.80 ✓ Brief v5.9→v6.0 Part A (§1/§7/§8/§9).
+30BN-DOC.81 ✓ Brief v6.0 Part B (§11/§13 — this prompt).
 
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
@@ -6854,6 +6871,190 @@ F1 resolved: `DirectMessageComposer.tsx` gained `onEmptyChange` callback prop;
 `isComposerEmpty` state; unused `_unused` var removed from
 DirectMessageComposer. Zero lint errors, zero tsc errors.
 4 files modified. Commit: 796af84.
+
+### Phase MM — Maintenance Mode ✓ Complete
+
+**Architecture:** Maintenance Mode is an operational
+kill switch for the `/crew` backend. When active, all
+non-Super-Admin roles are redirected to a branded
+maintenance page (`/crew/maintenance`) and cannot access
+any crew functionality. Super Admin retains full access
+at all times. The toggle, heading, and body text are
+configurable in Platform Setup Section 1.
+
+**MM.A ✓** — Read-only audit. 7 files audited:
+`proxy.ts`, `lib/actions/setup.ts`, `components/crew/
+settings/SetupPanel.tsx`, `app/crew/(app)/settings/
+setup/page.tsx`, `app/crew/(app)/layout.tsx`,
+`components/crew/TopBar.tsx`, `app/not-found.tsx`.
+Key findings: SetupPanel.tsx has 8 independent
+sub-components (not one component with all state at
+top); no literal section numeral text exists in code
+(section numbering is planning-doc convention only);
+`resolveLayoutSettings()` is in root `app/layout.tsx`,
+not the crew app layout; `SaveStatus` type uses `'saved'`
+not `'success'`; `settingsMap` in setup/page.tsx is a
+`Map` instance (`.get()` required, not bracket access);
+`ActionResult` is a discriminated union (`'error' in
+result` not `result?.error`). No code. No commit.
+
+**MM.1 ✓** — Migration 039 + server action + proxy.ts
+gate + maintenance page + layout banner. Migration 039
+applied: seeds `maintenance_mode`, `maintenance_heading`,
+`maintenance_body` in `app_settings`. `saveMaintenanceMode()`
+added to `lib/actions/setup.ts` (SA only; mirrors
+`saveNotFoundPage()` pattern; revalidates `/crew` layout
+scope for immediate banner propagation). `proxy.ts`
+maintenance gate inserted before all other checks (fires
+before `needsFlagCheck`, before flag fetches): reads
+`maintenance_mode` via `getAdminClient()`; if `'true'`
+and non-SA, redirects to `/crew/maintenance`; SA passes
+through transparently. `app/crew/maintenance/page.tsx`
+created (standalone — NOT in `(app)` route group;
+renders without sidebar/topbar; `getAdminClient()` +
+`resolveOrgIdentity()`; noindex; light mode only).
+`app/crew/(app)/layout.tsx` extended: `maintenance_mode`
+fetch as 4th Promise.all entry; `maintenanceModeActive`
+boolean derived; amber banner sibling div between TopBar
+and main (SA-only visible by definition). `getAdminClient`
+import added to layout. 5 files created/modified.
+Commit: 4196623.
+
+**MM.2 ✓** — Setup Panel Maintenance Mode section.
+`MaintenanceModeSection` sub-component added to
+`SetupPanel.tsx` — positioned as first section in the
+panel. Contains: `ToggleRow` (conditional label: "⚠
+Maintenance Mode — ON" when active), heading text input
+(max 100 chars), body textarea (max 300 chars), Save
+button + SaveFeedback. Uses `SaveStatus` type and
+`setStatus('saved')` per live file convention (not
+`'success'` — MM.A finding). `saveMaintenanceMode`
+imported and wired. `SetupPanelInitialValues` type
+extended (27 fields, was 24). `setup/page.tsx` SETUP_KEYS
+extended to 27 keys; initialValues mapping extended with
+`|| ''` fallbacks (R18). Self-caught bugs fixed before
+tsc: `'error' in result` for ActionResult narrowing;
+`.get()` for Map access in settingsMap. 2 files.
+Commit: 769ecdd. Phase MM complete.
+
+### Planned Beta Phases (approved build sequence)
+
+The following phases are planned and approved for
+execution during the Beta period. Order may vary.
+
+**Phase FORUMS-FIX (Priority 1 — bug fix):**
+Forums thread view is broken — hitting a thread URL
+redirects to the branded error page (`app/error.tsx`).
+Thread appears to exist in the forum index (post count
+shows) but cannot be opened. Diagnosed as a runtime
+error in the thread view, not a 404. Phase A diagnostic
+audit will identify root cause (likely a null dereference
+in `ThreadViewClient.tsx`, a signed URL failure for
+attachments, or a data shape mismatch in
+`getThreadWithPosts()`). Phase B fix in same session.
+Prompts: FORUMS-FIX.A (audit + inline fix).
+
+**Phase ANNOUNCE — Dashboard Announcements Widget:**
+Super Admin publishes rich-text (TipTap) announcements
+targeted to specific roles. Announcements appear in a
+new widget at the very top of the Dashboard (above
+Quick Stats) for all targeted users. Per-user dismissal
+tracked via `admin_users.announcement_dismissed_at`.
+New publish resets dismissal for all users. Multiple
+targeted announcements stack in one widget. SA-and-OA
+publishing enabled via Platform Setup toggle
+(`announcements_oa_enabled`). When enabled, OA gets
+an Announcement section in their accessible settings
+area mirroring the SA Platform Setup section. Distinct
+from the public-facing announcement banner on `/`.
+New `app_settings` keys: `announcement_body`,
+`announcement_updated_at`, `announcement_roles`
+(JSON array), `announcements_oa_enabled`. New column:
+`admin_users.announcement_dismissed_at timestamptz`.
+Prompts: ANNOUNCE.A (audit), ANNOUNCE.1 (migration +
+server actions), ANNOUNCE.2 (Setup Panel section +
+dashboard widget + OA mirror).
+
+**Phase FORUMS-UX — Forum Permissions Discoverability:**
+Minor UX fix to `ForumManageClient.tsx`. The expand
+chevron (▼) on forum rows opens the access grants/
+moderators/prefixes sub-panel but is not obviously a
+"manage permissions" trigger. Add a visible label or
+indicator making the function of the chevron clear.
+Small targeted fix. Prompts: FORUMS-UX.1.
+
+**Phase SHOWDELETE — Show Hard Delete:**
+Add Delete capability to show management. Currently
+shows can only be archived. Delete button in the Settings
+tab of show detail (SA/OA/Editor only). Show must be
+archived before deletion (prevents accidental deletion
+of live shows). Blocked if show has active slot claims.
+Hard delete cascades via FK. `deleteShow()` server
+action in `lib/actions/shows.ts`. Confirmation dialog
+via shadcn `AlertDialog`. Prompts: SHOWDELETE.A (audit),
+SHOWDELETE.1 (server action + UI).
+
+**Phase QRBANNER — QR Code Label Banner:**
+Optional text banner below the QR code in generated
+output. Admin types label at generation time; a toggle
+enables/disables the banner per generation. Banner
+appears in both the inline preview and the downloaded
+SVG and PNG files. Implemented via SVG `<text>` element
+composited below the QR matrix in `lib/qr.ts`
+`generateQR()` via optional `bannerText?: string` param.
+`QRGeneratorForm.tsx` gains banner toggle + text input.
+History panel shows banner text when present.
+Prompts: QRBANNER.A (audit), QRBANNER.1 (implementation).
+
+**Phase QRANALYTICS — QR Code Scan Tracking:**
+Newly generated QR codes point to `/go/[redirect_token]`
+instead of the raw target URL. Public redirect route
+(`app/go/[token]/route.ts`, `getAdminClient()`) logs
+a `qr_scan_events` row (timestamp, user-agent, device
+type, browser) then redirects to `target_url`. Analytics
+in QR history panel: total scans, last scanned, device
+breakdown. New columns on `qr_codes`: `redirect_token
+uuid DEFAULT gen_random_uuid()`, `target_url text`. New
+table: `qr_scan_events` (id, qr_code_id FK, scanned_at,
+user_agent, device_type, browser). Legacy QR codes
+(pre-feature) show "Analytics not available." Only
+newly generated codes are trackable — no retroactive
+conversion. Prompts: QRANALYTICS.A (audit),
+QRANALYTICS.1 (migration + redirect route + server
+action updates), QRANALYTICS.2 (analytics UI).
+
+**Phase SIDEBAR — Grouped Sidebar + Top Nav Style:**
+Production rollout of a redesigned sidebar and top nav,
+developed and approved via Style Sandbox mockups first.
+Sidebar: grouped/sectioned layout with four groups
+(Events, People, Utilities, Settings — or refined per
+audit), compact typography, enhanced active state with
+brand-primary left border accent + subtle background
+fill, refined spacing. Top nav: polished TopBar treatment
+with improved visual weight using Option A design tokens.
+SIDEBAR.1 ships mockups only (zero production files
+touched); SIDEBAR.2 is the production rollout pending
+owner approval of mockups. Prompts: SIDEBAR.A (audit),
+SIDEBAR.1 (Style Sandbox mockups), SIDEBAR.2 (production
+rollout — pending mockup approval).
+
+**Phase NAVORDER — Sidebar Link Reorder in Platform Setup:**
+Sequenced after SIDEBAR (sidebar structure must be
+finalized first). SA can reorder sidebar nav links via
+a new section in Platform Setup. Order stored as JSON
+array in `app_settings` (`sidebar_nav_order`). Reorder
+UI uses up/down arrow buttons (no drag library — project
+convention). `Sidebar.tsx` reads preferred order from
+props threaded from layout, applying it at render time
+with fallback to default order when key is absent.
+`saveSidebarNavOrder()` server action.
+Prompts: NAVORDER.A (audit), NAVORDER.1 (implementation).
+
+**Phase DOC-BETA1 — Documentation Update:**
+Comprehensive Brief + Process update after all above
+phases complete. Documents all new phases, migrations,
+app_settings keys, schema changes, patterns learned,
+and R-rules surfaced during Beta builds.
 
 ### Phase 17 — Launch
 
@@ -7475,6 +7676,64 @@ helpers in the same file for the same pattern. Leaving one parameterized and
 one using a hardcoded const creates an inconsistency that produces no error
 and is easy to miss.
 
+**Maintenance Mode gate position in proxy.ts (MM.1):**
+The maintenance mode check must fire before ALL other
+proxy.ts logic — before `needsFlagCheck`, before flag
+fetches, before role-based route guards. Its position
+immediately after `const { pathname } = request.nextUrl`
+and before the `needsFlagCheck` comment/block is
+intentional and must be preserved. Any future proxy.ts
+edit that adds logic before the maintenance gate would
+break the kill-switch guarantee (a maintenance-mode
+check that fires after a flag block could be bypassed
+when a flag redirects before the maintenance check runs).
+
+**`/crew/maintenance` page location — R20 exception
+(MM.1):**
+`app/crew/maintenance/page.tsx` is placed directly at
+`app/crew/maintenance/` — NOT inside `app/crew/(app)/`
+as R20 requires for all crew pages. This is an
+intentional, documented exception. The maintenance page
+must render WITHOUT the sidebar/topbar crew layout shell
+because it is shown to logged-in non-SA users who are
+blocked from the crew backend. Placing it inside `(app)`
+would render the full admin UI around the maintenance
+message, which is incorrect. This is the only `/crew/*`
+page that intentionally lives outside the `(app)` route
+group.
+
+**`SaveStatus` type in SetupPanel.tsx — 'saved' not
+'success' (MM.2 Q1):**
+The `SaveStatus` type in `SetupPanel.tsx` is `'idle' |
+'saving' | 'saved' | 'error'`. The success state is
+`'saved'`, not `'success'`. `SaveFeedback` renders "✓
+Saved" only when `status === 'saved'` — passing `'success'`
+produces no visible feedback and fails tsc. Any new
+sub-component in SetupPanel.tsx must use `useState<
+SaveStatus>('idle')` and call `setStatus('saved')` on
+success. Do not declare an inline status union type.
+
+**`settingsMap` in setup/page.tsx is a Map instance
+(MM.2 Q1):**
+`settingsMap` in `app/crew/(app)/settings/setup/page.tsx`
+is constructed as a `Map` instance. Access must use
+`.get('key')`, not bracket notation `settingsMap['key']`
+— bracket access on a Map always returns `undefined`
+silently. Any new key added to the initialValues mapping
+block must use the `.get()` pattern with a `|| ''`
+fallback per R18.
+
+**`ActionResult` discriminated union narrowing (MM.2 Q1):**
+`ActionResult` in this codebase is a discriminated union
+— the success branch has no `error` field. Narrowing
+with `result?.error` compiles but may not type-check
+correctly and produces incorrect behavior on the success
+branch. Use `'error' in result` to narrow to the error
+branch before accessing `result.error`. This is the
+correct TypeScript pattern for discriminated unions and
+is now the established convention for all Setup Panel
+`handleSave()` functions.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -7655,3 +7914,40 @@ next migration 039; §11 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b
 build summaries, TZ.6 ✓); §11 prompt log through DOC.78; §13 useNowPosition()
 hook pattern, module-level helper parameterization, TZ.5b split-state pattern,
 sibling helper asymmetry audit lesson; DOC.78 logged)*
+
+*v6.0 (August 2026 — DOC.80/DOC.81: Phase MM complete +
+Beta phases planned — §1 version header updated (v5.9 →
+v6.0), current phase updated (Phase MM ✓ Complete,
+platform in active Beta, Phase 17 deferred, 8 Beta
+phases planned); §7 Phase MM proxy.ts maintenance gate
+documented; §8 Platform Setup: section count 8 → 9,
+new Maintenance Mode Section 1 documented (three
+app_settings keys, amber banner, saveMaintenanceMode(),
+Migration 039), existing sections renumbered 2–9 in
+prose, SETUP_KEYS count 24 → 27, setup.ts action count
+nine → ten, setup/page.tsx fetch count 24 → 27 keys,
+SetupPanel.tsx section count eight → nine; §8 new
+/crew/maintenance page section added (R20 exception
+documented, getAdminClient(), noindex, light mode,
+resolveOrgIdentity()); §8 Dashboard: planned ANNOUNCE
+widget noted above Quick Stats; §8 Show Management:
+planned SHOWDELETE noted in Settings tab; §8 QR
+Generator: planned QRBANNER and QRANALYTICS noted; §8
+Style Sandbox: planned SIDEBAR mockups noted (Sidebar
+mockup + Top Nav mockup); §8 Internal Forums:
+discoverability note added (expand chevron opens access
+grants sub-panel); §9 Migration 039 status block added
+(applied, 3 new app_settings keys), next migration
+updated 039 → 040, SETUP_KEYS count updated to 27 in §9
+notes; §11 header updated (Phase MM ✓ Complete, Beta
+active, Phase 17 deferred); §11 Phase MM ✓ Complete
+section added (MM.A, MM.1, MM.2 build summaries); §11
+Planned Beta Phases section added (FORUMS-FIX, ANNOUNCE,
+FORUMS-UX, SHOWDELETE, QRBANNER, QRANALYTICS, SIDEBAR,
+NAVORDER, DOC-BETA1 — all forward specs); §11 prompt log
+updated (MM.A, MM.1, MM.2, DOC.80, DOC.81); §13 five new
+pattern notes added (maintenance gate position, /crew/
+maintenance R20 exception, SaveStatus 'saved' not
+'success', settingsMap Map instance, ActionResult
+discriminated union narrowing); §13 v6.0 version history
+entry added; DOC.80 + DOC.81 logged)*
