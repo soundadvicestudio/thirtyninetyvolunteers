@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.7
+## 30BN_PROCESS_v1.md — v5.8
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 ### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
 — §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
@@ -41,6 +41,14 @@ pattern, sibling helper asymmetry); §7 'America/Chicago' grep note updated
 (Phase TZ complete); §10 'America/Chicago' grep completion note updated;
 §13 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b summaries, TZ.6 this
 prompt); §13 prompt log through DOC.79; §14 four new pattern notes; v5.7)
+### Last Updated: August 2026 — v5.8 (DOC.82: Phase MM
+complete — §7 six new patterns (proxy.ts maintenance gate
+position, /crew/maintenance R20 exception, SetupPanel dual-
+client pattern, SaveStatus 'saved' not 'success', settingsMap
+Map instance, ActionResult discriminated union narrowing); §11
+four new checklist items; §13 Phase MM ✓ Complete + prompt
+log MM.A/MM.1/MM.2/DOC.80/DOC.81/DOC.82; §14 five new
+pattern notes; v5.8 version history)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -1570,6 +1578,123 @@ sibling helpers in the same file. `PendingQueueClient.tsx` had two:
 error and was only caught during TZ.5b's Task A. Rule: when one helper in a
 file is updated for timezone, check all siblings before closing the prompt.
 
+**Maintenance gate position in `proxy.ts` (MM.1):**
+The maintenance mode check in `proxy.ts` must fire before
+ALL other logic — before `needsFlagCheck`, before flag
+fetches, before role-based route guards. Its position
+immediately after `const { pathname } = request.nextUrl`
+and before the `needsFlagCheck` comment/block is
+non-negotiable. Any future `proxy.ts` edit that inserts
+logic before the maintenance gate compromises the
+kill-switch guarantee: a flagged-feature redirect could
+fire before the maintenance check, allowing a non-SA user
+to be routed by a feature-flag block rather than being
+sent to `/crew/maintenance`. Established MM.1.
+
+**`/crew/maintenance` page — intentional R20 exception
+(MM.1):**
+`app/crew/maintenance/page.tsx` lives at `app/crew/
+maintenance/` directly — NOT inside `app/crew/(app)/` as
+R20 requires for all crew pages. This is a documented
+exception. The maintenance page must render without the
+sidebar/topbar crew layout shell, because it is shown to
+logged-in non-SA users who are blocked from the crew
+backend. Placing it inside `(app)` would wrap the
+maintenance message in the full admin UI, which is
+incorrect. This is the only `/crew/*` page that
+intentionally lives outside the `(app)` route group.
+The `/crew/maintenance` path must not appear in
+`needsFlagCheck`, the crew flag block, or the Production
+allowlist in `proxy.ts` — it must always be reachable
+regardless of feature flag state. Established MM.1.
+
+**`saveMaintenanceMode()` dual-client note (MM.1):**
+`saveMaintenanceMode()` in `lib/actions/setup.ts` uses
+`getServerClient()` for all DB upserts — it is always
+called from an authenticated Super Admin session, so the
+session client is correct. However, the `proxy.ts`
+maintenance gate uses `getAdminClient()` for both the
+`app_settings` fetch and the `admin_users` role lookup
+— because no Supabase Auth session exists in middleware
+context. This is an accepted inconsistency: the three
+pre-existing SA-gate blocks in `proxy.ts` (Platform
+Setup, Style Sandbox, Production allowlist) use the
+session-scoped `supabase` client for the same `admin_users`
+lookup, while the maintenance gate uses `getAdminClient()`.
+Both patterns are correct in their respective contexts;
+the difference is explainable by the need to also use
+`getAdminClient()` for the `app_settings` fetch in the
+maintenance check, where using one client for both
+operations is the simpler approach. No unification
+needed. Established MM.1 Q3.
+
+**`SaveStatus` type in `SetupPanel.tsx` — `'saved'` not
+`'success'` (MM.2 Q1):**
+The `SaveStatus` type in `SetupPanel.tsx` is `'idle' |
+'saving' | 'saved' | 'error'`. The success state is
+`'saved'`, NOT `'success'`. `SaveFeedback` only renders
+"✓ Saved" when `status === 'saved'` — passing
+`setStatus('success')` produces no visible feedback and
+fails tsc against the `SaveStatus` union.
+
+Every new sub-component in `SetupPanel.tsx` must:
+- Declare status state as `useState<SaveStatus>('idle')`
+  — using the existing `SaveStatus` type, not an inline
+  union
+- Call `setStatus('saved')` on success — never
+  `setStatus('success')`
+
+Confirmed failure mode (MM.2 Q1): the prompt-authored
+`MaintenanceModeSection` used an inline `'idle' |
+'saving' | 'success' | 'error'` union and
+`setStatus('success')` — caught by Claude Code's pre-
+build Task A audit before any code was written. Established
+MM.2 Q1.
+
+**`settingsMap` in `setup/page.tsx` is a `Map` instance
+(MM.2 Q1):**
+`settingsMap` in `app/crew/(app)/settings/setup/page.tsx`
+is constructed as a `Map` instance — not a plain object.
+All access must use `.get('key')`, not bracket notation
+`settingsMap['key']`. Bracket access on a `Map` always
+returns `undefined` silently with no TypeScript error.
+
+Any new key added to the `initialValues` mapping block
+in `setup/page.tsx` must follow the `.get()` pattern:
+```typescript
+maintenance_mode: settingsMap.get('maintenance_mode') || 'false',
+maintenance_heading: settingsMap.get('maintenance_heading') || '',
+maintenance_body: settingsMap.get('maintenance_body') || '',
+```
+The `|| ''` fallback is per R18 (not `??` — `app_settings`
+values may be seeded as empty strings). Established MM.2 Q1.
+
+**`ActionResult` discriminated union narrowing (MM.2 Q1):**
+`ActionResult` in this codebase is a discriminated union:
+the success branch (`{ success: true }`) has no `error`
+field. Narrowing with `result?.error` compiles in some
+TypeScript configurations but may fail tsc in stricter
+contexts, and produces incorrect behavior on the success
+branch because optional chaining on a union without a
+shared optional field is unreliable.
+
+The correct narrowing pattern for all `handleSave()`
+functions in `SetupPanel.tsx`:
+```typescript
+const result = await saveMaintenanceMode(fd)
+if ('error' in result) {
+  setErrorMessage(result.error)
+  setStatus('error')
+} else {
+  setStatus('saved')
+}
+```
+
+This is a discriminated union check — it narrows to the
+error branch, which is the only branch with an `error`
+field. Do NOT use `result?.error` or `result.error`
+directly without narrowing first. Established MM.2 Q1.
+
 ---
 
 ## 8. Build Report Format
@@ -2901,6 +3026,38 @@ lib/actions/forum-posts.ts)
   `resolveEmailSettings()` and `formatCT()`/`formatWallClockCT()`:
   confirm `timezone` is destructured from the result and passed as
   the final argument to the format calls. (Phase TZ — TZ.4b)
+
+□ Any new sub-component added to `SetupPanel.tsx`: use
+  `SaveStatus` type for the status state — NOT an inline
+  union. Declare: `useState<SaveStatus>('idle')`. Call
+  `setStatus('saved')` on success — never
+  `setStatus('success')`. `SaveFeedback` renders "✓ Saved"
+  only on `status === 'saved'`; any other success-like
+  string produces no visible feedback. (MM.2 Q1)
+
+□ Any new `app_settings` key mapping added to the
+  `initialValues` block in `setup/page.tsx`: use
+  `settingsMap.get('key') || 'fallback'` — NOT bracket
+  notation `settingsMap['key']`. `settingsMap` is a `Map`
+  instance; bracket access silently returns `undefined`.
+  Use `||` not `??` per R18 (empty string fallback). (MM.2 Q1)
+
+□ Any server action call in a `handleSave()` function in
+  `SetupPanel.tsx` that returns `ActionResult`: narrow
+  with `'error' in result` before accessing `result.error`.
+  Do NOT use `result?.error` — `ActionResult` is a
+  discriminated union; the success branch has no `error`
+  field. Wrong: `if (result?.error)`. Correct:
+  `if ('error' in result)`. (MM.2 Q1)
+
+□ Any future edit to `proxy.ts` that adds logic near the
+  top of the function body: confirm the maintenance mode
+  check block still fires before `needsFlagCheck` and
+  before all flag/role checks. The maintenance gate must
+  remain the first substantive check after
+  `const { pathname } = request.nextUrl`. Moving it later
+  allows feature-flag redirects to fire before it,
+  breaking the kill-switch guarantee. (MM.1)
 ```
 
 ---
@@ -4486,6 +4643,47 @@ Phase TZ — Configurable Organization Timezone ✓ Complete
 
   TZ.6 ✓ Brief v5.9 (DOC.78) + Process v5.7 (DOC.79). This prompt.
 
+Phase MM — Maintenance Mode ✓ Complete
+  MM.A ✓ Read-only audit (7 files: proxy.ts, lib/actions/
+    setup.ts, components/crew/settings/SetupPanel.tsx,
+    app/crew/(app)/settings/setup/page.tsx, app/crew/(app)/
+    layout.tsx, components/crew/TopBar.tsx, app/not-found.tsx).
+    Key findings: SetupPanel.tsx has 8 independent sub-
+    components (not one monolithic component); no literal
+    section numeral text in code (planning-doc convention
+    only); resolveLayoutSettings() is in root app/layout.tsx,
+    not crew app layout; SaveStatus type uses 'saved' not
+    'success'; settingsMap is a Map instance (.get() required);
+    ActionResult needs 'error' in result narrowing. No code.
+    No commit.
+  MM.1 ✓ Migration 039 (maintenance_mode, maintenance_heading,
+    maintenance_body seeded in app_settings). saveMaintenanceMode()
+    added to lib/actions/setup.ts (SA only; revalidates
+    '/crew' layout scope). proxy.ts maintenance gate inserted
+    before all other checks (before needsFlagCheck): reads
+    maintenance_mode via getAdminClient(); if 'true' and
+    non-SA, redirects to /crew/maintenance; SA passes through;
+    no session → /crew/login. app/crew/maintenance/page.tsx
+    created (standalone — NOT in (app) route group; no crew
+    shell; getAdminClient() + resolveOrgIdentity(); noindex;
+    light mode only). app/crew/(app)/layout.tsx: maintenance_mode
+    as 4th Promise.all entry; maintenanceModeActive boolean;
+    amber banner sibling div between TopBar and main (SA-only
+    visible). getAdminClient import added to layout.
+    5 files. Commit: 4196623.
+  MM.2 ✓ MaintenanceModeSection sub-component added to
+    SetupPanel.tsx as first section. Contains: ToggleRow
+    (conditional label "⚠ Maintenance Mode — ON" when active),
+    heading input (max 100 chars), body textarea (max 300 chars),
+    Save button + SaveFeedback. Uses SaveStatus type and
+    setStatus('saved') per live file convention. saveMaintenanceMode
+    imported and wired. SetupPanelInitialValues type extended to
+    27 fields (was 24). setup/page.tsx SETUP_KEYS extended to 27
+    keys; initialValues mapping extended with settingsMap.get()
+    and || '' fallbacks per R18. Self-caught fixes before tsc:
+    'error' in result for ActionResult narrowing; .get() for
+    Map access. 2 files. Commit: 769ecdd. Phase MM complete.
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -5134,6 +5332,20 @@ checklist item, §13 prompt log — this prompt).
                     Phase TZ complete. Commit e06d1c4.
   30BN-DOC.78     ✓ Brief v5.9 (Phase TZ complete).
   30BN-DOC.79     ✓ Process v5.7 (this prompt).
+  30BN-MM.A       ✓ Read-only audit (7 files). Key findings:
+                    SetupPanel 8 independent sub-components;
+                    SaveStatus 'saved'; settingsMap Map instance;
+                    ActionResult discriminated union narrowing.
+                    No code. No commit.
+  30BN-MM.1       ✓ Migration 039 + saveMaintenanceMode() +
+                    proxy.ts gate + /crew/maintenance page +
+                    layout banner. 5 files. Commit 4196623.
+  30BN-MM.2       ✓ MaintenanceModeSection sub-component +
+                    SetupPanelInitialValues +3 fields +
+                    SETUP_KEYS 24→27. 2 files. Commit 769ecdd.
+  30BN-DOC.80     ✓ Brief v5.9→v6.0 Part A (§1/§7/§8/§9).
+  30BN-DOC.81     ✓ Brief v6.0 Part B (§11/§13).
+  30BN-DOC.82     ✓ Process v5.7→v5.8 (this prompt).
 ```
 
 ---
@@ -6189,6 +6401,114 @@ TypeScript or lint error. Confirmed failure in `PendingQueueClient.tsx`:
 `eventTimeLabel()` parameterized in TZ.5a; `eventDateLabel()` (right next
 to it) was not — caught only during TZ.5b Task A targeted read.
 
+**`proxy.ts` maintenance gate — always-first position
+(MM.1):**
+The maintenance mode check block in `proxy.ts` must be the
+first substantive check after `const { pathname } =
+request.nextUrl`. It precedes `needsFlagCheck`, all flag
+fetches, and all role-based route guards. This ordering is
+a correctness requirement for the kill-switch guarantee: if
+a feature-flag redirect fires before the maintenance check,
+a non-SA user could be routed by the flag block rather than
+sent to `/crew/maintenance`. Future `proxy.ts` edits must
+preserve this ordering. The correct guard position was
+established in MM.1 and must be treated as a structural
+invariant, not as an incidental ordering.
+
+**`/crew/maintenance` — R20 exception, standalone outside
+`(app)` (MM.1):**
+`app/crew/maintenance/page.tsx` is the sole documented
+exception to R20 (all `/crew/*` pages under `app/crew/(app)/`).
+It lives at `app/crew/maintenance/` directly so it renders
+without the sidebar/topbar shell — blocked non-SA users must
+not see the full admin UI around the maintenance message.
+Three additional rules flow from this:
+1. The path must never appear in `needsFlagCheck` (should
+   always be reachable regardless of flag state)
+2. The path must never appear in the crew flag block
+3. The path must never appear in the Production role
+   allowlist (it is not a crew feature route)
+If a future build moves or restructures this page, R20 must
+be re-evaluated — the exception is tied specifically to the
+maintenance use-case, not a general precedent. Established MM.1.
+
+**`SaveStatus` — `'saved'` not `'success'` in SetupPanel
+sub-components (MM.2 Q1):**
+The `SaveStatus` type (`'idle' | 'saving' | 'saved' | 'error'`)
+is defined in `SetupPanel.tsx` and used by all 9 of its
+sub-components. The success terminal state is `'saved'` —
+`SaveFeedback` renders "✓ Saved" only when `status === 'saved'`.
+Passing `'success'` compiles in some contexts but fails tsc
+against the union and produces no visible feedback.
+
+Pattern:
+```typescript
+// State declaration — always use SaveStatus, not an inline union
+const [status, setStatus] = useState<SaveStatus>('idle')
+
+// On success — always 'saved', never 'success'
+setStatus('saved')
+```
+
+This was the first self-caught bug in MM.2 Task A, before
+any code was written. The original prompt draft used an
+inline `'idle' | 'saving' | 'success' | 'error'` union and
+called `setStatus('success')`. Established MM.2 Q1.
+
+**`settingsMap` is a `Map` instance, not a plain object
+(MM.2 Q1):**
+In `app/crew/(app)/settings/setup/page.tsx`, `settingsMap`
+is a `Map<string, string>` — built via:
+```typescript
+const settingsMap = new Map(
+  (rows ?? []).map((r) => [r.key, r.value])
+)
+```
+Bracket access `settingsMap['key']` always returns
+`undefined` on a `Map`. The correct access pattern is
+`settingsMap.get('key')`. This is easy to miss because
+TypeScript does not error on bracket access to a `Map` —
+it returns `string | undefined` silently, which passes
+the `|| 'fallback'` chain but means the actual value is
+never read.
+
+Every key in the `initialValues` mapping block must use
+`.get()`:
+```typescript
+// WRONG — silent undefined
+maintenance_mode: settingsMap['maintenance_mode'] || 'false',
+// CORRECT
+maintenance_mode: settingsMap.get('maintenance_mode') || 'false',
+```
+Established MM.2 Q1.
+
+**`ActionResult` narrowing — `'error' in result` not
+`result?.error` (MM.2 Q1):**
+`ActionResult` is a discriminated union:
+```typescript
+type ActionResult =
+  | { success: true }
+  | { error: string }
+```
+The success branch has no `error` field. Optional chaining
+`result?.error` produces a TypeScript error in strict mode
+because the success branch does not have an optional `error`
+property — it has no `error` property at all. `'error' in
+result` is the correct narrowing:
+```typescript
+if ('error' in result) {
+  setErrorMessage(result.error) // TypeScript now knows this is the error branch
+  setStatus('error')
+} else {
+  setStatus('saved') // TypeScript knows this is { success: true }
+}
+```
+This pattern applies to every `handleSave()` function in
+`SetupPanel.tsx` that calls a server action returning
+`ActionResult`. All existing sub-components already use
+this pattern; any new sub-component must follow it.
+Established MM.2 Q1.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -6346,3 +6666,21 @@ rule, sibling helper asymmetry audit); §7 'America/Chicago' grep note updated
 this prompt); §13 prompt log through DOC.79; §14 four new pattern notes
 (useNowPosition() dep correctness, module-level no-document, split-state
 single-read, sibling helper audit); DOC.79 logged)*
+
+*v5.8 (August 2026 — DOC.82: Phase MM complete — §2
+header updated (v5.7 → v5.8); §7 six new patterns added
+(proxy.ts maintenance gate always-first position (MM.1),
+/crew/maintenance R20 exception rules (MM.1), saveMaintenanceMode()
+dual-client note and proxy.ts getAdminClient() vs session
+client inconsistency accepted (MM.1 Q3), SaveStatus type
+'saved' not 'success' in SetupPanel sub-components (MM.2 Q1),
+settingsMap Map instance — .get() not bracket access (MM.2 Q1),
+ActionResult discriminated union 'error' in result narrowing
+(MM.2 Q1)); §11 four new checklist items (SaveStatus 'saved',
+settingsMap .get(), ActionResult narrowing, proxy.ts maintenance
+gate position); §13 Phase MM ✓ Complete block added (MM.A,
+MM.1, MM.2 with commits 4196623/769ecdd); §13 prompt log
+updated (MM.A, MM.1, MM.2, DOC.80, DOC.81, DOC.82); §14
+five new pattern notes (maintenance gate position, /crew/
+maintenance R20 exception, SaveStatus 'saved', settingsMap
+Map instance, ActionResult discriminated union); DOC.82 logged)*
