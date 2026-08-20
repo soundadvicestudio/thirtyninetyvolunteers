@@ -663,6 +663,7 @@ function ForumRow({
                   </option>
                 ))}
               </select>
+              <span className="text-xs text-mid-gray dark:text-dark-muted">Manage Access</span>
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
