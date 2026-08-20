@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
@@ -10,6 +10,7 @@ import Underline from '@tiptap/extension-underline'
 import { Pin, Lock, Bell, BellOff, Paperclip, Pencil, Trash2, Mail } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import { toggleThreadSubscription } from '@/lib/actions/forum-posts'
+import { markThreadRead } from '@/lib/actions/forums'
 import {
   editPost,
   deletePost,
@@ -112,6 +113,10 @@ export default function ThreadViewClient({
   )
   const [forumsLoading, setForumsLoading] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
+
+  useEffect(() => {
+    void markThreadRead(data.thread.id)
+  }, [data.thread.id])
 
   const isSAOA = ['super_admin', 'owner_admin'].includes(data.adminRole)
   const canModerate = isSAOA || data.isModerator

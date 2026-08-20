@@ -3,7 +3,6 @@ import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getThreadWithPosts } from '@/lib/actions/forum-posts'
-import { markThreadRead } from '@/lib/actions/forums'
 import ThreadViewClient from '@/components/crew/forums/ThreadViewClient'
 
 export default async function ThreadViewPage({
@@ -27,8 +26,6 @@ export default async function ThreadViewPage({
   const data = await getThreadWithPosts(threadId)
   if (!data) notFound()
   if (data.thread.forum_id !== forumId) notFound()
-
-  await markThreadRead(threadId)
 
   return <ThreadViewClient data={data} messagesEnabled={flags.messages} />
 }
