@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v5.9
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.0
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -40,6 +40,19 @@ files getAvailableWindows() + computeEventPosition() timezone params noted;
 Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b build summaries); §11 prompt log
 through DOC.78; §13 useNowPosition() hook + module-level helper + TZ.5b
 split-state + sibling-helper asymmetry patterns; version history v5.9)
+### Last Updated: August 2026 — v6.0 (DOC.80: Phase MM
+complete + Beta phases planned — §1 version + current
+phase updated; §7 proxy.ts maintenance gate documented;
+§8 Platform Setup updated (9 sections, Maintenance Mode
+section added, SETUP_KEYS 24→27, action count updated);
+§8 /crew/maintenance page new section; §8 Dashboard
+planned ANNOUNCE widget noted; §8 Show Management planned
+delete noted; §8 QR Generator planned banner + analytics
+noted; §8 Style Sandbox planned mockups noted; §8 Forums
+discoverability note added; §9 Migration 039 documented,
+next migration 040, new app_settings keys added; §11 Phase
+MM complete + Beta phases planned; §13 new patterns +
+v6.0 version history)
 
 ---
 
@@ -59,9 +72,18 @@ split-state + sibling-helper asymmetry patterns; version history v5.9)
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase MESSAGES complete (MESSAGES.A through
-MESSAGES.7, commits 8a86d10/72deeae/924f6e5/4dea6cf/f99d8cc/178698f/b0ed62b).
-Phase 17 (Launch) is next. Phase CAST planned post-launch.
+**Current phase:** Phase MM (Maintenance Mode) ✓ Complete
+(MM.A audit, MM.1 backend, MM.2 Setup Panel UI — commits
+4196623/769ecdd). Platform now in active Beta — Executive
+Committee has access and is testing. Phase 17 (Launch)
+deferred pending Beta refinement. Active Beta phases
+planned: FORUMS-FIX (forums thread bug), ANNOUNCE
+(dashboard announcements widget), FORUMS-UX (forum
+permissions discoverability), SHOWDELETE (show hard
+delete), QRBANNER (QR label banner), QRANALYTICS (scan
+tracking), SIDEBAR (grouped sidebar + top nav style),
+NAVORDER (sidebar link reorder). Phase CAST planned
+post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -296,6 +318,8 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 **Phase INVENTORY proxy.ts additions (INVENTORY.1):** Two changes made to `proxy.ts` in INVENTORY.1: (1) `needsFlagCheck` extended to cover `/crew/inventory` — one condition appended to the existing chain. No matcher change needed (`/crew/:path*` already covers `/crew/inventory`). (2) Crew-route flag block for `/crew/inventory` added after the auditions block — redirects to `/crew/dashboard` when `flags.inventory` is false. No Production-role restriction exception added — Production has no inventory access (no proxy exception, no sidebar entry for Production).
 
 **Phase FORUMS proxy.ts additions (FORUMS.1):** Three changes were made to `proxy.ts` in FORUMS.1: (1) `needsFlagCheck` extended to cover `/crew/forums` — one condition appended after the inventory condition. No matcher change needed (`/crew/:path*` already covers `/crew/forums`). No public flag block needed — Forums has no public-facing routes (unlike Auditions which has `/auditions/:path*`). (2) Production-role restriction exception: `!pathname.startsWith('/crew/forums')` added to the Production allowlist alongside calendar, media, help, rehearsals, and auditions. Production users have forum access; per-forum filtering happens at the data layer (access grants). (3) Crew-route flag block for `/crew/forums` added after the inventory block — redirects to `/crew/dashboard` when `flags.forums` is false.
+
+**Phase MM proxy.ts additions (MM.1):** One new block added to `proxy.ts` — the maintenance mode gate. It fires before all other checks (before `needsFlagCheck`, before flag fetches, before role-based route guards). Logic: if `pathname.startsWith('/crew/')` AND pathname is not `/crew/login` AND pathname does not start with `/crew/maintenance`, fetch `maintenance_mode` from `app_settings` via `getAdminClient()`. If value is `'true'`: query `admin_users` for the current user's role. If role is `super_admin`, pass through transparently. If role is any other role, redirect to `/crew/maintenance`. If no Supabase Auth session exists, redirect to `/crew/login` (standard auth flow handles this). No matcher change needed — `/crew/:path*` already covers all crew routes. No feature flag — Maintenance Mode is an operational control, not a feature. Documented as MM.1 build, commit 4196623.
 
 ---
 
@@ -585,10 +609,22 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   triggering native `beforeinstallprompt`. Hidden when
   already installed or dismissed (localStorage key).
   Built in ADMIN.16.
-- **Dashboard section render order** (top to bottom):
-  Quick Stats → Season at a Glance → Pending Milestones
-  → Pending Hours → Add to Home Screen (mobile only)
-  → Activity Feed.
+- **Dashboard section render order** (top to bottom, as
+  currently built): Quick Stats → Season at a Glance →
+  Pending Milestones → Pending Hours → Add to Home Screen
+  (mobile only) → Activity Feed.
+- **Planned — Phase ANNOUNCE:** An Announcements widget
+  will appear at the very top of the Dashboard (above
+  Quick Stats). Super Admin publishes announcements with
+  rich text (TipTap) and targets specific roles. Each
+  user sees targeted announcements until they dismiss
+  them (per-user dismissal stored in
+  `admin_users.announcement_dismissed_at`). New publish
+  resets dismissal state for all users. SA and OA (when
+  enabled) can publish; OA announcement publishing is
+  toggled via Platform Setup. Multiple targeted
+  announcements stack in a single widget. Distinct from
+  the public-facing announcement banner on `/`.
 
 **Volunteers (`/crew/volunteers`):**
 - Searchable, filterable, sortable list (full-text: name/email/phone)
@@ -702,6 +738,13 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     scanability requirement). Generated server-side via `generateQR()` in `lib/qr.ts`.
     Both `check_in_token` columns added in Migration 024.
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
+    **Planned — Phase SHOWDELETE:** A Delete button will
+    be added to the Settings tab (SA/OA/Editor only).
+    Deletion is blocked if the show has any active slot
+    claims (status = 'claimed'). Show must be archived
+    first (prevents accidental deletion of live shows).
+    Hard delete cascades via FK. `deleteShow()` server
+    action in `lib/actions/shows.ts`.
     Also in Settings tab: a read-only "Default Hours per Volunteer" field showing
     the effective default hours for this show. Resolved value: `show.default_hours`
     (per-show override) if set; otherwise `defaultHours[getLocationHoursBucket(
@@ -858,6 +901,26 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   `{ error }`. The `url, label` signature replaces the prior url-only signature.
 - `lib/data/qr.ts` — `getQRHistory(supabase)` (new ADMIN.34): queries `qr_codes` with creator
   name join, `ORDER BY created_at DESC`, `LIMIT 50`. Returns up to 50 rows.
+- **Planned — Phase QRBANNER:** Optional text banner
+  below the QR code in generated output. Admin types
+  label text at generation time; a toggle enables/disables
+  the banner. Banner appears in both the preview and the
+  downloaded SVG and PNG files. Implemented via SVG
+  `<text>` element composited below the QR matrix in
+  `lib/qr.ts` `generateQR()`. Accessible to all roles
+  with QR generation access.
+- **Planned — Phase QRANALYTICS:** Scan tracking for
+  newly generated QR codes. New QR codes point to
+  `/go/[redirect_token]` instead of the raw target URL.
+  The redirect route logs a `qr_scan_events` row
+  (timestamp, user-agent, device type, browser) and
+  redirects to `target_url`. Analytics visible in the
+  QR history panel: total scans, last scanned, device
+  breakdown. Legacy QR codes (generated before this
+  feature) show "Analytics not available." New columns
+  on `qr_codes`: `redirect_token uuid`, `target_url
+  text`. New table: `qr_scan_events`. New public route:
+  `app/go/[token]/route.ts` (`getAdminClient()`).
 - Page architecture (restructured ADMIN.34): `app/crew/(app)/tools/qr-generator/page.tsx`
   (Server Component — fetches history via `getQRHistory()`) +
   `components/crew/tools/QRGeneratorForm.tsx` (Client Component — form state and generation) +
@@ -1248,7 +1311,7 @@ Deactivating an item (retiring it) removes it from the default list view. Items 
 Gated behind `feature_forums` flag (R34 compliant). Admin backend only — no public-facing surface. SA and OA see all forums always. All other roles (Editor, Viewer, Production) see only forums they have been explicitly granted access to. Access is checked at query time — the forum list is filtered server-side, never client-side hidden.
 
 **Forum structure (jcink-style, full depth):**
-Forum Index → Categories (organizational headers, not postable) → Forums → Threads → Posts (replies). SA/OA create and manage categories and forums from a dedicated management interface at `/crew/forums/manage`.
+Forum Index → Categories (organizational headers, not postable) → Forums → Threads → Posts (replies). SA/OA create and manage categories and forums from a dedicated management interface at `/crew/forums/manage`. Each forum row in this interface has an expand chevron (▼) that opens a sub-panel with three sections: Access Grants, Moderators, and Thread Prefixes. This chevron is the entry point for all per-forum permission management — it is not immediately obvious from the UI. The grants UI was built in FORUMS.2; the expand behavior was confirmed working in Beta testing.
 
 **Access grants (per forum — three types, any combination):**
 - Role grant: all users of a given role (e.g. "all Editors"). Any user with that role sees the forum automatically.
@@ -1919,11 +1982,13 @@ navigate directly to any sub-page.
 **Platform Setup (`/crew/settings/setup`) — Built Phase SETUP (SETUP.0–4 complete):**
 Super Admin-only configuration panel for OpenCall OS deployments. Hard-blocked for all other roles including Owner Admin (`proxy.ts` hard-redirect to `/crew/dashboard`). Not visible in sidebar for non-Super-Admin accounts. Settings hub: "Platform Setup" LinkedCard for Super Admin; LockedCard ("Super Admin only") for all other roles. Page double-guarded: `proxy.ts` + server-side role check.
 
-Eight independently-saving sections (each has its own Save button — no "Save All"):
+Nine independently-saving sections (each has its own Save button — no "Save All"):
 
-Section 1 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
+Section 1 — Maintenance Mode (added Phase MM): Three fields: `maintenance_mode` (boolean toggle — `'true'`/`'false'`), `maintenance_heading` (text, max 100 chars), `maintenance_body` (text, max 300 chars). When `maintenance_mode` is `'true'`, all non-Super-Admin roles accessing any `/crew/*` route (except `/crew/login` and `/crew/maintenance`) are redirected to the maintenance page. Super Admin retains full access at all times. Toggle label changes to "⚠ Maintenance Mode — ON" when active. Heading and body control the text displayed on the `/crew/maintenance` page and can be pre-set before activating. Seeded defaults: heading = "System Maintenance", body = "The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon." A persistent amber banner in the crew layout warns the Super Admin when Maintenance Mode is active (sibling div between TopBar and main, visible only to SA). Saved via `saveMaintenanceMode()` in `lib/actions/setup.ts`. `revalidatePath('/crew', 'layout')` ensures the banner propagates immediately on toggle. Migration 039.
 
-Also in Section 1: `org_timezone` — Organization Timezone select field.
+Section 2 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
+
+Also in Section 2: `org_timezone` — Organization Timezone select field.
 Populated from `TIMEZONE_OPTIONS` in `lib/utils/org-timezone.ts` (~69 entries,
 worldwide coverage — Americas, Europe, Africa, Middle East, Asia, Oceania).
 Each entry has an IANA timezone string as value and a city/region name as label
@@ -1935,15 +2000,15 @@ imperative validation (must match a value in TIMEZONE_OPTIONS), DB upsert,
 and `revalidatePath('/', 'layout')` to propagate the new `data-timezone`
 body attribute on next page render.
 
-Section 2 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME complete — brand colors now propagate dynamically across all rendering surfaces: public pages and admin UI via CSS custom properties injected in `app/layout.tsx` (THEME.1/2); email templates via string interpolation at send time using `resolveEmailSettings()` (THEME.3/3b); PDF exports via `createStyles()` factory props (THEME.4). Changing these values in the Setup Panel immediately affects all surfaces on next page render / email send.
+Section 3 — Brand Colors: `brand_primary`, `brand_accent`. Native `<input type="color">` pickers (same pattern as Location Management). Phase THEME complete — brand colors now propagate dynamically across all rendering surfaces: public pages and admin UI via CSS custom properties injected in `app/layout.tsx` (THEME.1/2); email templates via string interpolation at send time using `resolveEmailSettings()` (THEME.3/3b); PDF exports via `createStyles()` factory props (THEME.4). Changing these values in the Setup Panel immediately affects all surfaces on next page render / email send.
 
-Section 3 — Logo: `org_logo_url`. Two input modes: (a) URL input (paste any public image URL), or (b) file upload via BrandImageUploader — P-DC pattern to `brand/logo/` in the `brand` public bucket, crop editor (react-easy-crop, free aspect ratio, PNG output). Whichever was used last wins. Falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset. Used in email templates (via `resolveEmailSettings()`) and public landing page.
+Section 4 — Logo: `org_logo_url`. Two input modes: (a) URL input (paste any public image URL), or (b) file upload via BrandImageUploader — P-DC pattern to `brand/logo/` in the `brand` public bucket, crop editor (react-easy-crop, free aspect ratio, PNG output). Whichever was used last wins. Falls back to `${NEXT_PUBLIC_SITE_URL}/logo.png` when unset. Used in email templates (via `resolveEmailSettings()`) and public landing page.
 
-Section 4 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 square aspect ratio lock in the crop editor. Stored in `brand/favicon/` in the `brand` public bucket. `generateMetadata()` in `app/layout.tsx` reads this and injects `<link rel="icon">`. Falls back to static `app/favicon.ico` when unset.
+Section 5 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 square aspect ratio lock in the crop editor. Stored in `brand/favicon/` in the `brand` public bucket. `generateMetadata()` in `app/layout.tsx` reads this and injects `<link rel="icon">`. Falls back to static `app/favicon.ico` when unset.
 
-Section 5 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
+Section 6 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 6 — Feature Flags: Eight toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, and `/crew/users` alongside existing paths.
+Section 7 — Feature Flags: Eight toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, and `/crew/users` alongside existing paths.
 
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
@@ -1961,15 +2026,15 @@ sidebar links |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
-Section 7 — Platform Identity: `instance_label`. Internal deployment label (e.g. "Pelican Playhouse"). Displayed in the Setup Panel page header only — never visible to other roles. Helps Jonathan identify which client's backend he is managing across multiple deployments.
+Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.g. "Pelican Playhouse"). Displayed in the Setup Panel page header only — never visible to other roles. Helps Jonathan identify which client's backend he is managing across multiple deployments.
 
-Section 8 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
+Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 24 `app_settings` keys (23 SETUP keys + `default_reply_to`)
-- `components/crew/settings/SetupPanel.tsx` — Client Component, eight sections
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 27 `app_settings` keys (26 SETUP keys + `default_reply_to`)
+- `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
-- `lib/actions/setup.ts` — nine server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `getSignedBrandUploadUrl()`
+- `lib/actions/setup.ts` — ten server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `getSignedBrandUploadUrl()`
 - `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
 - `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
@@ -1978,6 +2043,32 @@ Key files (Phase SETUP):
   helper with 'America/Chicago' fallback. No 'use server'. Used by all server-
   side TZ consumers and as the source for the Setup Panel timezone select.
 - `app/layout.tsx` — `generateMetadata()` reads `favicon_url`, `org_name`, and `org_tagline` from `app_settings` (ADMIN.34)
+
+---
+
+**Maintenance Page (`/crew/maintenance` — Phase MM):**
+Standalone page outside the `app/crew/(app)/` route
+group — renders without the sidebar/topbar crew layout
+shell (intentional exception to R20; blocked non-SA
+users must not see the full crew UI). Accessible to any
+user redirected by the proxy.ts maintenance gate.
+
+- Fetches `maintenance_heading` and `maintenance_body`
+  from `app_settings` via `getAdminClient()` (no admin
+  session required — the page is shown to logged-in
+  non-SA users who are blocked from the crew backend).
+- Calls `resolveOrgIdentity()` for logo and org name.
+- `generateMetadata()` with `robots: { index: false,
+  follow: false }` (noindex).
+- Light mode only — no dark: classes (public-facing
+  page pattern per ADMIN.6).
+- Layout: full-screen centered, logo, h1 heading, p body,
+  "Return to homepage" link → `/`. No crew nav links.
+- Page location: `app/crew/maintenance/page.tsx` (not
+  inside `(app)` route group).
+- NOT in `needsFlagCheck`, NOT in crew flag block, NOT
+  in Production allowlist — must always be reachable
+  regardless of feature flag state.
 
 ---
 
@@ -2058,6 +2149,19 @@ Page mockup inventory (15 total):
 15. Setup Panel — 3 section cards (Org Identity, Brand Colors,
     Feature Flags) with header/body/footer pattern; color
     swatches via inline style; toggle switch visuals
+
+**Planned — Phase SIDEBAR:** Two additional mockups
+will be added to Section 2:
+16. Sidebar — grouped/sectioned navigation with four
+    groups (Events, People, Utilities, Settings),
+    compact typography, enhanced active state with
+    brand-primary left border accent + subtle fill,
+    refined spacing for the full link set.
+17. Top Nav — polished TopBar treatment with improved
+    visual weight and alignment using Option A design
+    tokens.
+These mockups require owner approval before production
+rollout (Phase SIDEBAR.2).
 
 **Option A design patterns (applied throughout mockups):**
 These are the intended targets for STYLE-ROLLOUT:
@@ -2467,7 +2571,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 039 (none currently planned). Migrations 033, 034, 035, 036, 037, and 038 are applied.
+**Next migration:** 040 (none currently planned). Migrations 033 through 039 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -3990,10 +4094,13 @@ TopBar MessagesIcon. Added to `FeatureFlags` type and `getFeatureFlags()`
 in `lib/feature-flags.ts`. Setup Panel Section 6 has an eighth toggle row
 for this flag. `saveFeatureFlags()` revalidates `/crew/messages` and
 `/crew/users` alongside existing routes.
-Total active SETUP keys: 24 (23 prior + `org_timezone` added Migration 038 /
-TZ.1). `SETUP_KEYS.length = 24` — `default_reply_to` is already included
-within the `SETUP_KEYS` array, not a separate addition (confirmed ADMIN.46
-Task A4). Setup Panel page (`setup/page.tsx`) fetches 24 keys total.
+Total active SETUP keys: 27 (24 prior + `maintenance_
+mode`, `maintenance_heading`, `maintenance_body` added
+Migration 039 / Phase MM). `SETUP_KEYS.length = 27`
+— `default_reply_to` is already included within the
+`SETUP_KEYS` array, not a separate addition (confirmed
+ADMIN.46 Task A4). Setup Panel page (`setup/page.tsx`)
+fetches 27 keys total.
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
@@ -4040,6 +4147,20 @@ ON CONFLICT (key) DO NOTHING`. Preserves existing behavior on the 30BN deploymen
 Admin only). Client-side: read from `document.body.dataset.timezone` (injected
 by `resolveLayoutSettings()` in `app/layout.tsx`). Server-side: read via
 `getOrgTimezone(supabase)` in `lib/utils/org-timezone.ts`.
+
+**Migration 039 status:** Applied —
+`039_maintenance_mode.sql` (Phase MM, MM.1, commit
+4196623). Seeds three `app_settings` keys via `INSERT ...
+ON CONFLICT DO NOTHING`:
+- `maintenance_mode → 'false'` — boolean string toggle;
+  `'true'` activates the proxy.ts gate
+- `maintenance_heading → 'System Maintenance'` — h1 on
+  the `/crew/maintenance` page (max 100 chars)
+- `maintenance_body → 'The crew portal is temporarily
+  unavailable while system updates and performance
+  improvements are in progress. Please check back soon.'`
+  — body text on the `/crew/maintenance` page (max 300
+  chars)
 
 ### message_threads
 ```sql
