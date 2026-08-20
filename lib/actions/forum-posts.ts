@@ -95,8 +95,13 @@ export async function getThreadWithPosts(threadId: string): Promise<ThreadViewDa
   // never construct a Supabase client inside a loop.
   const attachmentsWithUrls: ForumPostAttachment[] = await Promise.all(
     attachmentsRaw.map(async (a) => {
-      const { data: signed } = await adminClient.storage.from('media').createSignedUrl(a.storage_path, 3600)
-      return { ...a, signed_url: signed?.signedUrl ?? null }
+      try {
+        const { data: signed, error } = await adminClient.storage.from('media').createSignedUrl(a.storage_path, 3600)
+        return { ...a, signed_url: error ? null : (signed?.signedUrl ?? null) }
+      } catch (err) {
+        console.error('Failed to generate signed URL for forum attachment:', a.id, err)
+        return { ...a, signed_url: null }
+      }
     })
   )
 

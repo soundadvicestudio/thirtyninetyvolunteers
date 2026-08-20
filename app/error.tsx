@@ -1,15 +1,21 @@
 'use client'
 
+import { useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 
 export default function Error({
+  error,
   reset,
 }: {
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error('Runtime error caught by error boundary:', error)
+  }, [error])
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-6">
       <div className="max-w-md w-full text-center">
