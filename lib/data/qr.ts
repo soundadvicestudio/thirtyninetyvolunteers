@@ -29,6 +29,12 @@ export async function getQRHistory(supabase: SupabaseClient): Promise<QRHistoryE
   return (data ?? []) as unknown as QRHistoryEntry[]
 }
 
+export type QRScanEvent = {
+  scannedAt: string
+  deviceType: string | null
+  browser: string | null
+}
+
 export type QRAnalyticsSummary = {
   scanCount: number
   lastScannedAt: string | null
@@ -37,6 +43,7 @@ export type QRAnalyticsSummary = {
     tablet: number
     desktop: number
   }
+  events: QRScanEvent[]
 }
 
 export async function getQRScanStats(
@@ -47,8 +54,9 @@ export async function getQRScanStats(
 
   const { data } = await supabase
     .from('qr_scan_events')
-    .select('qr_code_id, scanned_at, device_type')
+    .select('qr_code_id, scanned_at, device_type, browser')
     .in('qr_code_id', qrCodeIds)
+    .order('scanned_at', { ascending: false })
 
   const map = new Map<string, QRAnalyticsSummary>()
   if (!data) return map
@@ -63,6 +71,7 @@ export async function getQRScanStats(
         tablet: 0,
         desktop: 0,
       },
+      events: [],
     }
 
     existing.scanCount += 1
@@ -79,6 +88,12 @@ export async function getQRScanStats(
     } else {
       existing.deviceBreakdown.desktop += 1
     }
+
+    existing.events.push({
+      scannedAt: event.scanned_at as string,
+      deviceType: (event.device_type as string) ?? null,
+      browser: (event.browser as string) ?? null,
+    })
 
     map.set(id, existing)
   }

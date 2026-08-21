@@ -1,5 +1,6 @@
 import { formatCT } from '@/lib/utils/date'
 import type { QRHistoryEntry, QRAnalyticsSummary } from '@/lib/data/qr'
+import QRScanLogToggle from './QRScanLogToggle'
 
 function sanitizeLabel(label: string): string {
   return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'qr-code'
@@ -77,9 +78,12 @@ export default function QRHistoryPanel({
                         .filter(Boolean)
                         .join(' · ')
                       return (
-                        <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
-                          {parts}
-                        </p>
+                        <>
+                          <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
+                            {parts}
+                          </p>
+                          <QRScanLogToggle events={stats.events} />
+                        </>
                       )
                     })()
                   ) : (
