@@ -298,36 +298,6 @@ export default function Sidebar({
               {helpItem.label}
             </Link>
           )}
-
-          {/* Platform Setup — SA-only, unchanged guard */}
-          {admin.role === 'super_admin' && (
-            <Link
-              href="/crew/settings/setup"
-              onClick={close}
-              className={
-                isActivePath(pathname, '/crew/settings/setup')
-                  ? 'flex items-center gap-3 rounded-r ' +
-                    'border-l-4 px-3 py-2 text-sm ' +
-                    'font-medium bg-brand-primary-light ' +
-                    'text-brand-primary'
-                  : 'flex items-center gap-3 rounded ' +
-                    'px-3 py-2 text-sm font-medium ' +
-                    'text-dark dark:text-dark-text ' +
-                    'hover:bg-gray-100 ' +
-                    'dark:hover:bg-white/10'
-              }
-              style={
-                isActivePath(pathname, '/crew/settings/setup')
-                  ? {
-                      borderLeftColor: 'var(--brand-primary)',
-                    }
-                  : undefined
-              }
-            >
-              <Settings size={18} />
-              Platform Setup
-            </Link>
-          )}
         </div>
       </aside>
     </>

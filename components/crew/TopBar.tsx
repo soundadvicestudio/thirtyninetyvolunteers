@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LogOut, Menu, KeyRound } from 'lucide-react'
+import { LogOut, Menu, KeyRound, SlidersHorizontal } from 'lucide-react'
 import { signOut } from '@/app/crew/actions'
 import type { AdminUser } from '@/lib/auth'
 import type { NotificationCounts, NotificationRow } from '@/types/notifications'
@@ -61,12 +61,29 @@ export default function TopBar({
         )}
         <NotificationPanel notificationCounts={notificationCounts} initialNotifications={initialNotifications} />
         <ThemeToggle />
-        <span className="hidden sm:inline text-sm text-dark dark:text-dark-text">{admin.name}</span>
+        <span className="hidden sm:inline text-sm font-semibold text-dark dark:text-dark-text max-w-[120px] truncate">{admin.name}</span>
         <span
           className={`text-xs font-semibold px-2 py-1 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
         >
           {ROLE_LABELS[admin.role]}
         </span>
+        {admin.role === 'super_admin' && (
+          <Link
+            href="/crew/settings/setup"
+            className="
+              flex items-center gap-2
+              px-3 py-1.5 rounded-md text-sm font-medium
+              border border-brand-primary-mid text-dark bg-white
+              hover:bg-brand-primary-mid hover:text-white
+              dark:text-dark-text dark:bg-dark-surface
+              transition-colors duration-150
+              cursor-pointer
+            "
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline">Platform Setup</span>
+          </Link>
+        )}
         <Link
           href="/crew/settings/password"
           className="
