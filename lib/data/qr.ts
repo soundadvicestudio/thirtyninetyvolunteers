@@ -8,6 +8,8 @@ export type QRHistoryEntry = {
   svg: string
   png_base64: string
   banner_text: string | null
+  redirect_token: string | null
+  target_url: string | null
   created_at: string
   created_by_admin: { name: string } | null
 }
@@ -17,7 +19,7 @@ export async function getQRHistory(supabase: SupabaseClient): Promise<QRHistoryE
     .from('qr_codes')
     .select(
       `
-      id, url, label, svg, png_base64, banner_text,
+      id, url, label, svg, png_base64, banner_text, redirect_token, target_url,
       created_at,
       created_by_admin:admin_users!created_by(name)
       `

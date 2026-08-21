@@ -22,9 +22,12 @@ export async function generateQRCode(
   const targetUrl =
     trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`
 
+  const redirectToken = crypto.randomUUID()
+  const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/go/${redirectToken}`
+
   let result: { svg: string; pngBase64: string }
   try {
-    result = await generateQR(targetUrl, bannerText?.trim() || undefined)
+    result = await generateQR(redirectUrl, bannerText?.trim() || undefined)
   } catch (err) {
     console.error('generateQRCode error:', err)
     return { error: 'Failed to generate QR code. Please check the URL and try again.' }
@@ -41,6 +44,8 @@ export async function generateQRCode(
       svg: result.svg,
       png_base64: result.pngBase64,
       banner_text: bannerText?.trim() || null,
+      redirect_token: redirectToken,
+      target_url: targetUrl,
       created_by: admin?.id ?? null,
     })
     revalidatePath('/crew/tools/qr-generator')
