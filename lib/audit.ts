@@ -19,6 +19,7 @@ export type AuditAction =
   | 'show.status_change'
   | 'show.editor_add'
   | 'show.editor_remove'
+  | 'show.delete'
   | 'season.create'
 
   // Categories

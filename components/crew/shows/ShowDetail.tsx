@@ -4,9 +4,24 @@ import { useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Mail } from 'lucide-react'
+import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { markAttendance, bulkMarkAttendance } from '@/lib/actions/attendance'
-import { addShowEditor, removeShowEditor, updateShowStatus, sendShowNotifications } from '@/lib/actions/shows'
+import {
+  addShowEditor,
+  removeShowEditor,
+  updateShowStatus,
+  sendShowNotifications,
+  deleteShow,
+} from '@/lib/actions/shows'
 import { SHOW_STATUS_LABEL, SHOW_STATUS_BADGE, getLocationHoursBucket } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
 import BulkEmailSection from '@/components/crew/shows/BulkEmailSection'
@@ -695,6 +710,10 @@ function SettingsTab({
   const [notify, setNotify] = useState(!show.notifications_sent_at)
   const [notifyResult, setNotifyResult] = useState<string | null>(null)
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
   const showLivePanel = statusValue === 'live' && statusValue !== show.status
 
   const resolvedDefaultHours = show.default_hours ?? defaultHours[getLocationHoursBucket(show.location?.name)]
@@ -780,6 +799,19 @@ function SettingsTab({
   function handleCancelLive() {
     setStatusValue(show.status)
     setNotifyResult(null)
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    setDeleteError('')
+    const result = await deleteShow(show.id)
+    if ('error' in result) {
+      setIsDeleting(false)
+      setDeleteError(result.error)
+      setShowDeleteConfirm(false)
+    } else {
+      router.push('/crew/shows')
+    }
   }
 
   return (
@@ -939,6 +971,50 @@ function SettingsTab({
           )}
         </section>
       )}
+
+      {canEdit && show.status === 'archived' && (
+        <section className="border-l-4 pl-4 py-1" style={{ borderLeftColor: '#ef4444' }}>
+          <h3 className="text-sm font-semibold text-red-600 mb-1">Delete Show</h3>
+          <p className="text-xs text-mid-gray dark:text-dark-muted mb-3">
+            {'Permanently delete this show and all associated data. This cannot be undone.'}
+          </p>
+          {deleteError && <p className="text-sm text-red-600 mb-3">{deleteError}</p>}
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+            className="px-3 py-1.5 text-sm font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Delete Show
+          </button>
+        </section>
+      )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Show?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`This will permanently delete "${show.name}" and all associated dates, slot assignments, and calendar events. This cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogPrimitive.Cancel
+              disabled={isDeleting}
+              className="border border-divider dark:border-dark-border text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </AlertDialogPrimitive.Cancel>
+            <AlertDialogPrimitive.Action
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 text-white hover:bg-red-700 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Show'}
+            </AlertDialogPrimitive.Action>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

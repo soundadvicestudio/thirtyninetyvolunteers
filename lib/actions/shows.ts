@@ -941,3 +941,74 @@ export async function sendShowBulkEmail(params: SendShowBulkEmailParams): Promis
     return { success: false, sentCount: 0, error: 'send_failed' }
   }
 }
+
+export async function deleteShow(showId: string): Promise<ShowEditorActionResult> {
+  const admin = await getAdminUser()
+  if (!admin || !['super_admin', 'owner_admin', 'editor'].includes(admin.role)) {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  // Confirm show exists and is archived
+  const { data: show } = await supabase
+    .from('shows')
+    .select('id, name, status')
+    .eq('id', showId)
+    .maybeSingle()
+
+  if (!show) {
+    return { error: 'Show not found.' }
+  }
+  if (show.status !== 'archived') {
+    return { error: 'Only archived shows can be deleted.' }
+  }
+
+  // Guard 1 — block if active slot claims exist. Two-step query (same
+  // pattern as sendShowBulkEmail() above and updateShow()'s date/role
+  // removal guard) — Supabase JS has no literal IN-subquery. Checks both
+  // 'claimed' and 'waitlisted' (SHOWDELETE.A C4 — matches the exact filter
+  // updateShow() already uses to block removing a date/role with real
+  // volunteer commitments still attached).
+  const { data: showDateRows } = await supabase.from('show_dates').select('id').eq('show_id', showId)
+  const showDateIds = (showDateRows ?? []).map((d) => d.id as string)
+
+  if (showDateIds.length > 0) {
+    const { data: activeClaims } = await supabase
+      .from('slot_claims')
+      .select('id')
+      .in('show_date_id', showDateIds)
+      .in('status', ['claimed', 'waitlisted'])
+      .limit(1)
+
+    if (activeClaims && activeClaims.length > 0) {
+      return {
+        error:
+          'This show has active volunteer commitments and cannot be deleted. Cancel all claims and waitlist entries first.',
+      }
+    }
+  }
+
+  // Guard 2 — block if attendance records exist. attendance.show_id has a
+  // NO ACTION FK (confirmed SHOWDELETE.A Flag F1) — a delete would throw a
+  // raw Postgres FK violation without this guard.
+  const { data: attendanceRows } = await supabase.from('attendance').select('id').eq('show_id', showId).limit(1)
+
+  if (attendanceRows && attendanceRows.length > 0) {
+    return { error: 'This show has attendance records and cannot be deleted.' }
+  }
+
+  // Log before delete — the show row will not exist after the DELETE executes
+  await logAction(admin.id, 'show.delete', 'show', showId, { name: show.name, status: show.status }, {})
+
+  const { error: deleteError } = await supabase.from('shows').delete().eq('id', showId)
+
+  if (deleteError) {
+    return { error: deleteError.message }
+  }
+
+  revalidatePath('/crew/shows')
+  revalidatePath('/shows')
+
+  return { success: true }
+}
