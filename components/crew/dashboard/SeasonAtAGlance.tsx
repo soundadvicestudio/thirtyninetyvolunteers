@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
-import { formatWallClockCT } from '@/lib/utils/date'
+import Link from 'next/link'
+import { addDays } from 'date-fns'
+import { formatCT, formatWallClockCT } from '@/lib/utils/date'
 import { getServerClient } from '@/lib/supabase/server'
 import { HelpTooltip } from '@/components/crew/HelpTooltip'
 import type { Location } from '@/types/show'
@@ -61,8 +63,27 @@ export default async function SeasonAtAGlance({
   // (no season pinned): live shows only, across all seasons.
   query = seasonId ? query.eq('season_id', seasonId) : query.eq('status', 'live')
 
-  const { data } = await query.order('name')
+  const { data } = await query
   const shows = (data ?? []) as unknown as ShowRow[]
+  const totalShowCount = shows.length
+
+  // 31-day preview cap — a show is included if its earliest date falls on
+  // or before the cutoff. String comparison on 'yyyy-MM-dd' values is safe
+  // and avoids the raw-Date-object timezone pitfalls of bare date columns
+  // (R23) — same pattern as the todayCT cutoff in dashboard/page.tsx.
+  const cutoff = formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)
+
+  const displayedShows = shows
+    .map((show) => {
+      const sortedDates = [...(show.show_dates ?? [])].sort((a, b) =>
+        a.show_date.localeCompare(b.show_date)
+      )
+      return { show, sortedDates, minDate: sortedDates[0]?.show_date ?? null }
+    })
+    .filter((s): s is typeof s & { minDate: string } => s.minDate !== null && s.minDate <= cutoff)
+    .sort((a, b) => a.minDate.localeCompare(b.minDate))
+
+  const displayedShowCount = displayedShows.length
 
   const headerLabel = seasonId ? seasonName ?? 'Season' : 'All Live Shows'
   const emptyMessage = seasonId ? 'No shows in this season yet.' : 'No live shows.'
@@ -74,17 +95,29 @@ export default async function SeasonAtAGlance({
           Season at a Glance — <span className="text-brand-primary dark:text-brand-primary-mid">{headerLabel}</span>
           <HelpTooltip anchor="dashboard-season" label="Season at a Glance" />
         </h2>
-        {selectorSlot}
+        <div className="flex items-center gap-3">
+          {selectorSlot}
+          <Link href="/crew/shows" className="text-sm text-brand-primary hover:underline">
+            View all shows →
+          </Link>
+        </div>
       </div>
 
-      {shows.length === 0 ? (
+      {totalShowCount === 0 ? (
         <p className="text-sm text-mid-gray dark:text-dark-muted">{emptyMessage}</p>
+      ) : displayedShowCount === 0 ? (
+        <div>
+          <p className="text-sm text-mid-gray dark:text-dark-muted mb-2">
+            No upcoming shows in the next 31 days.
+          </p>
+          <Link href="/crew/shows" className="text-sm text-brand-primary hover:underline">
+            View all shows →
+          </Link>
+        </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {shows.map((show) => {
-            const sortedDates = [...(show.show_dates ?? [])].sort((a, b) =>
-              a.show_date.localeCompare(b.show_date)
-            )
+          {displayedShows.map(({ show, sortedDates }) => {
             const dateRangeLabel =
               sortedDates.length === 0
                 ? 'No dates'
@@ -169,6 +202,15 @@ export default async function SeasonAtAGlance({
             )
           })}
         </div>
+        {totalShowCount > displayedShowCount && (
+          <p className="text-xs text-mid-gray dark:text-dark-muted mt-4">
+            Showing {displayedShowCount} of {totalShowCount} shows —{' '}
+            <Link href="/crew/shows" className="text-brand-primary hover:underline">
+              View all →
+            </Link>
+          </p>
+        )}
+        </>
       )}
     </div>
   )

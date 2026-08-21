@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Megaphone, X } from 'lucide-react'
 import { dismissAnnouncement } from '@/lib/actions/announcements'
 import type { DashboardAnnouncement } from '@/lib/data/announcements'
 
@@ -19,16 +20,22 @@ export default function AnnouncementWidgetClient({
   }
 
   return (
-    <div className="bg-white dark:bg-dark-surface border border-neutral-border rounded-lg p-4 mb-6">
+    <div
+      className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/40 border-l-4 rounded-lg p-4 mb-6"
+      style={{ borderLeftColor: 'var(--brand-accent)' }}
+    >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-dark dark:text-dark-text">📢 Announcement</span>
+        <span className="flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-brand-accent" aria-hidden="true" />
+          <span className="font-semibold text-dark dark:text-dark-text">Announcement</span>
+        </span>
         <button
           type="button"
           onClick={handleDismiss}
           aria-label="Dismiss announcement"
-          className="text-mid-gray hover:text-dark dark:text-dark-muted dark:hover:text-dark-text text-lg leading-none cursor-pointer"
+          className="text-mid-gray hover:text-dark dark:text-dark-muted dark:hover:text-dark-text transition-colors cursor-pointer"
         >
-          ×
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
       {announcements.map((a, i) => (
