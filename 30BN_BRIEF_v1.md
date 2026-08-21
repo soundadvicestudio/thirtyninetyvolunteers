@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.0
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.1
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -53,6 +53,17 @@ discoverability note added; §9 Migration 039 documented,
 next migration 040, new app_settings keys added; §11 Phase
 MM complete + Beta phases planned; §13 new patterns +
 v6.0 version history)
+### Last Updated: August 2026 — v6.1 (DOC.83: Beta
+phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/
+SHOWARCHIVE complete — §1 version + current phase; §7
+revalidatePath-during-render rule; §8 Dashboard ANNOUNCE
+complete; §8 Forums FORUMS-FIX + FORUMS-UX complete; §8
+Show Management SHOWDELETE + SHOWARCHIVE + ShowForm fix;
+§8 Platform Setup SETUP_KEYS 27→28, saveAnnouncement,
+9th feature flag toggle; §8 Settings hub Dashboard
+Announcements card; §9 Migration 040, admin_users
+announcement_dismissed_at, 4 new app_settings keys,
+next migration 041)
 
 ---
 
@@ -72,18 +83,16 @@ v6.0 version history)
 **Local folder:** `/Users/soundadvice/volunteers`
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
-**Current phase:** Phase MM (Maintenance Mode) ✓ Complete
-(MM.A audit, MM.1 backend, MM.2 Setup Panel UI — commits
-4196623/769ecdd). Platform now in active Beta — Executive
-Committee has access and is testing. Phase 17 (Launch)
-deferred pending Beta refinement. Active Beta phases
-planned: FORUMS-FIX (forums thread bug), ANNOUNCE
-(dashboard announcements widget), FORUMS-UX (forum
-permissions discoverability), SHOWDELETE (show hard
-delete), QRBANNER (QR label banner), QRANALYTICS (scan
-tracking), SIDEBAR (grouped sidebar + top nav style),
-NAVORDER (sidebar link reorder). Phase CAST planned
-post-launch.
+**Current phase:** Active Beta — Executive Committee
+testing. Completed Beta phases: FORUMS-FIX ✓ (thread
+view runtime error fixed — revalidatePath during render),
+FORUMS-UX ✓ (forum permissions discoverability label),
+ANNOUNCE ✓ (dashboard announcements widget), SHOWDELETE
+✓ (show hard delete with guards), SHOWARCHIVE ✓ (archive
+button + archived shows accordion + ShowForm save fix).
+Remaining Beta phases: QRBANNER, QRANALYTICS, SIDEBAR,
+NAVORDER. Phase 17 (Launch) deferred pending Beta
+refinement. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -320,6 +329,10 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 **Phase FORUMS proxy.ts additions (FORUMS.1):** Three changes were made to `proxy.ts` in FORUMS.1: (1) `needsFlagCheck` extended to cover `/crew/forums` — one condition appended after the inventory condition. No matcher change needed (`/crew/:path*` already covers `/crew/forums`). No public flag block needed — Forums has no public-facing routes (unlike Auditions which has `/auditions/:path*`). (2) Production-role restriction exception: `!pathname.startsWith('/crew/forums')` added to the Production allowlist alongside calendar, media, help, rehearsals, and auditions. Production users have forum access; per-forum filtering happens at the data layer (access grants). (3) Crew-route flag block for `/crew/forums` added after the inventory block — redirects to `/crew/dashboard` when `flags.forums` is false.
 
 **Phase MM proxy.ts additions (MM.1):** One new block added to `proxy.ts` — the maintenance mode gate. It fires before all other checks (before `needsFlagCheck`, before flag fetches, before role-based route guards). Logic: if `pathname.startsWith('/crew/')` AND pathname is not `/crew/login` AND pathname does not start with `/crew/maintenance`, fetch `maintenance_mode` from `app_settings` via `getAdminClient()`. If value is `'true'`: query `admin_users` for the current user's role. If role is `super_admin`, pass through transparently. If role is any other role, redirect to `/crew/maintenance`. If no Supabase Auth session exists, redirect to `/crew/login` (standard auth flow handles this). No matcher change needed — `/crew/:path*` already covers all crew routes. No feature flag — Maintenance Mode is an operational control, not a feature. Documented as MM.1 build, commit 4196623.
+
+**FORUMS-FIX root cause — revalidatePath() prohibited during render:** `revalidatePath()` and `revalidateTag()` may only be called from within a Server Action invocation or a Route Handler — NEVER during a component's render path (i.e., in a Server Component function body that is executing as part of a page render). Calling them during render throws a Next.js runtime error: "Route used revalidatePath during render which is unsupported" — this error bubbles to `app/error.tsx` and displays as a generic "Something went wrong" page with no diagnostic detail. The failure is completely silent to lint and tsc — it only surfaces at runtime.
+
+In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `await markThreadRead(threadId)` directly in the Server Component body. `markThreadRead()` internally calls `revalidatePath()`, which threw on every thread page load. Fix: moved `markThreadRead()` to a client-side `useEffect` in `ThreadViewClient.tsx` — the established pattern from `components/crew/messages/ThreadView.tsx` (which correctly calls `void markThreadRead()` in a `useEffect(() => {...}, [data.thread.id])`). Any server action that calls `revalidatePath()` must only be invoked from onClick handlers, form actions, or other client-initiated Server Action calls — never from a Server Component's render function body.
 
 ---
 
@@ -610,21 +623,88 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   already installed or dismissed (localStorage key).
   Built in ADMIN.16.
 - **Dashboard section render order** (top to bottom, as
-  currently built): Quick Stats → Season at a Glance →
-  Pending Milestones → Pending Hours → Add to Home Screen
-  (mobile only) → Activity Feed.
-- **Planned — Phase ANNOUNCE:** An Announcements widget
-  will appear at the very top of the Dashboard (above
-  Quick Stats). Super Admin publishes announcements with
-  rich text (TipTap) and targets specific roles. Each
-  user sees targeted announcements until they dismiss
-  them (per-user dismissal stored in
-  `admin_users.announcement_dismissed_at`). New publish
-  resets dismissal state for all users. SA and OA (when
-  enabled) can publish; OA announcement publishing is
-  toggled via Platform Setup. Multiple targeted
-  announcements stack in a single widget. Distinct from
-  the public-facing announcement banner on `/`.
+  currently built): Announcement Widget (when active, above
+  Quick Stats — Phase ANNOUNCE) → Quick Stats → Season at
+  a Glance → Pending Milestones → Pending Hours → Add to
+  Home Screen (mobile only) → Activity Feed.
+- **Dashboard Announcements Widget (Phase ANNOUNCE ✓
+  Complete):** A stacked widget at the very top of the
+  Dashboard (above Quick Stats) that displays active
+  announcements targeted to the current user's role.
+  Super Admin publishes announcements with rich-text
+  (TipTap) content, targeting specific roles via
+  checkboxes. Each user can dismiss the widget; dismissal
+  is per-user and persists via `admin_users.announcement_
+  dismissed_at`. New publish resets dismissal state for
+  all users (any announcement with `updated_at` newer than
+  `dismissed_at` is shown). Multiple targeted announcements
+  stack in one widget.
+
+  OA publishing: disabled by default. Enabled via the
+  `announcements_oa_enabled` feature flag toggle in
+  Platform Setup Feature Flags section. When enabled, OA
+  gets a mirror Announcement section at
+  `/crew/settings/dashboard-announcement`. The SA Platform
+  Setup announcement section and OA mirror section share
+  the same underlying data (`dashboard_announcement_*`
+  app_settings keys).
+
+  Announcement widget is distinct from the public-facing
+  announcement banner on `/` (`announcement_banner_*` keys
+  — a completely separate feature with a different storage
+  prefix to avoid naming collision).
+
+  **New app_settings keys (Migration 040):**
+  - `dashboard_announcement_body` — TipTap HTML content
+  - `dashboard_announcement_updated_at` — ISO timestamp
+    of last publish (set server-side, never from client)
+  - `dashboard_announcement_roles` — JSON array of targeted
+    role strings
+  - `announcements_oa_enabled` — `'true'`/`'false'` OA
+    publishing toggle (added to FeatureFlagsSection as 9th
+    toggle; SETUP_KEYS 27 → 28)
+
+  **New column (Migration 040):**
+  - `admin_users.announcement_dismissed_at timestamptz`
+    (nullable, no default)
+
+  **New files:**
+  - `lib/data/announcements.ts` — NO `'use server'`;
+    `getActiveAnnouncements(supabase, admin)` data helper;
+    returns announcements visible to the current user
+    (role targeting + dismissed_at vs updated_at comparison)
+  - `lib/actions/announcements.ts` — `'use server'`;
+    `dismissAnnouncement()` (sets `announcement_dismissed_at
+    = now()`, `getServerClient()`, self-row update, all
+    roles); `getAnnouncementContent()` (returns current body
+    + roles for AnnouncementSection self-load)
+  - `components/crew/settings/AnnouncementSection.tsx` —
+    `'use client'` standalone component used in both
+    SetupPanel (SA) and OA mirror page. Self-loading: single
+    `useEffect([editor])` calls `getAnnouncementContent()`
+    and initializes TipTap editor + selectedRoles state.
+    TipTap editor (Bold/Italic/Bullet/Ordered/H2 toolbar,
+    `immediatelyRender: false`). Five role checkboxes (SA,
+    OA, Editor, Viewer, Production) with Select All / Clear
+    All. Publish button calls `saveAnnouncement()`. Uses
+    `SaveStatus` type with `setStatus('saved')` on success
+    and `'error' in result` narrowing.
+  - `components/crew/dashboard/AnnouncementWidget.tsx` —
+    Server Component; calls `getActiveAnnouncements()`;
+    returns null when no active announcements
+  - `components/crew/dashboard/AnnouncementWidgetClient.tsx`
+    — `'use client'`; receives announcements as props;
+    `useState<boolean>(false)` for dismissed; optimistic
+    dismiss (set state immediately + `void dismissAnnouncement()`
+    non-blocking); TipTap HTML rendered via Tailwind arbitrary
+    CSS variant selectors (no `@tailwindcss/typography`)
+
+  **OA mirror page:**
+  `app/crew/(app)/settings/dashboard-announcement/page.tsx`
+  — double-guarded (SA always; OA only when
+  `announcements_oa_enabled === 'true'`; others redirect to
+  `/crew/settings`). Renders `<AnnouncementSection />` (no
+  props — self-loading).
 
 **Volunteers (`/crew/volunteers`):**
 - Searchable, filterable, sortable list (full-text: name/email/phone)
@@ -738,13 +818,59 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     scanability requirement). Generated server-side via `generateQR()` in `lib/qr.ts`.
     Both `check_in_token` columns added in Migration 024.
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
-    **Planned — Phase SHOWDELETE:** A Delete button will
-    be added to the Settings tab (SA/OA/Editor only).
-    Deletion is blocked if the show has any active slot
-    claims (status = 'claimed'). Show must be archived
-    first (prevents accidental deletion of live shows).
-    Hard delete cascades via FK. `deleteShow()` server
-    action in `lib/actions/shows.ts`.
+    **Show Delete (Phase SHOWDELETE ✓ Complete):**
+    `deleteShow(showId)` server action in
+    `lib/actions/shows.ts`. Role guard: strict
+    `['super_admin', 'owner_admin', 'editor'].includes(
+    admin.role)` — does NOT use `updateShowStatus()`'s
+    broader guard (which allows production-role users in
+    show_editors). Three guards in strict order before delete:
+
+    1. **Archived check:** Show must exist and have
+       `status = 'archived'`. Returns `{ error: 'Only
+       archived shows can be deleted.' }` if not.
+
+    2. **Active claims check (two-step query):** Fetch
+       `show_date` IDs for this show, then check
+       `slot_claims.status IN ('claimed', 'waitlisted')`.
+       Uses both statuses — same pattern as `updateShow()`
+       in this file. Returns error if any active claims exist.
+       (Note: a nested Supabase subquery in `.in()` does NOT
+       compile — must use the two-step approach.)
+
+    3. **Attendance records check (critical — SHOWDELETE.A
+       F1):** `attendance` has a direct `show_id` FK with
+       `ON DELETE NO ACTION`. Any show with even one
+       attendance record (any past show where volunteer hours
+       were ever marked) will throw a raw Postgres FK
+       violation without this guard. Checks
+       `attendance.show_id = showId`. Returns `{ error:
+       'This show has attendance records and cannot be
+       deleted.' }` if any exist.
+
+    `logAction('show.delete', ...)` fires BEFORE the DELETE
+    (row will not exist after). `'show.delete'` added to
+    `AuditAction` union in `lib/audit.ts`. On success:
+    `revalidatePath('/crew/shows')` + `revalidatePath('/shows')`.
+
+    **UI:** Delete button + `AlertDialog` confirmation in
+    `ShowDetail.tsx` `SettingsTab`. State and handler defined
+    inside `SettingsTab` (not root `ShowDetail`) — `router`
+    and `show` are already in scope there. On success:
+    `router.push('/crew/shows')` (not `router.refresh()` —
+    the show no longer exists). `AlertDialog` is state-
+    controlled (no `AlertDialogTrigger`) — matches pattern
+    in `ShowForm.tsx`. Uses `AlertDialogPrimitive.Cancel` and
+    `AlertDialogPrimitive.Action` from `radix-ui`.
+    Confirmation text: "This will permanently delete
+    '[show.name]' and all associated dates, slot assignments,
+    and calendar events. This cannot be undone." Visible
+    only when `canEdit && show.status === 'archived'`.
+    `ShowEditorActionResult` return type (not `ActionResult`
+    — the live file uses `ShowEditorActionResult` throughout).
+    Commits: SHOWDELETE.A (audit, no code); SHOWDELETE.1:
+    b4824dc.
+
     Also in Settings tab: a read-only "Default Hours per Volunteer" field showing
     the effective default hours for this show. Resolved value: `show.default_hours`
     (per-show override) if set; otherwise `defaultHours[getLocationHoursBucket(
@@ -754,6 +880,59 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     through to `SettingsTab`. Fixed in ADMIN.46 (the prop was previously declared
     in the type annotation but never destructured — the latent dead prop pattern
     from ADMIN.45).
+
+    **Show Archive (Phase SHOWARCHIVE ✓ Complete):**
+    Three changes shipped in SHOWARCHIVE.1:
+
+    1. **ShowForm.tsx Save button fix:** The "Edit Show"
+       form (`ShowForm.tsx`) previously had two hardcoded
+       buttons — "Save & Publish" (always submitted status
+       `'live'`) and "Save as Draft" (always submitted
+       `'draft'`) — that completely ignored the Status
+       `<select>` dropdown's selected value. Selecting
+       `'archived'` or `'past'` from the dropdown and
+       clicking either button would silently revert to
+       `'live'`/`'draft'`. Fixed: both buttons replaced
+       with a single "Save" button that reads the current
+       `status` state from the dropdown and calls
+       `submitForm()` with the correct status. Note:
+       `submitForm()`/`buildPayload()` only support
+       `'draft'`/`'live'` for the notification flow — selecting
+       `'past'`/`'archived'` shows a guidance message
+       directing the user to the Settings tab instead of
+       blocking or erroring. Hint text updated to "Set the
+       show status before saving."
+
+    2. **Archive button on show cards:** `ShowCard` (defined
+       inside `ShowList.tsx` — NOT a separate file) gained
+       an Archive button below the Draft/Live toggle, gated
+       on `canEdit && (show.status === 'draft' || show.status
+       === 'live')`. On click: calls `updateShowStatus(show.id,
+       'archived')` directly (no new server action needed).
+       On success: shows an inline undo banner with 5-second
+       auto-dismiss and an Undo button that calls
+       `updateShowStatus(show.id, previousStatus)` to restore.
+       `router.refresh()` called on both archive and undo
+       success. State lives in `ShowList` (parent), not
+       `ShowCard` — same pattern as the existing `isToggling`
+       state. Past shows do NOT get the Archive button — they
+       appear automatically in the Archived Shows accordion.
+
+    3. **Archived Shows accordion:** New accordion section
+       at the bottom of `ShowList.tsx`, after the entire
+       groups/season conditional (NOT nested inside it —
+       nesting would hide the accordion when the season
+       filter returns no results). Shows `status = 'archived'`
+       OR `status = 'past'` shows in reverse chronological
+       order by `latest_date` (null-safe via `?? ''`). Gated
+       on `canEdit && archivedShows.length > 0`. Title:
+       "Show Archive". Each show rendered via the existing
+       `ShowCard` component — no Archive button props passed
+       (shows here are already archived/past). Past shows
+       appear automatically without any status change — the
+       accordion is a display filter only.
+
+    Commit: 6557260.
 - Post-event attendance marking (Editors only, only available after show date has passed):
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
@@ -1310,8 +1489,37 @@ Deactivating an item (retiring it) removes it from the default list view. Items 
 **Internal Forums (`/crew/forums`, Phase FORUMS — pre-launch):**
 Gated behind `feature_forums` flag (R34 compliant). Admin backend only — no public-facing surface. SA and OA see all forums always. All other roles (Editor, Viewer, Production) see only forums they have been explicitly granted access to. Access is checked at query time — the forum list is filtered server-side, never client-side hidden.
 
+**FORUMS-FIX ✓ Complete (Bug Fix):** The forums thread
+view was redirecting to `app/error.tsx` ("Something went
+wrong") on every page load. Root cause: `app/crew/(app)/
+forums/[forumId]/[threadId]/page.tsx` called
+`await markThreadRead(threadId)` directly in the Server
+Component render body. `markThreadRead()` internally calls
+`revalidatePath()`, which Next.js prohibits during render.
+Fix: moved `markThreadRead()` to a client-side `useEffect`
+in `ThreadViewClient.tsx` (same pattern as `ThreadView.tsx`
+in the messages module). The same error fired on "Create
+Thread" because `NewThreadModal` navigated immediately to
+the new thread's URL after creation — landing on the same
+broken render path. Both symptoms resolved by the single
+fix. Commit: 29570e0.
+
+**FORUMS-FIX.B ✓ (Follow-up cleanup):** Two additional
+fixes: (1) The signed-URL generation loop in
+`getThreadWithPosts()` (forum-posts.ts) was not wrapped
+in a try/catch — a storage failure would crash the entire
+thread fetch. Replaced with a per-attachment try/catch
+that logs the error and returns `signed_url: null` on
+failure (non-fatal — a broken attachment link is better
+than a broken thread view). (2) `app/error.tsx` never
+logged the caught error, which made diagnosing runtime
+errors require extensive static analysis. Added
+`useEffect(() => { console.error('Runtime error caught
+by error boundary:', error) }, [error])`. Both fixes:
+commit 6b5e230.
+
 **Forum structure (jcink-style, full depth):**
-Forum Index → Categories (organizational headers, not postable) → Forums → Threads → Posts (replies). SA/OA create and manage categories and forums from a dedicated management interface at `/crew/forums/manage`. Each forum row in this interface has an expand chevron (▼) that opens a sub-panel with three sections: Access Grants, Moderators, and Thread Prefixes. This chevron is the entry point for all per-forum permission management — it is not immediately obvious from the UI. The grants UI was built in FORUMS.2; the expand behavior was confirmed working in Beta testing.
+Forum Index → Categories (organizational headers, not postable) → Forums → Threads → Posts (replies). SA/OA create and manage categories and forums from a dedicated management interface at `/crew/forums/manage`. Each forum row in this interface has an expand chevron (▼) that opens a sub-panel with three sections: Access Grants, Moderators, and Thread Prefixes. This chevron is the entry point for all per-forum permission management. **FORUMS-UX ✓ Complete:** A persistent "Manage Access" label (`<span className="text-xs text-mid-gray dark:text-dark-muted">Manage Access</span>`) was added immediately before the expand chevron in `ForumManageClient.tsx`, making the affordance discoverable without requiring the user to hover or explore. The label inherits the same `{!editMode && !confirmingDelete && (...)}` visibility gate as the chevron. Commit: 1651989. The grants UI was built in FORUMS.2; the expand behavior was confirmed working in Beta testing.
 
 **Access grants (per forum — three types, any combination):**
 - Role grant: all users of a given role (e.g. "all Editors"). Any user with that role sees the forum automatically.
@@ -1916,6 +2124,7 @@ displays 8 section cards using the `LinkedCard` /
 | Location Management | `/crew/settings/locations` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
 | Inventory Management | `/crew/settings/inventory` | Super Admin + Owner Admin (LinkedCard); Editor with `inventory_manager` (LinkedCard); Editor without flag + Viewer (LockedCard) — built INVENTORY.2 |
 | User Groups | `/crew/settings/groups` | Super Admin + Owner Admin (LinkedCard, `canAccessAdminSettings` gate); Editor + Viewer (LockedCard "Super Admin only") — built FORUMS.1 |
+| Dashboard Announcements | `/crew/settings/dashboard-announcement` | Super Admin always (LinkedCard); Owner Admin when `announcements_oa_enabled = 'true'` (LinkedCard); all other roles (not shown) — built Phase ANNOUNCE |
 | Style Sandbox | `/crew/settings/style` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — built STYLE.1. Reached via hub card only — no sidebar link. |
 
 **Platform Setup sidebar link (NOTIFY.1):** The Platform
@@ -1986,6 +2195,25 @@ Nine independently-saving sections (each has its own Save button — no "Save Al
 
 Section 1 — Maintenance Mode (added Phase MM): Three fields: `maintenance_mode` (boolean toggle — `'true'`/`'false'`), `maintenance_heading` (text, max 100 chars), `maintenance_body` (text, max 300 chars). When `maintenance_mode` is `'true'`, all non-Super-Admin roles accessing any `/crew/*` route (except `/crew/login` and `/crew/maintenance`) are redirected to the maintenance page. Super Admin retains full access at all times. Toggle label changes to "⚠ Maintenance Mode — ON" when active. Heading and body control the text displayed on the `/crew/maintenance` page and can be pre-set before activating. Seeded defaults: heading = "System Maintenance", body = "The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon." A persistent amber banner in the crew layout warns the Super Admin when Maintenance Mode is active (sibling div between TopBar and main, visible only to SA). Saved via `saveMaintenanceMode()` in `lib/actions/setup.ts`. `revalidatePath('/crew', 'layout')` ensures the banner propagates immediately on toggle. Migration 039.
 
+**`saveAnnouncement()` (lib/actions/setup.ts — Phase
+ANNOUNCE):** SA always allowed; OA allowed only when
+`announcements_oa_enabled === 'true'` (checked at
+action level). Accepts `dashboard_announcement_body`
+(TipTap HTML — sanitized per R31 allowlist before upsert,
+matching blast.ts exactly) and `dashboard_announcement_
+roles` (JSON array — validated as non-empty). Sets
+`dashboard_announcement_updated_at` to
+`new Date().toISOString()` server-side (never trust
+client timestamp — prevents dismissal state manipulation).
+Upserts all three content keys. Revalidates
+`/crew/settings/setup`, `/crew/settings/dashboard-
+announcement`, `/crew/dashboard`, and `/crew` layout.
+`logAction()` with `'announcement.publish'` AuditAction.
+Rendered via the standalone `AnnouncementSection`
+component embedded in `SetupPanel.tsx` (not one of the
+nine numbered sections — see Dashboard Announcements
+Widget in this section for full spec).
+
 Section 2 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
 Also in Section 2: `org_timezone` — Organization Timezone select field.
@@ -2010,6 +2238,22 @@ Section 6 — Email Configuration: `email_from_address`, `email_from_name`. Edit
 
 Section 7 — Feature Flags: Eight toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, and `/crew/users` alongside existing paths.
 
+**9th toggle — `announcements_oa_enabled` (Phase ANNOUNCE):**
+Added to `FeatureFlagsSection` as a 9th toggle, saved
+through the same `saveFeatureFlags()` action. Deliberately
+NOT wired through `getFeatureFlags()`/`lib/feature-flags.ts`
+(R32 exception) — it is an OA authorization toggle for a
+single action, not a route-gating feature flag, so it is
+read directly at its two call sites instead. This flag's
+wiring is six points, not the standard 5-file pattern: (1)
+Migration 040 seed, (2) `setup/page.tsx` SETUP_KEYS array +
+SetupPanelInitialValues field, (3) `SetupPanel.tsx`
+FeatureFlagsSection 9th toggle UI, (4) `saveFeatureFlags()`
+upsert in `lib/actions/setup.ts`, (5) `saveAnnouncement()`
+reads the flag to gate OA publish authorization, (6)
+`app/crew/(app)/settings/dashboard-announcement/page.tsx`
+reads the flag to gate OA page access. See §13 pattern note.
+
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
 | Calendar & Space Management | `feature_calendar` | `'true'` | `/crew/calendar/*`, public `/calendar`, `syncShowDateToCalendar()`, calendar links in emails, .ics links on Call Board |
@@ -2031,10 +2275,10 @@ Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.
 Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 27 `app_settings` keys (26 SETUP keys + `default_reply_to`)
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 28 `app_settings` keys (27 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
-- `lib/actions/setup.ts` — ten server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `getSignedBrandUploadUrl()`
+- `lib/actions/setup.ts` — eleven server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `saveAnnouncement()`, `getSignedBrandUploadUrl()`
 - `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
 - `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
@@ -2571,7 +2815,7 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 040 (none currently planned). Migrations 033 through 039 are applied.
+**Next migration:** 041 (none currently planned). Migrations 033 through 040 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -3302,6 +3546,8 @@ role             text NOT NULL CHECK (role IN (
 is_active        boolean NOT NULL DEFAULT true
 calendar_editor boolean NOT NULL DEFAULT false
 inventory_manager boolean NOT NULL DEFAULT false
+announcement_dismissed_at  timestamptz (nullable —
+Phase ANNOUNCE, Migration 040)
 calendar_subscription_token uuid NOT NULL
 DEFAULT gen_random_uuid()
 last_login timestamptz
@@ -4094,13 +4340,13 @@ TopBar MessagesIcon. Added to `FeatureFlags` type and `getFeatureFlags()`
 in `lib/feature-flags.ts`. Setup Panel Section 6 has an eighth toggle row
 for this flag. `saveFeatureFlags()` revalidates `/crew/messages` and
 `/crew/users` alongside existing routes.
-Total active SETUP keys: 27 (24 prior + `maintenance_
-mode`, `maintenance_heading`, `maintenance_body` added
-Migration 039 / Phase MM). `SETUP_KEYS.length = 27`
+Total active SETUP keys: 28 (27 prior +
+`announcements_oa_enabled` added Phase ANNOUNCE /
+ANNOUNCE.2). `SETUP_KEYS.length = 28`
 — `default_reply_to` is already included within the
 `SETUP_KEYS` array, not a separate addition (confirmed
 ADMIN.46 Task A4). Setup Panel page (`setup/page.tsx`)
-fetches 27 keys total.
+fetches 28 keys total.
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
@@ -4161,6 +4407,25 @@ ON CONFLICT DO NOTHING`:
   improvements are in progress. Please check back soon.'`
   — body text on the `/crew/maintenance` page (max 300
   chars)
+
+**Migration 040 status:** Applied —
+`040_dashboard_announcements.sql` (Phase ANNOUNCE,
+ANNOUNCE.1). Two changes:
+1. Added `announcement_dismissed_at timestamptz` to
+   `admin_users` (nullable, no default). When NULL: user
+   has never dismissed any announcement. When set:
+   compared against `dashboard_announcement_updated_at`
+   to determine if the announcement is new for this user.
+   AdminUser type in `types/admin.ts` extended to include
+   `announcement_dismissed_at: string | null`.
+   `getAdminUser()` SELECT in `lib/auth.ts` extended to
+   include this column.
+2. Seeded four new `app_settings` keys via
+   `INSERT ... ON CONFLICT DO NOTHING`:
+   - `dashboard_announcement_body → ''`
+   - `dashboard_announcement_updated_at → ''`
+   - `dashboard_announcement_roles → '[]'`
+   - `announcements_oa_enabled → 'false'`
 
 ### message_threads
 ```sql
