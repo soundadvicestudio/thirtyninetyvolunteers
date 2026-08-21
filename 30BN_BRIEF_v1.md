@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.3
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.4
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -89,6 +89,14 @@ feature_beta, 9th toggle); §8 new Beta Feedback section added; §9 Migration
 ADMIN.47–51 + BETA.A + BETA.1 build summaries + prompt log; §13 hide-not-lock
 rule, resolveGroupHrefs pattern, Settings access rule, Inventory Management
 sidebar pattern, feature_beta opt-in pattern; DOC.87 logged)
+### Last Updated: August 2026 — v6.4 (DOC.88: ADMIN.52–57
+complete — §1 current phase updated; §8 Dashboard
+SeasonAtAGlance + AnnouncementWidget updated; §8 Notification
+System NotificationPanel updated; §8 Platform Setup Section 1
+extended (SETUP_KEYS 30→31); §8 Maintenance Page restoration
+field; §8 QR Generator font fix + ribbon redesign; §8 Sidebar
+Beta Feedback SA exclusion; §9 Migration 044 status block;
+§11 ADMIN.52–57 build summaries; §13 new patterns; DOC.88 logged)
 
 ---
 
@@ -115,10 +123,12 @@ ANNOUNCE ✓, SHOWDELETE ✓, SHOWARCHIVE ✓, QRBANNER ✓,
 QRANALYTICS ✓, SIDEBAR ✓, NAVORDER ✓, Phase BETA ✓
 (Beta Feedback System). All planned Beta phases complete.
 Phase 17 (Launch) deferred pending Beta refinement.
-Post-Beta ADMIN prompts: ADMIN.47–51 ✓ (carry-forward
-cleanup, Settings access tightening, hide-not-lock rule,
-Inventory Manager sidebar link). Phase CAST planned
-post-launch.
+Post-Beta ADMIN prompts: ADMIN.47–57 ✓ (ADMIN.47–51:
+carry-forward cleanup, Settings access tightening, hide-not-lock
+rule, Inventory Manager sidebar link; ADMIN.52–57: pre-launch
+dashboard refinements, notification panel cleanup, QR banner
+fix + ribbon redesign, maintenance restoration field).
+Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -626,19 +636,36 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   shows); New Volunteers (7 Days) (created_at in last
   7 days). Uses `getServerClient()`. Components:
   `components/crew/dashboard/QuickStats.tsx`.
-- **Season at a Glance** (built ADMIN.20, all roles):
-  per-show staffing view for the pinned season, or all
-  live shows as fallback when no season is pinned. Each
-  show card lists roles with a staffing indicator per
-  role: red (0 claimed), yellow (partial), green (fully
-  claimed). Super Admin-only season selector dropdown
-  in section header — selecting a season upserts
-  `app_settings.dashboard_season_id` via
-  `setPinnedSeason()` in `lib/actions/settings.ts` and
-  revalidates the dashboard in place. Editors and
-  Viewers see the pinned season data but have no
-  selector. Fallback: when `dashboard_season_id` is
-  null or unset, shows all live shows. Components:
+- **Season at a Glance** (built ADMIN.20, refined ADMIN.52–53,
+  all roles): per-show staffing view for the pinned season, or
+  upcoming live shows as fallback when no season is pinned. Each
+  show card lists roles with a staffing indicator per role: red
+  (0 claimed), yellow (partial), green (fully claimed). Super
+  Admin-only season selector dropdown in section header —
+  selecting a season upserts `app_settings.dashboard_season_id`
+  via `setPinnedSeason()` in `lib/actions/settings.ts` and
+  revalidates the dashboard in place. Editors and Viewers see
+  the pinned season data but have no selector. **31-day preview
+  cap (ADMIN.52):** Only shows whose earliest `show_date` is
+  within 31 days from today are displayed — sorted
+  chronologically by earliest show date (ascending). Shows
+  beyond the 31-day window are excluded. An always-visible
+  'View all shows →' link in the section header links to
+  `/crew/shows`. When all shows are excluded by the cap, an
+  empty state displays 'No upcoming shows in the next 31 days.'
+  When some shows are hidden, a truncation note shows 'Showing N
+  of M shows — View all →'. **Fallback header (ADMIN.53):** When
+  no season is pinned, the section header reads 'Upcoming Shows
+  (Next 31 Days)' (not 'All Live Shows' — corrected to reflect
+  the 31-day cap). **Architecture:** `SeasonAtAGlance.tsx` is a
+  self-contained Server Component that fetches its own show data
+  internally — show data does not cross the `dashboard/page.tsx`
+  → component boundary. The `timezone` prop is passed from the
+  page (already resolved via `getOrgTimezone(supabase)`) to
+  avoid a redundant fetch. The 31-day cutoff uses
+  `formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)` —
+  the string-comparison pattern (safer than raw Date object
+  comparison for bare date columns per R23). Components:
   `components/crew/dashboard/SeasonAtAGlance.tsx`,
   `components/crew/dashboard/SeasonSelector.tsx`.
 - **Pending Hours Review** (Editor/Super Admin only):
@@ -752,6 +779,17 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     dismiss (set state immediately + `void dismissAnnouncement()`
     non-blocking); TipTap HTML rendered via Tailwind arbitrary
     CSS variant selectors (no `@tailwindcss/typography`)
+  **Visual redesign (ADMIN.52):** `AnnouncementWidgetClient.tsx`
+  was upgraded to a visually distinct card to draw attention on
+  the dashboard. Card uses `bg-orange-50 dark:bg-orange-900/10
+  border border-orange-200 dark:border-orange-900/40 border-l-4`
+  with `style={{ borderLeftColor: 'var(--brand-accent)' }}` for
+  the left accent. Header row: `Megaphone` icon (lucide-react) +
+  'Announcement' label. Dismiss button uses `X` icon. TipTap HTML
+  content rendered via arbitrary CSS variant selectors (unchanged).
+  R35-safe: `dark-surface` is a native `@theme` token, so the
+  `bg-orange-50 dark:bg-orange-900/10` pairing is cascade-safe —
+  both are native Tailwind utilities.
 
   **OA mirror page:**
   `app/crew/(app)/settings/dashboard-announcement/page.tsx`
@@ -1124,10 +1162,12 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   are always visually identical, including any banner
   text. `serverExternalPackages: ["@resvg/resvg-js"]`
   required in `next.config.ts` (napi-rs native binary).
-  Two module-level constants: `BANNER_HEIGHT_UNITS = 6`,
-  `BANNER_FONT_SIZE = 2.5`. Private `escapeXml()` helper
-  escapes `&<>"'` before injecting admin-supplied banner
-  text into SVG markup. 'server-only' directive present.
+  Two module-level constants: `BANNER_HEIGHT_UNITS = 10`
+  (increased from 6 in ADMIN.56 to accommodate ribbon depth),
+  `BANNER_FONT_SIZE = 2.8` (increased from 2.5 in ADMIN.56).
+  Private `escapeXml()` helper escapes `&<>"'` before
+  injecting admin-supplied banner text into SVG markup.
+  'server-only' directive present.
 - **Phase QRBANNER ✓ Complete:** Optional text banner
   below the QR matrix. Admin types banner text at
   generation time; a checkbox toggle enables/disables
@@ -1142,6 +1182,44 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   and `banner_text` are distinct fields — label is the
   history panel identifier; banner_text is printed on
   the output image. Migration 041. Commit 9f5f341.
+- **ADMIN.56 — Banner font fix + ribbon redesign:**
+
+  *Root cause (font not rendering on Vercel):* The `Resvg`
+  constructor in `lib/qr.ts` was called with no font option.
+  `@resvg/resvg-js` defaults to `loadSystemFonts: true`, which
+  silently fails on Vercel's minimal serverless Linux runtime
+  (no system fonts present) — no error thrown, zero glyph
+  rendering. Confirmed empirically via pixel-count test.
+
+  *Font fix (ADMIN.56-FIX):* Inter Regular v4.0 (SIL Open Font
+  License, 398KB) bundled at `public/fonts/banner-font.ttf`.
+  Font resolved at runtime via `path.join(process.cwd(), 'public',
+  'fonts', 'banner-font.ttf')` + `existsSync()`. `process.cwd()`
+  is a runtime expression — Turbopack cannot statically analyze
+  it, so the `.ttf` file is never treated as a module. The
+  original approach (`createRequire(import.meta.url).resolve(
+  'next/dist/compiled/@vercel/og/Geist-Regular.ttf')`) caused a
+  Turbopack build failure: Turbopack statically follows literal
+  string arguments to `resolve()`, attempted to import the `.ttf`
+  as a module, and failed with 'Unknown module type'. The
+  `process.cwd()` pattern is the established fix for referencing
+  project assets in server-only files to avoid this class of
+  Turbopack static analysis failure. Font options passed to
+  `Resvg` only when `trimmedBanner` is truthy — no-banner path
+  unchanged.
+
+  *Ribbon redesign (ADMIN.56):* The plain white rect + text
+  banner was replaced with a 7-element curled-edge ribbon:
+  (1) white background rect covering banner zone; (2) `#EEF2FF`
+  ribbon body rect with `rx='0.5'`; (3–4) `#B8C4E8` curl-shadow
+  triangles at bottom corners (the dark underside of folded
+  edges); (5–6) `#D4DCF5` curl-face triangles overlapping the
+  shadows (the lighter visible face of the fold); (7) centered
+  `#293994` text (brand navy, semibold, `font-family='Arial,
+  sans-serif'`). All geometry (ribbonY, ribbonH, curlDepth,
+  ribbonBottom, cx) derives dynamically from the parsed viewBox
+  width N — no hardcoded coordinates. `escapeXml()` applied to
+  bannerText before SVG interpolation (standing security rule).
 - **Phase QRANALYTICS ✓ Complete:** Scan tracking for
   newly generated QR codes. New QR codes encode a
   `/go/[redirect_token]` URL instead of the raw target
@@ -1749,11 +1827,32 @@ Dropdown (two sections):
    is a link to the relevant queue page. Section hidden
    when no ephemeral items are pending.
 2. "Notifications" — persistent items, reverse-
-   chronological (most recent 20). Unread rows highlighted
-   (`bg-neutral-surface dark:bg-dark-nav` — R35-safe; no
-   dark variant for `bg-brand-primary-subtle` exists in
-   globals.css). "Mark all read" button. Each item links
-   to `notification.href`.
+   chronological (all unread persistent items — no row
+   cap — ADMIN.54 removed the former 20-row limit). Unread
+   rows highlighted (`bg-neutral-surface dark:bg-dark-nav`
+   — R35-safe; no dark variant for `bg-brand-primary-subtle`
+   exists in globals.css). "Mark all read" button. Each item
+   links to `notification.href`.
+
+**Notification panel behavior (ADMIN.53):**
+- Mark-as-read removes the notification from the panel
+  immediately (optimistic filter-out — the item disappears
+  rather than just losing its unread highlight). Server action
+  still fires in the background.
+- Mark-all-as-read clears the panel to an empty state ('No new
+  notifications'). 'Mark all read' button conditionally rendered
+  only when `unreadPersistent > 0`.
+- `direct_message` type notifications are filtered from the
+  rendered list and excluded from the bell badge count. DB rows
+  are not deleted — hidden at render time only. The Messages
+  icon in TopBar has its own unread badge and is the canonical
+  surface for DM unread state.
+- `visibleNotifications` derived constant (filters out
+  `direct_message` type) drives both the rendered list and the
+  `unreadPersistent` count. The former server-computed
+  `counts.unreadPersistent` state was removed entirely —
+  `unreadPersistent` is now client-derived from
+  `visibleNotifications.filter(n => !n.read_at).length`.
 
 State model: SSR-first (initial data from layout server
 fetch as props), optimistic client updates via
@@ -2252,6 +2351,12 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   in group), Settings (`/crew/settings` — SA/OA only via FLAG_GATED_HREFS),
   Help. Plus conditional Inventory Management link for Editors with
   `inventory_manager = true` (special-case append, not part of orderable nav).
+  Beta Feedback is additionally hidden from `super_admin` role
+  (ADMIN.55) — SA reaches it via the Settings hub. A filter on
+  the resolved hrefs array for the settings group removes
+  `/crew/settings/beta` when `admin.role === 'super_admin'`,
+  applied after `resolveGroupHrefs()` and before `getGroupItems()`
+  so self-healing behavior is unaffected.
 
 - **Active state:** `border-l-4` +
   `style={{ borderLeftColor: 'var(--brand-primary)' }}`
@@ -2414,7 +2519,7 @@ Super Admin-only configuration panel for OpenCall OS deployments. Hard-blocked f
 
 Nine independently-saving sections (each has its own Save button — no "Save All"):
 
-Section 1 — Maintenance Mode (added Phase MM): Three fields: `maintenance_mode` (boolean toggle — `'true'`/`'false'`), `maintenance_heading` (text, max 100 chars), `maintenance_body` (text, max 300 chars). When `maintenance_mode` is `'true'`, all non-Super-Admin roles accessing any `/crew/*` route (except `/crew/login` and `/crew/maintenance`) are redirected to the maintenance page. Super Admin retains full access at all times. Toggle label changes to "⚠ Maintenance Mode — ON" when active. Heading and body control the text displayed on the `/crew/maintenance` page and can be pre-set before activating. Seeded defaults: heading = "System Maintenance", body = "The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon." A persistent amber banner in the crew layout warns the Super Admin when Maintenance Mode is active (sibling div between TopBar and main, visible only to SA). Saved via `saveMaintenanceMode()` in `lib/actions/setup.ts`. `revalidatePath('/crew', 'layout')` ensures the banner propagates immediately on toggle. Migration 039.
+Section 1 — Maintenance Mode (added Phase MM): Four fields: `maintenance_mode` (boolean toggle — `'true'`/`'false'`), `maintenance_heading` (text, max 100 chars), `maintenance_body` (text, max 300 chars), `maintenance_estimated_restoration` (text, max 150 chars, optional — added ADMIN.57). When `maintenance_mode` is `'true'`, all non-Super-Admin roles accessing any `/crew/*` route (except `/crew/login` and `/crew/maintenance`) are redirected to the maintenance page. Super Admin retains full access at all times. Toggle label changes to "⚠ Maintenance Mode — ON" when active. Heading and body control the text displayed on the `/crew/maintenance` page and can be pre-set before activating. Seeded defaults: heading = "System Maintenance", body = "The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon." `maintenance_estimated_restoration` displays as an amber highlighted box with "Estimated restoration:" label on `/crew/maintenance` when set; not displayed when empty. A persistent amber banner in the crew layout warns the Super Admin when Maintenance Mode is active (sibling div between TopBar and main, visible only to SA). Saved via `saveMaintenanceMode()` in `lib/actions/setup.ts` — the function now handles all four fields (the upsert loop picks up the 4th key generically — no structural change to the function was needed). `revalidatePath('/crew', 'layout')` ensures the banner propagates immediately on toggle. Migration 039.
 
 **`saveAnnouncement()` (lib/actions/setup.ts — Phase
 ANNOUNCE):** SA always allowed; OA allowed only when
@@ -2541,7 +2646,7 @@ Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.
 Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 30 `app_settings` keys (29 SETUP keys + `default_reply_to`)
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 31 `app_settings` keys (30 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
 - `lib/actions/setup.ts` — twelve server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `saveAnnouncement()`, `saveSidebarNavOrder()`, `getSignedBrandUploadUrl()`
@@ -2618,17 +2723,21 @@ shell (intentional exception to R20; blocked non-SA
 users must not see the full crew UI). Accessible to any
 user redirected by the proxy.ts maintenance gate.
 
-- Fetches `maintenance_heading` and `maintenance_body`
-  from `app_settings` via `getAdminClient()` (no admin
-  session required — the page is shown to logged-in
-  non-SA users who are blocked from the crew backend).
+- Fetches `maintenance_heading`, `maintenance_body`, and
+  `maintenance_estimated_restoration` from `app_settings` via
+  `getAdminClient()` (no admin session required).
 - Calls `resolveOrgIdentity()` for logo and org name.
 - `generateMetadata()` with `robots: { index: false,
   follow: false }` (noindex).
 - Light mode only — no dark: classes (public-facing
   page pattern per ADMIN.6).
 - Layout: full-screen centered, logo, h1 heading, p body,
-  "Return to homepage" link → `/`. No crew nav links.
+  optional amber restoration box (when
+  `maintenance_estimated_restoration` is set: amber bordered
+  box with 'Estimated restoration:' label + the value, using
+  `border-amber-300 bg-amber-50`, light mode only — no
+  dark: classes), 'Return to homepage' link → `/`. No crew
+  nav links.
 - Page location: `app/crew/maintenance/page.tsx` (not
   inside `(app)` route group).
 - NOT in `needsFlagCheck`, NOT in crew flag block, NOT
@@ -3147,8 +3256,18 @@ Creates `beta_feedback` table for in-platform feedback collection during
 Beta period. Seeds `feature_beta = 'false'` in `app_settings`
 (`ON CONFLICT DO NOTHING`).
 
-**Next migration:** 044 (none currently planned).
-Migration 043 is applied.
+**Migration 044 status:** Applied —
+`044_maintenance_restoration.sql` (ADMIN.57). Seeds one new
+`app_settings` key via `INSERT ... ON CONFLICT DO NOTHING`:
+- `maintenance_estimated_restoration → ''` — optional free-form
+  text (max 150 chars). Displayed on `/crew/maintenance` as an
+  amber highlighted box with 'Estimated restoration:' label when
+  non-empty. Managed via `saveMaintenanceMode()` in
+  `lib/actions/setup.ts`. Migration file location: repo root
+  (same as all prior migrations — not `supabase/migrations/`).
+
+**Next migration:** 045 (none currently planned).
+Migration 044 is applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -4751,8 +4870,8 @@ opt-in only. Beta Feedback is opt-in; enabling it activates the
 Setup Panel Feature Flags section has a 10th toggle row for this flag
 (9th `FeatureFlags`-typed flag). `saveFeatureFlags()` revalidates
 `/crew/settings/beta` alongside existing routes.
-Total active SETUP keys: 30. Setup Panel page (setup/page.tsx)
-fetches 30 SETUP keys.
+Total active SETUP keys: 31. Setup Panel page (setup/page.tsx)
+fetches 31 SETUP keys.
 
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
