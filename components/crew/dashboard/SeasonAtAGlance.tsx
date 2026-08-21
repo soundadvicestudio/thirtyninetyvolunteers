@@ -85,7 +85,7 @@ export default async function SeasonAtAGlance({
 
   const displayedShowCount = displayedShows.length
 
-  const headerLabel = seasonId ? seasonName ?? 'Season' : 'All Live Shows'
+  const headerLabel = seasonId ? seasonName ?? 'Season' : 'Upcoming Shows (Next 31 Days)'
   const emptyMessage = seasonId ? 'No shows in this season yet.' : 'No live shows.'
 
   return (

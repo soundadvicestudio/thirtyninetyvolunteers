@@ -59,7 +59,6 @@ function getTypeIcon(type: NotificationType): LucideIcon {
 export default function NotificationPanel({ notificationCounts, initialNotifications }: NotificationPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRow[]>(initialNotifications)
-  const [counts, setCounts] = useState<NotificationCounts>(notificationCounts)
   const [isPending, startTransition] = useTransition()
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -76,19 +75,20 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
+  // direct_message notifications have their own TopBar badge (MessagesIcon,
+  // driven by notificationCounts.messageUnread) — excluded here so they
+  // don't double-count in the bell panel or its badge.
+  const visibleNotifications = notifications.filter((n) => n.type !== 'direct_message')
+  const unreadPersistent = visibleNotifications.filter((n) => !n.read_at).length
+
+  const { ephemeral } = notificationCounts
   const totalEphemeral =
-    counts.ephemeral.pendingRegistrations + counts.ephemeral.pendingCalendarEvents + counts.ephemeral.pendingConsentForms
-  const totalBadge = totalEphemeral + counts.unreadPersistent
+    ephemeral.pendingRegistrations + ephemeral.pendingCalendarEvents + ephemeral.pendingConsentForms
+  const totalBadge = totalEphemeral + unreadPersistent
 
   const handleNotificationClick = (n: NotificationRow) => {
     if (!n.read_at) {
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item))
-      )
-      setCounts((prev) => ({
-        ...prev,
-        unreadPersistent: Math.max(0, prev.unreadPersistent - 1),
-      }))
+      setNotifications((prev) => prev.filter((item) => item.id !== n.id))
     }
     setIsOpen(false)
     startTransition(async () => {
@@ -98,8 +98,7 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
 
   const handleMarkAllRead = () => {
     startTransition(async () => {
-      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })))
-      setCounts((prev) => ({ ...prev, unreadPersistent: 0 }))
+      setNotifications([])
       await markAllNotificationsRead()
     })
   }
@@ -128,7 +127,7 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 Needs Action
               </div>
 
-              {counts.ephemeral.pendingRegistrations > 0 && (
+              {ephemeral.pendingRegistrations > 0 && (
                 <Link
                   href="/crew/settings/users"
                   onClick={() => setIsOpen(false)}
@@ -136,14 +135,14 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {`${counts.ephemeral.pendingRegistrations} pending registration${
-                      counts.ephemeral.pendingRegistrations === 1 ? '' : 's'
+                    {`${ephemeral.pendingRegistrations} pending registration${
+                      ephemeral.pendingRegistrations === 1 ? '' : 's'
                     }`}
                   </span>
                 </Link>
               )}
 
-              {counts.ephemeral.pendingCalendarEvents > 0 && (
+              {ephemeral.pendingCalendarEvents > 0 && (
                 <Link
                   href="/crew/calendar/pending"
                   onClick={() => setIsOpen(false)}
@@ -151,14 +150,14 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {`${counts.ephemeral.pendingCalendarEvents} event${
-                      counts.ephemeral.pendingCalendarEvents === 1 ? '' : 's'
+                    {`${ephemeral.pendingCalendarEvents} event${
+                      ephemeral.pendingCalendarEvents === 1 ? '' : 's'
                     } awaiting approval`}
                   </span>
                 </Link>
               )}
 
-              {counts.ephemeral.pendingConsentForms > 0 && (
+              {ephemeral.pendingConsentForms > 0 && (
                 <Link
                   href="/crew/settings/documents"
                   onClick={() => setIsOpen(false)}
@@ -166,8 +165,8 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
                 >
                   <AlertCircle size={16} className="text-orange-500 shrink-0" />
                   <span className="text-sm text-dark dark:text-dark-text">
-                    {`${counts.ephemeral.pendingConsentForms} consent form${
-                      counts.ephemeral.pendingConsentForms === 1 ? '' : 's'
+                    {`${ephemeral.pendingConsentForms} consent form${
+                      ephemeral.pendingConsentForms === 1 ? '' : 's'
                     } to review`}
                   </span>
                 </Link>
@@ -179,20 +178,24 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
 
           <div className="flex justify-between items-center px-4 pt-3 pb-1">
             <span className="text-xs font-semibold text-mid-gray uppercase tracking-wide">Notifications</span>
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              disabled={isPending || counts.unreadPersistent === 0}
-              className="text-xs text-mid-gray hover:text-dark disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Mark all read
-            </button>
+            {unreadPersistent > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                disabled={isPending}
+                className="text-xs text-mid-gray hover:text-dark disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Mark all read
+              </button>
+            )}
           </div>
 
-          {notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-mid-gray dark:text-dark-muted">No notifications yet</div>
+          {visibleNotifications.length === 0 ? (
+            <p className="text-sm text-mid-gray dark:text-dark-muted text-center py-4">
+              No new notifications
+            </p>
           ) : (
-            notifications.map((n) => {
+            visibleNotifications.map((n) => {
               const Icon = getTypeIcon(n.type)
               const isUnread = n.read_at === null
               return (
