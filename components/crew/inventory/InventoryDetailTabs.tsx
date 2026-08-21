@@ -22,7 +22,6 @@ import type {
   InventoryCondition,
   InventoryItemWithStatus,
 } from '@/types/inventory'
-import type { AdminRole } from '@/types/admin'
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg'
 
@@ -780,8 +779,6 @@ export default function InventoryDetailTabs({
   categories,
   checkouts,
   availableItems,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  adminRole,
   canWrite,
   canDelete,
   canSeeNotes,
@@ -792,7 +789,6 @@ export default function InventoryDetailTabs({
   categories: InventoryCategory[]
   checkouts: InventoryCheckout[]
   availableItems: InventoryItemWithStatus[]
-  adminRole: AdminRole
   canWrite: boolean
   canDelete: boolean
   canSeeNotes: boolean

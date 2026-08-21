@@ -59,7 +59,6 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
         categories={categories}
         checkouts={checkouts}
         availableItems={allItems}
-        adminRole={admin.role}
         canWrite={canWrite}
         canDelete={canDelete}
         canSeeNotes={canSeeNotes}
