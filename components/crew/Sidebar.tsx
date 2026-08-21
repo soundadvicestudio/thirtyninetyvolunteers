@@ -76,7 +76,10 @@ const UTILITIES_HREFS = [
   '/crew/media',
 ] as const
 
-const SETTINGS_HREFS = ['/crew/settings'] as const
+const SETTINGS_HREFS = [
+  '/crew/settings',
+  '/crew/help',
+] as const
 
 export default function Sidebar({
   admin,
@@ -141,10 +144,6 @@ export default function Sidebar({
   const peopleItems = getGroupItems(PEOPLE_HREFS)
   const utilitiesItems = getGroupItems(UTILITIES_HREFS)
   const settingsItems = getGroupItems(SETTINGS_HREFS)
-
-  // Help item for footer — rendered unconditionally since it has no flag gate and is
-  // Production-accessible. Retrieved from NAV_ITEMS directly.
-  const helpItem = NAV_ITEMS.find((item) => item.href === '/crew/help')!
 
   // Local render function for a single nav link. Handles active state, badge
   // rendering, and mobile close on click.
@@ -219,7 +218,7 @@ export default function Sidebar({
           <X size={20} />
         </button>
 
-        <Link href="/crew/dashboard" className="flex items-center justify-center py-6">
+        <Link href="/crew/dashboard" className="flex items-center justify-center py-3">
           <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
         </Link>
 
@@ -267,38 +266,6 @@ export default function Sidebar({
             </div>
           )}
         </nav>
-
-        <div className="px-2 py-3 border-t border-neutral-border shrink-0 space-y-0.5">
-          {/* Help — ungrouped footer link */}
-          {helpItem && (
-            <Link
-              href={helpItem.href}
-              onClick={close}
-              className={
-                isActivePath(pathname, helpItem.href)
-                  ? 'flex items-center gap-3 rounded-r ' +
-                    'border-l-4 px-3 py-2 text-sm ' +
-                    'font-medium bg-brand-primary-light ' +
-                    'text-brand-primary'
-                  : 'flex items-center gap-3 rounded ' +
-                    'px-3 py-2 text-sm font-medium ' +
-                    'text-dark dark:text-dark-text ' +
-                    'hover:bg-gray-100 ' +
-                    'dark:hover:bg-white/10'
-              }
-              style={
-                isActivePath(pathname, helpItem.href)
-                  ? {
-                      borderLeftColor: 'var(--brand-primary)',
-                    }
-                  : undefined
-              }
-            >
-              <helpItem.icon size={18} />
-              {helpItem.label}
-            </Link>
-          )}
-        </div>
       </aside>
     </>
   )
