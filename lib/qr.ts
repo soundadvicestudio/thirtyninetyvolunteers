@@ -1,13 +1,11 @@
 import 'server-only'
 import { existsSync } from 'node:fs'
-import { createRequire } from 'node:module'
+import path from 'node:path'
 import QRCode from 'qrcode'
 import { Resvg } from '@resvg/resvg-js'
 
 const BANNER_HEIGHT_UNITS = 10
 const BANNER_FONT_SIZE = 2.8
-
-const nodeRequire = createRequire(import.meta.url)
 
 // @resvg/resvg-js resolves `font-family` against fonts discovered on the
 // host OS (font.loadSystemFonts defaults to true when no `font` option is
@@ -19,19 +17,16 @@ const nodeRequire = createRequire(import.meta.url)
 // not text) — only the banner text vanished, which is why the banner
 // appeared completely missing rather than just malformed.
 //
-// Next.js already bundles a font (Geist, used by @vercel/og to solve this
-// identical problem for OG image generation on Vercel) inside its own
-// dependency tree — reusing it here avoids adding a new package or
-// fabricating a font asset. Resolved defensively: if a future `next`
-// version moves this internal file, generation falls back to
-// loadSystemFonts's best-effort default rather than throwing.
+// A bundled font ships in the repo at public/fonts/banner-font.ttf (Inter
+// Regular, SIL Open Font License) instead of reaching into next's internal
+// node_modules tree — createRequire().resolve() on a static string is
+// statically analyzed by Turbopack, which then tries to import the .ttf as
+// a module and fails the build. process.cwd() is a runtime-only expression
+// Turbopack cannot resolve at build time, so it is never treated as an
+// import.
 function resolveBannerFontFile(): string | undefined {
-  try {
-    const fontPath = nodeRequire.resolve('next/dist/compiled/@vercel/og/Geist-Regular.ttf')
-    return existsSync(fontPath) ? fontPath : undefined
-  } catch {
-    return undefined
-  }
+  const fontPath = path.join(process.cwd(), 'public', 'fonts', 'banner-font.ttf')
+  return existsSync(fontPath) ? fontPath : undefined
 }
 
 function escapeXml(str: string): string {
@@ -89,18 +84,23 @@ export async function generateQR(
     finalSvg = finalSvg.replace('</svg>', `${bannerMarkup}</svg>`)
   }
 
-  const bannerFontFile = resolveBannerFontFile()
-  const resvg = new Resvg(finalSvg, {
-    fitTo: { mode: 'width', value: 2000 },
-    font: bannerFontFile
+  const bannerFontFile = trimmedBanner ? resolveBannerFontFile() : undefined
+  const resvg = new Resvg(
+    finalSvg,
+    trimmedBanner
       ? {
-          loadSystemFonts: false,
-          fontFiles: [bannerFontFile],
-          defaultFontFamily: 'Geist',
-          sansSerifFamily: 'Geist',
+          fitTo: { mode: 'width', value: 2000 },
+          font: bannerFontFile
+            ? {
+                loadSystemFonts: false,
+                fontFiles: [bannerFontFile],
+                defaultFontFamily: 'Inter',
+                sansSerifFamily: 'Inter',
+              }
+            : { loadSystemFonts: true },
         }
-      : { loadSystemFonts: true },
-  })
+      : { fitTo: { mode: 'width', value: 2000 } }
+  )
   const pngBuffer = resvg.render().asPng()
   const pngBase64 = pngBuffer.toString('base64')
 
