@@ -28,6 +28,7 @@ export const HREF_LABELS: Record<string, string> = {
   '/crew/tools/checkin': 'Check-In',
   '/crew/communication': 'Communication',
   '/crew/media': 'Media',
+  '/crew/settings/beta': 'Beta Feedback',
   '/crew/settings': 'Settings',
   '/crew/help': 'Help',
 }
@@ -61,7 +62,7 @@ export const DEFAULT_LINK_ORDER: Record<GroupKey, string[]> = {
     '/crew/communication',
     '/crew/media',
   ],
-  settings: ['/crew/settings', '/crew/help'],
+  settings: ['/crew/settings/beta', '/crew/settings', '/crew/help'],
 }
 
 // Display labels for each group — used in the

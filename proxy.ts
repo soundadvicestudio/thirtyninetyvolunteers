@@ -91,7 +91,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/crew/inventory') ||
     pathname.startsWith('/crew/forums') ||
     pathname.startsWith('/crew/messages') ||
-    pathname.startsWith('/crew/users')
+    pathname.startsWith('/crew/users') ||
+    pathname.startsWith('/crew/settings/beta')
 
   let flags: FeatureFlags | null = null
   if (needsFlagCheck) {
@@ -244,6 +245,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith('/crew/users') && flags && !flags.messages) {
+    return NextResponse.redirect(new URL('/crew/dashboard', request.url))
+  }
+
+  if (pathname.startsWith('/crew/settings/beta') && flags && !flags.beta) {
     return NextResponse.redirect(new URL('/crew/dashboard', request.url))
   }
 

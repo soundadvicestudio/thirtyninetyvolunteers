@@ -270,6 +270,14 @@ export default async function SettingsPage() {
             description="Publish announcements to crew members on their dashboard."
           />
         )}
+
+        {canAccessAdminSettings && (
+          <LinkedCard
+            href="/crew/settings/beta"
+            title="Beta Feedback"
+            description="View and manage feedback submissions from crew members."
+          />
+        )}
       </div>
     </div>
   )

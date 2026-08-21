@@ -40,6 +40,7 @@ export type SetupPanelInitialValues = {
   feature_inventory: string
   feature_forums: string
   feature_messages: string
+  feature_beta: string
   instance_label: string
   not_found_heading: string
   not_found_body: string
@@ -452,6 +453,9 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [messagesEnabled, setMessagesEnabled] = useState(
     initialValues.feature_messages === 'true'
   )
+  const [betaEnabled, setBetaEnabled] = useState(
+    initialValues.feature_beta === 'true'
+  )
   const [announcementsOaEnabled, setAnnouncementsOaEnabled] = useState(
     initialValues.announcements_oa_enabled === 'true'
   )
@@ -469,6 +473,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_inventory', inventoryEnabled ? 'true' : 'false')
     fd.append('feature_forums', forumsEnabled ? 'true' : 'false')
     fd.append('feature_messages', messagesEnabled ? 'true' : 'false')
+    fd.append('feature_beta', betaEnabled ? 'true' : 'false')
     fd.append('announcements_oa_enabled', announcementsOaEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
@@ -539,6 +544,12 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
           inaccessible."
         enabled={messagesEnabled}
         onToggle={() => setMessagesEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Beta Feedback"
+        description="Enable the Beta Feedback page for crew members to submit feature requests and bug reports."
+        enabled={betaEnabled}
+        onToggle={() => setBetaEnabled((v) => !v)}
       />
       <ToggleRow
         label="Owner Admin Announcements"

@@ -11,6 +11,7 @@ import {
   Mic2,
   Package,
   MessageSquare,
+  MessageSquarePlus,
   Inbox,
   Users,
   UserSearch,
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
   { label: 'Check-In', href: '/crew/tools/checkin', icon: ScanLine },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
   { label: 'Media', href: '/crew/media', icon: FolderOpen },
+  { label: 'Beta Feedback', href: '/crew/settings/beta', icon: MessageSquarePlus },
   { label: 'Settings', href: '/crew/settings', icon: Settings },
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]
@@ -79,6 +81,7 @@ const UTILITIES_HREFS = [
 ] as const
 
 const SETTINGS_HREFS = [
+  '/crew/settings/beta',
   '/crew/settings',
   '/crew/help',
 ] as const
@@ -122,6 +125,7 @@ export default function Sidebar({
     '/crew/forums': flags.forums,
     '/crew/messages': flags.messages,
     '/crew/users': flags.messages,
+    '/crew/settings/beta': flags.beta,
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -165,9 +169,12 @@ export default function Sidebar({
   // rendering, and mobile close on click.
   const renderLink = (item: (typeof NAV_ITEMS)[number]) => {
     const isShows = item.href === '/crew/shows'
+    const isSettings = item.href === '/crew/settings'
     const active = isShows
       ? pathname === '/crew/shows' ||
         (pathname.startsWith('/crew/shows/') && !pathname.startsWith('/crew/shows/opportunities'))
+      : isSettings
+      ? isActivePath(pathname, item.href) && !pathname.startsWith('/crew/settings/beta')
       : isActivePath(pathname, item.href)
 
     return (
