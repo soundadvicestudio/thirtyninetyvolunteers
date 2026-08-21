@@ -5838,9 +5838,13 @@ complete (MESSAGES.A–7, 8 prompts). Phase TZ ✓ Complete (TZ.A through TZ.6, 
 prompts shipped). Phase MM ✓ Complete (MM.A audit, MM.1, MM.2 — 3 prompts).
 Phase FORUMS-FIX ✓ Complete. Phase FORUMS-UX ✓ Complete. Phase ANNOUNCE ✓
 Complete. Phase SHOWDELETE ✓ Complete. Phase SHOWARCHIVE ✓ Complete (new
-phase — not in original Beta plan). Platform in active Beta (Executive
-Committee testing). Phase 17 (Launch) deferred pending Beta refinement.
-Remaining Beta phases: QRBANNER, QRANALYTICS, SIDEBAR, NAVORDER.*
+phase — not in original Beta plan). Phase QRBANNER ✓
+Complete. Phase QRANALYTICS ✓ Complete. Phase SIDEBAR
+✓ Complete (SIDEBAR.A audit + SIDEBAR.1 mockups +
+SIDEBAR.2–6 production rollout, 6 prompts). Phase
+NAVORDER ✓ Complete (NAVORDER.A audit + NAVORDER.1).
+All planned Beta phases complete. Phase 17 (Launch)
+is next.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -6915,6 +6919,388 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      accordion. 2 files. Commit 6557260.
 30BN-DOC.83        ✓ Brief v6.0→v6.1 Part A (§1/§7/§8/§9).
 30BN-DOC.84        ✓ Brief v6.1 Part B (§11/§13 — this prompt).
+30BN-QRBANNER.A    ✓ Read-only audit. Key: PNG generated
+                     independently from SVG via
+                     QRCode.toBuffer() — switching to
+                     @resvg/resvg-js rasterization
+                     confirmed as the correct approach.
+                     No code. No commit.
+30BN-QRBANNER.1    ✓ Migration 041 + @resvg/resvg-js +
+                     banner SVG composition + escapeXml()
+                     + QRGeneratorForm banner toggle +
+                     QRHistoryPanel banner display.
+                     7 files. Commit 9f5f341.
+30BN-QRANALYTICS.A ✓ Read-only audit. Key: proxy.ts
+                     requires no changes; parseUserAgent()
+                     manual regex defined; app/documents/
+                     [token]/route.ts confirmed as
+                     structural template. No code.
+                     No commit.
+30BN-QRANALYTICS.1 ✓ Migration 042 + app/go/[token]/
+                     route.ts + lib/actions/qr.ts redirect
+                     URL + lib/data/qr.ts schema extension.
+                     4 files. Commit f2c1a73.
+30BN-QRANALYTICS.2 ✓ getQRScanStats() + QRHistoryPanel
+                     three-state analytics display.
+                     3 files. Commit ebbf270.
+30BN-QRANALYTICS.2b ✓ Expandable per-scan log:
+                     QRScanLogToggle.tsx + events[]
+                     in QRAnalyticsSummary. 3 files.
+                     Commit 9cf08a5.
+30BN-SIDEBAR.A     ✓ Read-only audit (Sidebar.tsx,
+                     TopBar.tsx, layout.tsx,
+                     StyleSandbox.tsx). Group structure
+                     and active state decisions confirmed.
+                     No code. No commit.
+30BN-SIDEBAR.1     ✓ SidebarMockup.tsx + TopNavMockup.tsx
+                     added to Style Sandbox. 3 files.
+                     Commit 6571a7b.
+30BN-SIDEBAR.2     ✓ Production grouped sidebar rollout.
+                     Crew Directory label. Active state
+                     redesign. 1 file. Commit 62e6497.
+30BN-SIDEBAR.3     ✓ Dark mode hover fix (dark:hover:
+                     bg-white/10, 4 locations) +
+                     ThemeToggle to TopBar + Change
+                     Password bordered button +
+                     border-neutral-border on TopBar.
+                     2 files. Commit 99c680b.
+30BN-SIDEBAR.4     ✓ Platform Setup to TopBar +
+                     admin name font-semibold + truncate.
+                     2 files. Commit 57ec5fe.
+30BN-SIDEBAR.5     ✓ Help into Settings group + footer
+                     removed + logo padding reduced.
+                     1 file. Commit b9f4c5e.
+30BN-SIDEBAR.6     ✓ Admin identity block (name + role
+                     badge stacked, full name displays).
+                     1 file. Commit 2566a92.
+30BN-NAVORDER.A    ✓ Read-only audit (Sidebar.tsx,
+                     SetupPanel.tsx, setup/page.tsx,
+                     setup.ts, layout.tsx, hearing options
+                     pattern). SidebarNavOrder type
+                     design confirmed. No code.
+                     No commit.
+30BN-NAVORDER.1    ✓ types/sidebar.ts + saveSidebarNavOrder()
+                     + setup/page.tsx + SetupPanel.tsx +
+                     NavOrderSection.tsx + layout.tsx +
+                     Sidebar.tsx. 2 new files, 5 modified.
+                     Commit d359668.
+30BN-DOC.85        ✓ Brief v6.1→v6.2 Part A (§1/§3/§7/
+                     §8/§9 — QRBANNER/QRANALYTICS/SIDEBAR/
+                     NAVORDER complete, migrations 041+042,
+                     qr_scan_events schema, sidebar_nav_
+                     order key).
+30BN-DOC.86        ✓ Brief v6.2 Part B (§11 — this prompt).
+
+### Phase QRBANNER — QR Code Label Banner ✓ Complete
+
+**QRBANNER.A ✓** — Read-only audit (no code). Five
+files audited: `lib/qr.ts` (confirmed `QRCode.toBuffer()`
+for PNG generation — independent of SVG; critical finding
+driving the @resvg/resvg-js decision), `lib/actions/qr.ts`
+(confirmed `generateQRCode(url, label)` signature and
+insert structure), `lib/data/qr.ts` (confirmed
+`QRHistoryEntry` type and SELECT clause), `QRGeneratorForm
+.tsx` (confirmed state management and result flow),
+`QRHistoryPanel.tsx` (confirmed row structure and
+insertion point for banner_text). Key finding: PNG was
+generated independently from SVG via `QRCode.toBuffer()`
+— adding a banner to the SVG alone would leave the PNG
+bannerless. Decision: switch all PNG generation to
+rasterize the final composed SVG via `@resvg/resvg-js`.
+No code. No commit.
+
+**QRBANNER.1 ✓** — Implementation. `@resvg/resvg-js`
+installed. Migration 041 applied (`banner_text text`
+nullable on `qr_codes`). `lib/qr.ts`: `generateQR(url,
+bannerText?)` — optional banner param; SVG composition
+extends viewBox by `BANNER_HEIGHT_UNITS = 6`, injects
+white `<rect>` + `<text>` element (`BANNER_FONT_SIZE =
+2.5`, `text-anchor="middle"`, `dominant-baseline=
+"middle"`); private `escapeXml()` helper escapes admin-
+supplied text before SVG injection; PNG generation
+switched from `QRCode.toBuffer()` to `new Resvg(svg,
+{ fitTo: { mode: 'width', value: 2000 } }).render()
+.asPng()` — SVG and PNG now always visually identical
+including banner. `next.config.ts`: `serverExternal
+Packages: ["@resvg/resvg-js"]` added (napi-rs native
+binary). `lib/actions/qr.ts`: `generateQRCode(url,
+label, bannerText?)` — third param added; passes
+`bannerText?.trim() || undefined` to `generateQR()`;
+inserts `banner_text: bannerText?.trim() || null` to
+`qr_codes`. `lib/data/qr.ts`: `banner_text` added to
+`QRHistoryEntry` type and SELECT clause. `QRGenerator
+Form.tsx`: `bannerEnabled`/`bannerText` state; toggle
+clears `bannerText` when disabled; `qrResult` clears
+on banner state change; `maxLength={50}` on banner
+text input. `QRHistoryPanel.tsx`: conditional `Banner:
+{row.banner_text}` line in history row left block.
+`label` and `banner_text` are distinct: label = history
+display identifier; banner_text = text printed on image.
+0 flags. npm run lint: 0/0. tsc: 0 errors. 7 files
+modified. Commit 9f5f341.
+
+### Phase QRANALYTICS — QR Code Scan Tracking ✓ Complete
+
+**QRANALYTICS.A ✓** — Read-only audit (no code). Eight
+tasks: `proxy.ts` (confirmed no changes needed — /go/
+paths pass through untouched, no existing guard
+intercepts them, route handler executes without proxy
+coverage); `lib/actions/qr.ts` (confirmed live state
+after QRBANNER.1); `lib/data/qr.ts` (confirmed
+`QRHistoryEntry` type + SELECT after QRBANNER.1);
+`QRHistoryPanel.tsx` (confirmed row structure and
+analytics insertion point); `app/go/` directory (does
+not exist — new); `NEXT_PUBLIC_SITE_URL` usage pattern
+(confirmed `process.env.NEXT_PUBLIC_SITE_URL ?? ''`
+fallback pattern); `app/documents/[token]/route.ts`
+(confirmed structural template for new route handler —
+plain `Request` param, `getAdminClient()`, `Response
+.redirect()` with 302, params as Promise); live RLS
+query on `qr_codes` (confirmed policy naming convention
+for `qr_scan_events` RLS). Proposed `parseUserAgent()`
+function: Edge before Chrome (both contain "Edg/"),
+tablet before mobile (Android tablet lacks "Mobile"),
+fallback 'desktop'/'Other'. No code. No commit.
+
+**QRANALYTICS.1 ✓** — Migration + redirect route +
+server action updates. Migration 042 applied:
+`redirect_token uuid` (nullable, no DEFAULT) +
+`target_url text` on `qr_codes`; partial index
+`idx_qr_codes_redirect_token WHERE redirect_token IS
+NOT NULL`; `qr_scan_events` table (id, qr_code_id FK
+CASCADE, scanned_at, user_agent, device_type, browser);
+index `idx_qr_scan_events_qr_code_id`; RLS:
+`qr_scan_events_select_authenticated` (SELECT, true)
++ `qr_scan_events_delete_sa_oa` (DELETE,
+is_super_admin_or_owner_admin()); no INSERT policy
+(writer uses getAdminClient()). `app/go/[token]/
+route.ts` (new — PUBLIC ROUTE header, `getAdminClient()`
+only, plain `Request` param, params as Promise, private
+`parseUserAgent()`, best-effort scan insert in try/catch,
+`Response.redirect()` to `target_url` or `/not-found`).
+`lib/actions/qr.ts`: `crypto.randomUUID()` generates
+`redirectToken` before `generateQR()` call; QR encodes
+`/go/${redirectToken}`; `redirect_token` + `target_url`
+added to insert; `NEXT_PUBLIC_SITE_URL ?? ''` fallback.
+`lib/data/qr.ts`: `redirect_token` + `target_url` added
+to `QRHistoryEntry` + SELECT. Owner browser verification
+PASSED: QR encodes /go/ URL, redirect works, row in
+`qr_scan_events` confirmed. 0 flags. 4 files created/
+modified. Commit f2c1a73.
+
+**QRANALYTICS.2 ✓** — Analytics display UI.
+`lib/data/qr.ts`: `QRScanEvent` type (scannedAt,
+deviceType, browser) + `QRAnalyticsSummary` type
+(scanCount, lastScannedAt, deviceBreakdown, events[])
++ `getQRScanStats(supabase, qrCodeIds)` — single
+`.in('qr_code_id', qrCodeIds)` query with
+`.select('qr_code_id, scanned_at, device_type,
+browser').order('scanned_at', { ascending: false })`;
+in-memory aggregation into `Map<string,
+QRAnalyticsSummary>`; empty-array guard (Supabase
+errors on `.in('col', [])`). `qr-generator/page.tsx`:
+fetches `getQRScanStats()` alongside history; passes
+`scanStats` to `QRHistoryPanel`. `QRHistoryPanel.tsx`:
+three-state analytics per row — legacy (`redirect_token`
+IS NULL) → "Analytics not available"; trackable, zero
+scans → "No scans yet"; scans present → compact stats
+line (`N scans · Last: MMM d · Mobile X / Desktop Y /
+Tablet Z`). Deviation from prompt spec: `formatCT` lives
+in `@/lib/utils/date` (not `@/lib/utils/time` as
+specified — corrected by Claude Code from live file).
+0 flags. 3 files modified. Commit ebbf270.
+
+**QRANALYTICS.2b ✓** — Expandable per-scan log.
+`lib/data/qr.ts`: `events: QRScanEvent[]` added to
+`QRAnalyticsSummary`; `browser` added to SELECT clause;
+`.order('scanned_at', { ascending: false })` added;
+events accumulated in aggregation loop. `QRScanLog
+Toggle.tsx` (new — 'use client'; `useState` expand/
+collapse; reads timezone from `document.body.dataset
+.timezone` with SSR guard — NOT prop-drilled from Server
+Component, per standing Client Component timezone
+pattern; toggle label "Show {n} scan(s)" / "Hide
+scans"; per-event rows showing `formatCT(scannedAt,
+'MMM d, yyyy h:mm a', timezone)` · device · browser).
+`QRHistoryPanel.tsx`: imports `QRScanLogToggle`;
+renders after compact stats line inside `scanCount > 0`
+branch only; passes only `events` prop (not timezone —
+component reads timezone internally). Deviation from
+prompt spec: prompt specified prop-drilled `timezone`
+on `QRScanLogToggle` — deviated to internal
+`document.body.dataset.timezone` read per the
+established Client Component timezone invariant.
+0 flags. 3 files modified. Commit 9cf08a5.
+
+### Phase SIDEBAR — Grouped Sidebar + Top Nav Style ✓ Complete
+
+**SIDEBAR.A ✓** — Read-only audit (no code). Four
+files audited: `Sidebar.tsx` (18 NAV_ITEMS confirmed in
+flat list; `isActivePath()` with Shows special case;
+active state was `bg-brand-primary text-white`; flat
+`.map()` render; FLAG_GATED_HREFS + Production allowlist
+confirmed); `TopBar.tsx` (border-divider on outer
+wrapper; right-side: MessagesIcon, NotificationPanel,
+admin name, role badge, Change Password as plain link,
+Sign Out); `app/crew/(app)/layout.tsx` (Promise.all
+structure confirmed; Sidebar and TopBar prop lists);
+`StyleSandbox.tsx` (Section 2 divider pattern
+confirmed; SetupPanelMockup is last entry before
+closing div). Proposed four-group structure: Events
+(Calendar top, Shows, Rehearsals, Auditions),
+People (Volunteers, Forums, Messages, Directory,
+Opportunities), Utilities (Inventory, Forms, QR
+Generator, Check-In, Communication, Media), Settings
+(Settings). Dashboard ungrouped above groups; Help
+ungrouped in footer; Communication in Utilities (not
+People). F1: active fill — `bg-brand-primary-subtle`
+lacks dark mode coverage; decision: use `bg-brand-
+primary-light` (confirmed R35-safe with existing dark
+coverage). F2: Dashboard ungrouped above groups,
+Help outside Settings. No code. No commit.
+
+**SIDEBAR.1 ✓** — Style Sandbox mockups only. Zero
+production files touched. `SidebarMockup.tsx` (new —
+named export; no 'use client'; grouped sidebar with
+Dashboard active, four labeled groups with correct
+links, unread badges on Forums/Messages, footer with
+Help + Platform Setup with SlidersHorizontal + static
+ThemeToggle placeholder). `TopNavMockup.tsx` (new —
+named export; no 'use client'; border-neutral-border
+outer wrapper, badge-decorated Mail/Bell, admin name +
+role badge, visual Sign Out div). `StyleSandbox.tsx`:
+both imported and appended after SetupPanelMockup with
+standard dividers. All 19 icons verified via live
+lucide-react package before use. 3 files. Commit
+6571a7b.
+
+**SIDEBAR.2 ✓** — Production grouped sidebar rollout.
+`Sidebar.tsx` restructured: five module-level href
+constants (EVENTS_HREFS with Calendar top, PEOPLE_HREFS
+with Crew Directory label, UTILITIES_HREFS, SETTINGS_HREFS,
+DASHBOARD_HREF); `getGroupItems()` unchanged (call sites
+resolve dynamic array); `renderLink()` local function
+handles active state, badges, `onClick={close}` for all
+links; four hardcoded group blocks → single `.map()`
+over `resolvedGroupOrder`; Directory label changed from
+"Directory" to "Crew Directory"; active state:
+`border-l-4` + `style={{ borderLeftColor: 'var(--brand-
+primary)' }}` + `bg-brand-primary-light text-brand-
+primary` + `rounded-r`; inactive hover: `dark:hover:
+bg-dark-surface/50` (fixed SIDEBAR.3). 1 file. Commit
+62e6497.
+
+**SIDEBAR.3 ✓** — Dark mode hover fix + TopBar polish.
+`Sidebar.tsx`: `dark:hover:bg-dark-surface/50` →
+`dark:hover:bg-white/10` in ALL 4 locations (3 named
+link locations + mobile X close button found by Claude
+Code). `ThemeToggle` removed from Sidebar, imported +
+rendered in `TopBar.tsx` (between NotificationPanel and
+admin name). Change Password converted from plain link
+to bordered button (`KeyRound` icon at `className="w-4
+h-4"`). TopBar outer wrapper: `border-divider
+dark:border-dark-border` → `border-neutral-border`.
+F1 (4 hover locations not 3) and F2 (icon sizing:
+`className="w-4 h-4"` not `size={14}`) both correctly
+caught and resolved by Claude Code from live file
+inspection. 2 files. Commit 99c680b.
+
+**SIDEBAR.4 ✓** — Platform Setup to TopBar + admin
+name polish. `Sidebar.tsx`: Platform Setup SA-only
+conditional block removed from footer entirely; Settings
+icon import retained (still used by /crew/settings
+NAV_ITEMS entry). `TopBar.tsx`: `SlidersHorizontal`
+added to lucide-react import; Platform Setup added as
+SA-only bordered Link to `/crew/settings/setup` (same
+className as Change Password, SlidersHorizontal icon
+at `className="w-4 h-4"`, positioned immediately left
+of Change Password); admin name span: `font-semibold`
++ `max-w-[120px] truncate` added. Prompt spec had
+`{ROLE_BADGE_CLASSES[admin.role]}` as literal text in
+className string — Claude Code corrected to template
+literal. 2 files. Commit 57ec5fe.
+
+**SIDEBAR.5 ✓** — Help into Settings group, remove
+footer, reduce logo padding. `Sidebar.tsx`: `/crew/help`
+added to `SETTINGS_HREFS`; `helpItem` const removed
+(Help now flows through `getGroupItems()` pipeline);
+footer block (border-t wrapper + Help link) removed
+entirely; logo/org header padding reduced (live value
+was `py-6`, not `py-4` as prompt assumed — changed to
+`py-3` per the prompt's explicit target). F1: prompt
+stated current padding as `py-4` but live file had
+`py-6`; Claude Code read the live file and applied the
+correct target. 1 file. Commit b9f4c5e.
+
+**SIDEBAR.6 ✓** — TopBar user identity polish.
+`TopBar.tsx`: `max-w-[120px] truncate` removed from
+admin name; admin name and role badge wrapped together
+in `hidden sm:flex flex-col items-end gap-0.5` identity
+block; name uses `leading-tight`; role badge `py-1` →
+`py-0.5` for compact stacked layout. Prompt spec had
+invalid className syntax (`{ROLE_BADGE_CLASSES[...]}` as
+literal text) — Claude Code corrected to template
+literal. 1 file. Commit 2566a92.
+
+### Phase NAVORDER — Sidebar Nav Order ✓ Complete
+
+**NAVORDER.A ✓** — Read-only audit (no code). Six files
+audited: `Sidebar.tsx` (five group href constants,
+`getGroupItems()` body, four hardcoded group render
+blocks, `SidebarProps` interface, group label strings);
+`SetupPanel.tsx` (`SetupPanelInitialValues` type, nine
+numbered sections, section card pattern, `SaveFeedback`
+and `cardClasses` not importable from SetupPanel —
+standalone components must define own equivalents,
+`AnnouncementSection` is a non-numbered standalone
+trailing element); `setup/page.tsx` (SETUP_KEYS array,
+`initialValues` construction with `|| ''` fallback
+pattern); `lib/actions/setup.ts` (`upsertSetting()`
+signature, `dashboard_announcement_roles` JSON storage
+precedent confirmed: `JSON.stringify()` before
+`upsertSetting()`); `app/crew/(app)/layout.tsx`
+(Promise.all structure, `<Sidebar>` prop list);
+hearing options reorder pattern (↑↓ buttons, disabled
+state on first/last, whole-array rewrite on save —
+single Save button not per-click). Proposed
+`SidebarNavOrder` type: `{ groupOrder: GroupKey[],
+linkOrder: Record<GroupKey, string[]> }`. No code.
+No commit.
+
+**NAVORDER.1 ✓** — Implementation. Seven files.
+`types/sidebar.ts` (new): `GroupKey` type union,
+`SidebarNavOrder` type, `HREF_LABELS` record (maps
+every href to display label — "Crew Directory" for
+`/crew/users`), `DEFAULT_GROUP_ORDER`, `DEFAULT_LINK_ORDER`
+(matches live `*_HREFS` constants exactly),
+`GROUP_LABELS`. `lib/actions/setup.ts`:
+`saveSidebarNavOrder()` appended — SA only, validates
+shape, fetches before-value for audit, `JSON.stringify()`
+→ `upsertSetting()`, `logAction()`, `revalidatePath(
+'/crew', 'layout')`. `setup/page.tsx`: `sidebar_nav_order`
+added to SETUP_KEYS (now 29); `|| ''` fallback in
+initialValues. `SetupPanel.tsx`: `sidebar_nav_order:
+string` in `SetupPanelInitialValues`; `<NavOrderSection>`
+rendered before `<AnnouncementSection>`. `NavOrderSection
+.tsx` (new — 'use client'): `parseNavOrder()` +
+`moveItem()` helpers; `useState<SidebarNavOrder>` with
+lazy init; group order reorder UI (4 rows, ↑↓); per-group
+link reorder (4 sequential sub-panels, ↑↓); single Save
+button + Reset to defaults; no `<form>` elements (R13.3a).
+`app/crew/(app)/layout.tsx`: 5th Promise.all entry for
+`sidebar_nav_order` fetch; JSON.parse with try/catch;
+`navOrder={navOrder}` on `<Sidebar>`. `Sidebar.tsx`:
+`navOrder?: SidebarNavOrder` prop (two locations —
+interface + destructuring, confirmed two-location prop
+addition pattern); `GROUP_HREF_DEFAULTS`; `resolvedGroup
+Order` + `groupItems` replace four hardcoded derivations;
+group render loop → single `.map()` over `resolvedGroup
+Order`. F1: prompt spec omitted `await` on `getServer
+Client()` — Claude Code corrected from live file.
+F2: `cardClasses` includes `p-6` padding — prompt spec
+would have doubled padding; Claude Code applied only
+structural classes to outer wrapper. 2 new files,
+5 modified. Commit d359668.
 
 ### Phase STYLE — Style Sandbox & Design Token Extension ✓ Complete
 
@@ -7744,78 +8130,18 @@ Key lessons from SHOWARCHIVE build:
 - `router.refresh()` is required after mutations in
   ShowList — shows is a Server Component prop.
 
-### Planned Beta Phases (approved build sequence)
+### Beta Build — Complete
 
-The following phases are approved and pending execution.
-Completed phases have been moved to their own sections
-above.
+All planned Beta phases are complete:
+- Phase QRBANNER ✓ — QR Code Label Banner
+- Phase QRANALYTICS ✓ — QR Code Scan Tracking
+- Phase SIDEBAR ✓ — Grouped Sidebar + TopBar Polish
+  (SIDEBAR.A audit, SIDEBAR.1 mockups, SIDEBAR.2–6
+  production rollout)
+- Phase NAVORDER ✓ — Sidebar Nav Order
+  (NAVORDER.A audit, NAVORDER.1 implementation)
 
-**Phase SHOWARCHIVE — Show Archive ✓ Complete (new
-phase, not in original Beta plan):** Added after SHOWDELETE
-during this session. See Phase SHOWARCHIVE complete block
-above.
-
-**Phase QRBANNER — QR Code Label Banner:**
-Optional text banner below the QR code in generated
-output. Admin types label at generation time; a toggle
-enables/disables the banner per generation. Banner
-appears in both the inline preview and the downloaded
-SVG and PNG files. Implemented via SVG `<text>` element
-composited below the QR matrix in `lib/qr.ts`
-`generateQR()` via optional `bannerText?: string` param.
-`QRGeneratorForm.tsx` gains banner toggle + text input.
-History panel shows banner text when present.
-Prompts: QRBANNER.A (audit), QRBANNER.1 (implementation).
-
-**Phase QRANALYTICS — QR Code Scan Tracking:**
-Newly generated QR codes point to `/go/[redirect_token]`
-instead of the raw target URL. Public redirect route
-(`app/go/[token]/route.ts`, `getAdminClient()`) logs
-a `qr_scan_events` row (timestamp, user-agent, device
-type, browser) then redirects to `target_url`. Analytics
-in QR history panel: total scans, last scanned, device
-breakdown. New columns on `qr_codes`: `redirect_token
-uuid DEFAULT gen_random_uuid()`, `target_url text`. New
-table: `qr_scan_events` (id, qr_code_id FK, scanned_at,
-user_agent, device_type, browser). Legacy QR codes
-(pre-feature) show "Analytics not available." Only
-newly generated codes are trackable — no retroactive
-conversion. Prompts: QRANALYTICS.A (audit),
-QRANALYTICS.1 (migration + redirect route + server
-action updates), QRANALYTICS.2 (analytics UI).
-
-**Phase SIDEBAR — Grouped Sidebar + Top Nav Style:**
-Production rollout of a redesigned sidebar and top nav,
-developed and approved via Style Sandbox mockups first.
-Sidebar: grouped/sectioned layout with four groups
-(Events, People, Utilities, Settings — or refined per
-audit), compact typography, enhanced active state with
-brand-primary left border accent + subtle background
-fill, refined spacing. Top nav: polished TopBar treatment
-with improved visual weight using Option A design tokens.
-SIDEBAR.1 ships mockups only (zero production files
-touched); SIDEBAR.2 is the production rollout pending
-owner approval of mockups. Prompts: SIDEBAR.A (audit),
-SIDEBAR.1 (Style Sandbox mockups), SIDEBAR.2 (production
-rollout — pending mockup approval).
-
-**Phase NAVORDER — Sidebar Link Reorder in Platform Setup:**
-Sequenced after SIDEBAR (sidebar structure must be
-finalized first). SA can reorder sidebar nav links via
-a new section in Platform Setup. Order stored as JSON
-array in `app_settings` (`sidebar_nav_order`). Reorder
-UI uses up/down arrow buttons (no drag library — project
-convention). `Sidebar.tsx` reads preferred order from
-props threaded from layout, applying it at render time
-with fallback to default order when key is absent.
-`saveSidebarNavOrder()` server action.
-Prompts: NAVORDER.A (audit), NAVORDER.1 (implementation).
-
-**Phase DOC-BETA1 — Documentation Update:**
-Comprehensive Brief + Process update after all above
-phases complete. Documents all new phases, migrations,
-app_settings keys, schema changes, patterns learned,
-and R-rules surfaced during Beta builds.
+Phase 17 — Launch is next.
 
 ### Phase 17 — Launch
 
