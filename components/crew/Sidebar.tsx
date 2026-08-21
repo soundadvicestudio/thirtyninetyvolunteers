@@ -158,11 +158,19 @@ export default function Sidebar({
 
   const resolvedGroupOrder = navOrder?.groupOrder ?? DEFAULT_GROUP_ORDER
 
+  // Merge a saved per-group link order with any hrefs added to NAV_ITEMS
+  // since that order was last saved — a saved order must never silently
+  // hide a nav item that didn't exist yet when it was saved. Missing
+  // hrefs are appended in default order.
+  const resolveGroupHrefs = (groupKey: GroupKey): readonly string[] => {
+    const saved = navOrder?.linkOrder[groupKey]
+    if (!saved) return GROUP_HREF_DEFAULTS[groupKey]
+    const missing = GROUP_HREF_DEFAULTS[groupKey].filter((href) => !saved.includes(href))
+    return [...saved, ...missing]
+  }
+
   const groupItems = Object.fromEntries(
-    resolvedGroupOrder.map((groupKey) => [
-      groupKey,
-      getGroupItems(navOrder?.linkOrder[groupKey] ?? GROUP_HREF_DEFAULTS[groupKey]),
-    ])
+    resolvedGroupOrder.map((groupKey) => [groupKey, getGroupItems(resolveGroupHrefs(groupKey))])
   ) as Record<GroupKey, (typeof NAV_ITEMS)[number][]>
 
   // Local render function for a single nav link. Handles active state, badge
