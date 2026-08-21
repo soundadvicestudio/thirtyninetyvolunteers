@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { logAction } from '@/lib/audit'
 import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
+import type { SidebarNavOrder } from '@/types/sidebar'
 
 type ActionResult = { success: true } | { error: string }
 
@@ -679,6 +680,61 @@ export async function saveAnnouncement(
     },
     values
   )
+
+  return { success: true }
+}
+
+export async function saveSidebarNavOrder(
+  navOrder: SidebarNavOrder
+): Promise<{ success: true } | { error: string }> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role !== 'super_admin') {
+    return { error: 'Unauthorized' }
+  }
+
+  // Validate shape
+  if (
+    !navOrder ||
+    !Array.isArray(navOrder.groupOrder) ||
+    navOrder.groupOrder.length === 0 ||
+    !navOrder.linkOrder ||
+    typeof navOrder.linkOrder !== 'object'
+  ) {
+    return { error: 'Invalid nav order data.' }
+  }
+
+  const supabase = await getServerClient()
+
+  // Fetch current value for audit log before diff
+  const { data: beforeRow } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'sidebar_nav_order')
+    .maybeSingle()
+  const beforeValue = beforeRow?.value ?? null
+
+  const json = JSON.stringify(navOrder)
+
+  const { error: upsertError } = await upsertSetting(
+    supabase,
+    'sidebar_nav_order',
+    json,
+    admin.id
+  )
+  if (upsertError) {
+    return { error: 'Failed to save nav order.' }
+  }
+
+  await logAction(
+    admin.id,
+    'settings.update',
+    'app_settings',
+    'sidebar_nav_order',
+    { sidebar_nav_order: beforeValue },
+    { sidebar_nav_order: json }
+  )
+
+  revalidatePath('/crew', 'layout')
 
   return { success: true }
 }

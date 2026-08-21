@@ -32,6 +32,7 @@ const SETUP_KEYS = [
   'maintenance_heading',
   'maintenance_body',
   'announcements_oa_enabled',
+  'sidebar_nav_order',
 ] as const
 
 export default async function SetupPage() {
@@ -82,6 +83,7 @@ export default async function SetupPage() {
     maintenance_heading: settingsMap.get('maintenance_heading') || '',
     maintenance_body: settingsMap.get('maintenance_body') || '',
     announcements_oa_enabled: settingsMap.get('announcements_oa_enabled') || 'false',
+    sidebar_nav_order: settingsMap.get('sidebar_nav_order') || '',
   }
 
   const instanceLabel = settingsMap.get('instance_label') ?? ''

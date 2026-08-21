@@ -13,6 +13,7 @@ import {
 } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
 import AnnouncementSection from '@/components/crew/settings/AnnouncementSection'
+import NavOrderSection from './NavOrderSection'
 import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -46,6 +47,7 @@ export type SetupPanelInitialValues = {
   maintenance_heading: string
   maintenance_body: string
   announcements_oa_enabled: string
+  sidebar_nav_order: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -725,6 +727,7 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
       <FeatureFlagsSection initialValues={initialValues} />
       <InstanceLabelSection initialValues={initialValues} />
       <NotFoundPageSection initialValues={initialValues} />
+      <NavOrderSection initialValues={initialValues} />
       <AnnouncementSection />
     </div>
   )

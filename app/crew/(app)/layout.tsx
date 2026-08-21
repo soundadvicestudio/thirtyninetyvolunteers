@@ -12,6 +12,7 @@ import TopBar from '@/components/crew/TopBar'
 import { ServiceWorkerRegistration } from '@/components/crew/ServiceWorkerRegistration'
 import { ThemeProvider } from '@/components/crew/ThemeProvider'
 import { MobileSidebarProvider } from '@/components/crew/MobileSidebarContext'
+import type { SidebarNavOrder } from '@/types/sidebar'
 
 export const metadata: Metadata = {
   manifest: '/manifest.json',
@@ -39,7 +40,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
 
   const flags = await getFeatureFlags(supabase)
 
-  const [org, notificationCounts, initialNotifications, maintenanceResult] =
+  const [org, notificationCounts, initialNotifications, maintenanceResult, navOrderResult] =
     await Promise.all([
       resolveOrgIdentity(),
       getNotificationCounts(admin, flags, supabase),
@@ -49,10 +50,25 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
         .select('value')
         .eq('key', 'maintenance_mode')
         .maybeSingle(),
+      getAdminClient()
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'sidebar_nav_order')
+        .maybeSingle(),
     ])
 
   const maintenanceModeActive =
     maintenanceResult.data?.value === 'true'
+
+  let navOrder: SidebarNavOrder | undefined = undefined
+  try {
+    const raw = navOrderResult?.data?.value
+    if (raw) {
+      navOrder = JSON.parse(raw) as SidebarNavOrder
+    }
+  } catch {
+    navOrder = undefined
+  }
 
   return (
     <>
@@ -81,6 +97,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
               org={org}
               forumUnreadCount={notificationCounts.forumUnread}
               messagesUnreadCount={notificationCounts.messageUnread}
+              navOrder={navOrder}
             />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar

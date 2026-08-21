@@ -29,6 +29,8 @@ import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
 import type { OrgIdentity } from '@/lib/utils/org-identity'
 import { useMobileSidebar } from './MobileSidebarContext'
+import type { SidebarNavOrder, GroupKey } from '@/types/sidebar'
+import { DEFAULT_GROUP_ORDER, GROUP_LABELS } from '@/types/sidebar'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/crew/dashboard', icon: LayoutDashboard },
@@ -81,18 +83,27 @@ const SETTINGS_HREFS = [
   '/crew/help',
 ] as const
 
+const GROUP_HREF_DEFAULTS: Record<GroupKey, readonly string[]> = {
+  events: EVENTS_HREFS,
+  people: PEOPLE_HREFS,
+  utilities: UTILITIES_HREFS,
+  settings: SETTINGS_HREFS,
+}
+
 export default function Sidebar({
   admin,
   flags,
   org,
   forumUnreadCount = 0,
   messagesUnreadCount = 0,
+  navOrder,
 }: {
   admin: AdminUser
   flags: FeatureFlags
   org: OrgIdentity
   forumUnreadCount?: number
   messagesUnreadCount?: number
+  navOrder?: SidebarNavOrder
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
@@ -140,10 +151,15 @@ export default function Sidebar({
       .filter((item): item is (typeof NAV_ITEMS)[number] => item !== undefined)
 
   const dashboardItem = visibleNavItems.find((item) => item.href === DASHBOARD_HREF)
-  const eventsItems = getGroupItems(EVENTS_HREFS)
-  const peopleItems = getGroupItems(PEOPLE_HREFS)
-  const utilitiesItems = getGroupItems(UTILITIES_HREFS)
-  const settingsItems = getGroupItems(SETTINGS_HREFS)
+
+  const resolvedGroupOrder = navOrder?.groupOrder ?? DEFAULT_GROUP_ORDER
+
+  const groupItems = Object.fromEntries(
+    resolvedGroupOrder.map((groupKey) => [
+      groupKey,
+      getGroupItems(navOrder?.linkOrder[groupKey] ?? GROUP_HREF_DEFAULTS[groupKey]),
+    ])
+  ) as Record<GroupKey, (typeof NAV_ITEMS)[number][]>
 
   // Local render function for a single nav link. Handles active state, badge
   // rendering, and mobile close on click.
@@ -226,45 +242,19 @@ export default function Sidebar({
           {/* Dashboard — ungrouped, always first */}
           {dashboardItem && renderLink(dashboardItem)}
 
-          {/* Events */}
-          {eventsItems.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
-                Events
-              </p>
-              {eventsItems.map(renderLink)}
-            </div>
-          )}
-
-          {/* People */}
-          {peopleItems.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
-                People
-              </p>
-              {peopleItems.map(renderLink)}
-            </div>
-          )}
-
-          {/* Utilities */}
-          {utilitiesItems.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
-                Utilities
-              </p>
-              {utilitiesItems.map(renderLink)}
-            </div>
-          )}
-
-          {/* Settings */}
-          {settingsItems.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
-                Settings
-              </p>
-              {settingsItems.map(renderLink)}
-            </div>
-          )}
+          {/* Groups — dynamic order and per-group link order via navOrder */}
+          {resolvedGroupOrder.map((groupKey) => {
+            const items = groupItems[groupKey]
+            if (!items || items.length === 0) return null
+            return (
+              <div key={groupKey}>
+                <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
+                  {GROUP_LABELS[groupKey]}
+                </p>
+                {items.map(renderLink)}
+              </div>
+            )
+          })}
         </nav>
       </aside>
     </>
