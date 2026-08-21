@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.1
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.2
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -64,6 +64,18 @@ Show Management SHOWDELETE + SHOWARCHIVE + ShowForm fix;
 Announcements card; §9 Migration 040, admin_users
 announcement_dismissed_at, 4 new app_settings keys,
 next migration 041)
+### Last Updated: August 2026 — v6.2 (DOC.85/DOC.86:
+Beta phases QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER
+complete — §1 current phase updated (all Beta phases ✓,
+Phase 17 Launch next); §3 @resvg/resvg-js + next.config.ts
++ types/sidebar.ts; §7 /go/ public route; §8 QR Generator
+QRBANNER+QRANALYTICS complete; §8 Style Sandbox mockups
+16+17 complete; §8 Sidebar grouped nav + TopBar redesign;
+§8 Platform Setup SETUP_KEYS 28→29 + saveSidebarNavOrder
++ NavOrderSection; §9 Migrations 041+042, qr_codes schema
+extended, qr_scan_events table, sidebar_nav_order key,
+next migration 043; §11 QRBANNER/QRANALYTICS/SIDEBAR/
+NAVORDER complete blocks + prompt log; §13 new patterns)
 
 ---
 
@@ -90,8 +102,8 @@ FORUMS-UX ✓ (forum permissions discoverability label),
 ANNOUNCE ✓ (dashboard announcements widget), SHOWDELETE
 ✓ (show hard delete with guards), SHOWARCHIVE ✓ (archive
 button + archived shows accordion + ShowForm save fix).
-Remaining Beta phases: QRBANNER, QRANALYTICS, SIDEBAR,
-NAVORDER. Phase 17 (Launch) deferred pending Beta
+All planned Beta phases complete. Phase 17 (Launch)
+is next. Phase 17 (Launch) deferred pending Beta
 refinement. Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
@@ -135,6 +147,7 @@ feature_messages flag; browsable directory for composing messages to other users
 | **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
 | **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
+| **QR Codes (PNG rasterization)** | `@resvg/resvg-js` | SVG-to-PNG rasterization (replaces QRCode.toBuffer() for all QR PNG generation; requires `serverExternalPackages: ["@resvg/resvg-js"]` in next.config.ts — napi-rs native binary pattern). |
 | **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
 | **Dates** | date-fns + date-fns-tz | Two utility functions in `lib/utils/date.ts`. `formatCT()` — for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info. `formatWallClockCT()` — for bare `date` column values (`'YYYY-MM-DD'`) and manually constructed date+time strings; these parse as UTC on Vercel without this function, shifting displayed dates by hours. Never use raw date-fns `format()`. See R23. |
 | **Icons** | lucide-react | Icon system. |
@@ -152,6 +165,9 @@ The crew layout (`app/crew/(app)/layout.tsx`) is a Server Component. To share si
 
 **React Hook Form — Nested Arrays:**
 Nested `useFieldArray` calls (arrays of arrays, e.g. dates each containing their own roles list) must be placed in their own named sub-component. React's rules of hooks prohibit calling `useFieldArray` inside a render loop over a parent field array. Pattern established in ADMIN.11 (DateRow sub-component inside ShowForm). See R24.
+
+**`types/sidebar.ts` — Shared Sidebar Types (established Phase NAVORDER):**
+`GroupKey`, `SidebarNavOrder`, `HREF_LABELS`, `DEFAULT_GROUP_ORDER`, `DEFAULT_LINK_ORDER`, `GROUP_LABELS` — shared between `Sidebar.tsx` and `NavOrderSection.tsx`.
 
 ### Critical Constraint — Tailwind v4
 Tailwind v4 uses CSS-first configuration. **There is no `tailwind.config.ts` in this project — do not create one.**
@@ -329,6 +345,17 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 **Phase FORUMS proxy.ts additions (FORUMS.1):** Three changes were made to `proxy.ts` in FORUMS.1: (1) `needsFlagCheck` extended to cover `/crew/forums` — one condition appended after the inventory condition. No matcher change needed (`/crew/:path*` already covers `/crew/forums`). No public flag block needed — Forums has no public-facing routes (unlike Auditions which has `/auditions/:path*`). (2) Production-role restriction exception: `!pathname.startsWith('/crew/forums')` added to the Production allowlist alongside calendar, media, help, rehearsals, and auditions. Production users have forum access; per-forum filtering happens at the data layer (access grants). (3) Crew-route flag block for `/crew/forums` added after the inventory block — redirects to `/crew/dashboard` when `flags.forums` is false.
 
 **Phase MM proxy.ts additions (MM.1):** One new block added to `proxy.ts` — the maintenance mode gate. It fires before all other checks (before `needsFlagCheck`, before flag fetches, before role-based route guards). Logic: if `pathname.startsWith('/crew/')` AND pathname is not `/crew/login` AND pathname does not start with `/crew/maintenance`, fetch `maintenance_mode` from `app_settings` via `getAdminClient()`. If value is `'true'`: query `admin_users` for the current user's role. If role is `super_admin`, pass through transparently. If role is any other role, redirect to `/crew/maintenance`. If no Supabase Auth session exists, redirect to `/crew/login` (standard auth flow handles this). No matcher change needed — `/crew/:path*` already covers all crew routes. No feature flag — Maintenance Mode is an operational control, not a feature. Documented as MM.1 build, commit 4196623.
+
+**Phase QRANALYTICS proxy.ts (QRANALYTICS.1):** No
+changes were needed. The `/go/[token]` public route
+handler (`app/go/[token]/route.ts`) is not covered by
+the `proxy.ts` matcher — this is intentional. Route
+handlers execute regardless of whether proxy.ts runs for
+that path. No existing proxy guard intercepts `/go/`
+paths (confirmed QRANALYTICS.A audit). The route requires
+no feature flag gate, no role guard, and no maintenance
+mode exception — it must always be reachable for any
+scan of a generated QR code.
 
 **FORUMS-FIX root cause — revalidatePath() prohibited during render:** `revalidatePath()` and `revalidateTag()` may only be called from within a Server Action invocation or a Route Handler — NEVER during a component's render path (i.e., in a Server Component function body that is executing as part of a page render). Calling them during render throws a Next.js runtime error: "Route used revalidatePath during render which is unsupported" — this error bubbles to `app/error.tsx` and displays as a generic "Something went wrong" page with no diagnostic detail. The failure is completely silent to lint and tsc — it only surfaces at runtime.
 
@@ -1060,55 +1087,94 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - Email functions: none — hours review is an internal admin workflow.
 
 **QR Code Generator (`/crew/tools/qr-generator`):**
-- `lib/qr.ts`: server-side utility. `generateQR(url)` → `{ svg: string, pngBase64: string }`.
-  Level H error correction. 2000×2000px PNG (base64, no data: prefix — callers construct
-  download links as `href="data:image/png;base64,${pngBase64}"`). SVG download uses data URI:
-  `href="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}"`. This is the confirmed
-  actual pattern (not Blob) — verified against the show detail page implementation.
-- Standalone generator (`/crew/tools/qr-generator`): URL input + optional label, "Generate QR
-  Code" button, auto-prepends https:// if no protocol provided. QR preview renders in a white
-  container regardless of dark mode (QR scanability requires white background).
-- QR History Panel (added ADMIN.34): Every successful generation is saved to the `qr_codes`
-  table (Migration 029). Shared across all admins (any admin sees all saved QRs). Chronological
-  panel (newest first, capped at 50 rows) below the generator. Each row shows: label (or URL
-  domain if no label), full URL, "Generated by [name] · [date]", PNG download link, SVG
-  download link. Data URI download links — plain `<a>` tags, no JS required. Empty state:
-  "No QR codes generated yet." Save is best-effort — failure never blocks returning the QR.
-- `lib/actions/qr.ts` — `generateQRCode(url, label)` server action (updated ADMIN.34): trims,
-  validates, prepends protocol, calls `generateQR()`, inserts into `qr_codes` (best-effort),
-  calls `revalidatePath('/crew/tools/qr-generator')`, returns `{ svg, pngBase64 }` or
-  `{ error }`. The `url, label` signature replaces the prior url-only signature.
-- `lib/data/qr.ts` — `getQRHistory(supabase)` (new ADMIN.34): queries `qr_codes` with creator
-  name join, `ORDER BY created_at DESC`, `LIMIT 50`. Returns up to 50 rows.
-- **Planned — Phase QRBANNER:** Optional text banner
-  below the QR code in generated output. Admin types
-  label text at generation time; a toggle enables/disables
-  the banner. Banner appears in both the preview and the
-  downloaded SVG and PNG files. Implemented via SVG
-  `<text>` element composited below the QR matrix in
-  `lib/qr.ts` `generateQR()`. Accessible to all roles
-  with QR generation access.
-- **Planned — Phase QRANALYTICS:** Scan tracking for
-  newly generated QR codes. New QR codes point to
-  `/go/[redirect_token]` instead of the raw target URL.
-  The redirect route logs a `qr_scan_events` row
-  (timestamp, user-agent, device type, browser) and
-  redirects to `target_url`. Analytics visible in the
-  QR history panel: total scans, last scanned, device
-  breakdown. Legacy QR codes (generated before this
-  feature) show "Analytics not available." New columns
-  on `qr_codes`: `redirect_token uuid`, `target_url
-  text`. New table: `qr_scan_events`. New public route:
-  `app/go/[token]/route.ts` (`getAdminClient()`).
-- Page architecture (restructured ADMIN.34): `app/crew/(app)/tools/qr-generator/page.tsx`
-  (Server Component — fetches history via `getQRHistory()`) +
-  `components/crew/tools/QRGeneratorForm.tsx` (Client Component — form state and generation) +
-  `components/crew/tools/QRHistoryPanel.tsx` (Server Component — history list, plain `<a>`
-  download links).
-- Per-show QR: on show detail Overview tab (links to `/shows/[id]`). Built in 30BN-4.3.
-- Per-form QR: on form detail page `/crew/forms/[id]` (links to `/forms/[id]`). Built in
-  30BN-6.3 — pulled forward from Phase 7 scope because the form detail page was built then.
-- All surfaces use the same `generateQR()` from lib/qr.ts.
+- `lib/qr.ts` — server-side utility. `generateQR(url,
+  bannerText?)` → `{ svg: string, pngBase64: string }`.
+  Level H error correction. PNG produced by rasterizing
+  the final composed SVG via `@resvg/resvg-js`
+  (`new Resvg(svg, { fitTo: { mode: 'width', value:
+  2000 } }).render().asPng()`) — replaces the former
+  `QRCode.toBuffer()` call. This means the SVG and PNG
+  are always visually identical, including any banner
+  text. `serverExternalPackages: ["@resvg/resvg-js"]`
+  required in `next.config.ts` (napi-rs native binary).
+  Two module-level constants: `BANNER_HEIGHT_UNITS = 6`,
+  `BANNER_FONT_SIZE = 2.5`. Private `escapeXml()` helper
+  escapes `&<>"'` before injecting admin-supplied banner
+  text into SVG markup. 'server-only' directive present.
+- **Phase QRBANNER ✓ Complete:** Optional text banner
+  below the QR matrix. Admin types banner text at
+  generation time; a checkbox toggle enables/disables
+  the banner per generation (max 50 chars). Banner
+  appears in both the inline preview and the downloaded
+  SVG and PNG files. Implemented via SVG `<text>` element
+  composited below the QR matrix — viewBox extended by
+  `BANNER_HEIGHT_UNITS`, white `<rect>` fills the banner
+  zone, `<text>` is centered via `text-anchor="middle"`
+  + `dominant-baseline="middle"`. `generateQR()` extended
+  with optional `bannerText?: string` param. `label`
+  and `banner_text` are distinct fields — label is the
+  history panel identifier; banner_text is printed on
+  the output image. Migration 041. Commit 9f5f341.
+- **Phase QRANALYTICS ✓ Complete:** Scan tracking for
+  newly generated QR codes. New QR codes encode a
+  `/go/[redirect_token]` URL instead of the raw target
+  URL. The redirect token is generated via
+  `crypto.randomUUID()` in `generateQRCode()` before
+  calling `generateQR()` — the QR image must encode
+  the `/go/` URL, so the token must exist first.
+  `app/go/[token]/route.ts` — public GET handler:
+  looks up `qr_codes` by `redirect_token`, logs a
+  `qr_scan_events` row (scanned_at, user_agent,
+  device_type, browser via manual regex parseUserAgent),
+  redirects to `target_url`. Scan insert is best-effort
+  (try/catch swallows errors). Redirect on token miss:
+  `/not-found`. Manual UA parsing: Edge before Chrome
+  (both contain "Edg/"), tablet before mobile (Android
+  tablet UA lacks "Mobile"). Analytics display in QR
+  history panel: aggregate summary (total scans, last
+  scanned, device breakdown) + expandable per-scan log
+  via `QRScanLogToggle.tsx` ('use client'). Legacy QR
+  codes (null redirect_token) show "Analytics not
+  available." Migrations 041 + 042. Commits f2c1a73,
+  ebbf270, 9cf08a5.
+- QR History Panel: Every successful generation is saved
+  to the `qr_codes` table. History shared across all
+  admins (any admin sees all saved QRs). Panel shows:
+  label (or URL domain if no label), banner text when
+  present, full URL, "Generated by [name] · [date]",
+  analytics summary (trackable codes) or "Analytics not
+  available" (legacy), "Show N scans" toggle (trackable
+  codes with at least one scan), PNG/SVG download links.
+  Capped at 50 rows. Save is best-effort.
+- `lib/actions/qr.ts` — `generateQRCode(url, label,
+  bannerText?)` server action: generates `redirectToken`
+  via `crypto.randomUUID()`, builds redirect URL
+  `${NEXT_PUBLIC_SITE_URL}/go/${redirectToken}`, calls
+  `generateQR(redirectUrl, bannerText)`, inserts into
+  `qr_codes` (best-effort), revalidates, returns
+  `{ svg, pngBase64 }` or `{ error }`.
+- `lib/data/qr.ts` — `getQRHistory(supabase)` + `QRHistoryEntry`
+  type (id, url, label, banner_text, svg, png_base64,
+  redirect_token, target_url, created_by, created_at).
+  `getQRScanStats(supabase, qrCodeIds)` returns
+  `Map<string, QRAnalyticsSummary>` with per-QR-code
+  aggregate (scanCount, lastScannedAt, deviceBreakdown,
+  events[]). `QRScanEvent` type (scannedAt, deviceType,
+  browser).
+- Page architecture: `app/crew/(app)/tools/qr-generator/
+  page.tsx` (Server Component — fetches history + scan
+  stats) + `components/crew/tools/QRGeneratorForm.tsx`
+  (Client Component — form state + banner toggle) +
+  `components/crew/tools/QRHistoryPanel.tsx` (Server
+  Component — history list with analytics) +
+  `components/crew/tools/QRScanLogToggle.tsx` ('use
+  client' — expand/collapse per-scan log).
+- New public route: `app/go/[token]/route.ts` — PUBLIC
+  ROUTE header, `getAdminClient()` only, no feature flag
+  gate, no matcher entry in proxy.ts needed.
+- Per-show QR: on show detail Overview tab. Per-form QR:
+  on form detail page. All surfaces use `generateQR()`
+  from `lib/qr.ts`; all now get PNG via @resvg/resvg-js.
 
 **Volunteer Hours & Milestones:**
 - Auto-tally: hours increment when attendance marked Showed (using show's default_hours, then reviewed via Pending Hours Review card)
@@ -2127,15 +2193,97 @@ displays 8 section cards using the `LinkedCard` /
 | Dashboard Announcements | `/crew/settings/dashboard-announcement` | Super Admin always (LinkedCard); Owner Admin when `announcements_oa_enabled = 'true'` (LinkedCard); all other roles (not shown) — built Phase ANNOUNCE |
 | Style Sandbox | `/crew/settings/style` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — built STYLE.1. Reached via hub card only — no sidebar link. |
 
-**Platform Setup sidebar link (NOTIFY.1):** The Platform
-Setup link was removed from the Settings hub (no card for
-any role) and added as a direct sidebar link in the bottom
-section of `Sidebar.tsx`, above the ThemeToggle. Super
-Admin only — conditionally rendered based on role. Label:
-"Platform Setup". Links to `/crew/settings/setup`. The
-`proxy.ts` hard-redirect and server-side double-guard on
-the page are unchanged. Non-SA roles simply do not see
-this link anywhere.
+**Sidebar — Phase SIDEBAR ✓ Complete:**
+`components/crew/Sidebar.tsx` was restructured from a
+flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
+
+- **Structure:** Dashboard link ungrouped above four
+  labeled sections (Events, People, Utilities, Settings).
+  Help moved to the Settings group. ThemeToggle moved
+  from Sidebar footer to TopBar. Platform Setup moved
+  from Sidebar footer to TopBar. Footer block removed.
+
+- **Four groups and their links (in default order):**
+  Events: Calendar, Shows, Rehearsals, Auditions.
+  People: Volunteers, Forums (unread badge), Messages
+  (unread badge), Crew Directory (/crew/users — label
+  changed from "Directory" to "Crew Directory"), Opportunities.
+  Utilities: Inventory, Forms, QR Generator, Check-In,
+  Communication, Media.
+  Settings: Settings, Help.
+
+- **Active state:** `border-l-4` +
+  `style={{ borderLeftColor: 'var(--brand-primary)' }}`
+  + `bg-brand-primary-light text-brand-primary` +
+  `rounded-r` (right-side only). Confirmed R35-safe:
+  `bg-brand-primary-light` has existing dark mode
+  coverage in globals.css. `dark:hover:bg-white/10`
+  for inactive link hover (replaces former
+  `dark:hover:bg-dark-surface/50` which was imperceptible).
+
+- **Rendering:** Five module-level constants
+  (DASHBOARD_HREF, EVENTS_HREFS, PEOPLE_HREFS,
+  UTILITIES_HREFS, SETTINGS_HREFS) define default
+  group membership and order. `getGroupItems()` iterates
+  the href array and finds matching `visibleNavItems`.
+  `renderLink()` local function handles active state,
+  badges, and `onClick={close}` for mobile. Group render
+  loop is a dynamic `.map()` over `resolvedGroupOrder`
+  (from `navOrder?.groupOrder ?? DEFAULT_GROUP_ORDER`).
+
+- **NAVORDER integration:** `navOrder?: SidebarNavOrder`
+  prop accepted from `app/crew/(app)/layout.tsx`. When
+  present, `navOrder.groupOrder` determines group
+  sequence; `navOrder.linkOrder[groupKey]` determines
+  per-group link sequence. Falls back to hardcoded
+  defaults when absent or when a group key is missing.
+  `GROUP_HREF_DEFAULTS` maps each GroupKey to its
+  hardcoded fallback array.
+
+- **Three-part atomic edit still applies** for new
+  flagged nav links: NAV_ITEMS + FLAG_GATED_HREFS +
+  Production allowlist. TOOLTIP_ANCHOR_MAP no longer
+  exists.
+
+- **Commits:** SIDEBAR.2 (62e6497), SIDEBAR.3 (99c680b),
+  SIDEBAR.4 (57ec5fe), SIDEBAR.5 (b9f4c5e).
+
+**TopBar — Phase SIDEBAR ✓ Complete:**
+`components/crew/TopBar.tsx` polished and extended:
+
+- **border-neutral-border** replaces `border-divider
+  dark:border-dark-border` on the outer wrapper
+  (Option A token — consistent with all other borders).
+
+- **ThemeToggle** moved here from Sidebar footer. Renders
+  between NotificationPanel and the admin name span.
+
+- **Platform Setup** moved here from Sidebar footer.
+  Renders as a bordered `<Link>` to `/crew/settings/setup`
+  with `SlidersHorizontal` icon, styled identically to
+  Change Password and Sign Out. SA-only guard:
+  `{admin.role === 'super_admin' && (...)}`.
+
+- **Change Password** converted from a plain text link
+  to a bordered button matching Sign Out. `KeyRound`
+  icon at `className="w-4 h-4"`. Navigates to
+  `/crew/settings/password` (preserves existing behavior).
+
+- **Admin identity block:** Name and role badge now
+  stacked vertically in a `flex flex-col items-end
+  gap-0.5` wrapper (`hidden sm:flex`). Name uses
+  `font-semibold` with no `max-w` constraint (full name
+  displays). Role badge uses `py-0.5` (compact in
+  stacked layout). Icon size on Change Password and
+  Sign Out: `className="w-4 h-4"` (not `size` prop).
+
+- **Right-side order (left to right):** MessagesIcon
+  (conditional on flags.messages), NotificationPanel,
+  ThemeToggle, admin identity block (name + role badge),
+  Platform Setup (SA-only), Change Password, Sign Out.
+
+- **Commits:** SIDEBAR.3 (99c680b), SIDEBAR.4 (57ec5fe),
+  SIDEBAR.6 (2566a92).
 
 **Email Activity (`/crew/settings/email-activity`, built Phase 13.1 — Super Admin only):**
 Global log of all emails sent by the platform. Three tabs via `?tab=` URL param:
@@ -2214,6 +2362,36 @@ component embedded in `SetupPanel.tsx` (not one of the
 nine numbered sections — see Dashboard Announcements
 Widget in this section for full spec).
 
+**`saveSidebarNavOrder()` (lib/actions/setup.ts —
+Phase NAVORDER):** SA only. Accepts a `SidebarNavOrder`
+object (validated: non-empty `groupOrder` array + valid
+`linkOrder` object). Stores as `JSON.stringify(navOrder)`
+via `upsertSetting(supabase, 'sidebar_nav_order', json,
+admin.id)`. Fetches current value before write for the
+audit log before-diff. `revalidatePath('/crew', 'layout')`
+propagates the new order to all crew pages immediately.
+
+`NavOrderSection.tsx` (`components/crew/settings/
+NavOrderSection.tsx` — 'use client', new Phase NAVORDER):
+Standalone component rendered in `SetupPanel.tsx`
+immediately before `AnnouncementSection` (both are
+non-numbered standalone sub-components). Receives
+`initialValues: SetupPanelInitialValues` as prop.
+Manages local state: `navOrder: SidebarNavOrder`
+initialized by parsing `initialValues.sidebar_nav_order`
+(falls back to `DEFAULT_GROUP_ORDER` + `DEFAULT_LINK_ORDER`
+when absent or malformed). Two sub-UIs:
+(1) Group order — 4 rows with ↑↓ arrow buttons, first
+item ↑ disabled, last item ↓ disabled.
+(2) Per-group link order — 4 sequential sub-panels (one
+per group in current group order), each with link rows
+and ↑↓ buttons. Single "Save Order" button + "Reset to
+defaults" text link. Save calls `saveSidebarNavOrder()`.
+Reset restores `DEFAULT_GROUP_ORDER` + `DEFAULT_LINK_ORDER`
+in local state only — does not auto-save. No drag library
+(project convention — R6). Type `SidebarNavOrder` and
+constants imported from `@/types/sidebar`.
+
 Section 2 — Organization Identity: `org_name`, `org_tagline`, `org_contact_email`, `org_website_url`, `org_location`. Text inputs. Used in email templates, page title (`generateMetadata()`), public landing page heading and footer (via `resolveOrgIdentity()`).
 
 Also in Section 2: `org_timezone` — Organization Timezone select field.
@@ -2275,10 +2453,10 @@ Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.
 Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 28 `app_settings` keys (27 SETUP keys + `default_reply_to`)
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 29 `app_settings` keys (28 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
-- `lib/actions/setup.ts` — eleven server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `saveAnnouncement()`, `getSignedBrandUploadUrl()`
+- `lib/actions/setup.ts` — twelve server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `saveAnnouncement()`, `saveSidebarNavOrder()`, `getSignedBrandUploadUrl()`
 - `lib/feature-flags.ts` — `getFeatureFlags()` + `FeatureFlags` type (built SETUP.1)
 - `lib/utils/image-crop.ts` — `getCroppedImg()` canvas crop utility (built SETUP.2)
 - `lib/utils/org-identity.ts` — `resolveOrgIdentity()` for public Server Components (built ADMIN.31; extended ADMIN.33 to include `org_logo_url`)
@@ -2355,7 +2533,7 @@ patterns. All data is hardcoded representative values — no
 DB queries. Mockups live entirely within the sandbox; zero
 production files are touched. Added STYLE.2 through STYLE.8.
 
-Page mockup inventory (15 total):
+Page mockup inventory (17 total):
 1. Dashboard — stat tiles with border-t-brand-primary accent,
    activity feed with NEW badge using bg-brand-primary-subtle
 2. Calendar — Month view, location color chips inline style,
@@ -2394,18 +2572,23 @@ Page mockup inventory (15 total):
     Feature Flags) with header/body/footer pattern; color
     swatches via inline style; toggle switch visuals
 
-**Planned — Phase SIDEBAR:** Two additional mockups
-will be added to Section 2:
-16. Sidebar — grouped/sectioned navigation with four
-    groups (Events, People, Utilities, Settings),
-    compact typography, enhanced active state with
-    brand-primary left border accent + subtle fill,
-    refined spacing for the full link set.
-17. Top Nav — polished TopBar treatment with improved
-    visual weight and alignment using Option A design
-    tokens.
-These mockups require owner approval before production
-rollout (Phase SIDEBAR.2).
+**Phase SIDEBAR mockups ✓ Complete (SIDEBAR.1):**
+Two additional mockups added to Section 2:
+16. Sidebar (`SidebarMockup.tsx`) — grouped/sectioned
+    navigation with Dashboard ungrouped above four
+    groups (Events, People, Utilities, Settings), active
+    Dashboard link with border-l-4 left accent +
+    bg-brand-primary-light fill + rounded-r, group
+    labels in text-xs uppercase tracking-wider,
+    unread badge on Forums (3) and Messages (2),
+    footer with Help + Platform Setup + ThemeToggle
+    placeholder. Named export only, no 'use client'.
+    Commit 6571a7b.
+17. Top Nav (`TopNavMockup.tsx`) — polished TopBar
+    with border-neutral-border (Option A token, replacing
+    border-divider), badge-decorated Mail + Bell icons,
+    admin name + role badge, visual Sign Out button.
+    Named export only, no 'use client'. Commit 6571a7b.
 
 **Option A design patterns (applied throughout mockups):**
 These are the intended targets for STYLE-ROLLOUT:
@@ -2434,12 +2617,13 @@ mockup prompts.
 - `lib/utils/color.ts` — `darkenHex()` added alongside `lightenHex()` (STYLE.A)
 - `app/globals.css` — `--color-neutral-surface` / `--color-neutral-border` in @theme block; new @layer utilities classes for brand-derived tokens
 - `app/layout.tsx` — `resolveBrandColors()` extended to inject 9 total custom properties
-- Mockup components (15 files):
+- Mockup components (17 files):
   `DashboardMockup.tsx`, `CalendarMockup.tsx`, `RehearsalsMockup.tsx`,
   `AuditionsMockup.tsx`, `InventoryMockup.tsx`, `VolunteersMockup.tsx`,
   `ForumsMockup.tsx`, `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`,
   `FormsMockup.tsx`, `QRGeneratorMockup.tsx`, `CheckInMockup.tsx`,
-  `CommunicationMockup.tsx`, `MediaLibraryMockup.tsx`, `SetupPanelMockup.tsx`
+  `CommunicationMockup.tsx`, `MediaLibraryMockup.tsx`, `SetupPanelMockup.tsx`,
+  `SidebarMockup.tsx`, `TopNavMockup.tsx`
 
 ---
 
@@ -2815,7 +2999,8 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 041 (none currently planned). Migrations 033 through 040 are applied.
+**Next migration:** 043 (none currently planned).
+Migrations 041 and 042 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -3964,6 +4149,24 @@ png_base64  text NOT NULL
 created_by  uuid REFERENCES admin_users(id)
             ON DELETE SET NULL
 created_at  timestamptz NOT NULL DEFAULT now()
+banner_text  text
+-- Nullable. Added Migration 041 (041_qr_banner_text.sql).
+-- Admin-supplied text composited below the QR matrix.
+-- Stored so the history panel can display it.
+-- Distinct from label: label = display identifier;
+--   banner_text = text printed on QR output image.
+redirect_token uuid
+-- Nullable, no DEFAULT. Added Migration 042.
+-- App-generated via crypto.randomUUID() before generateQR().
+-- NULL on legacy rows (generated before QRANALYTICS).
+-- NULL means "analytics not available" for that row.
+-- Partial index: idx_qr_codes_redirect_token
+--   WHERE redirect_token IS NOT NULL.
+target_url   text
+-- Nullable. Added Migration 042.
+-- The admin's original destination URL.
+-- Used by /go/[token] route handler to redirect scanners.
+-- The QR image encodes /go/[redirect_token], NOT target_url.
 -- INDEX: idx_qr_codes_created_at on (created_at DESC)
 --   For chronological history queries.
 -- INDEX: idx_qr_codes_created_by
@@ -3984,6 +4187,35 @@ created_at  timestamptz NOT NULL DEFAULT now()
 --   Callers construct: data:image/svg+xml;charset=utf-8,
 --   {encodeURIComponent(svg)}
 -- Migration 029 (029_qr_codes.sql)
+```
+
+### qr_scan_events
+```sql
+id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
+qr_code_id  uuid NOT NULL
+            REFERENCES qr_codes(id) ON DELETE CASCADE
+scanned_at  timestamptz NOT NULL DEFAULT now()
+user_agent  text  -- nullable; absent on some bots/clients
+device_type text  -- nullable; derived from user_agent
+browser     text  -- nullable; derived from user_agent
+-- device_type values (parsed in route handler):
+--   'mobile' | 'tablet' | 'desktop'
+-- browser values:
+--   'Chrome' | 'Safari' | 'Firefox' | 'Edge' | 'Other'
+-- Parsing order matters: Edge before Chrome (both contain
+--   "Edg/"); tablet before mobile (Android tablet UA
+--   lacks "Mobile").
+-- INDEX: idx_qr_scan_events_qr_code_id on (qr_code_id)
+-- RLS: qr_scan_events_select_authenticated — SELECT,
+--   authenticated, USING (true)
+-- RLS: qr_scan_events_delete_sa_oa — DELETE,
+--   authenticated, USING (is_super_admin_or_owner_admin())
+-- No INSERT policy — the only writer is /go/[token] route
+--   handler which uses getAdminClient() (bypasses RLS).
+-- INSERT is best-effort (try/catch swallows errors in the
+--   route handler — a scan logging failure must never block
+--   the redirect).
+-- Migration 042 (042_qr_analytics.sql)
 ```
 
 ### audit_log
@@ -4348,6 +4580,18 @@ ANNOUNCE.2). `SETUP_KEYS.length = 28`
 ADMIN.46 Task A4). Setup Panel page (`setup/page.tsx`)
 fetches 28 keys total.
 
+**`sidebar_nav_order` key added in NAVORDER.1:**
+Stores a JSON object defining the SA's preferred sidebar
+group order and per-group link order. Shape:
+`{ groupOrder: GroupKey[], linkOrder: Record<GroupKey,
+string[]> }` where `GroupKey = 'events' | 'people' |
+'utilities' | 'settings'`. Absent key (default for all
+deployments) = use hardcoded defaults in `Sidebar.tsx`.
+Saved via `saveSidebarNavOrder()` in `lib/actions/setup.ts`.
+Read in `app/crew/(app)/layout.tsx` — JSON.parse with
+try/catch fallback to null. Total active SETUP keys: 29.
+Setup Panel page (setup/page.tsx) fetches 29 SETUP keys.
+
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
 **Migration 036 status:** Applied — `036_notifications.sql`
@@ -4426,6 +4670,31 @@ ANNOUNCE.1). Two changes:
    - `dashboard_announcement_updated_at → ''`
    - `dashboard_announcement_roles → '[]'`
    - `announcements_oa_enabled → 'false'`
+
+**Migration 041 status:** Applied —
+`041_qr_banner_text.sql` (Phase QRBANNER, commit
+9f5f341). Adds `banner_text text` (nullable, no default)
+to `qr_codes`. Stores the admin-supplied banner text
+that is composited below the QR matrix in the generated
+SVG and PNG output. Distinct from the `label` column —
+label is the history panel display identifier; banner_text
+is printed on the output image.
+
+**Migration 042 status:** Applied —
+`042_qr_analytics.sql` (Phase QRANALYTICS, commits
+f2c1a73 + ebbf270 + 9cf08a5).
+Adds two columns to `qr_codes`:
+- `redirect_token uuid` (nullable, no DEFAULT — app
+  generates via `crypto.randomUUID()` before calling
+  `generateQR()`; NULL on legacy rows = "analytics not
+  available")
+- `target_url text` (nullable — the admin's original
+  destination URL, stored for the route handler to
+  redirect scanners)
+Partial index `idx_qr_codes_redirect_token` on
+`qr_codes(redirect_token) WHERE redirect_token IS NOT NULL`.
+Creates `qr_scan_events` table (see schema below).
+Index `idx_qr_scan_events_qr_code_id` on `qr_code_id`.
 
 ### message_threads
 ```sql
@@ -8601,3 +8870,10 @@ error.tsx logging, ShowCard inline in ShowList, SettingsTab
 state scope, ShowForm vs ShowDetail distinction, attendance
 NO ACTION FK, saveFeatureFlags 6-point wiring,
 AnnouncementSection self-loading); v6.1 version history)*
+
+*v6.2 (August 2026 — DOC.85/DOC.86: Beta phases
+QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — see
+§1 current phase update, §8 QR Generator, §8 Style
+Sandbox, §8 Sidebar + TopBar, §8 Platform Setup, §9
+Migrations 041+042, §11 complete blocks, §13 new
+patterns. DOC.85 + DOC.86 logged.)*
