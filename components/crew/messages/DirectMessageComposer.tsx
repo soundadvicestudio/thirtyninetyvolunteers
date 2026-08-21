@@ -9,6 +9,7 @@
 'use client'
 
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useEditor, Editor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TipTapLink from '@tiptap/extension-link'
@@ -276,10 +277,15 @@ const DirectMessageComposer = forwardRef<DirectMessageComposerHandle, DirectMess
         />
 
         {/* Editor */}
-        <div className="border border-neutral-border dark:border-dark-border rounded-b-lg bg-white dark:bg-dark-surface">
+        <div
+          className="dm-editor-wrapper cursor-text border border-neutral-border dark:border-dark-border rounded-b-lg bg-white dark:bg-dark-surface"
+          style={{ '--dm-min-height': minHeight } as CSSProperties}
+          onClick={() => {
+            if (!disabled) editor?.commands.focus()
+          }}
+        >
           <EditorContent
             editor={editor}
-            style={{ minHeight }}
             className="text-sm text-dark dark:text-dark-text p-3
               [&_.ProseMirror]:outline-none
               [&_.ProseMirror_p]:mb-2 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-4

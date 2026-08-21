@@ -206,3 +206,16 @@ body {
   .hover\:bg-brand-primary-subtle:hover { background-color: var(--brand-primary-subtle); }
 
 }
+
+/* TipTap DirectMessageComposer click-to-focus fix (ADMIN.54) — the
+   .ProseMirror contenteditable element shrinks to its content height by
+   default, leaving unclickable empty space in its wrapper. This rule gives
+   .ProseMirror an explicit min-height (driven by the wrapper's
+   --dm-min-height custom property, set inline per-instance from the
+   minHeight prop) so clicks anywhere in the wrapper land inside the
+   editable element itself. Plain CSS — not a brand utility, no @layer
+   utilities pattern needed. */
+.dm-editor-wrapper .ProseMirror {
+  min-height: var(--dm-min-height, 100px);
+  outline: none;
+}

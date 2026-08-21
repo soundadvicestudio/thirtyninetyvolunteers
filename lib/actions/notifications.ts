@@ -26,12 +26,12 @@ export async function getNotificationCounts(): Promise<NotificationCounts> {
   return getNotificationCountsData(admin, flags, supabase)
 }
 
-export async function getUserNotifications(limit?: number): Promise<NotificationRow[]> {
+export async function getUserNotifications(): Promise<NotificationRow[]> {
   const supabase = await getServerClient()
   const admin = await getAdminUser()
   if (!admin) return []
 
-  return getUserNotificationsData(admin.id, supabase, limit)
+  return getUserNotificationsData(admin.id, supabase)
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {

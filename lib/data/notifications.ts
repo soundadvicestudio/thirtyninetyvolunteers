@@ -167,8 +167,7 @@ export async function getNotificationCounts(
 
 export async function getUserNotifications(
   adminUserId: string,
-  supabase: SupabaseClient,
-  limit = 20
+  supabase: SupabaseClient
 ): Promise<NotificationRow[]> {
   try {
     const { data, error } = await supabase
@@ -176,7 +175,6 @@ export async function getUserNotifications(
       .select('*')
       .eq('admin_user_id', adminUserId)
       .order('created_at', { ascending: false })
-      .limit(limit)
 
     if (error || !data) return []
     return data as NotificationRow[]
