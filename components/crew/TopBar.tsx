@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu, KeyRound } from 'lucide-react'
 import { signOut } from '@/app/crew/actions'
 import type { AdminUser } from '@/lib/auth'
 import type { NotificationCounts, NotificationRow } from '@/types/notifications'
 import { useMobileSidebar } from './MobileSidebarContext'
 import NotificationPanel from '@/components/crew/NotificationPanel'
 import MessagesIcon from '@/components/crew/MessagesIcon'
+import { ThemeToggle } from './ThemeToggle'
 
 const ROLE_LABELS: Record<AdminUser['role'], string> = {
   super_admin: 'Super Admin',
@@ -41,7 +42,7 @@ export default function TopBar({
   const { toggle } = useMobileSidebar()
 
   return (
-    <header className="h-16 shrink-0 bg-white dark:bg-dark-surface border-b border-divider dark:border-dark-border flex items-center justify-between px-4 md:px-6">
+    <header className="h-16 shrink-0 bg-white dark:bg-dark-surface border-b border-neutral-border flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -59,6 +60,7 @@ export default function TopBar({
           <MessagesIcon unreadCount={notificationCounts.messageUnread} />
         )}
         <NotificationPanel notificationCounts={notificationCounts} initialNotifications={initialNotifications} />
+        <ThemeToggle />
         <span className="hidden sm:inline text-sm text-dark dark:text-dark-text">{admin.name}</span>
         <span
           className={`text-xs font-semibold px-2 py-1 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
@@ -67,9 +69,18 @@ export default function TopBar({
         </span>
         <Link
           href="/crew/settings/password"
-          className="hidden sm:inline text-sm text-mid-gray hover:text-brand-primary dark:text-dark-muted transition-colors"
+          className="
+            flex items-center gap-2
+            px-3 py-1.5 rounded-md text-sm font-medium
+            border border-brand-primary-mid text-dark bg-white
+            hover:bg-brand-primary-mid hover:text-white
+            dark:text-dark-text dark:bg-dark-surface
+            transition-colors duration-150
+            cursor-pointer
+          "
         >
-          Change Password
+          <KeyRound className="w-4 h-4" />
+          <span className="hidden sm:inline">Change Password</span>
         </Link>
         <form action={signOut}>
           <button

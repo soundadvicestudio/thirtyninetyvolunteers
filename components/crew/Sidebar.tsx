@@ -28,7 +28,6 @@ import {
 import type { AdminUser } from '@/lib/auth'
 import type { FeatureFlags } from '@/lib/feature-flags'
 import type { OrgIdentity } from '@/lib/utils/org-identity'
-import { ThemeToggle } from './ThemeToggle'
 import { useMobileSidebar } from './MobileSidebarContext'
 
 const NAV_ITEMS = [
@@ -171,7 +170,7 @@ export default function Sidebar({
               'px-3 py-2 text-sm font-medium ' +
               'text-dark dark:text-dark-text ' +
               'hover:bg-gray-100 ' +
-              'dark:hover:bg-dark-surface/50'
+              'dark:hover:bg-white/10'
         }
         style={
           active
@@ -215,7 +214,7 @@ export default function Sidebar({
           type="button"
           onClick={close}
           aria-label="Close menu"
-          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-gray-100 cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
+          className="md:hidden absolute top-4 right-4 p-1 rounded text-dark hover:bg-gray-100 cursor-pointer dark:text-dark-text dark:hover:bg-white/10"
         >
           <X size={20} />
         </button>
@@ -285,7 +284,7 @@ export default function Sidebar({
                     'px-3 py-2 text-sm font-medium ' +
                     'text-dark dark:text-dark-text ' +
                     'hover:bg-gray-100 ' +
-                    'dark:hover:bg-dark-surface/50'
+                    'dark:hover:bg-white/10'
               }
               style={
                 isActivePath(pathname, helpItem.href)
@@ -315,7 +314,7 @@ export default function Sidebar({
                     'px-3 py-2 text-sm font-medium ' +
                     'text-dark dark:text-dark-text ' +
                     'hover:bg-gray-100 ' +
-                    'dark:hover:bg-dark-surface/50'
+                    'dark:hover:bg-white/10'
               }
               style={
                 isActivePath(pathname, '/crew/settings/setup')
@@ -329,9 +328,6 @@ export default function Sidebar({
               Platform Setup
             </Link>
           )}
-
-          {/* ThemeToggle — unchanged */}
-          <ThemeToggle />
         </div>
       </aside>
     </>
