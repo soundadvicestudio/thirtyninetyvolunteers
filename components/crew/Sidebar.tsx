@@ -40,7 +40,7 @@ const NAV_ITEMS = [
   { label: 'Forums', href: '/crew/forums', icon: MessageSquare },
   { label: 'Messages', href: '/crew/messages', icon: Inbox },
   { label: 'Volunteers', href: '/crew/volunteers', icon: Users },
-  { label: 'Directory', href: '/crew/users', icon: UserSearch },
+  { label: 'Crew Directory', href: '/crew/users', icon: UserSearch },
   { label: 'Shows', href: '/crew/shows', icon: Theater },
   { label: 'Opportunities', href: '/crew/shows/opportunities', icon: Briefcase },
   { label: 'Forms', href: '/crew/forms', icon: FileText },
@@ -55,6 +55,29 @@ const NAV_ITEMS = [
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
+
+const DASHBOARD_HREF = '/crew/dashboard'
+
+const EVENTS_HREFS = ['/crew/calendar', '/crew/shows', '/crew/rehearsals', '/crew/auditions'] as const
+
+const PEOPLE_HREFS = [
+  '/crew/volunteers',
+  '/crew/forums',
+  '/crew/messages',
+  '/crew/users',
+  '/crew/shows/opportunities',
+] as const
+
+const UTILITIES_HREFS = [
+  '/crew/inventory',
+  '/crew/forms',
+  '/crew/tools/qr-generator',
+  '/crew/tools/checkin',
+  '/crew/communication',
+  '/crew/media',
+] as const
+
+const SETTINGS_HREFS = ['/crew/settings'] as const
 
 export default function Sidebar({
   admin,
@@ -108,6 +131,72 @@ export default function Sidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
+  // Derive grouped items from visibleNavItems, preserving group order and flag/role filtering
+  const getGroupItems = (hrefs: readonly string[]) =>
+    hrefs
+      .map((href) => visibleNavItems.find((item) => item.href === href))
+      .filter((item): item is (typeof NAV_ITEMS)[number] => item !== undefined)
+
+  const dashboardItem = visibleNavItems.find((item) => item.href === DASHBOARD_HREF)
+  const eventsItems = getGroupItems(EVENTS_HREFS)
+  const peopleItems = getGroupItems(PEOPLE_HREFS)
+  const utilitiesItems = getGroupItems(UTILITIES_HREFS)
+  const settingsItems = getGroupItems(SETTINGS_HREFS)
+
+  // Help item for footer — rendered unconditionally since it has no flag gate and is
+  // Production-accessible. Retrieved from NAV_ITEMS directly.
+  const helpItem = NAV_ITEMS.find((item) => item.href === '/crew/help')!
+
+  // Local render function for a single nav link. Handles active state, badge
+  // rendering, and mobile close on click.
+  const renderLink = (item: (typeof NAV_ITEMS)[number]) => {
+    const isShows = item.href === '/crew/shows'
+    const active = isShows
+      ? pathname === '/crew/shows' ||
+        (pathname.startsWith('/crew/shows/') && !pathname.startsWith('/crew/shows/opportunities'))
+      : isActivePath(pathname, item.href)
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={close}
+        className={
+          active
+            ? 'flex items-center gap-3 rounded-r ' +
+              'border-l-4 px-3 py-2 text-sm ' +
+              'font-medium bg-brand-primary-light ' +
+              'text-brand-primary'
+            : 'flex items-center gap-3 rounded ' +
+              'px-3 py-2 text-sm font-medium ' +
+              'text-dark dark:text-dark-text ' +
+              'hover:bg-gray-100 ' +
+              'dark:hover:bg-dark-surface/50'
+        }
+        style={
+          active
+            ? {
+                borderLeftColor: 'var(--brand-primary)',
+              }
+            : undefined
+        }
+      >
+        <item.icon size={18} />
+        {item.label}
+        {item.href === '/crew/forums' && forumUnreadCount > 0 && (
+          <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+            {forumUnreadCount > 99 ? '99+' : forumUnreadCount}
+          </span>
+        )}
+        {item.href === '/crew/messages' && messagesUnreadCount > 0 && (
+          <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
+            {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
   return (
     <>
       {isOpen && (
@@ -135,47 +224,113 @@ export default function Sidebar({
           <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
         </Link>
 
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {visibleNavItems.map(({ label, href, icon: Icon }) => {
-          const active =
-            href === '/crew/shows'
-              ? isActivePath(pathname, href) && !isActivePath(pathname, '/crew/shows/opportunities')
-              : isActivePath(pathname, href)
-          const linkClasses = `flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
-            active
-              ? 'bg-brand-primary text-white'
-              : 'text-dark hover:bg-gray-100 dark:text-dark-text dark:hover:bg-dark-surface/50'
-          }`
+        <nav className="flex-1 px-2 py-2 overflow-y-auto space-y-0.5">
+          {/* Dashboard — ungrouped, always first */}
+          {dashboardItem && renderLink(dashboardItem)}
 
-          return (
-            <Link key={href} href={href} className={linkClasses}>
-              <Icon size={18} />
-              {label}
-              {href === '/crew/forums' && forumUnreadCount > 0 && (
-                <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
-                  {forumUnreadCount > 99 ? '99+' : forumUnreadCount}
-                </span>
-              )}
-              {href === '/crew/messages' && messagesUnreadCount > 0 && (
-                <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-brand-primary text-white text-xs font-semibold ring-1 ring-white dark:ring-dark-surface">
-                  {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
-                </span>
-              )}
+          {/* Events */}
+          {eventsItems.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
+                Events
+              </p>
+              {eventsItems.map(renderLink)}
+            </div>
+          )}
+
+          {/* People */}
+          {peopleItems.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
+                People
+              </p>
+              {peopleItems.map(renderLink)}
+            </div>
+          )}
+
+          {/* Utilities */}
+          {utilitiesItems.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
+                Utilities
+              </p>
+              {utilitiesItems.map(renderLink)}
+            </div>
+          )}
+
+          {/* Settings */}
+          {settingsItems.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-3 pt-4 pb-1">
+                Settings
+              </p>
+              {settingsItems.map(renderLink)}
+            </div>
+          )}
+        </nav>
+
+        <div className="px-2 py-3 border-t border-neutral-border shrink-0 space-y-0.5">
+          {/* Help — ungrouped footer link */}
+          {helpItem && (
+            <Link
+              href={helpItem.href}
+              onClick={close}
+              className={
+                isActivePath(pathname, helpItem.href)
+                  ? 'flex items-center gap-3 rounded-r ' +
+                    'border-l-4 px-3 py-2 text-sm ' +
+                    'font-medium bg-brand-primary-light ' +
+                    'text-brand-primary'
+                  : 'flex items-center gap-3 rounded ' +
+                    'px-3 py-2 text-sm font-medium ' +
+                    'text-dark dark:text-dark-text ' +
+                    'hover:bg-gray-100 ' +
+                    'dark:hover:bg-dark-surface/50'
+              }
+              style={
+                isActivePath(pathname, helpItem.href)
+                  ? {
+                      borderLeftColor: 'var(--brand-primary)',
+                    }
+                  : undefined
+              }
+            >
+              <helpItem.icon size={18} />
+              {helpItem.label}
             </Link>
-          )
-        })}
-      </nav>
+          )}
 
-        <div className="px-3 py-3 border-t border-divider dark:border-dark-border shrink-0">
+          {/* Platform Setup — SA-only, unchanged guard */}
           {admin.role === 'super_admin' && (
             <Link
               href="/crew/settings/setup"
-              className="flex items-center gap-2 px-2 py-2 rounded text-sm text-mid-gray dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-nav transition-colors mb-2"
+              onClick={close}
+              className={
+                isActivePath(pathname, '/crew/settings/setup')
+                  ? 'flex items-center gap-3 rounded-r ' +
+                    'border-l-4 px-3 py-2 text-sm ' +
+                    'font-medium bg-brand-primary-light ' +
+                    'text-brand-primary'
+                  : 'flex items-center gap-3 rounded ' +
+                    'px-3 py-2 text-sm font-medium ' +
+                    'text-dark dark:text-dark-text ' +
+                    'hover:bg-gray-100 ' +
+                    'dark:hover:bg-dark-surface/50'
+              }
+              style={
+                isActivePath(pathname, '/crew/settings/setup')
+                  ? {
+                      borderLeftColor: 'var(--brand-primary)',
+                    }
+                  : undefined
+              }
             >
-              <Settings size={16} />
+              <Settings size={18} />
               Platform Setup
             </Link>
           )}
+
+          {/* ThemeToggle — unchanged */}
           <ThemeToggle />
         </div>
       </aside>
