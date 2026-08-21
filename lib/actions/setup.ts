@@ -483,6 +483,8 @@ export async function saveMaintenanceMode(
   const mode = (formData.get('maintenance_mode') as string | null) ?? 'false'
   const heading = (formData.get('maintenance_heading') as string | null)?.trim() ?? ''
   const body = (formData.get('maintenance_body') as string | null)?.trim() ?? ''
+  const estimatedRestoration =
+    (formData.get('maintenance_estimated_restoration') as string | null)?.trim() ?? ''
 
   if (!heading) {
     return { error: 'Heading is required.' }
@@ -499,7 +501,12 @@ export async function saveMaintenanceMode(
 
   const supabase = await getServerClient()
 
-  const keys = ['maintenance_mode', 'maintenance_heading', 'maintenance_body']
+  const keys = [
+    'maintenance_mode',
+    'maintenance_heading',
+    'maintenance_body',
+    'maintenance_estimated_restoration',
+  ]
   const { data: previousRows } = await supabase
     .from('app_settings')
     .select('key, value')
@@ -512,6 +519,7 @@ export async function saveMaintenanceMode(
     maintenance_mode: mode === 'true' ? 'true' : 'false',
     maintenance_heading: heading,
     maintenance_body: body,
+    maintenance_estimated_restoration: estimatedRestoration,
   }
 
   const results = await Promise.all(

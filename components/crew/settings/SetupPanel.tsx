@@ -47,6 +47,7 @@ export type SetupPanelInitialValues = {
   maintenance_mode: string
   maintenance_heading: string
   maintenance_body: string
+  maintenance_estimated_restoration: string
   announcements_oa_enabled: string
   sidebar_nav_order: string
 }
@@ -80,6 +81,9 @@ function MaintenanceModeSection({
     initialValues.maintenance_body ||
       'The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon.'
   )
+  const [maintenanceEstimatedRestoration, setMaintenanceEstimatedRestoration] = useState(
+    initialValues.maintenance_estimated_restoration
+  )
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -90,6 +94,7 @@ function MaintenanceModeSection({
     fd.append('maintenance_mode', maintenanceEnabled ? 'true' : 'false')
     fd.append('maintenance_heading', maintenanceHeading)
     fd.append('maintenance_body', maintenanceBody)
+    fd.append('maintenance_estimated_restoration', maintenanceEstimatedRestoration)
     const result = await saveMaintenanceMode(fd)
     if ('error' in result) {
       setErrorMessage(result.error)
@@ -143,6 +148,22 @@ function MaintenanceModeSection({
             rows={3}
             className={inputClasses}
           />
+        </div>
+        <div>
+          <label className={labelClasses}>
+            Estimated Restoration Time
+          </label>
+          <input
+            type="text"
+            value={maintenanceEstimatedRestoration}
+            onChange={(e) => setMaintenanceEstimatedRestoration(e.target.value)}
+            placeholder="e.g. Tuesday, August 26 at 6:00 PM"
+            maxLength={150}
+            className={inputClasses}
+          />
+          <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
+            Optional — displays on the maintenance page when set
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-4">

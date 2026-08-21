@@ -16,7 +16,7 @@ export default async function MaintenancePage() {
     supabase
       .from('app_settings')
       .select('key, value')
-      .in('key', ['maintenance_heading', 'maintenance_body']),
+      .in('key', ['maintenance_heading', 'maintenance_body', 'maintenance_estimated_restoration']),
   ])
 
   const settingsMap = Object.fromEntries(
@@ -28,6 +28,7 @@ export default async function MaintenancePage() {
   const body =
     settingsMap['maintenance_body'] ||
     'The crew portal is temporarily unavailable while system updates and performance improvements are in progress. Please check back soon.'
+  const estimatedRestoration = settingsMap['maintenance_estimated_restoration'] || ''
 
   const logoSrc = org.org_logo_url || '/logo.png'
 
@@ -50,6 +51,14 @@ export default async function MaintenancePage() {
         <p className="text-gray-600 mb-8">
           {body}
         </p>
+        {estimatedRestoration && (
+          <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4">
+            <p className="text-sm text-amber-900">
+              <span className="font-semibold">Estimated restoration: </span>
+              {estimatedRestoration}
+            </p>
+          </div>
+        )}
         <Link
           href="/"
           className="text-sm text-gray-500 hover:text-gray-700 underline"
