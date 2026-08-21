@@ -31,6 +31,7 @@ const SETUP_KEYS = [
   'maintenance_mode',
   'maintenance_heading',
   'maintenance_body',
+  'announcements_oa_enabled',
 ] as const
 
 export default async function SetupPage() {
@@ -80,6 +81,7 @@ export default async function SetupPage() {
     maintenance_mode: settingsMap.get('maintenance_mode') || 'false',
     maintenance_heading: settingsMap.get('maintenance_heading') || '',
     maintenance_body: settingsMap.get('maintenance_body') || '',
+    announcements_oa_enabled: settingsMap.get('announcements_oa_enabled') || 'false',
   }
 
   const instanceLabel = settingsMap.get('instance_label') ?? ''

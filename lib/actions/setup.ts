@@ -323,6 +323,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   const inventory = formData.get('feature_inventory') as string | null
   const forums = formData.get('feature_forums') as string | null
   const messages = formData.get('feature_messages') as string | null
+  const announcementsOaEnabled = formData.get('announcements_oa_enabled') as string | null
 
   if (
     !isValidFlagValue(calendar) ||
@@ -332,14 +333,15 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
     !isValidFlagValue(auditions) ||
     !isValidFlagValue(inventory) ||
     !isValidFlagValue(forums) ||
-    !isValidFlagValue(messages)
+    !isValidFlagValue(messages) ||
+    !isValidFlagValue(announcementsOaEnabled)
   ) {
     return { error: 'Invalid flag value.' }
   }
 
   const supabase = await getServerClient()
 
-  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory', 'feature_forums', 'feature_messages']
+  const keys = ['feature_calendar', 'feature_checkin', 'feature_blast', 'feature_rehearsals', 'feature_auditions', 'feature_inventory', 'feature_forums', 'feature_messages', 'announcements_oa_enabled']
   const { data: previousRows } = await supabase.from('app_settings').select('key, value').in('key', keys)
   const previousMap = new Map((previousRows ?? []).map((r) => [r.key, r.value]))
 
@@ -353,6 +355,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       { key: 'feature_inventory', value: inventory, updated_by: admin.id },
       { key: 'feature_forums', value: forums, updated_by: admin.id },
       { key: 'feature_messages', value: messages, updated_by: admin.id },
+      { key: 'announcements_oa_enabled', value: announcementsOaEnabled, updated_by: admin.id },
     ],
     { onConflict: 'key' }
   )
@@ -374,6 +377,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
   revalidatePath('/crew/forums')
   revalidatePath('/crew/messages', 'page')
   revalidatePath('/crew/users', 'page')
+  revalidatePath('/crew/settings/dashboard-announcement')
 
   await logAction(
     admin.id,
@@ -389,6 +393,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_inventory: previousMap.get('feature_inventory') ?? '',
       feature_forums: previousMap.get('feature_forums') ?? '',
       feature_messages: previousMap.get('feature_messages') ?? '',
+      announcements_oa_enabled: previousMap.get('announcements_oa_enabled') ?? '',
     },
     {
       feature_calendar: calendar,
@@ -399,6 +404,7 @@ export async function saveFeatureFlags(formData: FormData): Promise<ActionResult
       feature_inventory: inventory,
       feature_forums: forums,
       feature_messages: messages,
+      announcements_oa_enabled: announcementsOaEnabled,
     }
   )
 

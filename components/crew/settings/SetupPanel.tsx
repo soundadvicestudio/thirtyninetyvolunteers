@@ -12,6 +12,7 @@ import {
   saveMaintenanceMode,
 } from '@/lib/actions/setup'
 import BrandImageUploader from '@/components/crew/settings/BrandImageUploader'
+import AnnouncementSection from '@/components/crew/settings/AnnouncementSection'
 import { TIMEZONE_OPTIONS } from '@/lib/utils/org-timezone'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -44,6 +45,7 @@ export type SetupPanelInitialValues = {
   maintenance_mode: string
   maintenance_heading: string
   maintenance_body: string
+  announcements_oa_enabled: string
 }
 
 const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
@@ -448,6 +450,9 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
   const [messagesEnabled, setMessagesEnabled] = useState(
     initialValues.feature_messages === 'true'
   )
+  const [announcementsOaEnabled, setAnnouncementsOaEnabled] = useState(
+    initialValues.announcements_oa_enabled === 'true'
+  )
   const [flagSaveStatus, setFlagSaveStatus] = useState<SaveStatus>('idle')
   const [flagErrorMessage, setFlagErrorMessage] = useState('')
 
@@ -462,6 +467,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
     fd.append('feature_inventory', inventoryEnabled ? 'true' : 'false')
     fd.append('feature_forums', forumsEnabled ? 'true' : 'false')
     fd.append('feature_messages', messagesEnabled ? 'true' : 'false')
+    fd.append('announcements_oa_enabled', announcementsOaEnabled ? 'true' : 'false')
 
     const result = await saveFeatureFlags(fd)
     if ('error' in result) {
@@ -531,6 +537,15 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
           inaccessible."
         enabled={messagesEnabled}
         onToggle={() => setMessagesEnabled((v) => !v)}
+      />
+      <ToggleRow
+        label="Owner Admin Announcements"
+        description={
+          'When ON, Owner Admins can publish dashboard ' +
+          'announcements from their Settings page.'
+        }
+        enabled={announcementsOaEnabled}
+        onToggle={() => setAnnouncementsOaEnabled((v) => !v)}
       />
       <div className="flex items-center gap-4">
         <button
@@ -710,6 +725,7 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
       <FeatureFlagsSection initialValues={initialValues} />
       <InstanceLabelSection initialValues={initialValues} />
       <NotFoundPageSection initialValues={initialValues} />
+      <AnnouncementSection />
     </div>
   )
 }

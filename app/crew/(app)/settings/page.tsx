@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/auth'
+import { getServerClient } from '@/lib/supabase/server'
 
 function LinkedCard({
   href,
@@ -63,6 +64,16 @@ export default async function SettingsPage() {
   const isEditorOrAbove = admin.role !== 'viewer' && admin.role !== 'production'
   const canAccessInventorySettings =
     canAccessAdminSettings || (admin.role === 'editor' && admin.inventory_manager)
+
+  const supabase = await getServerClient()
+  const { data: oaFlagRow } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'announcements_oa_enabled')
+    .maybeSingle()
+  const announcementsOaEnabled = oaFlagRow?.value === 'true'
+  const canAccessDashboardAnnouncements =
+    admin.role === 'super_admin' || (admin.role === 'owner_admin' && announcementsOaEnabled)
 
   return (
     <div>
@@ -244,6 +255,19 @@ export default async function SettingsPage() {
           <LockedCard
             title="Style Sandbox"
             description="Design and preview UI aesthetic changes before platform-wide rollout."
+          />
+        )}
+
+        {canAccessDashboardAnnouncements ? (
+          <LinkedCard
+            href="/crew/settings/dashboard-announcement"
+            title="Dashboard Announcements"
+            description="Publish announcements to crew members on their dashboard."
+          />
+        ) : (
+          <LockedCard
+            title="Dashboard Announcements"
+            description="Publish announcements to crew members on their dashboard."
           />
         )}
       </div>

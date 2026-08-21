@@ -5,6 +5,7 @@ import { formatCT } from '@/lib/utils/date'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import ActivityFeed from '@/components/crew/dashboard/ActivityFeed'
 import AddToHomeScreenCard from '@/components/crew/AddToHomeScreenCard'
+import AnnouncementWidget from '@/components/crew/dashboard/AnnouncementWidget'
 import QuickStats from '@/components/crew/dashboard/QuickStats'
 import SeasonAtAGlance from '@/components/crew/dashboard/SeasonAtAGlance'
 import SeasonSelector from '@/components/crew/dashboard/SeasonSelector'
@@ -127,6 +128,8 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-brand-primary mb-6">Welcome to Production Crew</h1>
+
+      <AnnouncementWidget admin={admin} />
 
       <QuickStats />
 
