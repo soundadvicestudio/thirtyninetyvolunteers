@@ -61,12 +61,16 @@ export default function TopBar({
         )}
         <NotificationPanel notificationCounts={notificationCounts} initialNotifications={initialNotifications} />
         <ThemeToggle />
-        <span className="hidden sm:inline text-sm font-semibold text-dark dark:text-dark-text max-w-[120px] truncate">{admin.name}</span>
-        <span
-          className={`text-xs font-semibold px-2 py-1 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
-        >
-          {ROLE_LABELS[admin.role]}
-        </span>
+        <div className="hidden sm:flex flex-col items-end gap-0.5">
+          <span className="text-sm font-semibold text-dark dark:text-dark-text leading-tight">
+            {admin.name}
+          </span>
+          <span
+            className={`text-xs font-semibold px-2 py-0.5 rounded ${ROLE_BADGE_CLASSES[admin.role]}`}
+          >
+            {ROLE_LABELS[admin.role]}
+          </span>
+        </div>
         {admin.role === 'super_admin' && (
           <Link
             href="/crew/settings/setup"
