@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v5.8
+## 30BN_PROCESS_v1.md — v5.9
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 ### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
 — §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
@@ -49,6 +49,16 @@ Map instance, ActionResult discriminated union narrowing); §11
 four new checklist items; §13 Phase MM ✓ Complete + prompt
 log MM.A/MM.1/MM.2/DOC.80/DOC.81/DOC.82; §14 five new
 pattern notes; v5.8 version history)
+### Last Updated: August 2026 — v5.9 (DOC.85: Beta
+phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/
+SHOWARCHIVE complete — §7 six new patterns (revalidatePath
+during render, error.tsx logging, ShowCard inline in
+ShowList, ShowForm vs ShowDetail distinction,
+saveFeatureFlags 6-point wiring, AnnouncementSection
+self-loading); §10 new grep check (revalidatePath in
+render); §11 seven new checklist items; §13 phase
+complete blocks for all five phases + prompt log;
+§14 six new pattern notes; v5.9 version history)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -1695,6 +1705,176 @@ error branch, which is the only branch with an `error`
 field. Do NOT use `result?.error` or `result.error`
 directly without narrowing first. Established MM.2 Q1.
 
+**`revalidatePath()` and `revalidateTag()` are prohibited
+during Server Component render (FORUMS-FIX):**
+These functions may only be called inside a Server Action
+invocation or a Route Handler. Calling them in a Server
+Component's render function body — i.e., in a `page.tsx`
+or layout function executing as part of Next.js rendering
+— throws a runtime error:
+  "Route used revalidatePath during render which is unsupported"
+This error bubbles to `app/error.tsx` and displays as a
+generic "Something went wrong" with no diagnostic detail.
+It does NOT surface in `npm run lint` or `npx tsc --noEmit`.
+The failure is completely invisible to pre-commit checks.
+
+Confirmed failure mode (FORUMS-FIX.A): `page.tsx` for the
+forum thread view called `await markThreadRead(threadId)`
+directly in the Server Component body. `markThreadRead()`
+internally calls `revalidatePath()`. Every thread page
+load threw this error, causing the forums to be completely
+unusable. Fix: moved to `useEffect(() => { void
+markThreadRead(data.thread.id) }, [data.thread.id])` in
+`ThreadViewClient.tsx` — the same pattern already used in
+`components/crew/messages/ThreadView.tsx`.
+
+Rule: Any server action that calls `revalidatePath()` must
+only be invoked from:
+- Client-initiated Server Action calls (onClick, form action)
+- Route handlers
+- Other server actions (NOT from render functions)
+
+Never call such an action from the body of a Server
+Component page function. Established FORUMS-FIX.A.
+
+**`app/error.tsx` must log the caught error (FORUMS-FIX.B):**
+The error boundary component at `app/error.tsx` must:
+1. Destructure `error` from the component props (not just
+   `reset`) — the type annotation alone is insufficient
+2. Include a `useEffect(() => { console.error('Runtime
+   error caught by error boundary:', error) }, [error])`
+
+Without this, diagnosing runtime errors that bubble to the
+error boundary requires extensive static analysis with no
+stack trace. The original `app/error.tsx` had `error` in
+the function signature type but never destructured it —
+meaning even if the useEffect had been present, `error`
+would not have been in scope.
+
+This was confirmed during FORUMS-FIX diagnosis — the
+thread view error showed as a generic "Something went
+wrong" with zero logging, making the root cause impossible
+to identify without reading every component in the render
+chain. Fixed in FORUMS-FIX.B. Established FORUMS-FIX.B.
+
+**`ShowCard` is defined inline inside `ShowList.tsx` —
+not a separate file (SHOWDELETE.A / SHOWARCHIVE.A):**
+`ShowCard` is a component defined at the top of
+`components/crew/shows/ShowList.tsx`. It is NOT a
+separate file at `components/crew/shows/ShowCard.tsx`.
+Any audit targeting "the ShowCard component" must look
+inside `ShowList.tsx`.
+
+Architectural rule: state for all ShowCard mutations lives
+in `ShowList` (the parent), not inside `ShowCard`. The
+existing `isToggling` / `toggleError` / `onToggleStatus`
+props establish this pattern. Any new mutation button added
+to `ShowCard` follows the same structure:
+- New state declared in `ShowList` (e.g., `archivingId`,
+  `undoState`)
+- Handler declared in `ShowList` (e.g., `handleArchive()`)
+- Passed to `ShowCard` as optional props
+- `ShowCard` renders the button and fires the prop on click
+
+Never move mutation state into `ShowCard` itself — it is a
+presentation component only. Established SHOWDELETE.A /
+SHOWARCHIVE.A.
+
+**`ShowForm.tsx` vs `ShowDetail.tsx` — two completely
+different files (SHOWARCHIVE.A / SHOWARCHIVE.1):**
+These are NOT the same component, do NOT share code, and
+are NOT even co-located within a shared component.
+
+- `ShowForm.tsx` — the show CREATION and EDITING form.
+  Reached via "New Show" or "Edit Show". Contains form
+  fields (name, location, season, description), date rows,
+  role configuration, and submission buttons. Previously
+  had "Save & Publish" / "Save as Draft" buttons that
+  hardcoded the status value, ignoring the Status dropdown.
+  Fixed in SHOWARCHIVE.1 to a single "Save" button using
+  the current dropdown value.
+
+- `ShowDetail.tsx` — the tabbed show DETAIL view. Reached
+  by clicking a show's name/card. Contains tabs: Overview,
+  Dates, Volunteers, Settings. Already had a correctly
+  implemented "Save Status" button calling
+  `updateShowStatus(show.id, statusValue)`.
+
+Confirmed confusion point (SHOWARCHIVE.A audit): The prompt
+plan assumed the status buttons were in `ShowDetail.tsx`
+(Settings tab). The Task A audit showed `ShowDetail.tsx`
+already had the correct implementation. The actual bug was
+in `ShowForm.tsx`. Never confuse the two — they serve
+fundamentally different purposes. Established SHOWARCHIVE.A.
+
+**`saveFeatureFlags()` requires SIX wiring points per new
+flag — not four (ANNOUNCE.2 Task A4 correction):**
+`saveFeatureFlags()` in `lib/actions/setup.ts` uses a
+completely different internal structure than other setup
+actions. It does NOT use `upsertSetting()` per key.
+Instead:
+
+1. Each flag is individually extracted:
+   `const xyzEnabled = formData.get('feature_xyz') as string`
+2. All flags are validated via `isValidFlagValue()` type-
+   guard (accepts only `'true'` or `'false'`)
+3. All flags are submitted in a single batched `.upsert([])` call
+4. Each flag must appear in the `logAction()` BEFORE diff
+5. Each flag must appear in the `logAction()` AFTER diff
+   (two separate object literals — both require updating)
+6. Add `revalidatePath('/path/to/feature-route')` for the
+   new route
+
+The Process previously documented four wiring points
+(state, ToggleRow, type widening, fd.append()). Those four
+are the SetupPanel UI wiring points. The server action
+requires its own six wiring points. Both sets must be
+complete. Missing any of the six server-side wiring points
+produces a silent failure: the flag writes to the DB but
+the before/after diff in the audit log is wrong, or the
+new route doesn't revalidate on flag change.
+
+Confirmed during ANNOUNCE.2 Task A audit when Claude Code
+correctly identified the six-point requirement before
+implementing it. Established ANNOUNCE.2 Task A4.
+
+**`AnnouncementSection` self-loading pattern — single
+`useEffect([editor])`, all-in-one body (ANNOUNCE.2):**
+`AnnouncementSection.tsx` is a `'use client'` component
+with no props — it loads its own initial content. This
+pattern is required because `dashboard_announcement_body`
+and `dashboard_announcement_roles` are NOT in `SETUP_KEYS`
+and therefore not in `settingsMap` / `initialValues`.
+
+The correct loading pattern:
+```typescript
+useEffect(() => {
+  if (!editor) return
+  void (async () => {
+    const data = await getAnnouncementContent()
+    editor.commands.setContent(data.body || '')
+    setSelectedRoles(data.roles)
+  })()
+}, [editor])
+```
+
+Three rules that must all hold:
+1. **Single effect.** Do NOT split into two effects (one for
+   fetch, one for setContent) — a second effect keyed on
+   fetched data triggers `react-hooks/set-state-in-effect`.
+2. **`[editor]` as sole dependency.** The effect fires when
+   the editor is ready. It must NOT include fetched data in
+   the dep array — that would re-trigger on every state
+   update.
+3. **All state mutations in one async body.** `setContent()`
+   and `setSelectedRoles()` both run inside the single void
+   IIFE inside the single effect. This avoids both the lint
+   violation and the stale-content problem.
+
+This pattern generalizes: any self-loading Setup Panel
+sub-component that manages data outside `SETUP_KEYS` must
+follow this same structure. Established ANNOUNCE.2.
+
 ---
 
 ## 8. Build Report Format
@@ -2325,6 +2505,26 @@ grep -rn "'America/Chicago'" \
 #   setup/page.tsx — initialValues fallback (|| 'America/Chicago')
 #     per R18 pattern
 # Any other hit = a regression — fix before committing.
+```
+
+```bash
+# Confirm no revalidatePath() or revalidateTag() calls
+# appear directly in Server Component render functions
+# (FORUMS-FIX — confirmed Vercel runtime error).
+# These functions are only valid inside Server Action
+# invocations or Route Handlers.
+# Check: any file NOT marked 'use server' that imports
+# revalidatePath or revalidateTag:
+grep -rn "revalidatePath\|revalidateTag" \
+  app/ components/ \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "'use server'" \
+  | grep -v "route.ts"
+# Review every hit. Hits in layout.tsx or page.tsx
+# that are NOT inside a server action callback or
+# form action are runtime errors waiting to happen.
+# Exception: imports at the top of the file are fine —
+# only actual call sites in render functions are errors.
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -3058,6 +3258,70 @@ lib/actions/forum-posts.ts)
   `const { pathname } = request.nextUrl`. Moving it later
   allows feature-flag redirects to fire before it,
   breaking the kill-switch guarantee. (MM.1)
+
+□ Any server action that internally calls `revalidatePath()`
+  or `revalidateTag()`: confirm it is NEVER called from a
+  Server Component's render function body (page.tsx,
+  layout.tsx, any async Server Component function). Only
+  valid inside Server Action invocations or Route Handlers.
+  Calling during render throws a silent runtime error that
+  bubbles to app/error.tsx with no stack trace.
+  (FORUMS-FIX — confirmed failure mode)
+
+□ After any runtime error investigation: confirm
+  `app/error.tsx` destructures `error` (not just `reset`)
+  AND includes `useEffect(() => { console.error('Runtime
+  error caught by error boundary:', error) }, [error])`.
+  Without both, runtime error diagnosis requires extensive
+  static analysis with zero logging. (FORUMS-FIX.B)
+
+□ Any build that audits or modifies ShowCard behavior:
+  `ShowCard` is defined INLINE inside `ShowList.tsx` — it
+  is NOT at `components/crew/shows/ShowCard.tsx`. Mutation
+  state for ShowCard actions always lives in `ShowList`
+  (parent) and is passed down as props. Never move mutation
+  state into ShowCard. (SHOWDELETE.A / SHOWARCHIVE.A)
+
+□ Any show deletion server action: must include THREE
+  guards in order before executing DELETE — (1) show exists
+  and `status = 'archived'`, (2) no active slot_claims
+  (`claimed` or `waitlisted` — two-step query via
+  show_dates), (3) no attendance records (`attendance.show_id`
+  — direct NO ACTION FK that throws a Postgres FK violation
+  without this guard). The slot_claims check alone is NOT
+  sufficient. (SHOWDELETE.A F1)
+
+□ Any new server action added to `lib/actions/shows.ts`:
+  use `ShowEditorActionResult` as the return type — NOT
+  `ActionResult`. The file uses `ShowEditorActionResult`
+  throughout (`{ success: true } | { error: string }`).
+  Using `ActionResult` will cause a TypeScript error on
+  call sites that use `ShowEditorActionResult`. Confirmed
+  self-caught during SHOWDELETE.1 Task H (tsc). (SHOWDELETE.1)
+
+□ When adding a new feature flag to `saveFeatureFlags()` in
+  `lib/actions/setup.ts`: confirm SIX wiring points — (1)
+  extract from formData, (2) add to `isValidFlagValue()`
+  type-guard, (3) add row to the batched `.upsert([])` call,
+  (4) add to `logAction()` BEFORE diff object, (5) add to
+  `logAction()` AFTER diff object, (6) add `revalidatePath()`
+  for the new feature's route. The SetupPanel UI requires
+  four additional wiring points — both sets must be complete.
+  Missing any server-side wiring point produces a silent
+  failure. (ANNOUNCE.2 Task A4 correction)
+
+□ Any new `app_settings` keys related to dashboard
+  announcements: use the `dashboard_announcement_` prefix,
+  NOT `announcement_`. Pre-existing keys
+  `announcement_banner_active` and `announcement_banner_text`
+  serve the public-facing announcement banner feature — a
+  completely separate system. The dashboard announcements
+  widget uses `dashboard_announcement_body`,
+  `dashboard_announcement_updated_at`,
+  `dashboard_announcement_roles`. Any OA mirror route must
+  be at `/crew/settings/dashboard-announcement` (not
+  `/crew/settings/announcement` which already exists).
+  (ANNOUNCE.A G3 — naming collision discovery)
 ```
 
 ---
@@ -4684,6 +4948,138 @@ Phase MM — Maintenance Mode ✓ Complete
     'error' in result for ActionResult narrowing; .get() for
     Map access. 2 files. Commit: 769ecdd. Phase MM complete.
 
+Phase FORUMS-FIX — Forums Thread View Bug Fix ✓ Complete
+  FORUMS-FIX.A ✓ — Combined audit-and-fix session. Root
+    cause: `markThreadRead()` called directly in Server
+    Component render body of the thread view page.tsx
+    (line 31). `markThreadRead()` internally calls
+    `revalidatePath()`, which Next.js prohibits during
+    render — throws runtime error to app/error.tsx.
+    Confirmed via static analysis: zero broken data in DB,
+    canAccessForum() correctly handles SA, no null arrays.
+    Fix: removed call from page.tsx; added
+    `useEffect(() => { void markThreadRead(data.thread.id)
+    }, [data.thread.id])` to ThreadViewClient.tsx (same
+    pattern as messages/ThreadView.tsx). Same fix resolved
+    "Create Thread" error (navigated immediately to new
+    thread URL = same broken render path). 2 files.
+    Commit: 29570e0.
+  FORUMS-FIX.B ✓ — Q-item cleanup. (1) getThreadWithPosts()
+    signed-URL loop wrapped in per-attachment try/catch —
+    returns signed_url: null on failure instead of crashing
+    entire thread fetch. (2) app/error.tsx: error prop was
+    typed but not destructured; added to destructuring +
+    added useEffect console.error. 2 files. Commit: 6b5e230.
+
+Phase FORUMS-UX — Forum Permissions Discoverability ✓ Complete
+  FORUMS-UX.1 ✓ — Single targeted fix. Added
+    `<span className="text-xs text-mid-gray dark:text-dark-
+    muted">Manage Access</span>` before expand chevron in
+    ForumManageClient.tsx ForumRow. Inside
+    {!editMode && !confirmingDelete && (...)} gate — inherits
+    chevron visibility rules. 1 file, 1 line inserted.
+    Commit: 1651989.
+
+Phase ANNOUNCE — Dashboard Announcements Widget ✓ Complete
+  ANNOUNCE.A ✓ — Read-only audit (9 targets). Key findings:
+    layout.tsx cannot pass fetched data to {children} as
+    props (Next.js hard constraint — announcement data must
+    be fetched in dashboard/page.tsx); pre-existing
+    announcement_banner_* keys require dashboard_announcement_*
+    prefix for new keys; no toast library installed — inline
+    undo banner needed; OA settings page needs new route
+    (/crew/settings/dashboard-announcement); AdminUser type
+    and getAdminUser() SELECT must both be updated (INVENTORY.1
+    lesson). Task A4 correction: saveFeatureFlags() requires
+    6 wiring points per new flag (not 4 as documented).
+    No code. No commit.
+  ANNOUNCE.1 ✓ — Migration 040 + server actions + type
+    extensions. Migration 040: adds announcement_dismissed_at
+    to admin_users; seeds 4 new app_settings keys. AdminUser
+    type (types/admin.ts) + getAdminUser() SELECT (lib/auth.ts)
+    both extended. saveAnnouncement() added to lib/actions/
+    setup.ts (SA always + OA-when-enabled; R31 sanitization;
+    server-side timestamp; roles validation; revalidates
+    dashboard). New: lib/data/announcements.ts (no 'use
+    server', getActiveAnnouncements()); lib/actions/
+    announcements.ts ('use server', dismissAnnouncement() +
+    getAnnouncementContent()). announcement.publish added to
+    AuditAction. 7 files. Commit: 23d28f3.
+  ANNOUNCE.2 ✓ — Full UI. AnnouncementSection.tsx standalone
+    'use client' (self-loading via single useEffect([editor]),
+    TipTap editor, role checkboxes, Publish button).
+    AnnouncementWidget.tsx (Server Component, returns null
+    when no active announcements) + AnnouncementWidgetClient.tsx
+    ('use client', optimistic dismiss). dashboard/page.tsx:
+    widget inserted before QuickStats. SetupPanel.tsx:
+    announcements_oa_enabled 9th FeatureFlagsSection toggle
+    (6-point wiring — Task A4 correction applied). OA mirror
+    page: /crew/settings/dashboard-announcement. Settings hub:
+    Dashboard Announcements card. getAnnouncementContent()
+    added to lib/actions/announcements.ts as 2nd export.
+    Key lesson: saveFeatureFlags() uses batched .upsert([])
+    with isValidFlagValue() type-guard — NOT upsertSetting()
+    per key — requiring 6 server-side wiring points.
+    10 files. Commit: 98a275e. Phase ANNOUNCE complete.
+
+Phase SHOWDELETE — Show Hard Delete ✓ Complete
+  SHOWDELETE.A ✓ — Read-only audit (6 targets). Key findings:
+    ShowCard is inline in ShowList.tsx (not a separate file);
+    updateShowStatus() role guard is broader than canEdit
+    (allows production-role show editors — deleteShow() must
+    use strict ['super_admin','owner_admin','editor'] allowlist);
+    attendance table has NO ACTION FK to shows.id (any show
+    with attendance records throws Postgres FK violation on
+    DELETE — attendance check is mandatory, not optional);
+    slot_claims status has 3 values: claimed/waitlisted/
+    cancelled (both claimed and waitlisted block deletion);
+    AlertDialog already installed; lib/actions/shows.ts uses
+    ShowEditorActionResult (not ActionResult). No code.
+    No commit.
+  SHOWDELETE.1 ✓ — show.delete added to AuditAction. deleteShow()
+    added to lib/actions/shows.ts (strict SA/OA/Editor allowlist;
+    3 guards: archived → active claims [two-step query, both
+    claimed+waitlisted] → attendance records; logAction() before
+    DELETE; returns ShowEditorActionResult). ShowDetail.tsx:
+    state + handler (showDeleteConfirm, isDeleting, deleteError,
+    handleDelete) defined inside SettingsTab (not root ShowDetail
+    — router and show are in scope there); Delete section +
+    AlertDialog (state-controlled, no AlertDialogTrigger).
+    router.push('/crew/shows') on success. Self-caught: Supabase
+    .in() does not support nested subqueries — two-step approach
+    required. Self-caught: return type must be ShowEditorActionResult
+    not ActionResult. 3 files. Commit: b4824dc.
+
+Phase SHOWARCHIVE — Show Archive ✓ Complete (new phase)
+  SHOWARCHIVE.A ✓ — Read-only audit (7 targets). Key findings:
+    shows page already fetches ALL shows regardless of status
+    — no new tab or separate fetch needed; Archive tab proposal
+    was unnecessary; real gaps were (1) missing Archive quick-
+    action button on ShowCard and (2) ShowForm.tsx having
+    hardcoded "Save & Publish"/"Save as Draft" buttons that
+    ignored the Status dropdown. ShowForm.tsx confirmed
+    completely different from ShowDetail.tsx — the status
+    button bug was in ShowForm.tsx, not ShowDetail.tsx
+    (ShowDetail.tsx already had correct Save Status button).
+    No toast library — inline undo banner required. No code.
+    No commit.
+  SHOWARCHIVE.1 ✓ — Three changes in two files:
+    (1) ShowForm.tsx: "Save & Publish" + "Save as Draft"
+    replaced with single "Save" button reading status
+    from dropdown. Past/archived shows guidance message.
+    Notification AlertDialog preserved for live status.
+    (2) ShowList.tsx: updateShowStatus + Archive icon imports;
+    archivingId/archiveError/undoState state + handleArchive()
+    + handleUndo() + 5s auto-dismiss useEffect; ShowCard gains
+    3 optional props (isArchiving, archiveError, onArchive);
+    Archive button gated on canEdit && (draft || live);
+    Archived Shows accordion AFTER entire groups conditional
+    (not nested inside — nesting hides it when season filter
+    returns no results); undo banner above list content.
+    router.refresh() required on archive/undo success (self-
+    caught — not in original prompt snippets).
+    2 files. Commit: 6557260. Phase SHOWARCHIVE complete.
+
 Phase 17 — Launch                   (pending)
 
 New Beta features confirmed during Alpha build:
@@ -5346,6 +5742,44 @@ checklist item, §13 prompt log — this prompt).
   30BN-DOC.80     ✓ Brief v5.9→v6.0 Part A (§1/§7/§8/§9).
   30BN-DOC.81     ✓ Brief v6.0 Part B (§11/§13).
   30BN-DOC.82     ✓ Process v5.7→v5.8 (this prompt).
+  30BN-FORUMS-FIX.A  ✓ Audit + inline fix: markThreadRead
+                       moved from render to useEffect.
+                       2 files. Commit 29570e0.
+  30BN-FORUMS-FIX.B  ✓ signed-URL try/catch + error.tsx
+                       console.error. 2 files.
+                       Commit 6b5e230.
+  30BN-FORUMS-UX.1   ✓ "Manage Access" label.
+                       1 file, 1 line. Commit 1651989.
+  30BN-ANNOUNCE.A    ✓ Audit (9 targets). Key: layout
+                       cannot pass data to children;
+                       dashboard_announcement_* prefix;
+                       saveFeatureFlags() 6-point wiring.
+                       No code. No commit.
+  30BN-ANNOUNCE.1    ✓ Migration 040 + saveAnnouncement()
+                       + dismissAnnouncement() +
+                       getActiveAnnouncements() + types.
+                       7 files. Commit 23d28f3.
+  30BN-ANNOUNCE.2    ✓ AnnouncementSection + widget +
+                       dashboard integration + OA toggle
+                       + mirror page + hub card.
+                       10 files. Commit 98a275e.
+  30BN-SHOWDELETE.A  ✓ Audit. Key: attendance NO ACTION
+                       FK; ShowCard inline in ShowList;
+                       ShowEditorActionResult not
+                       ActionResult. No code. No commit.
+  30BN-SHOWDELETE.1  ✓ deleteShow() + AuditAction +
+                       AlertDialog in SettingsTab.
+                       3 files. Commit b4824dc.
+  30BN-SHOWARCHIVE.A ✓ Audit. Key: ShowForm.tsx has
+                       hardcoded buttons; ShowDetail.tsx
+                       already correct; no Archive tab
+                       needed. No code. No commit.
+  30BN-SHOWARCHIVE.1 ✓ ShowForm.tsx Save fix + Archive
+                       button + Archived Shows accordion.
+                       2 files. Commit 6557260.
+  30BN-DOC.83        ✓ Brief v6.0→v6.1 Part A (§1/§7/§8/§9).
+  30BN-DOC.84        ✓ Brief v6.1 Part B (§11/§13).
+  30BN-DOC.85        ✓ Process v5.8→v5.9 (this prompt).
 ```
 
 ---
@@ -6509,6 +6943,205 @@ This pattern applies to every `handleSave()` function in
 this pattern; any new sub-component must follow it.
 Established MM.2 Q1.
 
+**`revalidatePath()` in Server Component render — confirmed
+runtime error (FORUMS-FIX.A):**
+The exact runtime error thrown when `revalidatePath()` or
+`revalidateTag()` is called during a Server Component render:
+  "Route used revalidatePath during render which is
+  unsupported."
+This is a Next.js framework constraint, not a Supabase
+or application-layer constraint. The error does not surface
+in lint or tsc. It only appears at runtime — and it appears
+as a generic "Something went wrong" because it bubbles to
+`app/error.tsx` without a stack trace (per the next pattern).
+
+The fix pattern: if a server action that calls
+`revalidatePath()` needs to fire on page load, move it to
+a client-side `useEffect` with the `void` keyword:
+```typescript
+// In a Client Component that wraps the page content:
+useEffect(() => {
+  void serverActionThatCallsRevalidate(id)
+}, [id])
+```
+Do NOT make the useEffect callback async — use `void` to
+discard the Promise. See the `void functionName()` in
+`useEffect` pattern documented earlier in §14. The
+dependency array should contain the value that, when it
+changes, should re-trigger the action (e.g., `[thread.id]`
+for markThreadRead). Established FORUMS-FIX.A.
+
+**`app/error.tsx` error logging — both conditions required
+(FORUMS-FIX.B):**
+For `app/error.tsx` to log errors:
+1. `error` must appear in the destructured parameter list
+   (not just in the type annotation)
+2. A `useEffect` must reference `error` in both its body
+   and dependency array
+
+```typescript
+// WRONG — error in type but not destructured; or useEffect
+// references error but it's not in scope
+export default function ErrorPage({ reset }: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) { ... }
+
+// CORRECT — error destructured AND used in useEffect
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => {
+    console.error('Runtime error caught by error boundary:', error)
+  }, [error])
+  // ...
+}
+```
+
+Without both conditions, the error boundary is a black box
+that makes debugging runtime errors vastly harder than it
+needs to be. The FORUMS-FIX investigation would have been
+significantly faster with a logged stack trace. Established
+FORUMS-FIX.B.
+
+**`ShowCard` is inline in `ShowList.tsx`, state in parent
+(SHOWDELETE.A / SHOWARCHIVE.A):**
+`ShowCard` is defined as a component function INSIDE
+`components/crew/shows/ShowList.tsx` — not as a separate
+file. When auditing or modifying ShowCard behavior, open
+`ShowList.tsx`.
+
+All mutation state for ShowCard buttons lives in `ShowList`
+(the parent component) and is passed down as optional props:
+```typescript
+// State declared in ShowList:
+const [archivingId, setArchivingId] = useState<string | null>(null)
+const [undoState, setUndoState] = useState<{...} | null>(null)
+
+// Handler declared in ShowList:
+async function handleArchive(show: ShowWithStaffing) { ... }
+
+// Passed to ShowCard as props:
+<ShowCard
+  show={show}
+  isArchiving={archivingId === show.id}
+  onArchive={() => handleArchive(show)}
+  // ...
+/>
+```
+
+`ShowCard` is a presentation component. It receives handlers
+as props and fires them on click — it does not manage its
+own mutation state. This is the same pattern as the existing
+`isToggling` / `onToggleStatus` props. Established
+SHOWDELETE.A / SHOWARCHIVE.A.
+
+**`ShowForm.tsx` and `ShowDetail.tsx` serve different
+purposes — never confuse them (SHOWARCHIVE.A):**
+```
+ShowForm.tsx     → Create/Edit form (reached via New Show
+                   or Edit Show button). Contains form
+                   fields, date rows, submission buttons.
+ShowDetail.tsx   → Tabbed detail view (reached by clicking
+                   a show). Contains Overview/Dates/
+                   Volunteers/Settings tabs.
+```
+The status submission bug was in `ShowForm.tsx` (hardcoded
+"Save & Publish" / "Save as Draft" buttons ignoring the
+dropdown). `ShowDetail.tsx` already had a correct "Save
+Status" button calling `updateShowStatus(show.id, statusValue)`.
+
+Auditing the wrong file wastes a Task A slot and delays
+the fix. When a bug concerns show status submission from
+an edit form, check `ShowForm.tsx`. When a bug concerns
+the tabbed detail view or Settings tab actions, check
+`ShowDetail.tsx`. Established SHOWARCHIVE.A.
+
+**`saveFeatureFlags()` internal structure — 6-point wiring
+(ANNOUNCE.2 Task A4):**
+`saveFeatureFlags()` in `lib/actions/setup.ts` is NOT
+equivalent to calling `upsertSetting()` per flag. Its
+internal structure:
+
+```typescript
+// Pattern (simplified):
+const xyzEnabled = formData.get('announcements_oa_enabled') as string
+// (1) Extraction
+
+if (!isValidFlagValue(xyzEnabled)) return { error: '...' }
+// (2) isValidFlagValue() validation
+
+const rows = [
+  { key: 'feature_calendar', value: calendarEnabled },
+  // ... existing flags ...
+  { key: 'announcements_oa_enabled', value: xyzEnabled },
+  // (3) Upsert row
+]
+
+await supabase.from('app_settings').upsert(rows)
+
+await logAction(admin.id, 'settings.update', ...,
+  { feature_calendar: prev.calendar, ..., announcements_oa_enabled: prev.xyz },
+  // (4) BEFORE diff
+  { feature_calendar: calendarEnabled, ..., announcements_oa_enabled: xyzEnabled }
+  // (5) AFTER diff
+)
+
+revalidatePath('/crew/settings/dashboard-announcement')
+// (6) Route revalidation
+```
+
+The SetupPanel UI requires FOUR separate wiring points
+(state, ToggleRow, type widening, fd.append()). The server
+action requires SIX. Both sets must be complete. Established
+ANNOUNCE.2 (Task A4 live-file audit correction).
+
+**Self-loading Setup Panel sub-component pattern
+(ANNOUNCE.2):**
+When a `SetupPanel.tsx` sub-component manages data NOT in
+`SETUP_KEYS` / `settingsMap` / `initialValues`, it must
+self-load via a single `useEffect`:
+
+```typescript
+// CORRECT — single effect, [editor] dependency, all state
+// mutations in one async body:
+useEffect(() => {
+  if (!editor) return
+  void (async () => {
+    const data = await getDataAction()
+    editor.commands.setContent(data.body || '')
+    setStateA(data.roles)
+    setStateB(data.other)
+  })()
+}, [editor])
+
+// WRONG — two effects (triggers react-hooks/set-state-in-effect):
+useEffect(() => {
+  void loadData()
+}, [editor])
+useEffect(() => {
+  if (fetchedData) {
+    setStateA(fetchedData.roles)  // ← lint violation
+  }
+}, [fetchedData])
+```
+
+Why `[editor]` as the dependency: the effect fires when
+the TipTap editor is initialized (ready to receive content).
+Before the editor is ready, `setContent()` would be a no-op.
+After it's ready, one load is all that's needed. Including
+fetched data in the dependency array causes the effect to
+re-trigger on every state update.
+
+The `void (async () => { ... })()` IIFE inside the effect
+is required because the effect callback must remain
+synchronous — `useEffect` does not accept async callbacks.
+Established ANNOUNCE.2.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -6684,3 +7317,28 @@ updated (MM.A, MM.1, MM.2, DOC.80, DOC.81, DOC.82); §14
 five new pattern notes (maintenance gate position, /crew/
 maintenance R20 exception, SaveStatus 'saved', settingsMap
 Map instance, ActionResult discriminated union); DOC.82 logged)*
+
+*v5.9 (August 2026 — DOC.85: Beta phases FORUMS-FIX/
+FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE complete — §2
+header v5.8→v5.9 + Last Updated; §7 six new patterns
+(revalidatePath during render prohibition (FORUMS-FIX),
+app/error.tsx must log caught error (FORUMS-FIX.B),
+ShowCard inline in ShowList not separate file
+(SHOWDELETE.A/SHOWARCHIVE.A), ShowForm.tsx vs ShowDetail.tsx
+distinction (SHOWARCHIVE.A), saveFeatureFlags() 6-point
+wiring not 4-point (ANNOUNCE.2 A4), AnnouncementSection
+self-loading single-useEffect pattern (ANNOUNCE.2));
+§10 new grep check (revalidatePath in Server Component
+render bodies); §11 seven new checklist items (revalidatePath
+during render, error.tsx logging, ShowCard inline location,
+attendance NO ACTION FK guard, ShowEditorActionResult return
+type, saveFeatureFlags 6-point wiring, dashboard_announcement_*
+prefix vs announcement_banner_*); §13 phase complete blocks
+for FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE
+added; §13 prompt log updated (FORUMS-FIX.A/B, FORUMS-UX.1,
+ANNOUNCE.A/1/2, SHOWDELETE.A/1, SHOWARCHIVE.A/1, DOC.83,
+DOC.84, DOC.85); §14 six new pattern notes (revalidatePath
+runtime error pattern, error.tsx both-conditions rule,
+ShowCard inline+state-in-parent, ShowForm vs ShowDetail,
+saveFeatureFlags 6-point internal structure,
+self-loading sub-component useEffect); DOC.85 logged)*
