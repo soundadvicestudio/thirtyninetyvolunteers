@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.2
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.3
 ### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
 ### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
 current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
@@ -76,6 +76,19 @@ QRBANNER+QRANALYTICS complete; §8 Style Sandbox mockups
 extended, qr_scan_events table, sidebar_nav_order key,
 next migration 043; §11 QRBANNER/QRANALYTICS/SIDEBAR/
 NAVORDER complete blocks + prompt log; §13 new patterns)
+### Last Updated: August 2026 — v6.3 (DOC.87: ADMIN.47–51 + Phase BETA
+complete — §1 current phase updated; §2 Editor/Viewer terminology updated;
+§7 Editor/Viewer roles updated (Settings access tightened); §7 proxy.ts
+new guards documented; §8 Audit Log access updated (SA/OA only); §8
+Settings hub table rewritten (hide-not-lock rule, Beta Feedback card added,
+15 cards total); §8 Sidebar updated (resolveGroupHrefs, showInventorySettings
+prop, Inventory Management conditional link, dual-highlight fix, Beta Feedback
+in Settings group); §8 Platform Setup updated (SETUP_KEYS 29→30,
+feature_beta, 9th toggle); §8 new Beta Feedback section added; §9 Migration
+043 + beta_feedback schema block + next migration updated to 044; §11
+ADMIN.47–51 + BETA.A + BETA.1 build summaries + prompt log; §13 hide-not-lock
+rule, resolveGroupHrefs pattern, Settings access rule, Inventory Management
+sidebar pattern, feature_beta opt-in pattern; DOC.87 logged)
 
 ---
 
@@ -96,15 +109,16 @@ NAVORDER complete blocks + prompt log; §13 new patterns)
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
 **Current phase:** Active Beta — Executive Committee
-testing. Completed Beta phases: FORUMS-FIX ✓ (thread
-view runtime error fixed — revalidatePath during render),
-FORUMS-UX ✓ (forum permissions discoverability label),
-ANNOUNCE ✓ (dashboard announcements widget), SHOWDELETE
-✓ (show hard delete with guards), SHOWARCHIVE ✓ (archive
-button + archived shows accordion + ShowForm save fix).
-All planned Beta phases complete. Phase 17 (Launch)
-is next. Phase 17 (Launch) deferred pending Beta
-refinement. Phase CAST planned post-launch.
+testing. Pre-Phase-17 improvement work underway.
+Completed Beta phases: FORUMS-FIX ✓, FORUMS-UX ✓,
+ANNOUNCE ✓, SHOWDELETE ✓, SHOWARCHIVE ✓, QRBANNER ✓,
+QRANALYTICS ✓, SIDEBAR ✓, NAVORDER ✓, Phase BETA ✓
+(Beta Feedback System). All planned Beta phases complete.
+Phase 17 (Launch) deferred pending Beta refinement.
+Post-Beta ADMIN prompts: ADMIN.47–51 ✓ (carry-forward
+cleanup, Settings access tightening, hide-not-lock rule,
+Inventory Manager sidebar link). Phase CAST planned
+post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
 
@@ -118,8 +132,8 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Volunteer Call Board** | Volunteer self-service portal display label. Route: `/callboard` |
 | **Call** | A single volunteer appearance at a show or event. Never "shift." |
 | **Super Admin** | Highest role. Full control including user management. |
-| **Editor** | Theater exec or volunteer manager. Full read/write operational access. |
-| **Viewer** | Coordinator-level. Read-only access. No email sending, no editing. |
+| **Editor** | Theater exec or volunteer manager. Full read/write operational access. Cannot access the Settings hub, any Settings sub-page, or the Audit Log — all SA/OA only (tightened ADMIN.50). Editors with `inventory_manager = true` get a direct Inventory Management sidebar link to `/crew/settings/inventory` instead of a Settings hub card. |
+| **Viewer** | Coordinator-level. Read-only access. No email sending, no editing. Cannot access the Settings hub or any Settings sub-page — SA/OA only. |
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
@@ -319,8 +333,8 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 |---|---|---|---|---|
 | Super Admin | All `/crew/*` including `/crew/settings/setup` | Yes | Yes | Creates/manages all admin accounts including Owner Admin. Only role with access to the Setup Panel. |
 | Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can create and manage Editor, Viewer, Production, and Owner Admin accounts. Can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. Can edit and delete volunteer notes (ADMIN.33 — RLS updated Migration 028). Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. Permissions expanded ADMIN.33. |
-| Editor | All `/crew/*` except Settings hub and user management | Yes | Yes | Full operational access. Cannot access Settings sub-pages (owner decision — Settings is Super Admin and Owner Admin only). Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
-| Viewer | All `/crew/*` except Settings hub | No | No | Read-only. No edit controls rendered. Cannot access Settings sub-pages. |
+| Editor | All `/crew/*` except the Settings hub (`/crew/settings`), Settings sub-pages, and the Audit Log (`/crew/settings/audit-log`) | Yes | Yes | Full operational access. Cannot access the Settings hub, any Settings sub-page, or the Audit Log — all SA/OA only (tightened ADMIN.50). Editors with `inventory_manager = true` get a direct Inventory Management sidebar link to `/crew/settings/inventory` instead of a Settings hub card. Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
+| Viewer | All `/crew/*` except the Settings hub (`/crew/settings`) and any Settings sub-page | No | No | Read-only. No edit controls rendered. Cannot access the Settings hub or any Settings sub-page — all SA/OA only (tightened ADMIN.50). |
 | Production | `/crew/calendar`, `/crew/media`, `/crew/help`, `/crew/rehearsals` (assigned only), `/crew/auditions` (assigned only), `/crew/forums` (granted forums only) | Calendar submission only | No | Directors and Stage Managers. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Full read/write on assigned rehearsal schedules (Phase 21) and assigned auditions and shows (Phase AUDITIONS — AUDITIONS.2a). Assignment is per-resource and independent: show assignment (via show editors) grants access to all auditions linked to that show; direct audition assignment grants access to that audition only. Sidebar shows Calendar, Media Library, Help, Rehearsals, and Auditions. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library confirmed ADMIN.30. Rehearsals added Phase 21. Show + audition access added AUDITIONS.2a. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
 | Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]`, `/auditions/[id]`, `/audition-checkin/[token]`, `/auditions/upload/[token]`, `/auditions/cancel/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). `/auditions/[id]` — public audition signup page (open call and timed-slot modes, role selection, material uploads, is_minor/guardian fields, consent trigger for under-18). `/audition-checkin/[token]` — audition self check-in page (token-gated, no auth required, roster dropdown identity — same pattern as rehearsal check-in). `/auditions/upload/[token]` — late material upload page; upload_token from signup confirmation email; P-DC pattern. `/auditions/cancel/[token]` — audition signup cancellation page; cancel_token from confirmation email; sets status = 'withdrawn'. |
@@ -356,6 +370,19 @@ paths (confirmed QRANALYTICS.A audit). The route requires
 no feature flag gate, no role guard, and no maintenance
 mode exception — it must always be reachable for any
 scan of a generated QR code.
+
+**ADMIN.50 proxy.ts additions:** Two new role-based guards
+inserted after the Style Sandbox guard:
+(1) `/crew/settings` — exact match (`pathname ===
+'/crew/settings'`): SA/OA only; all other roles redirected
+to `/crew/dashboard`. Uses session-scoped client (same
+pattern as Setup and Style Sandbox guards).
+(2) `/crew/settings/audit-log` — prefix match
+(`pathname.startsWith('/crew/settings/audit-log')`):
+SA/OA only; all other roles redirected to `/crew/dashboard`.
+Both guards use the same session-client role-fetch pattern
+as the pre-existing SA-gate guards. No matcher change
+needed — `/crew/:path*` already covers both routes.
 
 **FORUMS-FIX root cause — revalidatePath() prohibited during render:** `revalidatePath()` and `revalidateTag()` may only be called from within a Server Action invocation or a Route Handler — NEVER during a component's render path (i.e., in a Server Component function body that is executing as part of a page render). Calling them during render throws a Next.js runtime error: "Route used revalidatePath during render which is unsupported" — this error bubbles to `app/error.tsx` and displays as a generic "Something went wrong" page with no diagnostic detail. The failure is completely silent to lint and tsc — it only surfaces at runtime.
 
@@ -1194,12 +1221,13 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - Migration 013: UNIQUE constraint on `milestone_log(volunteer_id, milestone_hours)`.
 
 **Audit Log (`/crew/settings/audit-log`):**
-- Read-only. Editors and Super Admins only. Viewers redirected to dashboard.
+- Read-only. Super Admin and Owner Admin only. All other roles
+  (Editor, Viewer, Production) hard-blocked at proxy and server —
+  redirected to `/crew/dashboard`.
 - Server-side paginated (25 per page), filtered viewer built in 30BN-10.1.
-- Entry point: "Audit Log" card on `/crew/settings` hub — a `LinkedCard` to
-  `/crew/settings/audit-log` for Editors and Super Admins; a `LockedCard` with badge
-  "Editor & Super Admin only" for Viewers. Added in 30BN-10.1 as a necessary undocumented
-  addition — the page would have been unreachable without it.
+- Entry point: "Audit Log" card on `/crew/settings` hub — `{canAccessAdminSettings &&
+  <LinkedCard .../>}` to `/crew/settings/audit-log` for SA/OA; hidden entirely for all
+  other roles (hide-not-lock rule, ADMIN.49 — no `LockedCard` fallback).
 - Filters: Admin User dropdown, Action Type dropdown (grouped by category), Target Type
   dropdown, Date From/To (DST-aware org-timezone boundary via `fromZonedTime()` from
   `date-fns-tz` with the resolved org timezone — not a hardcoded offset, since
@@ -2172,26 +2200,36 @@ regardless of admin dark mode). Server action:
 
 **App Settings (`/crew/settings`):**
 Built in Phase 11.2. Settings hub at `/crew/settings`
-displays 8 section cards using the `LinkedCard` /
-`LockedCard` role-gating pattern (established in
-30BN-10.1 for the Audit Log card).
+displays 15 section cards using the hide-not-lock
+`LinkedCard`-only pattern (ADMIN.49 — no `LockedCard`
+fallback; SA/OA only, all other roles see nothing).
 
 | Card | Route | Access |
 |---|---|---|
-| Announcement Banner | `/crew/settings/announcement` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| Hearing Options | `/crew/settings/hearing-options` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| Signup Form | `/crew/settings/signup-form` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| General Defaults | `/crew/settings/general` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| Category Management | `/crew/settings/categories` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| User Management | `/crew/settings/users` | Super Admin + Owner Admin (LinkedCard, with restrictions — see §7); Editor + Viewer (LockedCard "Super Admin only") |
-| Audit Log | `/crew/settings/audit-log` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") |
-| Email Activity | `/crew/settings/email-activity` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — built 13.1 |
-| Document Management | `/crew/settings/documents` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — built Phase 15.1; "Beta" badge removed 15.1 Q2 fix |
-| Location Management | `/crew/settings/locations` | Super Admin + Owner Admin (LinkedCard); Editor + Viewer (LockedCard "Super Admin only") — **built CAL.8** |
-| Inventory Management | `/crew/settings/inventory` | Super Admin + Owner Admin (LinkedCard); Editor with `inventory_manager` (LinkedCard); Editor without flag + Viewer (LockedCard) — built INVENTORY.2 |
-| User Groups | `/crew/settings/groups` | Super Admin + Owner Admin (LinkedCard, `canAccessAdminSettings` gate); Editor + Viewer (LockedCard "Super Admin only") — built FORUMS.1 |
-| Dashboard Announcements | `/crew/settings/dashboard-announcement` | Super Admin always (LinkedCard); Owner Admin when `announcements_oa_enabled = 'true'` (LinkedCard); all other roles (not shown) — built Phase ANNOUNCE |
-| Style Sandbox | `/crew/settings/style` | Super Admin ONLY (LinkedCard); Owner Admin + Editor + Viewer (LockedCard "Super Admin only") — built STYLE.1. Reached via hub card only — no sidebar link. |
+| Announcement Banner | `/crew/settings/announcement` | SA + OA (LinkedCard); all other roles — hidden |
+| Hearing Options | `/crew/settings/hearing-options` | SA + OA (LinkedCard); all other roles — hidden |
+| Signup Form | `/crew/settings/signup-form` | SA + OA (LinkedCard); all other roles — hidden |
+| General Defaults | `/crew/settings/general` | SA + OA (LinkedCard); all other roles — hidden |
+| Category Management | `/crew/settings/categories` | SA + OA (LinkedCard); all other roles — hidden |
+| User Management | `/crew/settings/users` | SA + OA (LinkedCard, with restrictions — see §7); all other roles — hidden |
+| Audit Log | `/crew/settings/audit-log` | SA + OA (LinkedCard); all other roles — hidden |
+| Email Activity | `/crew/settings/email-activity` | SA + OA (LinkedCard); all other roles — hidden |
+| Document Management | `/crew/settings/documents` | SA + OA (LinkedCard); all other roles — hidden |
+| Location Management | `/crew/settings/locations` | SA + OA (LinkedCard); all other roles — hidden |
+| Inventory Settings | `/crew/settings/inventory` | SA + OA (LinkedCard); all other roles — hidden |
+| User Groups | `/crew/settings/groups` | SA + OA (LinkedCard); all other roles — hidden |
+| Style Sandbox | `/crew/settings/style` | SA only (LinkedCard); all other roles — hidden |
+| Dashboard Announcements | `/crew/settings/dashboard-announcement` | SA always (LinkedCard); OA when `announcements_oa_enabled = 'true'` (LinkedCard); all other roles — hidden |
+| Beta Feedback | `/crew/settings/beta` | SA + OA (LinkedCard); all other roles — hidden |
+
+**New standing rule (ADMIN.49 — hide-not-lock):** Cards for
+SA/OA-only destination pages use `{canAccessAdminSettings &&
+<LinkedCard .../>}` — no LockedCard fallback. The `LockedCard`
+function has been removed from `settings/page.tsx`. All role-gated
+hub cards now use the hide-not-lock pattern. Settings hub page itself
+is SA/OA only — Editors, Viewers, and Production are redirected to
+`/crew/dashboard` before the JSX renders (proxy guard + server-side
+redirect).
 
 **Sidebar — Phase SIDEBAR ✓ Complete:**
 `components/crew/Sidebar.tsx` was restructured from a
@@ -2210,7 +2248,10 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   changed from "Directory" to "Crew Directory"), Opportunities.
   Utilities: Inventory, Forms, QR Generator, Check-In,
   Communication, Media.
-  Settings: Settings, Help.
+  Settings: Beta Feedback (`/crew/settings/beta` — flag-gated, first
+  in group), Settings (`/crew/settings` — SA/OA only via FLAG_GATED_HREFS),
+  Help. Plus conditional Inventory Management link for Editors with
+  `inventory_manager = true` (special-case append, not part of orderable nav).
 
 - **Active state:** `border-l-4` +
   `style={{ borderLeftColor: 'var(--brand-primary)' }}`
@@ -2244,6 +2285,38 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   flagged nav links: NAV_ITEMS + FLAG_GATED_HREFS +
   Production allowlist. TOOLTIP_ANCHOR_MAP no longer
   exists.
+
+- **Self-healing group hrefs — `resolveGroupHrefs()` (ADMIN.49):**
+  A merge function added to `Sidebar.tsx` that combines a saved per-group
+  nav order with the current `GROUP_HREF_DEFAULTS` — appending any hrefs
+  present in defaults but absent from the saved array. Prevents future nav
+  additions from being silently hidden when an SA has a saved custom nav
+  order from before the new link was added. Applied to all groups in the
+  `.map()` render loop.
+
+  **Conditional Inventory Management link (ADMIN.50):** A special-case
+  conditional link appended inside the Settings group render block, gated
+  on a new `showInventorySettings` prop (added to SidebarProps interface
+  and destructured with default `false`). Visible only to Editors with
+  `inventory_manager = true`. NOT part of `SETTINGS_HREFS` or
+  `DEFAULT_LINK_ORDER` — rendered outside the orderable nav system.
+  `showInventorySettings` computed in `layout.tsx` as
+  `admin.role === 'editor' && admin.inventory_manager === true` and
+  threaded to `<Sidebar>`. `/crew/settings/inventory` → 'Inventory
+  Management' added to `HREF_LABELS` in `types/sidebar.ts`.
+
+  **Settings link visibility (ADMIN.50):** `/crew/settings` is hidden
+  from Editor, Viewer, and Production roles via `FLAG_GATED_HREFS` (role
+  check using `admin` prop already in scope). Production was already
+  excluded by the pre-existing allowlist. Only SA and OA see the Settings
+  sidebar link.
+
+  **Dual-highlight fix (BETA.1):** `renderLink()` active-state logic
+  special-cases `/crew/settings` — the active condition adds
+  `&& !pathname.startsWith('/crew/settings/beta')` to prevent the
+  Settings link from showing active when visiting the Beta Feedback page.
+  Identical pattern to the confirmed Shows/Opportunities fix (ADMIN.30).
+  Do NOT modify `isActivePath()` itself.
 
 - **Commits:** SIDEBAR.2 (62e6497), SIDEBAR.3 (99c680b),
   SIDEBAR.4 (57ec5fe), SIDEBAR.5 (b9f4c5e).
@@ -2414,7 +2487,7 @@ Section 5 — Favicon: `favicon_url`. Same two-mode input as logo but with 1:1 s
 
 Section 6 — Email Configuration: `email_from_address`, `email_from_name`. Editable fields. All Resend sends read these dynamically via `resolveEmailSettings()`. `default_reply_to` displayed read-only with link to General Defaults.
 
-Section 7 — Feature Flags: Eight toggles, one per flag, one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, and `/crew/users` alongside existing paths.
+Section 7 — Feature Flags: Ten toggles (nine `FeatureFlags`-typed flags + one non-flag OA authorization toggle), one Save button. Each flag is an `app_settings` key with value `'true'` or `'false'`. All reads via `getFeatureFlags()` in `lib/feature-flags.ts` — never inline. Flag changes trigger `revalidatePath('/crew', 'layout')` + public route paths for immediate sidebar and page propagation. `saveFeatureFlags()` revalidates `/crew/rehearsals`, `/crew/auditions`, `/crew/inventory`, `/crew/forums`, `/crew/messages`, `/crew/users`, and `/crew/settings/beta` alongside existing paths.
 
 **9th toggle — `announcements_oa_enabled` (Phase ANNOUNCE):**
 Added to `FeatureFlagsSection` as a 9th toggle, saved
@@ -2432,6 +2505,20 @@ reads the flag to gate OA publish authorization, (6)
 `app/crew/(app)/settings/dashboard-announcement/page.tsx`
 reads the flag to gate OA page access. See §13 pattern note.
 
+**10th toggle — `feature_beta` (Phase BETA):**
+Beta Feedback (`feature_beta`) — opt-in, defaults to `'false'`
+(disabled). Enables the `/crew/settings/beta` page for crew
+members to submit feature requests, bug reports, and general
+feedback. Unlike `announcements_oa_enabled`, `feature_beta` IS
+wired through `getFeatureFlags()`/`lib/feature-flags.ts` as the
+9th `FeatureFlags`-typed flag — the standard 5-file pattern
+applies (migration seed, `lib/feature-flags.ts`, `SetupPanel.tsx`,
+`setup/page.tsx`, `saveFeatureFlags()` route revalidation). Uses
+the standard `|| 'false'` opt-in-by-default fallback (matches
+`feature_messages`), not `|| 'true'`. `SetupPanelInitialValues`
+in `SetupPanel.tsx` gains `feature_beta: string` as part of the
+standard 5-file wiring.
+
 | Feature | app_settings key | Default | What disabling blocks |
 |---|---|---|---|
 | Calendar & Space Management | `feature_calendar` | `'true'` | `/crew/calendar/*`, public `/calendar`, `syncShowDateToCalendar()`, calendar links in emails, .ics links on Call Board |
@@ -2445,6 +2532,7 @@ reads the flag to gate OA page access. See §13 pattern note.
 and only flag that defaults to OFF; opt-in only) | `/crew/messages/*`, `/crew/users`,
 message server action guards in `lib/actions/messages.ts`, Messages + Directory
 sidebar links |
+| Beta Feedback | `feature_beta` | `'false'` (disabled by default — second opt-in-only flag) | `/crew/settings/beta`, `submitBetaFeedback()`/`completeBetaFeedback()` server action guards, Beta Feedback sidebar link |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -2453,7 +2541,7 @@ Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.
 Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
 Key files (Phase SETUP):
-- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 29 `app_settings` keys (28 SETUP keys + `default_reply_to`)
+- `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 30 `app_settings` keys (29 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
 - `components/crew/settings/BrandImageUploader.tsx` — shared upload+crop component (logo + favicon)
 - `lib/actions/setup.ts` — twelve server actions: `saveOrgIdentity()`, `saveBrandColors()`, `saveLogoUrl()`, `saveFaviconUrl()`, `saveEmailConfig()`, `saveFeatureFlags()`, `saveInstanceLabel()`, `saveNotFoundPage()`, `saveMaintenanceMode()`, `saveAnnouncement()`, `saveSidebarNavOrder()`, `getSignedBrandUploadUrl()`
@@ -2465,6 +2553,61 @@ Key files (Phase SETUP):
   helper with 'America/Chicago' fallback. No 'use server'. Used by all server-
   side TZ consumers and as the source for the Setup Panel timezone select.
 - `app/layout.tsx` — `generateMetadata()` reads `favicon_url`, `org_name`, and `org_tagline` from `app_settings` (ADMIN.34)
+
+---
+
+**Beta Feedback (`/crew/settings/beta` — Phase BETA ✓ Complete):**
+Gated behind `feature_beta` flag (R34 compliant — opt-in,
+defaults to `'false'`). Crew-only — no public-facing surface.
+
+**Purpose:** Allows crew members (all roles except SA) to submit
+feature requests, bug reports, and general feedback during the
+Beta period. Super Admin sees a queue of all submissions; all
+other roles see a submission form.
+
+**Schema (Migration 043 — `beta_feedback` table):**
+`id` (uuid PK), `submitted_by` (FK → admin_users ON DELETE
+CASCADE), `role_snapshot` (text — role at submission time),
+`type` (text CHECK `'feature_request'|'bug_report'|'other'`),
+`message` (text NOT NULL), `submitted_at` (timestamptz DEFAULT
+now()), `completed_at` (timestamptz nullable — soft archive).
+RLS: authenticated INSERT (self-scoped); SA-only SELECT; SA-only
+UPDATE (for soft archive). No DELETE policy.
+
+**SA queue view:** Pending items only (`completed_at IS NULL`),
+oldest-first. Each row: submitter name, role snapshot badge,
+type badge, timestamp (formatted via `formatCT` with org timezone),
+full message text (`whitespace-pre-wrap`), "Mark Complete" button.
+Mark Complete sets `completed_at = now()` via `completeBetaFeedback()`
+and removes the row from the queue (soft archive — row preserved in
+DB). No notifications triggered on submission or completion.
+
+**Non-SA/OA submission form (`BetaFeedbackForm.tsx` — 'use client'):**
+Type selector (segmented button group: Feature Request / Bug Report /
+Other), message textarea (max 2000 chars with live character count),
+Submit button. On success: inline "Submitted — thank you!" message,
+form resets to blank for additional submissions. No `<form>` element
+(R13.3a). Error shown inline on failure.
+
+**Server actions (`lib/actions/beta.ts`):**
+- `submitBetaFeedback(type, message)` — all authenticated roles;
+  validates + inserts; no revalidatePath (submitter sees no queue).
+- `completeBetaFeedback(id)` — SA only; sets `completed_at = now()`;
+  idempotency guard (`.is('completed_at', null)`);
+  `revalidatePath('/crew/settings/beta')`.
+
+**Hub card:** `{canAccessAdminSettings && <LinkedCard .../>}` —
+SA/OA only, no LockedCard (consistent with hide-not-lock rule).
+No flag import on `settings/page.tsx` — proxy handles redirect
+when flag is off.
+
+**Key files:**
+- `043_beta_feedback.sql` — migration
+- `lib/actions/beta.ts` — server actions
+- `app/crew/(app)/settings/beta/page.tsx` — Server Component shell
+  (role-branched: SA queue / non-SA form)
+- `components/crew/settings/BetaFeedbackForm.tsx` — 'use client'
+  submission form
 
 ---
 
@@ -2999,8 +3142,13 @@ all write paths).
 - Seeded `feature_rehearsals` into `app_settings` (value
   `''` — evaluates as enabled via `!== 'false'` logic).
 
-**Next migration:** 043 (none currently planned).
-Migrations 041 and 042 are applied.
+**Migration 043 status:** Applied — `043_beta_feedback.sql` (Phase BETA.1):
+Creates `beta_feedback` table for in-platform feedback collection during
+Beta period. Seeds `feature_beta = 'false'` in `app_settings`
+(`ON CONFLICT DO NOTHING`).
+
+**Next migration:** 044 (none currently planned).
+Migration 043 is applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -4592,6 +4740,20 @@ Read in `app/crew/(app)/layout.tsx` — JSON.parse with
 try/catch fallback to null. Total active SETUP keys: 29.
 Setup Panel page (setup/page.tsx) fetches 29 SETUP keys.
 
+**`feature_beta` key added in Migration 043 (Phase BETA.1):**
+Seeded via `INSERT INTO app_settings (key, value) VALUES
+('feature_beta', 'false') ON CONFLICT (key) DO NOTHING`.
+Value `'false'` evaluates as DISABLED (`=== 'false'`). This is the
+**second flag (after `feature_messages`) that defaults to OFF** —
+opt-in only. Beta Feedback is opt-in; enabling it activates the
+`/crew/settings/beta` page and Beta Feedback sidebar link. Added to
+`FeatureFlags` type and `getFeatureFlags()` in `lib/feature-flags.ts`.
+Setup Panel Feature Flags section has a 10th toggle row for this flag
+(9th `FeatureFlags`-typed flag). `saveFeatureFlags()` revalidates
+`/crew/settings/beta` alongside existing routes.
+Total active SETUP keys: 30. Setup Panel page (setup/page.tsx)
+fetches 30 SETUP keys.
+
 **Migration 035 status:** Applied — `035_forums.sql` (Phase FORUMS, FORUMS.1, commit dde841d). Created 12 new tables: `forum_user_groups`, `forum_user_group_members`, `forum_categories`, `forums`, `forum_access_grants`, `forum_moderators`, `forum_thread_prefixes`, `forum_threads`, `forum_posts`, `forum_post_attachments`, `forum_thread_subscriptions`, `forum_post_reads`. Seeded `feature_forums` in `app_settings`. RLS: authenticated SELECT on all forum tables; write operations gated on `is_super_admin_or_owner_admin()` for management tables; `forum_threads` and `forum_posts` allow authenticated INSERT (any user with forum access can create content — access filtering at data layer, not RLS); `forum_thread_subscriptions` and `forum_post_reads` use self-scoped policies (`admin_user_id = auth.uid()` — confirmed R37 pattern). `handle_updated_at()` triggers on 4 tables (`forum_user_groups`, `forums`, `forum_threads`, `forum_posts`). Compound sort index on `forum_threads (forum_id, is_pinned DESC, updated_at DESC)` for the primary thread list query. No SECURITY DEFINER functions — R28 does not apply.
 
 **Migration 036 status:** Applied — `036_notifications.sql`
@@ -4784,6 +4946,30 @@ created_at   timestamptz NOT NULL DEFAULT now()
 --   getAdminClient() — storage.objects has no RLS (established dual-client
 --   pattern from INVENTORY.3/FORUMS.4).
 -- Migration 037 (037_private_messaging.sql)
+```
+
+### beta_feedback
+```sql
+id            uuid        PRIMARY KEY DEFAULT gen_random_uuid()
+submitted_by  uuid        NOT NULL REFERENCES admin_users(id)
+              ON DELETE CASCADE
+role_snapshot text        NOT NULL
+type          text        NOT NULL
+              CHECK (type IN ('feature_request','bug_report','other'))
+message       text        NOT NULL
+submitted_at  timestamptz NOT NULL DEFAULT now()
+completed_at  timestamptz
+-- completed_at NULL = pending (visible in SA queue)
+-- completed_at NOT NULL = soft-archived (hidden from queue,
+--   preserved in DB for history)
+-- INDEX: idx_beta_feedback_submitted_by
+-- INDEX: idx_beta_feedback_submitted_at
+-- PARTIAL INDEX: idx_beta_feedback_pending ON submitted_at
+--   WHERE completed_at IS NULL
+-- RLS: authenticated INSERT (submitted_by = auth.uid());
+--   SA-only SELECT; SA-only UPDATE (for soft archive)
+-- No DELETE policy — rows are never hard-deleted
+-- Migration 043 (043_beta_feedback.sql)
 ```
 
 **5-file pattern for adding a new feature flag (confirmed AUDITIONS.1a F2):**
@@ -6990,6 +7176,29 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      qr_scan_events schema, sidebar_nav_
                      order key).
 30BN-DOC.86        ✓ Brief v6.2 Part B (§11 — this prompt).
+30BN-ADMIN.47      ✓ Carry-forward cleanup — dead adminRole
+                     prop removed from InventoryDetailTabs.tsx.
+                     2 files. Commit 678d774.
+30BN-ADMIN.48      ✓ setup/page.tsx ?? → || R18 sweep
+                     (15 expressions). 1 file. Commit 9f614a0.
+30BN-BETA.A        ✓ Read-only audit (9 targets). Key
+                     findings above. No code. No commit.
+30BN-BETA.1        ✓ Migration 043 + lib/actions/beta.ts +
+                     settings/beta page + BetaFeedbackForm.tsx
+                     + 5-file flag pattern + sidebar entry.
+                     4 new files, 8 modified. Commit a9b1026.
+30BN-ADMIN.49      ✓ resolveGroupHrefs() self-healing sidebar
+                     fix + Settings hub hide-not-lock
+                     (14 cards, LockedCard removed). 2 files.
+                     Commit pushed.
+30BN-ADMIN.50      ✓ Settings access tightening (SA/OA only
+                     for hub + audit log) + Inventory Manager
+                     conditional sidebar link. 6 files.
+                     Commit pushed.
+30BN-ADMIN.51      ✓ settings/page.tsx dead variable cleanup
+                     post-ADMIN.50. 1 file. Commit f628541.
+30BN-DOC.87        ✓ Brief v6.2→v6.3 (ADMIN.47–51 + Phase
+                     BETA complete — this prompt).
 
 ### Phase QRBANNER — QR Code Label Banner ✓ Complete
 
@@ -8141,7 +8350,162 @@ All planned Beta phases are complete:
 - Phase NAVORDER ✓ — Sidebar Nav Order
   (NAVORDER.A audit, NAVORDER.1 implementation)
 
-Phase 17 — Launch is next.
+Phase 17 (Launch) deferred pending Beta refinement. Post-Beta
+ADMIN prompts and Phase BETA (Beta Feedback System) followed —
+see below.
+
+**ADMIN.47 ✓** — Carry-forward cleanup. Three carry-forward
+items audited; two were non-applicable (stale in live code):
+Task C (stale QRCode.toBuffer() comment in QRGeneratorForm.tsx)
+— not found in live codebase, already resolved in QRBANNER.1.
+Task D (default_reply_to missing from SETUP_KEYS) — already
+present in SETUP_KEYS at line 19 (resolved ADMIN.46 Task A4).
+Task B executed: removed dead `adminRole` prop from
+`InventoryDetailTabs.tsx` (type annotation, destructure, ESLint
+suppression) + unused `AdminRole` import. Also removed
+`adminRole={admin.role}` from call site in
+`app/crew/(app)/inventory/[id]/page.tsx` (required to avoid
+TypeScript excess-property error). 2 files. Commit 678d774.
+
+**ADMIN.48 ✓** — setup/page.tsx `??` → `||` R18 sweep.
+15 `??` expressions replaced with `||` in the `initialValues`
+block of `setup/page.tsx` (prompt estimated ~11; live count
+was 15). 2 `??` expressions outside `initialValues`
+(settingsMap construction, instanceLabel local const)
+correctly left untouched. Prompt confirmed zero errors, zero
+warnings. 1 file. Commit 9f614a0.
+
+---
+
+**Phase BETA — Beta Feedback System ✓ Complete**
+
+**BETA.A ✓** — Read-only audit (9 targets). Key findings:
+F1: dual-highlight risk — `/crew/settings/beta` prefix-matches
+`/crew/settings` in `isActivePath()`; fix: special-case
+`/crew/settings` in `renderLink()` with
+`!pathname.startsWith('/crew/settings/beta')` exclusion.
+F2: label must be "Beta Feedback" everywhere.
+F3: `feature_beta` defaults OFF — seeds `'false'`, uses
+`|| 'false'` pattern (matches `feature_messages`).
+F4: proxy must use `pathname.startsWith('/crew/settings/beta')`
+only, never broader `/crew/settings`.
+F5: `feature_beta` must go in the `feature_*` cluster in
+SETUP_KEYS, not appended at end.
+F6: `saveFeatureFlags()` has a separate `keys` array AND
+`.upsert()` array — both need `'feature_beta'`.
+F7: `settings/page.tsx` has zero flag-gated cards; Beta
+Feedback hub card uses `canAccessAdminSettings` role gate only.
+No code. No commit.
+
+**BETA.1 ✓** — Full implementation. Migration 043 applied
+(`beta_feedback` table + RLS + `feature_beta` seed).
+`lib/actions/beta.ts` (new): `submitBetaFeedback()` +
+`completeBetaFeedback()`. `app/crew/(app)/settings/beta/
+page.tsx` (new): SA queue view (oldest-first pending items,
+role/type badges, Mark Complete via `.bind()` + R40 assertion)
++ non-SA submission form. `components/crew/settings/
+BetaFeedbackForm.tsx` (new): 'use client', no `<form>` element
+(R13.3a), controlled state, type segmented control, textarea
+with character count, inline success/error. Feature flag
+5-file pattern: `lib/feature-flags.ts` (9th flag `beta:
+boolean`), `SetupPanel.tsx` (10th toggle "Beta Feedback"),
+`setup/page.tsx` (SETUP_KEYS 29→30, `|| 'false'` fallback),
+`lib/actions/setup.ts` (`saveFeatureFlags()` all 6 wiring
+points including both `keys` array and `.upsert()` array),
+`proxy.ts` (`/crew/settings/beta` added to `needsFlagCheck`
++ crew flag block). `Sidebar.tsx`: Beta Feedback nav entry
+(`MessageSquarePlus` icon), `FLAG_GATED_HREFS` entry, prepended
+to `SETTINGS_HREFS`, dual-highlight fix in `renderLink()`.
+`types/sidebar.ts`: `'/crew/settings/beta': 'Beta Feedback'`
+in HREF_LABELS; `/crew/settings/beta` prepended to
+`DEFAULT_LINK_ORDER['settings']`. `settings/page.tsx`: Beta
+Feedback hub card (`canAccessAdminSettings` gate, no LockedCard
+— first card built after hide-not-lock rule). 4 new files,
+8 modified. Commit a9b1026.
+
+---
+
+**ADMIN.49 ✓** — Sidebar Beta link fix + Settings hub
+hide-not-lock.
+
+Bug 1 root cause: `navOrder?.linkOrder[groupKey] ??
+GROUP_HREF_DEFAULTS[groupKey]` — a saved `sidebar_nav_order`
+DB row existed (saved before BETA.1) with
+`linkOrder.settings = ["/crew/settings", "/crew/help"]`
+(no `/crew/settings/beta`). Since non-null, `??` never fell
+through to updated defaults, so `getGroupItems()` never
+looked up the new href. Fix: added `resolveGroupHrefs()`
+to `Sidebar.tsx` — merges saved order with current
+`GROUP_HREF_DEFAULTS`, appending any hrefs present in
+defaults but missing from saved array. Self-healing for
+all future nav additions, for all groups.
+
+Bug 2: 14 cards on `settings/page.tsx` converted from
+`cond ? <LinkedCard/> : <LockedCard/>` to `cond &&
+<LinkedCard/>`. `LockedCard` function definition removed
+(fully unused after conversion — lint would have caught it).
+New standing rule: hide-not-lock (see §13).
+
+Q1: Audit Log C3 pattern `(canAccessAdminSettings ||
+isEditorOrAbove)` is logically redundant but harmless —
+kept as written (simplified in ADMIN.51).
+Q2: Stale `sidebar_nav_order` DB row not modified —
+`resolveGroupHrefs()` makes it harmless.
+F1: `canAccessInventorySettings` used instead of prompt's
+literal `(canAccessAdminSettings || admin.inventory_manager)`
+— safer (defense-in-depth), identical visible behavior.
+2 files. Commit pushed.
+
+**ADMIN.50 ✓** — Settings access tightening + Inventory
+Manager sidebar link.
+
+Decisions: Settings sidebar link hidden from Editor/Viewer/
+Production (SA/OA only). Editors lose access to Audit Log
+entirely (SA/OA only). New "Inventory Management" sidebar
+link in Settings group — visible only to Editors with
+`inventory_manager = true`. SA/OA already have access via
+Settings hub. Settings hub page hard-blocked at proxy and
+server for non-SA/OA.
+
+`Sidebar.tsx`: `/crew/settings` added to `FLAG_GATED_HREFS`
+with role check using `admin` prop (already in scope —
+no new prop needed); `showInventorySettings` prop added
+(interface + destructured default `false`); conditional
+Inventory Management link rendered as special-case append
+inside settings group render block (Package icon — same
+as Utilities-group Inventory link); NOT part of
+`FLAG_GATED_HREFS` or `DEFAULT_LINK_ORDER` system.
+`types/sidebar.ts`: `/crew/settings/inventory` →
+`'Inventory Management'` added to `HREF_LABELS`.
+`proxy.ts`: `/crew/settings` exact-match guard (SA/OA)
++ `/crew/settings/audit-log` prefix guard (SA/OA) —
+both use session-client pattern matching pre-existing
+SA guards. `settings/page.tsx`:
+`if (!canAccessAdminSettings) redirect('/crew/dashboard')`
+added. `audit-log/page.tsx`: tightened from
+Viewer-only-block to full SA/OA-only guard.
+`layout.tsx`: `showInventorySettings = admin.role ===
+'editor' && admin.inventory_manager === true` computed
+and threaded to `<Sidebar>`.
+F1: Editors lose UI path to Announcement Banner, Hearing
+Options, Signup Form, General Defaults (individual sub-page
+routes not independently proxy-blocked). Intentional.
+F2: Dead variables on `settings/page.tsx`
+(`isEditorOrAbove`, inventory editor branch) now
+unreachable for Editor/Viewer — deferred to ADMIN.51.
+6 files. Commit pushed.
+
+---
+
+**ADMIN.51 ✓** — `settings/page.tsx` dead variable cleanup.
+Post-ADMIN.50 simplification: `isEditorOrAbove` (always
+true for SA/OA, the only roles reaching JSX) and
+`canAccessInventorySettings` (Editor branch unreachable)
+both removed. 6 card conditions simplified to
+`canAccessAdminSettings`. `canAccessAdminSettings`,
+`canAccessDashboardAnnouncements`, and
+`admin.role === 'super_admin'` (Style Sandbox) all remain
+meaningful and unchanged. 1 file. Commit f628541.
 
 ### Phase 17 — Launch
 
@@ -8154,13 +8518,16 @@ Phase 17 — Launch is next.
 - Run through all 8 Setup Panel sections and populate with
   production 30BN values (org identity, brand colors, logo,
   favicon, email config, feature flags, instance label, 404 page)
-- Confirm all eight feature flags are configured for launch.
+- Confirm all nine feature flags are configured for launch.
   The original seven operational flags should be enabled:
   `feature_calendar`, `feature_checkin`, `feature_blast`,
   `feature_rehearsals`, `feature_auditions`, `feature_inventory`,
   `feature_forums`. `feature_messages` (Private Messaging — added
   MESSAGES.1) defaults to `'false'` (opt-in only) — enable
   separately when ready to roll out Private Messaging to the crew.
+  `feature_beta` (Beta Feedback — added Phase BETA, defaults to
+  `'false'` — enable separately when ready to roll out Beta
+  Feedback to crew).
 - Work through Deferred Verifications document (v15, 774 items)
 
 **17.2 — Domain & DNS**
@@ -8939,6 +9306,70 @@ and `dashboard_announcement_roles` are NOT in `SETUP_KEYS`
 and not in the `settingsMap`/`initialValues` pattern —
 they are managed by `saveAnnouncement()` directly.
 Established ANNOUNCE.2.
+
+**Hide-not-lock rule for Settings hub cards (ADMIN.49):**
+Cards on `app/crew/(app)/settings/page.tsx` for SA/OA-only
+destination pages use `{canAccessAdminSettings && <LinkedCard/>}` —
+no `LockedCard` fallback. The `LockedCard` function has been
+removed from `settings/page.tsx`. New standing rule: if the
+destination page is SA/OA-only or SA-only, the hub card is
+completely hidden from other roles. Cards whose destination
+page is accessible to Editors (e.g., a future editor-specific
+tool) may still render for Editors. The Settings hub page
+itself redirects all non-SA/OA roles before JSX renders —
+any role-specific card conditions in JSX are only meaningful
+for OA vs SA distinctions.
+
+**`resolveGroupHrefs()` — self-healing nav order merge
+(ADMIN.49):**
+Added to `Sidebar.tsx`. When a saved `sidebar_nav_order` DB
+row exists for a group, `resolveGroupHrefs()` merges it with
+the current `GROUP_HREF_DEFAULTS` by appending any hrefs
+present in defaults but absent from the saved array. This
+prevents any future nav link addition from being silently
+hidden for an SA who has a saved custom order from before
+the new link was added. Applied to all four groups in the
+`.map()` render loop. The stale DB row is not modified —
+missing hrefs are appended at render time.
+
+**Settings access rule (ADMIN.50):**
+`/crew/settings` (hub) and `/crew/settings/audit-log` are
+SA/OA only. Hard-blocked at `proxy.ts` (exact match for hub
+— `pathname === '/crew/settings'`; prefix match for audit-log
+— `pathname.startsWith('/crew/settings/audit-log')`). Both
+use the session-scoped client (same pattern as Setup + Style
+Sandbox guards). Server-side redirect guard also added to
+`settings/page.tsx` (`if (!canAccessAdminSettings) redirect()`).
+`audit-log/page.tsx` tightened from Viewer-only-block to
+full SA/OA-only guard. Editors, Viewers, and Production
+are all redirected to `/crew/dashboard`.
+
+**Conditional Inventory Management sidebar link (ADMIN.50):**
+`showInventorySettings?: boolean` prop added to Sidebar
+(SidebarProps interface + destructured default `false`).
+Computed in `layout.tsx` as `admin.role === 'editor' &&
+admin.inventory_manager === true` and threaded to `<Sidebar>`.
+Rendered as a special-case conditional append inside the
+settings group render block — NOT part of `SETTINGS_HREFS`,
+`FLAG_GATED_HREFS`, or `DEFAULT_LINK_ORDER`. Visible only
+to Editors with `inventory_manager = true`. SA/OA reach
+Inventory Settings via the Settings hub; they do not get
+this sidebar link. Icon: Package (same as Utilities-group
+Inventory link). `/crew/settings/inventory` →
+`'Inventory Management'` added to `HREF_LABELS` in
+`types/sidebar.ts`.
+
+**`feature_beta` — opt-in-by-default flag (Phase BETA):**
+`feature_beta` is the second flag (after `feature_messages`)
+that seeds as `'false'` (opt-in rather than opt-out). The
+`!== 'false'` evaluation logic means a missing key evaluates
+as enabled — an explicit `'false'` seed is required to
+disable at initialization. In `setup/page.tsx`, uses
+`|| 'false'` fallback (not `|| 'true'`). In `SetupPanel.tsx`,
+state initialized as `initialValues.feature_beta === 'true'`
+(not `!== 'false'`). Toggle in Platform Setup → Feature Flags
+section as the 10th toggle (9th FeatureFlags-type flag —
+`announcements_oa_enabled` is not a FeatureFlags field).
 
 ---
 
