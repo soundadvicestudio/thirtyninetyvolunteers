@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import sanitizeHtml from 'sanitize-html'
 import { getAdminUser } from '@/lib/auth'
 import { getServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin'
@@ -557,6 +558,120 @@ export async function saveInstanceLabel(formData: FormData): Promise<ActionResul
     'instance_label',
     { value: previous?.value ?? '' },
     { value: instanceLabel }
+  )
+
+  return { success: true }
+}
+
+export async function saveAnnouncement(
+  formData: FormData
+): Promise<ActionResult> {
+  const admin = await getAdminUser()
+  if (!admin) return { error: 'Unauthorized' }
+
+  // Check if OA is enabled for announcements
+  const supabase = await getServerClient()
+  const isSA = admin.role === 'super_admin'
+  const isOA = admin.role === 'owner_admin'
+
+  if (!isSA && !isOA) {
+    return { error: 'Unauthorized' }
+  }
+
+  if (isOA) {
+    const { data: oaFlagRow } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'announcements_oa_enabled')
+      .maybeSingle()
+    if (oaFlagRow?.value !== 'true') {
+      return { error: 'Unauthorized' }
+    }
+  }
+
+  const rawBody = (formData.get('dashboard_announcement_body') as string | null) ?? ''
+  const roles = (formData.get('dashboard_announcement_roles') as string | null) ?? '[]'
+
+  // Sanitize TipTap HTML per R31
+  const body = sanitizeHtml(rawBody, {
+    allowedTags: [
+      'p', 'strong', 'em', 'u', 'ul', 'ol', 'li',
+      'br', 'h1', 'h2', 'h3', 'blockquote', 'a', 'hr',
+    ],
+    allowedAttributes: {
+      a: ['href', 'rel'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+  })
+
+  // Validate roles is valid JSON array
+  let parsedRoles: string[]
+  try {
+    parsedRoles = JSON.parse(roles)
+    if (!Array.isArray(parsedRoles)) {
+      return { error: 'Invalid roles format.' }
+    }
+  } catch {
+    return { error: 'Invalid roles format.' }
+  }
+
+  if (!body.trim()) {
+    return { error: 'Announcement body is required.' }
+  }
+
+  if (parsedRoles.length === 0) {
+    return { error: 'At least one role must be selected.' }
+  }
+
+  // Set updated_at server-side — never trust client timestamp
+  const updatedAt = new Date().toISOString()
+
+  const keys = [
+    'dashboard_announcement_body',
+    'dashboard_announcement_updated_at',
+    'dashboard_announcement_roles',
+  ]
+
+  const { data: previousRows } = await supabase
+    .from('app_settings')
+    .select('key, value')
+    .in('key', keys)
+  const previousMap = new Map(
+    (previousRows ?? []).map((r) => [r.key, r.value])
+  )
+
+  const values: Record<string, string> = {
+    dashboard_announcement_body: body,
+    dashboard_announcement_updated_at: updatedAt,
+    dashboard_announcement_roles: JSON.stringify(parsedRoles),
+  }
+
+  const results = await Promise.all(
+    keys.map((key) =>
+      upsertSetting(supabase, key, values[key], admin.id)
+    )
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    return { error: failed.error.message }
+  }
+
+  revalidatePath('/crew/settings/setup')
+  revalidatePath('/crew/settings/dashboard-announcement')
+  revalidatePath('/crew/dashboard')
+  revalidatePath('/crew', 'layout')
+
+  await logAction(
+    admin.id,
+    'announcement.publish',
+    'app_settings',
+    'dashboard_announcement',
+    {
+      ...Object.fromEntries(
+        keys.map((k) => [k, previousMap.get(k) ?? ''])
+      ),
+    },
+    values
   )
 
   return { success: true }

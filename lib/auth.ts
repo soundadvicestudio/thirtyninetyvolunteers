@@ -16,7 +16,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
     const { data: adminUser, error } = await supabase
       .from('admin_users')
       .select(
-        'id, name, email, role, is_active, calendar_editor, inventory_manager, calendar_subscription_token, last_login, activity_cleared_at'
+        'id, name, email, role, is_active, calendar_editor, inventory_manager, calendar_subscription_token, last_login, activity_cleared_at, announcement_dismissed_at'
       )
       .eq('id', user.id)
       .eq('is_active', true)

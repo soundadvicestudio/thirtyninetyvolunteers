@@ -159,6 +159,9 @@ export type AuditAction =
   | 'forum_post.edit'
   | 'forum_post.delete'
 
+  // Dashboard Announcements
+  | 'announcement.publish'
+
 export async function logAction(
   adminId: string | null,
   action: AuditAction,

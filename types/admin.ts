@@ -11,4 +11,5 @@ export type AdminUser = {
   calendar_subscription_token: string
   last_login: string | null
   activity_cleared_at: string | null
+  announcement_dismissed_at: string | null
 }
