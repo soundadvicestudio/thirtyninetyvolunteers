@@ -175,7 +175,17 @@ export default function Sidebar({
   }
 
   const groupItems = Object.fromEntries(
-    resolvedGroupOrder.map((groupKey) => [groupKey, getGroupItems(resolveGroupHrefs(groupKey))])
+    resolvedGroupOrder.map((groupKey) => {
+      const hrefs = resolveGroupHrefs(groupKey)
+      // Super Admin reaches Beta Feedback via the Settings hub card, not the
+      // sidebar link — hide it here only for SA; all other roles with
+      // feature_beta on keep seeing it (ADMIN.55).
+      const visibleHrefs =
+        groupKey === 'settings' && admin.role === 'super_admin'
+          ? hrefs.filter((href) => href !== '/crew/settings/beta')
+          : hrefs
+      return [groupKey, getGroupItems(visibleHrefs)]
+    })
   ) as Record<GroupKey, (typeof NAV_ITEMS)[number][]>
 
   // Local render function for a single nav link. Handles active state, badge
