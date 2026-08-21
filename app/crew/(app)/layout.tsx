@@ -36,6 +36,8 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
     redirect('/crew/login')
   }
 
+  const showInventorySettings = admin.role === 'editor' && admin.inventory_manager === true
+
   const supabase = await getServerClient()
 
   const flags = await getFeatureFlags(supabase)
@@ -98,6 +100,7 @@ export default async function CrewLayout({ children }: { children: ReactNode }) 
               forumUnreadCount={notificationCounts.forumUnread}
               messagesUnreadCount={notificationCounts.messageUnread}
               navOrder={navOrder}
+              showInventorySettings={showInventorySettings}
             />
             <div className="flex-1 flex flex-col min-w-0">
               <TopBar

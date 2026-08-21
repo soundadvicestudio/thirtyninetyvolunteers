@@ -63,7 +63,7 @@ export default async function AuditLogPage({
   if (!admin) {
     redirect('/crew/login')
   }
-  if (admin.role === 'viewer') {
+  if (admin.role !== 'super_admin' && admin.role !== 'owner_admin') {
     redirect('/crew/dashboard')
   }
 

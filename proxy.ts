@@ -175,6 +175,44 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Settings hub: hard-blocked at the route level for every role except
+  // Super Admin and Owner Admin. Exact match (not prefix) — sub-pages like
+  // /crew/settings/inventory and /crew/settings/beta must remain reachable
+  // for roles that have their own separate access grant to those specific
+  // sub-pages (e.g. an inventory_manager Editor).
+  if (user && pathname === '/crew/settings') {
+    const { data: settingsAdminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (settingsAdminUser?.role !== 'super_admin' && settingsAdminUser?.role !== 'owner_admin') {
+      const dashboardUrl = request.nextUrl.clone()
+      dashboardUrl.pathname = '/crew/dashboard'
+      return NextResponse.redirect(dashboardUrl)
+    }
+  }
+
+  // Audit Log: hard-blocked at the route level for every role except Super
+  // Admin and Owner Admin. Prefix match — no legitimate sub-routes exist
+  // under /crew/settings/audit-log for any other role.
+  if (user && pathname.startsWith('/crew/settings/audit-log')) {
+    const { data: auditLogAdminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (auditLogAdminUser?.role !== 'super_admin' && auditLogAdminUser?.role !== 'owner_admin') {
+      const dashboardUrl = request.nextUrl.clone()
+      dashboardUrl.pathname = '/crew/dashboard'
+      return NextResponse.redirect(dashboardUrl)
+    }
+  }
+
   // Production role: restricted to /crew/calendar, /crew/help, /crew/media,
   // /crew/rehearsals, /crew/forums, and /crew/shows/[id] (assigned shows
   // only). Additive

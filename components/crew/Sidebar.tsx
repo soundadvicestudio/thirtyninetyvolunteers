@@ -100,6 +100,7 @@ export default function Sidebar({
   forumUnreadCount = 0,
   messagesUnreadCount = 0,
   navOrder,
+  showInventorySettings = false,
 }: {
   admin: AdminUser
   flags: FeatureFlags
@@ -107,6 +108,7 @@ export default function Sidebar({
   forumUnreadCount?: number
   messagesUnreadCount?: number
   navOrder?: SidebarNavOrder
+  showInventorySettings?: boolean
 }) {
   const pathname = usePathname()
   const { isOpen, close } = useMobileSidebar()
@@ -114,7 +116,9 @@ export default function Sidebar({
 
   // Flag check and role check are independent — both must be true for a
   // gated link to render. NAV_ITEMS is a flat data-driven array (not
-  // discrete per-link JSX), so gating is a filter keyed by href.
+  // discrete per-link JSX), so gating is a filter keyed by href. Most
+  // entries are feature-flag booleans; '/crew/settings' is a role boolean
+  // (Settings hub is SA/OA only) — the filter below treats both uniformly.
   const FLAG_GATED_HREFS: Record<string, boolean> = {
     '/crew/calendar': flags.calendar,
     '/crew/tools/checkin': flags.checkin,
@@ -126,6 +130,7 @@ export default function Sidebar({
     '/crew/messages': flags.messages,
     '/crew/users': flags.messages,
     '/crew/settings/beta': flags.beta,
+    '/crew/settings': admin.role === 'super_admin' || admin.role === 'owner_admin',
   }
   const flagFilteredNavItems = NAV_ITEMS.filter((item) => FLAG_GATED_HREFS[item.href] !== false)
 
@@ -267,6 +272,13 @@ export default function Sidebar({
                   {GROUP_LABELS[groupKey]}
                 </p>
                 {items.map(renderLink)}
+                {groupKey === 'settings' &&
+                  showInventorySettings &&
+                  renderLink({
+                    label: 'Inventory Management',
+                    href: '/crew/settings/inventory',
+                    icon: Package,
+                  })}
               </div>
             )
           })}

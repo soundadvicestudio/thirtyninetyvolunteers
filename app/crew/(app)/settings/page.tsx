@@ -39,6 +39,9 @@ export default async function SettingsPage() {
   }
 
   const canAccessAdminSettings = admin.role === 'super_admin' || admin.role === 'owner_admin'
+  if (!canAccessAdminSettings) {
+    redirect('/crew/dashboard')
+  }
   const isEditorOrAbove = admin.role !== 'viewer' && admin.role !== 'production'
   const canAccessInventorySettings =
     canAccessAdminSettings || (admin.role === 'editor' && admin.inventory_manager)
