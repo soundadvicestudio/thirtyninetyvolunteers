@@ -9,7 +9,11 @@ export type GenerateQRCodeResult =
   | { svg: string; pngBase64: string }
   | { error: string }
 
-export async function generateQRCode(url: string, label: string): Promise<GenerateQRCodeResult> {
+export async function generateQRCode(
+  url: string,
+  label: string,
+  bannerText?: string
+): Promise<GenerateQRCodeResult> {
   const trimmed = url.trim()
   if (!trimmed) {
     return { error: 'Please enter a URL.' }
@@ -20,7 +24,7 @@ export async function generateQRCode(url: string, label: string): Promise<Genera
 
   let result: { svg: string; pngBase64: string }
   try {
-    result = await generateQR(targetUrl)
+    result = await generateQR(targetUrl, bannerText?.trim() || undefined)
   } catch (err) {
     console.error('generateQRCode error:', err)
     return { error: 'Failed to generate QR code. Please check the URL and try again.' }
@@ -36,6 +40,7 @@ export async function generateQRCode(url: string, label: string): Promise<Genera
       label: label.trim() || null,
       svg: result.svg,
       png_base64: result.pngBase64,
+      banner_text: bannerText?.trim() || null,
       created_by: admin?.id ?? null,
     })
     revalidatePath('/crew/tools/qr-generator')

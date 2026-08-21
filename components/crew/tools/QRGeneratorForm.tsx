@@ -14,6 +14,8 @@ function sanitizeLabel(label: string): string {
 export default function QRGeneratorForm() {
   const [url, setUrl] = useState('')
   const [label, setLabel] = useState('')
+  const [bannerEnabled, setBannerEnabled] = useState(false)
+  const [bannerText, setBannerText] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [qrResult, setQrResult] = useState<{ svg: string; pngBase64: string } | null>(null)
@@ -25,10 +27,20 @@ export default function QRGeneratorForm() {
     }
   }
 
+  const handleBannerToggle = (enabled: boolean) => {
+    setBannerEnabled(enabled)
+    if (!enabled) setBannerText('')
+    setQrResult(null)
+  }
+
   async function handleGenerate() {
     setGenerating(true)
     setError(null)
-    const result = await generateQRCode(url, label)
+    const result = await generateQRCode(
+      url,
+      label,
+      bannerEnabled && bannerText.trim() ? bannerText : undefined
+    )
     setGenerating(false)
     if ('error' in result) {
       setError(result.error)
@@ -68,6 +80,32 @@ export default function QRGeneratorForm() {
           <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
             Used for the downloaded file name and saved history — it does not affect the QR code content.
           </p>
+        </div>
+
+        <div>
+          <label className={labelClasses}>Banner Text</label>
+          <label className="flex items-center gap-2 text-sm text-dark dark:text-dark-text">
+            <input
+              type="checkbox"
+              checked={bannerEnabled}
+              onChange={(e) => handleBannerToggle(e.target.checked)}
+              className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
+            />
+            Add banner below QR code
+          </label>
+          {bannerEnabled && (
+            <input
+              type="text"
+              value={bannerText}
+              onChange={(e) => {
+                setBannerText(e.target.value)
+                setQrResult(null)
+              }}
+              placeholder="e.g. Scan to Register"
+              maxLength={50}
+              className={`${inputClasses} mt-2`}
+            />
+          )}
         </div>
 
         <button

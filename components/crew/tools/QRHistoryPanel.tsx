@@ -36,6 +36,11 @@ export default function QRHistoryPanel({
                   <p className="text-sm font-semibold text-dark dark:text-dark-text">
                     {row.label || domainFromUrl(row.url)}
                   </p>
+                  {row.banner_text && (
+                    <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
+                      Banner: {row.banner_text}
+                    </p>
+                  )}
                   <p className="text-sm text-mid-gray dark:text-dark-muted overflow-hidden text-ellipsis whitespace-nowrap max-w-xs">
                     {row.url}
                   </p>
