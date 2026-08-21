@@ -42,10 +42,6 @@ export default async function SettingsPage() {
   if (!canAccessAdminSettings) {
     redirect('/crew/dashboard')
   }
-  const isEditorOrAbove = admin.role !== 'viewer' && admin.role !== 'production'
-  const canAccessInventorySettings =
-    canAccessAdminSettings || (admin.role === 'editor' && admin.inventory_manager)
-
   const supabase = await getServerClient()
   const { data: oaFlagRow } = await supabase
     .from('app_settings')
@@ -64,7 +60,7 @@ export default async function SettingsPage() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {isEditorOrAbove && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/announcement"
             title="Announcement Banner"
@@ -72,7 +68,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isEditorOrAbove && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/hearing-options"
             title="Hearing Options"
@@ -80,7 +76,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isEditorOrAbove && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/signup-form"
             title="Signup Form"
@@ -88,7 +84,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {isEditorOrAbove && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/general"
             title="General Defaults"
@@ -120,7 +116,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {canAccessInventorySettings && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/inventory"
             title="Inventory Settings"
@@ -128,7 +124,7 @@ export default async function SettingsPage() {
           />
         )}
 
-        {(canAccessAdminSettings || isEditorOrAbove) && (
+        {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/audit-log"
             title="Audit Log"
