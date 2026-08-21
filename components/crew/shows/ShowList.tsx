@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { Archive, ChevronDown } from 'lucide-react'
 import { formatWallClockCT } from '@/lib/utils/date'
-import { createSeason, toggleShowStatus } from '@/lib/actions/shows'
+import { createSeason, toggleShowStatus, updateShowStatus } from '@/lib/actions/shows'
 import {
   SHOW_STATUS_LABEL as STATUS_LABEL,
   SHOW_STATUS_BADGE as STATUS_BADGE,
@@ -59,6 +59,9 @@ function ShowCard({
   isCopied,
   onToggleStatus,
   onCopyUrl,
+  isArchiving,
+  archiveError,
+  onArchive,
 }: {
   show: ShowWithStaffing
   canEdit: boolean
@@ -67,6 +70,9 @@ function ShowCard({
   isCopied: boolean
   onToggleStatus: () => void
   onCopyUrl: () => void
+  isArchiving?: boolean
+  archiveError?: string
+  onArchive?: () => void
 }) {
   const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const staffing = staffingDisplay(show)
@@ -115,6 +121,21 @@ function ShowCard({
           )}
         </div>
         {toggleError && <p className="text-xs text-brand-accent">{toggleError}</p>}
+
+        {canEdit && (show.status === 'draft' || show.status === 'live') && onArchive && (
+          <div className="mt-1">
+            <button
+              type="button"
+              onClick={onArchive}
+              disabled={isArchiving}
+              className="text-xs text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+            >
+              <Archive size={12} />
+              {isArchiving ? 'Archiving…' : 'Archive'}
+            </button>
+            {archiveError && <p className="text-xs text-red-600 mt-1">{archiveError}</p>}
+          </div>
+        )}
         <div className="flex items-center gap-3">
           {canEdit && (
             <Link
@@ -178,6 +199,14 @@ export default function ShowList({
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [toggleErrors, setToggleErrors] = useState<Record<string, string>>({})
 
+  const [archivingId, setArchivingId] = useState<string | null>(null)
+  const [archiveError, setArchiveError] = useState<{ id: string; msg: string } | null>(null)
+  const [undoState, setUndoState] = useState<{
+    showId: string
+    showName: string
+    previousStatus: 'draft' | 'live'
+  } | null>(null)
+
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -186,6 +215,14 @@ export default function ShowList({
       if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!undoState) return
+    const timer = setTimeout(() => {
+      setUndoState(null)
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [undoState])
 
   function toggleExpand(key: string) {
     setExpandedKeys((prev) => {
@@ -250,6 +287,31 @@ export default function ShowList({
     router.refresh()
   }
 
+  async function handleArchive(show: ShowWithStaffing) {
+    const previousStatus = show.status as 'draft' | 'live'
+    setArchivingId(show.id)
+    setArchiveError(null)
+    const result = await updateShowStatus(show.id, 'archived')
+    setArchivingId(null)
+    if ('error' in result) {
+      setArchiveError({ id: show.id, msg: result.error })
+    } else {
+      setUndoState({
+        showId: show.id,
+        showName: show.name,
+        previousStatus,
+      })
+      router.refresh()
+    }
+  }
+
+  async function handleUndo() {
+    if (!undoState) return
+    await updateShowStatus(undoState.showId, undoState.previousStatus)
+    setUndoState(null)
+    router.refresh()
+  }
+
   function handleCopyUrl(showId: string) {
     const url = `${process.env.NEXT_PUBLIC_SITE_URL}/shows/${showId}`
     navigator.clipboard.writeText(url).then(() => {
@@ -295,6 +357,15 @@ export default function ShowList({
       groups.push({ key: UNSEASONED_KEY, season: null, shows: filteredUnseasoned })
     }
   }
+
+  const archivedShows = shows
+    .filter((s) => s.status === 'archived' || s.status === 'past')
+    .sort((a, b) => {
+      const aDate = a.latest_date ?? ''
+      const bDate = b.latest_date ?? ''
+      return bDate.localeCompare(aDate)
+    })
+  const archivedExpanded = expandedKeys.has('archived')
 
   return (
     <div>
@@ -411,6 +482,24 @@ export default function ShowList({
         </div>
       )}
 
+      {undoState && (
+        <div className="mb-4 flex items-center justify-between bg-neutral-surface dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg px-4 py-3 text-sm">
+          <span className="text-dark dark:text-dark-text">{`"${undoState.showName}" archived.`}</span>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={handleUndo} className="text-brand-primary hover:underline font-medium text-sm cursor-pointer">
+              Undo
+            </button>
+            <button
+              type="button"
+              onClick={() => setUndoState(null)}
+              className="text-mid-gray dark:text-dark-muted hover:text-dark dark:hover:text-dark-text text-lg leading-none cursor-pointer"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {groups.length === 0 && !hasActiveFilter ? (
         <div className="text-center py-16">
           <p className="text-mid-gray dark:text-dark-muted mb-4">
@@ -488,6 +577,9 @@ export default function ShowList({
                           isCopied={copiedId === show.id}
                           onToggleStatus={() => handleToggleStatus(show)}
                           onCopyUrl={() => handleCopyUrl(show.id)}
+                          isArchiving={archivingId === show.id}
+                          archiveError={archiveError?.id === show.id ? archiveError.msg : undefined}
+                          onArchive={() => handleArchive(show)}
                         />
                       ))
                     )}
@@ -496,6 +588,45 @@ export default function ShowList({
               </div>
             )
           })}
+        </div>
+      )}
+
+      {canEdit && archivedShows.length > 0 && (
+        <div className="mt-3 border border-divider dark:border-dark-border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleExpand('archived')}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-dark-nav text-left hover:bg-gray-100 dark:hover:bg-dark-nav/70 transition-colors cursor-pointer"
+          >
+            <div className="flex flex-wrap items-center gap-3 min-w-0">
+              <span className="font-bold text-dark dark:text-dark-text">Show Archive</span>
+              <span className="text-sm text-mid-gray dark:text-dark-muted">
+                {archivedShows.length} {archivedShows.length !== 1 ? 'shows' : 'show'}
+              </span>
+            </div>
+            <ChevronDown
+              size={18}
+              className={`text-mid-gray dark:text-dark-muted transition-transform shrink-0 ${
+                archivedExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {archivedExpanded && (
+            <div className="p-3 space-y-3 bg-white dark:bg-dark-surface">
+              {archivedShows.map((show) => (
+                <ShowCard
+                  key={show.id}
+                  show={show}
+                  canEdit={canEdit}
+                  isToggling={togglingId === show.id}
+                  toggleError={toggleErrors[show.id]}
+                  isCopied={copiedId === show.id}
+                  onToggleStatus={() => handleToggleStatus(show)}
+                  onCopyUrl={() => handleCopyUrl(show.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

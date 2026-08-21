@@ -469,18 +469,22 @@ export default function ShowForm({
     window.location.href = '/crew/shows'
   }
 
-  function onClickSaveDraft() {
-    handleSubmit((data) => submitForm(data, 'draft'))()
-  }
-
-  function onClickSavePublish() {
+  function handleSave() {
+    setFormError(null)
+    if (status !== 'draft' && status !== 'live') {
+      setFormError(
+        'This form can only save as Draft or Live. To set a show to Past or Archived, use the Settings tab on the show detail page.'
+      )
+      return
+    }
+    const targetStatus = status
     handleSubmit((data) => {
-      if (hasZeroSlotRole(data)) {
+      if (targetStatus === 'live' && hasZeroSlotRole(data)) {
         setPendingPublish(data)
         setShowPublishWarning(true)
         return
       }
-      submitForm(data, 'live')
+      submitForm(data, targetStatus)
     })()
   }
 
@@ -540,7 +544,7 @@ export default function ShowForm({
             <option value="archived">Archived</option>
           </select>
           <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
-            Use the buttons below to save as Draft or publish Live.
+            {'Set the show status before saving.'}
           </p>
         </div>
 
@@ -711,19 +715,11 @@ export default function ShowForm({
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
           type="button"
-          onClick={onClickSavePublish}
+          onClick={handleSave}
           disabled={busy}
           className="bg-brand-accent text-white font-bold px-5 py-2.5 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {submittingStatus === 'live' ? 'Publishing…' : 'Save & Publish'}
-        </button>
-        <button
-          type="button"
-          onClick={onClickSaveDraft}
-          disabled={busy}
-          className="bg-white dark:bg-dark-surface border border-brand-primary text-brand-primary dark:text-brand-primary-mid font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          {submittingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}
+          {busy ? 'Saving…' : 'Save'}
         </button>
       </div>
 
