@@ -7325,6 +7325,14 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      11 files. Commit 73ef219.
 30BN-DOC.90        ✓ Brief v6.4→v6.5 Part A (§1/§8/§9).
 30BN-DOC.91        ✓ Brief v6.5 Part B (§11/§13 — this prompt).
+30BN-DOC.94        ✓ §13 version history tail compressed
+                     (~315 lines → ~20 lines). 40 redundant
+                     entries replaced with pointer to §11.
+                     7 doc-maintenance notes preserved in
+                     condensed paragraph. v6.3 gap moot
+                     (no per-version tail entries remain;
+                     header table is version registry).
+                     Orphaned cross-reference line removed.
 
 ### Phase QRBANNER — QR Code Label Banner ✓ Complete
 
@@ -10044,320 +10052,39 @@ orphaned by a feature change, delete both:
 
 ---
 
-*This document is updated at the completion of each build phase.*
+*This document is updated at the completion of each
+build phase.*
 *Version history:*
-*v1 (initial — all Alpha prompts, full schema, brand system, standing rules)*
-*v1.1 (July 2026 — Phase 1 complete: project facts confirmed, Google SSO moved to Alpha, Production Crew footer link added, Open Decisions #1/#3/#4 resolved, R15 added)*
-*v1.2 (July 2026 — Phase 2 complete: @hookform/resolvers added to §3, Resend domain verified and from address confirmed, Open Decision #2 resolved, age_range required decision noted, shows link in confirmation email, R16/R17 cross-references added, R18 empty string normalization added, R8 single-send clarification)*
-*v1.3 (July 2026 — Phase 3 complete: date-fns-tz/@react-pdf/renderer/PWA added to §3, requires_service_hours added to §8 and §9 (Migration 003), Editor Notes Super Admin edit/delete added (Migration 004), multiple Super Admins support documented, Light/Dark mode and PWA documented, Standing Volunteer Opportunities (4.4) and Category-Match Notifications (5.3) added as new prompt slots, Phase 3 marked complete, Open Decisions #6/#7 added, R19–R22 added)*
-*v1.4 (July 2026 — Phase 4 complete: volunteer_roles restructured to show_date_id (Migration 006), standing_opportunities and opportunity_submissions added (Migration 005), activity_cleared_at added to admin_users (Migration 007), activity feed with pagination and per-user read state, roles-per-date form structure, formatWallClockCT() for date-only columns, R23–R27 added, Phase 4 prompts and all ADMIN prompts through ADMIN.12 marked complete)*
-*v1.5 (July 2026 — Phase 5 complete: slot claiming with two-tier duplicate detection, self-cancel flow with email verification, waitlist promotion and renumbering, 24hr Vercel Cron reminder, category-match notifications with notifications_sent_at tracking and SECURITY DEFINER RPC, CRON_SECRET env var added, /cancel public route, vercel.json cron config, R28 (SECURITY DEFINER REVOKE) added, ADMIN.13 planned for get_activity_feed() security fix, Phase 5 prompts 5.1–5.3 marked complete, DOC.7–DOC.8 logged)*
-*v1.6 (July 2026 — Phases 6 and 7 complete: form builder with arrow reorder (not drag), public form with dynamic zod schema, response viewer with client-side filters and CSV export, form detail page with embed code and QR, standalone QR generator tool, per-form QR pulled forward into 6.3, lib/data/forms.ts and lib/actions/qr.ts added, ADMIN.14 (cache revalidation sweep, theme toggle hydration fix, dialog hover fix, blank-role trap fix, opportunity reactivate), R28 retroactive note corrected, R29 (revalidatePath required) and R30 (theme toggle targets document.body) added, duplicate deferred item removed, new deferred items added (form_response_values FK, ThemeProvider ESLint), DOC.8/ADMIN.14/DOC.9 logged)*
-*v1.7 (July 2026 — Call Board redesign: single-page opportunities hub replacing multi-page portal; magic link / token email flow eliminated; email-or-phone lookup sets cookie session directly with no email step; no callboard_token columns on volunteers table; volunteer card renders inline on /callboard; sub-routes /callboard/profile, /callboard/history, /callboard/opportunities eliminated; §7 auth note updated; §8 Call Board spec replaced; §10 Phase 8 prompt specs replaced; DOC.11 logged)*
-*v1.9 (July 2026 — 9.2 and 10.1 build corrections: PDF export filter gap noted (milestoneTier not honored); audit log settings hub card documented (LinkedCard/LockedCard); Slot Claims audit group bolded with distinct-group note; submitVolunteerForm() logging gap documented; Phase 13 email CTA consistency note added; §8 Milestone System corrections from DOC.13 confirmed already accurate (lib/milestones-shared.ts, acknowledgeMilestone 10.1 attribution, sendMilestoneEmail CTA) — no further change needed there; DOC.15 logged)*
-*v1.8 (July 2026 — Phases 8–10 complete, ADMIN.15–19: see previous entry — v1.8 was applied after v1.9 in document history; ordering preserved as-is for audit trail integrity)*
-*v2.0 (July 2026 — Alpha feature-complete: §1 current phase updated (11 complete, 12 pending); §7 Editor email updated; §8 Dashboard rewritten (ADMIN.20 complete); §8 Volunteers phone display + PDF filter fix noted; §8 Volunteer Profile stale audit bullet removed, Communication History added (ADMIN.24), phone display note added; §8 Show Management Report tab + post-show report (ADMIN.22) + bulk email (ADMIN.23) documented; §8 Announcement Banner marked built; §8 App Settings expanded to full spec (11.2); §8 Communication/Check-In/Document Management stub status updated (11.1); §9 Migration 014 status + next migration updated; §9 volunteers + slot_claims phone normalization notes; §9 email_log_recipients volunteer_id index noted; §9 app_settings dashboard_season_id runtime key noted; §10 Phase 11.1 and 11.2 marked complete; §10 Phase 12 deferred list updated (3 items completed, 2 new gaps noted); §10 ADMIN.20–24 + DOC.17 added to prompt log; §11 Phase 18 items marked complete; DOC.17 logged)*
-*v2.1 (July 2026 — Alpha build complete: §1 phase
-updated (complete); §3 MobileSidebarContext pattern
-added; §7 Login Google SSO stale line corrected; §8
-Call Board volunteer card updated (12.3 hours summary
-+ grouped breakdown); §8 Admin mobile sidebar marked
-built (12.1); §8 honeypot noted on all 4 public form
-surfaces (12.1); §8 help page + HelpTooltip system
-documented (12.2b/c); §8 automated thank-you email
-documented (12.4); §8 category management drag-and-drop
-removed from reorder description; §9 show_dates
-thank_you_sent_at column added (Migration 015); §9
-attendance slot_claim_id index noted; §9 Migration 015
-status + next migration 016; §10 Phase 12 deferred
-list updated (4 items resolved, 4 carried to Beta); §10
-Phase 12 prompts all marked complete (12.1–12.4); §10
-DOC.20–DOC.21 + 12.1–12.4 added to prompt log; §11
-Beta thank-you email marked built in Alpha; §12 Open
-Decision #7 resolved; DOC.21 logged)*
-*Cross-reference: 30BN_PROCESS_v1.md v3.1*
-*v3.2 (July 2026 — Phase 13 complete: §1 current phase updated (Phase 13 complete, Phase 14 next); §3 TipTap and sanitize-html added to tech stack table; §6 email design section expanded (branded HTML templates, buildEmailHtml() wrapper, CTA rules, sanitization exception, universal logging); §8 signup confirmation CTA updated (/shows → /callboard); §8 Communication History stale pre-Phase-13 note updated; §8 Communication page stub replaced with full blast composer spec; §8 Settings hub card table updated (Email Activity card added); §8 Email Activity page new section added; §9 email_log body_preview comment updated; §11 Phase 13 header line updated (Phase 14 next); §11 Phase 13 section replaced (forward-looking → completed summary, 13.1–13.4b each described); §11 Phase 18 Call Board hours marked complete (12.3); §11 prompt log updated (13.1–13.4b added); §13 R31 added (blast body uses sanitize-html, not escapeHtml()); DOC.33 logged)*
-*v3.0 (July 2026 — Beta Phase CAL active: §1 current phase updated (Beta underway, Phase CAL active); §1 public surfaces updated (/calendar added); §2 terminology table updated (Production role, Calendar Editor flag); §7 roles table updated (Production row, calendar_editor flag paragraph, middleware note); §8 Show Management updated (show_type → location, end time, buffer time); §8 Master Calendar section added (full feature spec: locations, auto-sync, event types, role access, calendar views, event creation, bulk rehearsal, pending queue, Book Space, public calendar); §8 General Defaults fallback note updated; §8 Location Management card added (planned CAL.8); §9 Migrations 016–020 status added, next migration 021; §9 locations table added; §9 shows.show_type replaced by location_id; §9 show_dates.end_time added; §9 show_date_buffer table added; §9 rehearsal_batches, calendar_events, calendar_event_contacts tables added; §9 admin_users.role extended + calendar_editor added; §10 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a added to prompt log; §11 Phase CAL added with CAL.1–CAL.5b marked complete + CAL.6–CAL.8 planned; DOC.25a/25b logged)*
-*v3.1 (July 2026 — Phase CAL complete: §9 Migrations 021–022 status added (021: admin calendar token; 022: recurring events schema); next migration updated to 023; admin_users calendar_subscription_token column + calendar_editor note updated (built not planned); calendar_events recurrence_group_id column + index + note added; recurrence_groups table schema block added; §8 F2 fixed (duplicate Key Files entries removed); §8 F3 fixed (stale 'planned for CAL.8' Locations note updated to built); §10 prompt log DOC.26–30 + CAL.6–CAL.10c + ADMIN.26 added; §11 Phase CAL marked complete (CAL.1–CAL.10c); DOC.28a/28b logged)*
-*v3.3 (July 2026 — HELP phase + OpenCall OS additions: §1 current phase updated (13.4c complete, HELP complete, Phase 14 next); §1 OpenCall OS context paragraph added; §2 Owner Admin, OpenCall OS, Setup Panel terminology rows added; §3 TipTap row updated (extension-link + extension-underline + full toolbar list); §6 email design forward reference notes for dynamic from address and logo URL (Phase SETUP); §7 roles table updated (Owner Admin row added, Editor row corrected — Settings access removed, Production row updated with /crew/help); §7 calendar_editor flag note updated (owner_admin allowed); §7 middleware/proxy note updated (proxy.ts rename, Owner Admin access, Production /crew/help exception); §8 Settings hub card table corrected (all cards = SA + Owner Admin; Platform Setup card added); §8 Communication page Owner Admin access note added; §8 Help System section added (full HELP phase spec, role visibility, anchor inventory, HelpTooltip count 26, Production sidebar, Settings = SA + Owner Admin); §8 Platform Setup section added (full SETUP spec: 6 sections, all app_settings keys, feature flags, implementation notes); §9 is_editor() function update note added; §9 new SETUP app_settings keys added (17 keys); §9 Migration 023 scope added; §9 admin_users.role CHECK updated (owner_admin added); §9 calendar_editor CHECK note updated (owner_admin allowed); §10 prompt log updated (DOC.31–33, ADMIN.27–29, HELP.1–HELP.2d, ADMIN.29 added); §11 header updated (13.4c + HELP complete); §11 Phase 13 13.4c marked complete; §11 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29); §11 Phase SETUP section added (SETUP.0–4 forward spec); §11 Phase THEME section added (THEME.A/1–3 forward spec); §13 R32 added (feature flags via getFeatureFlags()); §13 R33 added (CSS custom properties post-THEME); DOC.34 logged)*
-*v3.4 (July 2026 — SETUP.0 complete: §1 current phase updated (SETUP.0 complete, Phase 14 next); §2 Calendar Editor terminology updated (Owner Admin added); §7 Owner Admin row updated (built SETUP.0); §8 User Management updated (calendar_editor toggle on OA rows, deactivate guard, role selector restriction, badge — SETUP.0); §9 Migration 023 marked applied (role CHECK, calendar_editor CHECK, is_editor() update, is_super_admin_or_owner_admin() added, 17 app_settings keys, locations RLS repointed); §9 locations table RLS note updated; §9 next migration updated to 024; §11 SETUP.0 marked complete with summary; §11 Phase SETUP header "(pending)" removed; §10/§11 prompt log updated (SETUP.0 ✓, DOC.36 ✓); §13 R32 note updated (not-yet-built language removed, SETUP.1 forward reference added); DOC.36 logged)*
-*v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §1 current phase updated (Phase 14 complete, Phase 15.3 next); §3 File Storage updated (media bucket, P-DC, all file types); §5 Storage Buckets updated (media private bucket replaces documents spec); §7 Public routes updated (/consent/*, /documents/*); §8 landing page consent form bullet replaced (auto-trigger on is_minor); §8 Public Check-In Page replaced (full 14.1–14.3 spec: per-date + whole-show tokens, walk-in signup, all result states, /consent/[token] doc); §8 Check-In Admin section replaced (live dashboard spec: 10s refresh, roster, walk-ins, accordion); §8 Show Management Dates tab updated (check-in QRs); §8 Volunteers tab updated (Self Check-In badge); §8 Document Management replaced (15.1–15.2 spec: document types manager, consent submissions queue, /documents/[token] redirect route, consent trigger, sendConsentFormRequestEmail, 15.3–15.4 pending); §8 Settings hub card Document Management updated (Beta badge removed); §9 show_dates check_in_token column added (Migration 024); §9 attendance slot_claim_id made nullable (Migration 024); §9 old documents table schema replaced with new 6-table schema (Migration 025): documents, document_types, consent_form_submissions (with full schema blocks) + media_folders, media_folder_access, document_access (deferred to DOC.37c); §9 Migration 024–025 status blocks added; §9 next migration updated to 026; §9 AuditAction types note added (14.1 + 15.1 + 15.2 additions); §11 header updated (Phase 15.3 next); §11 Phase 14 marked complete (14.1–14.3 + 14.1-FIX summaries); §11 Phase 15 section replaced (15.1–15.2 ✓ + 15.3–15.4 pending); §11 prompt log updated (14.1–14.3, 14.1-FIX, 15.1, 15.2, 15.2-AUDIT, 15.2-FIX, DOC.37a, DOC.37b added); §12 Open Decision #5 updated (infrastructure built, PDF content pending); DOC.37b logged)*
-*v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §1 current phase updated (Phase 15 complete); §3 File Storage updated (media library built + player page noted); §7 Production role updated (/crew/media + /crew/help access confirmed); §8 Light/Dark Mode corrected (prefers-color-scheme note removed — ADMIN.27 removed this branch); §8 Help System section replaced (13 sections, ~46 subsections, full anchor inventory, 32 HelpTooltip placements, Production visibility updated, ADMIN.30 Q1 gap noted); §8 Tooltip system description updated (count 16→32, Client Component note added); §8 /documents/[token] route stale "Phase 15.4 will add" line replaced with built description; §8 Document Management "Planned" block replaced with built Media Library + Player Page specs; §8 Key Files updated (view/[token]/page.tsx, MediaLibrary.tsx, checkin/page.tsx added, route.ts updated); §9 media_folders + media_folder_access + document_access schema blocks added (deferred from DOC.37b); §11 header updated (Phase 15 complete); §11 Phase 15 15.3 and 15.4 entries marked complete with build summaries; §11 prompt log updated (15.3 ✓, 15.4 ✓, DOC.38 ✓, ADMIN.30 ✓, DOC.37c ✓); document header v3.6; DOC.37c logged)*
-*v3.7 (July 2026 — Targeted fixes: §7 Production row
-updated (Media Library access confirmed ADMIN.30 — added
-/crew/media to Production sidebar note); §9 two stale
-"planned CAL.8" notes corrected to "built in CAL.8" in
-locations table schema block and Migration 020 status
-paragraph (DOC.28b F3 carry-forward); §11 prompt log
-updated (HELP.2e + DOC.41); HELP.2e: HelpContent.tsx
-ALL_SECTIONS sweep — owner_admin added to all non-Settings
-section and subsection role arrays (47 entries); DOC.41
-logged)*
-*v3.8 (July 2026 — HELP.2e completion: §8 Help System Owner Admin bullet updated (removed "known gap (ADMIN.30 Q1)" forward-reference note — HELP.2e fixed all 47 non-Settings ALL_SECTIONS entries; replaced with confirmation that the gap is closed); document header + §1 header bumped to v3.8; §11 prompt log unchanged (HELP.2e + DOC.41 already logged in v3.7); DOC.42 logged)*
-*v3.9 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §1 current phase updated (SETUP complete, THEME next); §3 react-easy-crop added; §5 brand public bucket added; §6 email design forward references replaced with implementation facts (resolveEmailSettings, buildEmailHtml logoUrl param, resolveOrgIdentity); §7 proxy feature flag guards documented; §8 Platform Setup section fully replaced (pending spec → built spec: 7 sections, BrandImageUploader, 3-flag set, correct action list, key files); §8 landing page heading/footer dynamic org identity noted; §8 Phase 12 deferred list: 3 items closed (waitlist RPC, phone search, reminder cron DST), 1 remaining; §8 Audit Log known gap closed (volunteer.signup); §9 Migrations 026–027 status blocks added, next migration 028; §9 app_settings seed list corrected (3 flag keys removed, favicon_url added, total 15); §9 AuditAction types: volunteer.signup added; §11 header status updated; §11 Phase SETUP entries SETUP.1–4 all marked complete with summaries; §11 prompt log updated (DOC.42, SETUP.1–4, ADMIN.31, ADMIN.31b, DOC.43a); §11 Phase 15 marked complete; §11 Phase 19 expanded to full communication preference spec; §11 Phase 21 Rehearsal Management System forward spec added; §11 Phase CAST named future phase added; §13 R32 SetupPanel.tsx grep exclusion noted; §13 R34 added (non-core features flag-ready); DOC.43a logged)*
-*v4.0 (July 2026 — ADMIN.32–34 complete: §1 current phase updated (ADMIN.32–34 complete, THEME next); §2 Owner Admin terminology updated (can now create/manage/deactivate OA accounts; cannot create SA); §3 next.config.ts images.remotePatterns entry added (.supabase.co — required for uploaded logo rendering); §6 resolveEmailSettings() return type updated (orgName + orgContactEmail added); resolveOrgIdentity() return type updated (org_logo_url added; layout prop pattern documented); generateMetadata() org_tagline documented (|| fallback); FROM_ADDRESS/REPLY_TO constants deleted, payload builders use explicit from/replyTo params; §7 Owner Admin roles table row updated (OA can create/deactivate OA; can edit/delete volunteer notes; permissions expanded ADMIN.33); Auth model updated (Production direct-create added; OA approval paths documented); §8 User Management SETUP.0 block replaced with accurate ADMIN.33 state; create account role description updated; Platform Setup Section 8 added (not_found_heading/body) + key count 18 + 9 server actions; not-found.tsx description updated (async, dynamic, resolveOrgIdentity); error.tsx Client Component constraint noted; Phase 7 QR Generator updated (QR history panel, lib/data/qr.ts, QRGeneratorForm/QRHistoryPanel components, generateQRCode extended); BulkEmailSection defaultSubject prop noted; HelpContent generic language note; public page org identity sweep documented (13 pages + Sidebar); iCal PRODID/UID domains updated to OpenCall OS; §9 Migration 004 OA volunteer_notes note added; Migrations 028–029 status blocks added; next migration 030; qr_codes table schema block added; admin_users owner_admin NOTE updated; app_settings not_found keys + count 17 + page fetch count 18; §11 header updated; prompt log ADMIN.32–34 + DOC.44 added; DOC.44 logged)*
-*v4.1 (July 2026 — Phase THEME complete: §1 header + current phase updated (THEME complete, Phase 19 + 21 pre-launch); §3 color.ts utility added to tech stack; PDF export brand color architecture noted (@react-pdf/renderer createStyles factory — THEME.4); §6 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight via lightenHex); buildEmailHtml() brand color params documented; email client brand color approach note (string interpolation, not var()); buildCtaButton() dynamic color call sites noted; §8 signup form Phase 19 preference field noted; /update Phase 19 field noted; Call Board volunteer card Phase 19 preference badge + inline update noted; Volunteer Profile Phase 19 editable preference noted (confirmed editable in admin); Volunteer List Phase 19 display-only noted; PDF export createStyles factory architecture documented; Platform Setup Section 2 "Phase THEME must ship" language replaced with completed status; §9 volunteers table communication_preference column Phase 19 note added; Migration 030 context note added; §11 Beta Build header updated; Phase THEME section replaced (all 4 "pending" entries → completed summaries: THEME.A/1/2a–2d/3/3b/4); Phase 17 stub replaced with full 7-sub-phase spec (17.1–17.7); Phase 19 spec updated (prompt structure 19.1/19.2/19.3, admin editable confirmed, CSV export noted, PDF decision noted); Phase 21 moved from post-launch to pre-launch; §11 prompt log: DOC.44 note expanded, DOC.44-FIX + DOC.45 + DOC.46 + DOC.46-FIX + THEME.A + THEME.1 + THEME.2a–2d + THEME.3 + THEME.3b-4 + DOC.47 all added; DOC.47 logged)*
-*v4.2 (July 2026 — Phase 19 complete + ADMIN.35–38: reconstructed retroactively during the DOC.53 session — this update was logged as shipped in 30BN_PROCESS_v1.md's §13 prompt history but was never actually committed to this file; the live Brief remained at v4.1 until this session closed the gap. §1 header + current phase updated (Phase 19 + ADMIN.35–38 complete); §7 two new patterns added: Google OAuth registration path (ADMIN.36 — routes through the same Request Access approval flow as email/password self-registration, dual-client pattern in auth/callback/route.ts) and is_active gating on the Google OAuth path (ADMIN.38 — sign out before redirect on inactive account, matching the existing email/password pattern); §8 five "Phase 19 — pending" markers updated to built (signup form, /update, Call Board card, volunteer list, volunteer profile); §8 /update field note extended with the updateVolunteerInfo()/updateVolunteer() two-file update pattern (19.2); §8 Volunteer Profile field note extended with the zod <select> pattern (z.string().optional(), not z.enum() — empty string from an unselected <select> fails enum validation silently; corrected 19.1→19.3); §9 Migration 030 marked applied, volunteers.communication_preference column def uncommented, next-migration pointer updated; §11 header updated; §11 prompt log: ADMIN.35-AUDIT + ADMIN.35 + ADMIN.36 + ADMIN.37 + ADMIN.38 + 19.1 + 19.2 + 19.3 added; §11 Phase 19 section rewritten from planned spec to complete build summary; DOC.50 logged)*
-*v4.3 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header + current phase updated (ADMIN.37–38 + ADMIN.39-AUDIT + ADMIN.39a–c complete; dark mode cascade defect closed across 54 files; Phase 21 next); §8 Volunteer Profile notes spec: Editors confirmed append-only for notes (editNote/deleteNote guards stay SA+OA only — RLS + design intent re-confirmed ADMIN.39-AUDIT F4, July 2026); stale pre-ADMIN.33 wording also corrected here (Owner Admin included alongside Super Admin for edit/delete); §8 Light/Dark Mode: dark mode cascade defect resolution documented (root cause, fix pattern, 54 files, special cases, light mode visual impact, ADMIN.40 residual); §13 R35 added (never pair hand-authored @layer utilities class with native Tailwind dark: utility on same property — two correct approaches documented); §11 prompt log ADMIN.39-AUDIT + ADMIN.39a–c + DOC.51 + DOC.52 + DOC.53 added; §11 Phase 21 pre-requisite bullets corrected from forward-looking language to ✓ Complete (ADMIN.32/33 — stale since v4.0, whose own history entry had claimed this was already fixed); §11 ADMIN.40 carry-forward noted (OpportunityForm.tsx:99,115 — not in original audit scope, pre-Phase-17); DOC.53 logged)*
-*v4.4 (July 2026 — ADMIN.40–42 + Phase 21 architecture: §1 current phase updated (ADMIN.40–42 complete, Phase 21 ready); §8 Light/Dark Mode ADMIN.40 noted (OpportunityForm single-part fix confirmed correct dark target), ADMIN.41/42 globals.css opacity-variant closure documented (12 missing rules across 3 component families, 3 accessibility gaps closed, R36 established); §11 Phase 21 full architecture documented (assignment model, schema, 4-prompt structure 21.A–21.3, Production admin users only, schedule + per-date override, rehearsal_attendance table, QR check-in via calendar_events.check_in_token, feature_rehearsals flag, /rehearsal-checkin/[token] public route, existing infra reused); §11 prompt log ADMIN.40–42 + ADMIN.42-AUDIT + DOC.54 added; §13 R36 added (hand-authored @layer utilities do not auto-generate opacity-suffix or stacked-variant rules — each combination requires explicit authoring; silent failure mode; ACCESSIBILITY impact on focus rings confirmed); DOC.55 logged)*
-*v4.5 (August 2026 — Phase 21 complete: §1 header + current phase updated (Phase 21 complete, Phase 17 next); §1 public surfaces: /rehearsal-checkin/[token] added; §2 Production row: /crew/rehearsals added (flag-gated, assigned-only); §7 proxy.ts section: Phase 21 additions documented (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /rehearsal-checkin/[token] added; §8 Help System: 13 → 14 sections, 32 → 37 HelpTooltips, Phase 21 anchors added, Rehearsals visible to Production; §8 Setup Panel Section 6: 4th flag toggle (feature_rehearsals); §8 new Rehearsal Management section (full spec: schedule list, detail, roster/dates/attendance tabs, public check-in, key files, two-file server action split confirmed); §9 calendar_events.check_in_token added; §9 three new table blocks (rehearsal_schedule_assignments, rehearsal_date_assignments, rehearsal_attendance); §9 Migration 031 status block; §9 next migration pointer updated (no pending migrations); §9 feature_rehearsals seed documented + SETUP key count 17 → 18, fetch count 18 → 19; §9 admin_users.id RLS note expanded; §11 header updated (Phase 21 complete, Phase 17 next); §11 Phase 21 section replaced (forward-looking spec → completed 4-prompt build summary with 21.A–21.3 each described, key findings documented); §13 R34 flag list: feature_rehearsals added; §13 R37 added (admin_users.id = auth.uid(), no auth_user_id column — RLS authoring rule); DOC.56 logged)*
-*v4.6 (August 2026 — Phase AUDITIONS specced as pre-launch build: §1 header + current phase updated (Phase AUDITIONS next, Phase 17 follows); §1 public surfaces: /auditions/[id] + /audition-checkin/[token] added; §2 Production row expanded (assigned shows + assigned auditions, two independent paths); §2 Auditioner terminology row added; §7 roles table Production row updated (shows + auditions access, assignment model); §7 proxy.ts: Phase AUDITIONS proxy additions block added (needsFlagCheck, Production exception, crew flag block, matcher, public flag block); §7 public routes table: /auditions/[id] + /audition-checkin/[token] added; §8 new Audition Management section (full spec: list, six-tab detail, public signup, check-in, email templates, email functions, key files, calendar integration, Production assignment model); §8 Show Listing + Landing Page: Upcoming Auditions card noted; §8 Setup Panel Section 6: 5th flag toggle (feature_auditions); §9 feature_auditions seed block + SETUP key count 18→19 + fetch count 19→20; §9 Migration 032 pending status block; §9 eight new table schema blocks (auditions, audition_roles, audition_slots, audition_signups, audition_signup_notes, audition_materials, audition_assignments, audition_email_templates); §11 header updated (Phase AUDITIONS next, Phase 17 follows); §11 Phase AUDITIONS forward-spec section added (11-prompt structure, all architectural decisions); §11 Phase 17.1 flag count updated (three → five); §13 R34 flag list: feature_auditions added; §13 R38 added (TipTap merge tag extension pattern — mergeTag node type, toolbar inserter, substitution at send time, live preview server action, escapeHtml on substituted values); DOC.58 logged)*
-*v4.7 (August 2026 — Phase AUDITIONS complete: §1 header + current phase updated (Phase AUDITIONS complete, Phase 17 next); §1 public surfaces: /auditions/upload/[token] + /auditions/cancel/[token] added; §3 TipTap custom extension pattern (MergeTagExtension) + immediatelyRender: false noted; §3 feature flag 5-file pattern noted; §6 email send function export status corrected (all exported); §7 Public row: 2 new routes added; §8 Audition Management email functions: all 4 named with triggers; §8 public signup: consent email function corrected (sendAuditionConsentFormRequestEmail not sendConsentFormRequestEmail); §8 self-cancel: cancel page described; §8 key files: complete final list; §8 Overview tab: QR display pattern noted; §8 Email Templates tab: useEditor details (immediatelyRender, 3 instances, async content init); §8 Help System: 14 → 15 sections (Auditions added — corrected to its true position before Getting Help per the live ALL_SECTIONS array, not after as originally drafted); 37 → 40 HelpTooltips; Production sidebar: Auditions + HelpContent visibility noted; Setup Panel Section 6: 5 toggles; §8 About System Emails: 11 → 15 triggers; §9 audition_signups.phone: NOT NULL corrected; §9 audition_materials: original_filename column added; §9 consent_form_submissions: audition_signup_id FK column added; §9 calendar_events: source_audition_id FK column added; source CHECK updated to include 'audition'; §9 email_log: recipient_type CHECK note updated (includes 'audition') — corrected to note the value is not yet exercised by any code path; §9 Migration 032: Pending → Applied (full inline fix inventory; migration-file/live-DB drift flagged); §9 next migration: 033; §9 AuditAction: audition.convert_to_volunteer added; §9 saveFeatureFlags revalidatePath: /crew/auditions added; §11 header updated (Phase AUDITIONS complete, Phase 17 next); §11 Phase AUDITIONS: forward spec → completed summary with all 10 prompt build logs (includes a correction to the AUDITIONS.4b log's Help System section-order claim); §13 R23: formatWallClockCT() signature corrected to 3 args (dateStr, timeStr|null, fmt); formatTime() local helper pattern documented for time without timezone columns; DOC.59 logged. NOTE (Q-item, DOC.59): the original prompt's Edit 5 referenced a separate "§7 public routes table" with a per-route row for /audition-checkin/[token] — no such table exists in this document; its intended content was already covered by the existing §7 Public role-access row, updated in this same pass.)*
 
-*v4.8 (August 2026 — DOC.61 correction: §13 R32 updated — getFeatureFlags(supabase) client-agnostic signature documented; false getServerClient() association corrected; Brief header bumped to v4.8; DOC.61 logged)*
+*Documentation history notes (doc-maintenance record —
+out-of-order entries, sync failures, and corrections
+to prior entries; not product history; for full build
+history by phase and prompt see §11):*
 
-*v4.9 (August 2026 — DOC.63: Phase INVENTORY + Phase FORUMS added as confirmed pre-launch builds: §1 current phase updated; §2 inventory_manager terminology row added; §8 Inventory Management section added (full forward spec: access model, item records, categories/locations, checkout system, QR tags, prompt structure, key files); §8 Forums section added (full forward spec: access grants, user groups, thread/post structure, TipTap rich editor, file attachments, subscriptions, unread tracking, moderation, prompt structure, key files); §8 Setup Panel Section 6 updated (5 → 7 toggles, feature_inventory + feature_forums added); §9 admin_users: inventory_manager boolean column + NOTE added (Migration 034); §9 app_settings: feature_inventory + feature_forums seed blocks added (SETUP keys 19 → 21, fetch count 20 → 22); §9 next migration pointer updated (033 required, then 034 + 035 pending); §11 Phase INVENTORY + Phase FORUMS sections added (prompt structures, migration numbers, new table counts, sanctioned XHR files); §11 Phase CAST updated from "post-Phase 21" to "post-launch"; §11 Phase 17.1 flag count updated (5 → 7); §13 R34 flagged features list updated (feature_inventory + feature_forums added); DOC.63 logged)*
+*- v1.7: The Call Board originally used a magic-link /
+token email flow with multi-page sub-routes
+(`/callboard/profile`, `/callboard/history`,
+`/callboard/opportunities`); replaced by the current
+single-page cookie-session design.*
+*- v1.8: This entry was applied out of chronological
+order (after v1.9); ordering preserved as-is for
+audit-trail integrity.*
+*- v1.9: Milestone System content was independently
+re-verified accurate against DOC.13; no changes to
+this file were needed.*
+*- v4.2: A full version cycle was logged as shipped in
+`30BN_PROCESS_v1.md`'s prompt history but was never
+actually committed to this file; the Brief remained at
+v4.1 until the content was reconstructed retroactively
+in DOC.53.*
+*- v4.3: v4.0's claim that Phase 21 prerequisites were
+already complete was premature; corrected here.*
+*- v4.7: A build prompt referenced a "§7 public routes
+table" that does not exist in this document; a prior
+entry's Help System section-order claim was also
+corrected here.*
+*- v5.0: The tail's own version ordering had an error
+(v4.9 was inserted before v4.8/v4.7 in DOC.63);
+corrected to chronological order here.*
 
-*v5.0 (August 2026 — DOC.64: §1 current phase updated (033 applied, INVENTORY.1 complete, INVENTORY.2–5 pending); §7 Phase AUDITIONS proxy block corrected — /crew/auditions Production exception attribution changed from AUDITIONS.2a to ADMIN.43 (the fix was missing from the AUDITIONS.2a commit and applied separately); §7 Phase INVENTORY proxy.ts additions block added (needsFlagCheck + crew flag block, no Production exception); §8 User Management: inventory_manager toggle documented (INVENTORY.1 — Editor rows only, toggleInventoryManager(), logged as user.inventory_manager_change in types/audit.ts); §8 HelpContent NOTE: TOOLTIP_ANCHOR_MAP pattern documented (replaces hardcoded || ternary — INVENTORY.1 refactor); §8 Help System: 15 → 16 sections, Inventory anchors added, Production exclusion noted; §9 Migration 033 status block added (applied DB-VERIFY.5); §9 Migration 034 status block added (applied INVENTORY.1 — 8 tables + inventory_manager column); §9 next-migration pointer updated (035 next); §9 Migration 032 inline fix NOTE updated (five fixes now captured in 033, drift resolved); §11 Phase INVENTORY: 8 tables (not 9 — prompt miscount corrected); INVENTORY.A + INVENTORY.1 build summaries added; §11 prompt log: DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 all logged; §13 version history ordering corrected (v4.9 was inserted before v4.8/v4.7 in DOC.63 — reordered to chronological ascending); DOC.64 logged)*
-
-*v5.1 (August 2026 — DOC.66: Phase INVENTORY complete — §1 current phase updated (INVENTORY complete, FORUMS next); §8 User Management inventory_manager toggle: types/audit.ts corrected to lib/audit.ts (inaccuracy introduced DOC.64); §8 Settings hub table: Inventory Management card added (INVENTORY.2); §8 Inventory Management: prompt structure updated (all 6 prompts ✓); key files list replaced (pending → built, 17 files total; route.ts corrected to route.tsx — F1 INVENTORY.5; lib/audit.ts corrected from types/audit.ts — F1 INVENTORY.2; types/inventory.ts, InventoryTagsPDF.tsx, CheckoutModal.tsx added; types/admin.ts + lib/auth.ts unplanned additions documented); §8 Help System: Inventory stub note removed; HelpTooltip count 40 → 42 (inventory-checkout + inventory-tags added INVENTORY.5); §9 lib/audit.ts AuditAction location note added (admin_users schema block); §9 media bucket: inventory/ path namespace added + storage dual-client pattern noted (Edit 10 adapted to the live prose-paragraph format at line 148 — the prompt's bulleted-list old_str did not exist in the Brief; it matched the Process document's format instead); §11 Phase INVENTORY: INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts); INVENTORY.2–5 full build summaries added; §11 prompt log: INVENTORY.2–5 logged; DOC.66 logged)*
-
-*v5.2 (August 2026 — DOC.68/DOC.69: Phase FORUMS complete — §1 header + current phase updated (FORUMS complete, Phase 17 next); §2 Production row updated (forums access added); §3 TipTap useEditor overload caveat added (Editor | null explicit typing required — FORUMS.5 Q3); §5 media bucket forums path namespace added; §7 Production roles table updated (/crew/forums added), Phase FORUMS proxy.ts additions block added (needsFlagCheck, Production exception, crew flag block — no matcher, no public block); §8 Internal Forums section: pending → complete, prompt structure all ✓, key files list replaced (17 files total); §8 Settings hub User Groups card added (FORUMS.1, canAccessAdminSettings gate); §8 Help System: 16 → 17 sections, 42 → 43 HelpTooltips, forum anchors added, TOOLTIP_ANCHOR_MAP /crew/forums → 'forums' entry added, Production sidebar: Forums link + partial HelpContent visibility noted; §8 About System Emails: 15 → 16 triggers (forum_notification added); §8 Setup Panel setup/page.tsx key count corrected (18 → 22); §9 Migration 035 status block added; §9 12 forum table schema blocks added; §9 next migration pointer updated (036 — no pending migrations); §9 AuditAction types: 34 new forum_* types across FORUMS.1–5; §11 Phase FORUMS: forward spec → completed 6-prompt build summary (FORUMS.A–FORUMS.5 with commits and key findings); §11 header updated; §11 prompt log: FORUMS.A–FORUMS.5 + DOC.68 + DOC.69 added; DOC.69 logged)*
-
-*v5.3 (August 2026 — DOC.71: FORUMS.5-FIX documented — §11 FORUMS.5 build summary extended with post-build fix note (FORUM_POST_SANITIZE_OPTIONS plain-object export from 'use server' file — Vercel build failure, not caught by local lint/tsc; fixed by extracting to lib/actions/forum-post-sanitize.ts, 3 files, commit 02f4569; full 'use server' audit confirmed zero other violations); §11 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
-
-*v5.4 (August 2026 — DOC.72: Phase STYLE complete — §1
-header + current phase updated (STYLE.A–STYLE.8, 9 prompts,
-Phase 17 next); §3 Tech Stack: color.ts darkenHex() addition
-noted; §6 Brand System: new CSS Custom Properties subsection
-(9 derived tokens, 2 static @theme tokens, resolveBrandColors()
-return shape, --color- prefix rule, :where() dark variant
-pattern); §8 Settings hub table: Style Sandbox card added
-(SA-only LinkedCard, no sidebar link); §8 new Phase STYLE
-section (sandbox spec: access model, two sections, primitive
-gallery 8 groups, 15 page mockups with full inventory, Option
-A design patterns reference, named badge export pattern,
-key files including 15 mockup components); §11 header
-updated (Phase STYLE complete, Phase 17 next); §11 Phase
-STYLE build summaries added (STYLE.A–STYLE.8, all 9 prompts
-with commits and key findings); §11 prompt log: STYLE.A–
-STYLE.8 + DOC.72 added; §13 R33 note added (--color- prefix
-rule for @theme tokens, no @layer utilities hand-authoring
-needed); §13 R35 note added (left border accent pattern:
-border-l-4 + style={{ borderLeftColor }}); §13 R36 note
-added (Tailwind purge risk for computed class strings,
-progress bar width + color literals); DOC.72 logged)*
-*v5.5 (August 2026 — DOC.73: Phase NOTIFY complete — §1
-header + current phase updated (NOTIFY.A–NOTIFY.4-CLEANUP,
-Phase 17 next); §8 User Management: pending registrations
-badge note updated (count now in TopBar NotificationPanel
-"Needs Action" section for SA/OA); §8 Settings hub:
-Platform Setup row removed (card removed from hub, link
-moved to sidebar bottom section SA-only — NOTIFY.1); §8
-Help System: TOOLTIP_ANCHOR_MAP note updated (const removed
-NOTIFY.4-CLEANUP — sidebar is now three-part atomic edit,
-no HelpTooltips on sidebar nav links); §8 Forums: thread
-subscriptions updated (sendForumNotificationEmail() returns
-{ notifiedUserIds: string[] }, in-app notification created
-per subscriber independently of email deliverability —
-NOTIFY.3/NOTIFY.3-FIX); §8 new Notification System section
-(full spec: two-track architecture, ephemeral items, 6
-persistent types, NotificationPanel, forum unread badge,
-key new/modified files, 6-prompt structure); §9 Migration
-036 status block added (notifications table — 9 columns,
-2 RLS policies, 3 indexes); §9 next migration pointer
-updated (036 applied → 037 next); §9 consent_form_
-submissions: reviewed_at pre-existence confirmed + note
-added; §11 header updated (Phase NOTIFY complete, Phase 17
-next); §11 Phase NOTIFY build summary added (NOTIFY.A–
-NOTIFY.4-CLEANUP all ✓ with commits and key findings);
-§11 prompt log: NOTIFY.A–NOTIFY.4-CLEANUP + DOC.73 added;
-§13 TOOLTIP_ANCHOR_MAP removal note (if applicable);
-DOC.73 logged)*
-
-*v5.6 (August 2026 — DOC.74: Phase MESSAGES.A–4 documented — §1 current
-phase updated (Phase MESSAGES in progress, MESSAGES.A–4 complete); §2
-Production role updated (/crew/messages + /crew/users added); §8 Setup Panel
-Section 6 updated (7 → 8 toggles, feature_messages added as first opt-in-
-default flag defaulting to 'false'); §8 Notification System updated
-(direct_message as 7th type, MessagesIcon documented, messageUnread in
-NotificationCounts); §8 new Private Messaging section added (full architecture,
-archive semantics, thread_reads asymmetric RLS note, prompt structure
-MESSAGES.A–4 ✓ / MESSAGES.5–8 pending, key files); §9 4 new table schema
-blocks (message_threads, thread_replies, thread_reads,
-thread_reply_attachments); §9 notifications type CHECK updated
-(direct_message added); §9 Migration 037 status block added (commit 8a86d10);
-§9 next migration pointer updated (037 → 038); §9 feature_messages seed
-paragraph added; §9 SETUP key counts updated (21 → 22, 22 → 23 total);
-§11 Phase MESSAGES in-progress section added (MESSAGES.A–4 build summaries,
-MESSAGES.5–8 pending listed); §11 header updated; §11 prompt log updated
-(MESSAGES.A–4 + DOC.74); §13 R39 (SQL policy naming) + R40 (Server Action
-.bind() assertion) added; DOC.74 logged)*
-
-*v5.7 (August 2026 — DOC.75: Phase MESSAGES complete — §1 current phase
-updated (Phase MESSAGES complete, MESSAGES.A–7 all ✓); §5 media bucket
-messages/ path namespaces added (temp + final); §8 Private Messaging section
-fully updated: thread view attachment reference corrected (MESSAGES.6),
-context placements marked ✓ complete with latent bug note (AuditionDetailTabs
-+ ShowDetail adminId destructuring fix), sanitize-at-write-time sub-section
-added (DM_SANITIZE_OPTIONS, @tailwindcss/typography absent note), file
-attachments sub-section added (DirectMessageComposer 8th sanctioned XHR,
-upload route, storage paths, AttachmentInput/ThreadReplyAttachmentWithUrl
-types, forwardRef+useImperativeHandle pattern), prompt structure updated
-(9 → 8 prompts, MESSAGES.5–7 ✓ with build summaries), key files updated
-(MESSAGES.1–7, 9 types in types/messages.ts, all new/modified files listed);
-§11 Phase MESSAGES ✓ Complete, build summaries for MESSAGES.5–7 added,
-prompt log updated (MESSAGES.5–7 + DOC.75); §11 Phase 17.1 flag count
-updated (7 → 8, feature_messages noted as new opt-in defaulting to 'false');
-§13 version history v5.7; DOC.75 logged)*
-
-*v5.8 (August 2026 — DOC.76: ADMIN.45 + ADMIN.46 + Phase TZ TZ.A–TZ.4b
-documented — §1 version + current phase (Phase TZ in active execution, TZ.5a/
-5b/TZ.6 remaining); §8 Setup Panel Section 1 (org_timezone select field, SETUP_KEYS
-23→24, lib/utils/org-timezone.ts key file); §8 QuickStats "CT" → org-timezone;
-§8 ShowDetail Settings tab defaultHours display (ADMIN.46); §8 Private Messaging
-onEmptyChange/isComposerEmpty pattern (ADMIN.46); §8 Check-In Dashboard CT →
-org-timezone; §8 Audit Log CT → org-timezone; §9 Migration 038 status block;
-§9 org_timezone key in app_settings; §9 SETUP_KEYS count corrected to 24; §11
-Phase TZ section added (TZ.A–TZ.4b ✓ with commits + TZ.5a/5b/TZ.6 pending;
-ADMIN.45 + ADMIN.46 build summaries); §11 prompt log through DOC.76; §13
-resolveLayoutSettings rename + getOrgTimezone pattern + formatCT timezone param
-+ client-before-usage reordering pattern; DOC.76 logged)*
-
-*v5.9 (August 2026 — DOC.78: Phase TZ complete — §1 version + current phase
-(Phase TZ ✓ Complete); §8 Public Calendar CT→org-timezone language; §8
-calendar-availability.ts getAvailableWindows() + calendar-layout.ts
-computeEventPosition() timezone parameter notes; §9 Migration 038 applied,
-next migration 039; §11 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b
-build summaries, TZ.6 ✓); §11 prompt log through DOC.78; §13 useNowPosition()
-hook pattern, module-level helper parameterization, TZ.5b split-state pattern,
-sibling helper asymmetry audit lesson; DOC.78 logged)*
-
-*v6.0 (August 2026 — DOC.80/DOC.81: Phase MM complete +
-Beta phases planned — §1 version header updated (v5.9 →
-v6.0), current phase updated (Phase MM ✓ Complete,
-platform in active Beta, Phase 17 deferred, 8 Beta
-phases planned); §7 Phase MM proxy.ts maintenance gate
-documented; §8 Platform Setup: section count 8 → 9,
-new Maintenance Mode Section 1 documented (three
-app_settings keys, amber banner, saveMaintenanceMode(),
-Migration 039), existing sections renumbered 2–9 in
-prose, SETUP_KEYS count 24 → 27, setup.ts action count
-nine → ten, setup/page.tsx fetch count 24 → 27 keys,
-SetupPanel.tsx section count eight → nine; §8 new
-/crew/maintenance page section added (R20 exception
-documented, getAdminClient(), noindex, light mode,
-resolveOrgIdentity()); §8 Dashboard: planned ANNOUNCE
-widget noted above Quick Stats; §8 Show Management:
-planned SHOWDELETE noted in Settings tab; §8 QR
-Generator: planned QRBANNER and QRANALYTICS noted; §8
-Style Sandbox: planned SIDEBAR mockups noted (Sidebar
-mockup + Top Nav mockup); §8 Internal Forums:
-discoverability note added (expand chevron opens access
-grants sub-panel); §9 Migration 039 status block added
-(applied, 3 new app_settings keys), next migration
-updated 039 → 040, SETUP_KEYS count updated to 27 in §9
-notes; §11 header updated (Phase MM ✓ Complete, Beta
-active, Phase 17 deferred); §11 Phase MM ✓ Complete
-section added (MM.A, MM.1, MM.2 build summaries); §11
-Planned Beta Phases section added (FORUMS-FIX, ANNOUNCE,
-FORUMS-UX, SHOWDELETE, QRBANNER, QRANALYTICS, SIDEBAR,
-NAVORDER, DOC-BETA1 — all forward specs); §11 prompt log
-updated (MM.A, MM.1, MM.2, DOC.80, DOC.81); §13 five new
-pattern notes added (maintenance gate position, /crew/
-maintenance R20 exception, SaveStatus 'saved' not
-'success', settingsMap Map instance, ActionResult
-discriminated union narrowing); §13 v6.0 version history
-entry added; DOC.80 + DOC.81 logged)*
-
-*v6.1 (August 2026 — DOC.83/DOC.84: Beta phases
-FORUMS-FIX/UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE complete
-— §1 version + current phase updated (6 Beta phases ✓,
-remaining: QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER); §7
-revalidatePath-during-render prohibition documented
-(FORUMS-FIX root cause); §8 Dashboard: ANNOUNCE widget
-spec (replaced Planned note with complete implementation:
-AnnouncementWidget, AnnouncementWidgetClient,
-AnnouncementSection self-loading, getActiveAnnouncements,
-dismissAnnouncement, getAnnouncementContent, OA mirror
-page, dashboard_announcement_* keys, dismissal via
-announcement_dismissed_at); §8 Internal Forums: FORUMS-FIX
-complete block (markThreadRead render-path fix, FORUMS-FIX.B
-signed-URL try/catch + error.tsx logging), FORUMS-UX
-complete ("Manage Access" label); §8 Show Management:
-SHOWDELETE complete (deleteShow with 3 guards including
-attendance NO ACTION FK, AlertDialog in SettingsTab,
-show.delete AuditAction, ShowEditorActionResult); SHOWARCHIVE
-complete (ShowForm.tsx Save button fix, Archive button on
-draft/live ShowCards with undo banner, Archived Shows
-accordion after groups conditional); §8 Platform Setup:
-SETUP_KEYS 27→28 (announcements_oa_enabled), saveAnnouncement
-documented (SA+OA-when-enabled, R31, server-side timestamp,
-6-point FeatureFlagsSection wiring), setup.ts ten→eleven
-actions; §8 Settings hub: Dashboard Announcements card
-added; §9 Migration 040 status block (announcement_
-dismissed_at + 4 new app_settings keys), admin_users column
-added, SETUP_KEYS count 27→28, next migration 040→041;
-§11 FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE
-complete blocks added; Planned Beta Phases section updated
-(completed phases removed, SHOWARCHIVE noted); prompt log
-updated (FORUMS-FIX.A/B, FORUMS-UX.1, ANNOUNCE.A/1/2,
-SHOWDELETE.A/1, SHOWARCHIVE.A/1, DOC.83, DOC.84); §13
-eight new pattern notes (revalidatePath during render,
-error.tsx logging, ShowCard inline in ShowList, SettingsTab
-state scope, ShowForm vs ShowDetail distinction, attendance
-NO ACTION FK, saveFeatureFlags 6-point wiring,
-AnnouncementSection self-loading); v6.1 version history)*
-
-*v6.2 (August 2026 — DOC.85/DOC.86: Beta phases
-QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — see
-§1 current phase update, §8 QR Generator, §8 Style
-Sandbox, §8 Sidebar + TopBar, §8 Platform Setup, §9
-Migrations 041+042, §11 complete blocks, §13 new
-patterns. DOC.85 + DOC.86 logged.)*
-
-*v6.4 (August 2026 — DOC.88/DOC.89: ADMIN.52–57 complete —
-§1 current phase updated (ADMIN.47–57 all ✓); §8 Dashboard:
-SeasonAtAGlance 31-day cap + chronological sort + "View all
-shows" link + empty/truncation states + "Upcoming Shows (Next
-31 Days)" fallback label (ADMIN.52–53); AnnouncementWidget
-visual redesign (orange card, accent border, Megaphone icon —
-ADMIN.52); §8 Notification System: NotificationPanel mark-read
-removes items, mark-all → empty state, direct_message filtered
-from panel + badge, 20-row cap removed, unreadPersistent
-client-derived from visibleNotifications (ADMIN.53–54); §8
-Platform Setup Section 1: maintenance_estimated_restoration
-4th field added, saveMaintenanceMode() extended, SETUP_KEYS
-30→31; §8 Maintenance Page: estimated restoration fetch +
-amber conditional box; §8 QR Generator: banner font fix
-(Inter bundled at public/fonts/, process.cwd() pattern,
-Turbopack createRequire fix), ribbon redesign (7-element
-curled-edge SVG, BANNER_HEIGHT_UNITS=10, BANNER_FONT_SIZE=2.8)
-(ADMIN.56/56-FIX); §8 Sidebar: Beta Feedback SA exclusion
-(ADMIN.55); §9 Migration 044 status block + next migration
-045; §11 ADMIN.52–57 + ADMIN.56-FIX build summaries + DOC.88
-+ DOC.89 prompt log entries; §13 seven new pattern notes
-(SeasonAtAGlance self-contained Server Component,
-visibleNotifications filter pattern, TipTap click-to-focus
-CSS custom property pattern, public/fonts/ convention,
-Turbopack createRequire literal string failure, @resvg/resvg-js
-silent font failure, migration files at repo root);
-DOC.88 + DOC.89 logged)*
-
-*v6.5 (August 2026 — DOC.90/DOC.91: ADMIN.58–60 complete —
-§1 current phase updated (ADMIN.58/59/60 ✓, pre-launch
-refinement active); §8 Dashboard: QuickStats "Upcoming Shows
-This Month" → "Upcoming Shows (31 Days)" + "Volunteers Needed"
-→ "Volunteers Needed (31 Days)" (both 31-day rolling, R23
-pattern); SeasonAtAGlance full overhaul (season selector
-removed, pure 31-day, auditions combined list flag-gated,
-discriminated union, self-contained; dashboard/page.tsx 5→3
-queries; SeasonSelector.tsx deleted; setPinnedSeason() removed;
-dashboard_season_id orphaned); §8 Show Management: deleteShow()
-single-guard + cascade (Migration 045 attendance FKs → CASCADE,
-volunteer hours retained, best-effort notifications cleanup,
-AlertDialog text updated); updateShowStatus() archive side-effect
-(cancel future approved calendar events, revalidate calendar
-routes); ShowList.tsx archived filter on groups + Unseasoned,
-Opportunities link removed; §8 Sidebar: Beta Feedback → Beta
-Testing everywhere (HREF_LABELS, NAV_ITEMS, toggle, hub card,
-page headings); NavOrderSection.tsx parseNavOrder() self-heal
-merge added; TopBar icon sizing: Mail/Bell/ThemeToggle all
-className="w-5 h-5"; §9 Migration 045 status block
-(attendance_show_id_fkey + attendance_show_date_id_fkey →
-CASCADE); dashboard_season_id documented as orphaned; next
-migration 046; §11 ADMIN.58/59/60 build summaries + DOC.90/91
-prompt log; §13 five new pattern notes (show delete single-guard,
-archive calendar side-effect, NavOrderSection self-heal,
-TopBar icon sizing tiers, orphan deletion pattern);
-DOC.90 + DOC.91 logged)*
+*Full build history by phase and prompt: see §11.*
