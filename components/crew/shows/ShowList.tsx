@@ -328,14 +328,19 @@ export default function ShowList({
   )
   const hasActiveFilter = locationFilter !== 'all' || statusFilter !== 'all'
 
+  // Season groups and the Unseasoned group show only live/draft shows —
+  // archived and past shows belong exclusively in the Archived Shows
+  // accordion below.
   const showsBySeasonAll = new Map<string, ShowWithStaffing[]>()
   for (const show of shows) {
+    if (show.status !== 'live' && show.status !== 'draft') continue
     const key = show.season_id ?? UNSEASONED_KEY
     if (!showsBySeasonAll.has(key)) showsBySeasonAll.set(key, [])
     showsBySeasonAll.get(key)!.push(show)
   }
   const showsBySeasonFiltered = new Map<string, ShowWithStaffing[]>()
   for (const show of filteredShows) {
+    if (show.status !== 'live' && show.status !== 'draft') continue
     const key = show.season_id ?? UNSEASONED_KEY
     if (!showsBySeasonFiltered.has(key)) showsBySeasonFiltered.set(key, [])
     showsBySeasonFiltered.get(key)!.push(show)
@@ -380,13 +385,6 @@ export default function ShowList({
           </Link>
         )}
       </div>
-
-      <Link
-        href="/crew/shows/opportunities"
-        className="inline-block text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline mb-6"
-      >
-        Standing Opportunities →
-      </Link>
 
       <div className="flex flex-wrap gap-3 mb-4">
         <select

@@ -617,9 +617,28 @@ export async function updateShowStatus(
     { status: newStatus }
   )
 
+  if (newStatus === 'archived') {
+    // Cancel all future approved calendar events linked to this show's dates.
+    // Two-step: fetch show_date IDs first (Supabase .in() cannot nest subqueries).
+    const { data: showDates } = await supabase.from('show_dates').select('id').eq('show_id', showId)
+
+    if (showDates && showDates.length > 0) {
+      const showDateIds = showDates.map((d) => d.id)
+      await supabase
+        .from('calendar_events')
+        .update({ status: 'cancelled' })
+        .in('source_show_date_id', showDateIds)
+        .eq('status', 'approved')
+        .gt('end_time', new Date().toISOString())
+    }
+  }
+
   revalidatePath('/shows')
   revalidatePath('/crew/shows')
   revalidatePath(`/crew/shows/${showId}`)
+  revalidatePath('/calendar')
+  revalidatePath('/crew/calendar')
+  revalidatePath('/crew/calendar/pending')
 
   return { success: true }
 }

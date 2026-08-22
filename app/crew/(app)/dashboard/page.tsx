@@ -8,7 +8,6 @@ import AddToHomeScreenCard from '@/components/crew/AddToHomeScreenCard'
 import AnnouncementWidget from '@/components/crew/dashboard/AnnouncementWidget'
 import QuickStats from '@/components/crew/dashboard/QuickStats'
 import SeasonAtAGlance from '@/components/crew/dashboard/SeasonAtAGlance'
-import SeasonSelector from '@/components/crew/dashboard/SeasonSelector'
 import PendingHoursCard, { type PendingHoursRow } from '@/components/crew/dashboard/PendingHoursCard'
 import PendingMilestonesCard, {
   type PendingMilestoneRow,
@@ -47,23 +46,16 @@ export default async function DashboardPage() {
   const supabase = await getServerClient()
   const tz = await getOrgTimezone(supabase)
 
-  // All five queries below are mutually independent — none depends on
+  // All three queries below are mutually independent — none depends on
   // another's result (the two role-gated ones only need admin.role, already
-  // available) — so they run in a single Promise.all instead of up to four
+  // available) — so they run in a single Promise.all instead of up to three
   // sequential await stages.
   const [
     { data: events },
-    { data: pinnedSetting },
-    { data: seasons },
     { data: pendingMilestones },
     { data: pendingRows },
   ] = await Promise.all([
     supabase.rpc('get_activity_feed', { p_limit: 10, p_offset: 0 }),
-    supabase.from('app_settings').select('value').eq('key', 'dashboard_season_id').maybeSingle(),
-    supabase
-      .from('seasons')
-      .select('id, name')
-      .order('start_date', { ascending: false, nullsFirst: false }),
     admin.role !== 'viewer'
       ? supabase
           .from('milestone_log')
@@ -92,12 +84,6 @@ export default async function DashboardPage() {
           .order('show_date_id', { ascending: false })
       : Promise.resolve({ data: [] as RawPendingHoursRow[] }),
   ])
-
-  const pinnedSeasonId = pinnedSetting?.value ? pinnedSetting.value : null
-  const seasonList = seasons ?? []
-  const pinnedSeasonName = pinnedSeasonId
-    ? (seasonList.find((s) => s.id === pinnedSeasonId)?.name ?? null)
-    : null
 
   const pendingMilestoneRows: PendingMilestoneRow[] = (
     (pendingMilestones ?? []) as unknown as RawPendingMilestoneRow[]
@@ -133,18 +119,7 @@ export default async function DashboardPage() {
 
       <QuickStats />
 
-      <SeasonAtAGlance
-        seasonId={pinnedSeasonId}
-        seasonName={pinnedSeasonName}
-        timezone={tz}
-        selectorSlot={
-          <SeasonSelector
-            seasons={seasonList}
-            currentSeasonId={pinnedSeasonId}
-            adminRole={admin.role}
-          />
-        }
-      />
+      <SeasonAtAGlance timezone={tz} />
 
       <PendingMilestonesCard rows={pendingMilestoneRows} />
 

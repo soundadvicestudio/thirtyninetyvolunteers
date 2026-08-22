@@ -1,5 +1,6 @@
 import { Users, CalendarDays, ClipboardList, UserPlus } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
+import { addDays } from 'date-fns'
 import { getServerClient } from '@/lib/supabase/server'
 import { getActiveVolunteerCount } from '@/lib/volunteers/list'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
@@ -10,29 +11,24 @@ type RoleStaffing = {
   slot_claims: { status: string }[] | null
 }
 
-async function getUpcomingShowsThisMonth(
+async function getUpcomingShowsIn31Days(
   supabase: Awaited<ReturnType<typeof getServerClient>>
 ): Promise<number> {
-  // "This month" is anchored to the org timezone, not server UTC — a naive
-  // `new Date()` month boundary would be wrong near a month rollover for
-  // part of the day (R23 / 10.1 DST-aware pattern). show_date is a bare
-  // date column with no time zone of its own, so once we know the correct
-  // org-timezone calendar month, plain 'YYYY-MM-DD' string bounds are
-  // sufficient — no UTC instant conversion needed (unlike timestamptz
-  // columns).
+  // 31-day rolling window anchored to the org timezone, not server UTC
+  // (R23 / 10.1 DST-aware pattern). show_date is a bare date column with
+  // no time zone of its own, so once we know the correct org-timezone
+  // today/cutoff, plain 'YYYY-MM-DD' string bounds are sufficient — no
+  // UTC instant conversion needed (unlike timestamptz columns).
   const tz = await getOrgTimezone(supabase)
   const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
-  const [year, month] = todayCT.split('-').map(Number)
-  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  const cutoffCT = formatInTimeZone(addDays(new Date(), 31), tz, 'yyyy-MM-dd')
 
   const { data } = await supabase
     .from('show_dates')
     .select('show_id, shows!inner(status)')
     .eq('shows.status', 'live')
-    .gte('show_date', monthStart)
-    .lte('show_date', monthEnd)
+    .gte('show_date', todayCT)
+    .lte('show_date', cutoffCT)
 
   const distinctShowIds = new Set((data ?? []).map((row) => row.show_id as string))
   return distinctShowIds.size
@@ -41,6 +37,22 @@ async function getUpcomingShowsThisMonth(
 async function getVolunteersNeeded(
   supabase: Awaited<ReturnType<typeof getServerClient>>
 ): Promise<number> {
+  const tz = await getOrgTimezone(supabase)
+  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
+  const cutoffCT = formatInTimeZone(addDays(new Date(), 31), tz, 'yyyy-MM-dd')
+
+  // Two-step: (1) find live shows with at least one show_date in the next
+  // 31 days, (2) sum open slots across all dates of only those shows.
+  const { data: dateRows } = await supabase
+    .from('show_dates')
+    .select('show_id, shows!inner(status)')
+    .eq('shows.status', 'live')
+    .gte('show_date', todayCT)
+    .lte('show_date', cutoffCT)
+
+  const showIds = [...new Set((dateRows ?? []).map((row) => row.show_id as string))]
+  if (showIds.length === 0) return 0
+
   const { data } = await supabase
     .from('shows')
     .select(
@@ -52,7 +64,7 @@ async function getVolunteersNeeded(
       )
       `
     )
-    .eq('status', 'live')
+    .in('id', showIds)
 
   type RawShow = {
     show_dates: { volunteer_roles: RoleStaffing[] | null }[] | null
@@ -114,7 +126,7 @@ export default async function QuickStats() {
 
   const [activeVolunteers, upcomingShows, volunteersNeeded, recentSignups] = await Promise.all([
     getActiveVolunteerCount(supabase),
-    getUpcomingShowsThisMonth(supabase),
+    getUpcomingShowsIn31Days(supabase),
     getVolunteersNeeded(supabase),
     getRecentSignups(supabase),
   ])
@@ -122,11 +134,11 @@ export default async function QuickStats() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <StatTile icon={Users} value={activeVolunteers} label="Total Active Volunteers" />
-      <StatTile icon={CalendarDays} value={upcomingShows} label="Upcoming Shows This Month" />
+      <StatTile icon={CalendarDays} value={upcomingShows} label="Upcoming Shows (31 Days)" />
       <StatTile
         icon={ClipboardList}
         value={volunteersNeeded}
-        label="Volunteers Needed"
+        label="Volunteers Needed (31 Days)"
         helpAnchor="show-volunteers"
       />
       <StatTile icon={UserPlus} value={recentSignups} label="New Volunteers (7 Days)" />
