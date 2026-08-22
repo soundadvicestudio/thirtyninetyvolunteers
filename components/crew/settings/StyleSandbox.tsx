@@ -15,7 +15,6 @@ import { QRGeneratorMockup } from './QRGeneratorMockup'
 import { CheckInMockup } from './CheckInMockup'
 import { CommunicationMockup } from './CommunicationMockup'
 import { MediaLibraryMockup } from './MediaLibraryMockup'
-import { SetupPanelMockup } from './SetupPanelMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -277,8 +276,6 @@ export default function StyleSandbox() {
         <CommunicationMockup />
         <div className="border-t border-neutral-border my-8" />
         <MediaLibraryMockup />
-        <div className="border-t border-neutral-border my-8" />
-        <SetupPanelMockup />
       </div>
     </div>
   )

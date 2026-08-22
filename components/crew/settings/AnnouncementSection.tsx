@@ -10,8 +10,7 @@ import { getAnnouncementContent } from '@/lib/actions/announcements'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-const cardClasses =
-  'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
+const cardClasses = 'border border-divider dark:border-dark-border rounded-lg overflow-hidden'
 const headingClasses = 'text-lg font-semibold text-dark dark:text-dark-text'
 const descriptionClasses = 'text-sm text-mid-gray dark:text-dark-muted mb-4'
 const labelClasses = 'block text-sm font-medium text-dark dark:text-dark-text mb-1'
@@ -94,15 +93,16 @@ export default function AnnouncementSection() {
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Dashboard Announcement</h2>
         <p className={descriptionClasses}>
           Publish an announcement that appears at the top of the Dashboard for the roles you select below.
         </p>
       </div>
 
-      <div>
-        <label className={labelClasses}>Message</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Message</label>
         <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-gray-50 dark:bg-dark-surface rounded-t-md">
           <button
             type="button"
@@ -210,11 +210,12 @@ export default function AnnouncementSection() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Publishing...' : 'Publish'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )

@@ -52,7 +52,7 @@ export type SetupPanelInitialValues = {
   sidebar_nav_order: string
 }
 
-const cardClasses = 'bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg p-6 space-y-4'
+const cardClasses = 'border border-divider dark:border-dark-border rounded-lg overflow-hidden'
 const headingClasses = 'text-lg font-semibold text-dark dark:text-dark-text'
 const descriptionClasses = 'text-sm text-mid-gray dark:text-dark-muted mb-4'
 const labelClasses = 'block text-sm font-medium text-dark dark:text-dark-text mb-1'
@@ -106,13 +106,13 @@ function MaintenanceModeSection({
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Maintenance Mode</h2>
         <p className={descriptionClasses}>
           {"Control crew portal access during updates and maintenance windows."}
         </p>
       </div>
-      <div className="space-y-4">
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
         <ToggleRow
           label={
             maintenanceEnabled
@@ -166,7 +166,8 @@ function MaintenanceModeSection({
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button
           type="button"
           onClick={handleSave}
@@ -175,7 +176,6 @@ function MaintenanceModeSection({
         >
           {status === 'saving' ? 'Saving...' : 'Save'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -213,14 +213,15 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Organization Identity</h2>
         <p className={descriptionClasses}>
           {"Your organization's name and contact information. Used in email templates, the public landing page, and the platform footer."}
         </p>
       </div>
-      <div>
-        <label className={labelClasses}>Organization Name</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Organization Name</label>
         <input
           type="text"
           maxLength={100}
@@ -281,11 +282,12 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -315,15 +317,16 @@ function BrandColorsSection({ initialValues }: { initialValues: SetupPanelInitia
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Brand Colors</h2>
         <p className={descriptionClasses}>
           Your primary and accent colors. These will be used in email templates. After Phase THEME
           ships, they will also update the admin UI.
         </p>
       </div>
-      <div>
-        <label className={labelClasses}>Primary Color</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Primary Color</label>
         <div className="flex items-center gap-2">
           <input
             type="color"
@@ -346,11 +349,12 @@ function BrandColorsSection({ initialValues }: { initialValues: SetupPanelInitia
           <span className="text-sm font-mono text-mid-gray dark:text-dark-muted">{brandAccent}</span>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -380,14 +384,15 @@ function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitia
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Email Configuration</h2>
         <p className={descriptionClasses}>
           The sending address and name that appear on all outgoing emails from this platform.
         </p>
       </div>
-      <div>
-        <label className={labelClasses}>Sending Address</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Sending Address</label>
         <input
           type="email"
           value={emailFromAddress}
@@ -416,11 +421,12 @@ function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitia
           Edit in General Defaults →
         </Link>
       </div>
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -509,13 +515,14 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Feature Flags</h2>
         <p className={descriptionClasses}>
           Enable or disable optional platform features. Changes take effect immediately for all
           users.
         </p>
       </div>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
       <ToggleRow
         label="Calendar & Space Management"
         description="Enables the master calendar, space booking, and public /calendar page. When off, these are hidden from all users."
@@ -581,7 +588,9 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         enabled={announcementsOaEnabled}
         onToggle={() => setAnnouncementsOaEnabled((v) => !v)}
       />
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={flagSaveStatus} errorMessage={flagErrorMessage} />
         <button
           type="button"
           onClick={handleSave}
@@ -590,7 +599,6 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         >
           {flagSaveStatus === 'saving' ? 'Saving...' : 'Save Feature Flags'}
         </button>
-        <SaveFeedback status={flagSaveStatus} errorMessage={flagErrorMessage} />
       </div>
     </div>
   )
@@ -618,15 +626,16 @@ function InstanceLabelSection({ initialValues }: { initialValues: SetupPanelInit
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>Platform Identity</h2>
         <p className={descriptionClasses}>
           An internal label for this deployment. Only visible to you on this page — never shown
           to other users.
         </p>
       </div>
-      <div>
-        <label className={labelClasses}>Instance Label</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Instance Label</label>
         <input
           type="text"
           maxLength={100}
@@ -636,11 +645,12 @@ function InstanceLabelSection({ initialValues }: { initialValues: SetupPanelInit
           className={inputClasses}
         />
       </div>
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save Identity Label'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -670,14 +680,15 @@ function NotFoundPageSection({ initialValues }: { initialValues: SetupPanelIniti
 
   return (
     <div className={cardClasses}>
-      <div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
         <h2 className={headingClasses}>404 Page</h2>
         <p className={descriptionClasses}>
           Customize the message shown when a visitor reaches a page that doesn&apos;t exist.
         </p>
       </div>
-      <div>
-        <label className={labelClasses}>Heading</label>
+      <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+        <div>
+          <label className={labelClasses}>Heading</label>
         <input
           type="text"
           maxLength={100}
@@ -698,11 +709,12 @@ function NotFoundPageSection({ initialValues }: { initialValues: SetupPanelIniti
           className={inputClasses}
         />
       </div>
-      <div className="flex items-center gap-4">
+      </div>
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+        <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
         </button>
-        <SaveFeedback status={status} errorMessage={errorMessage} />
       </div>
     </div>
   )
@@ -748,25 +760,27 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
           <BrandColorsSection initialValues={initialValues} />
 
           <div className={cardClasses}>
-            <div>
+            <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
               <h2 className={headingClasses}>Organization Logo</h2>
               <p className={descriptionClasses}>
                 Your logo appears in email templates and on the public landing page. Upload a file or
                 paste a URL to a publicly hosted image.
               </p>
             </div>
-            <BrandImageUploader
-              label="Logo"
-              settingsKey="org_logo_url"
-              storagePath="logo"
-              aspectRatio={undefined}
-              currentValue={logoUrl}
-              onSave={(url) => setLogoUrl(url)}
-            />
+            <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+              <BrandImageUploader
+                label="Logo"
+                settingsKey="org_logo_url"
+                storagePath="logo"
+                aspectRatio={undefined}
+                currentValue={logoUrl}
+                onSave={(url) => setLogoUrl(url)}
+              />
+            </div>
           </div>
 
           <div className={cardClasses}>
-            <div>
+            <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4">
               <h2 className={headingClasses}>Browser Favicon</h2>
               <p className={descriptionClasses}>
                 The small icon that appears in browser tabs and bookmarks. Must be square. Upload a
@@ -774,14 +788,16 @@ export default function SetupPanel({ initialValues }: { initialValues: SetupPane
                 image.
               </p>
             </div>
-            <BrandImageUploader
-              label="Favicon"
-              settingsKey="favicon_url"
-              storagePath="favicon"
-              aspectRatio={1}
-              currentValue={faviconUrl}
-              onSave={(url) => setFaviconUrl(url)}
-            />
+            <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+              <BrandImageUploader
+                label="Favicon"
+                settingsKey="favicon_url"
+                storagePath="favicon"
+                aspectRatio={1}
+                currentValue={faviconUrl}
+                onSave={(url) => setFaviconUrl(url)}
+              />
+            </div>
           </div>
         </div>
 

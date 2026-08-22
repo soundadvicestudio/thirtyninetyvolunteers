@@ -127,7 +127,7 @@ export default function NavOrderSection({
   return (
     <div className={cardClasses}>
       {/* Header */}
-      <div className="p-6 border-b border-neutral-border">
+      <div className="bg-neutral-surface dark:bg-dark-nav p-6 border-b border-neutral-border">
         <h2 className="text-lg font-semibold text-dark dark:text-dark-text">
           Sidebar Navigation Order
         </h2>
