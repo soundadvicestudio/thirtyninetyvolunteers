@@ -1,115 +1,24 @@
 # 30 By Ninety Theatre — Build Governance
 ## 30BN_PROCESS_v1.md — v6.3
-### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
-### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
-— §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
-default flag noted); §7 six new MESSAGES pattern notes (SetupPanel fd.append(),
-Sidebar prop double-location, EMPTY_COUNTS cascade, Style Sandbox text tokens,
-DM privacy + thread_reads asymmetry, sender mark-as-read); §10 R32 grep
-updated (feature_messages, 8 flags); §10 createNotification grep extended
-(lib/actions/messages.ts); §11 five new checklist items (R39, R40, EMPTY_COUNTS
-cascade, SetupPanel fd.append(), Sidebar double-location); §13 10 missing STYLE
-flat log entries inserted (STYLE.A–STYLE.8 + DOC.72 — gap from DOC.72/73 now
-resolved); §13 Phase MESSAGES in-progress block added (MESSAGES.A–4 ✓,
-MESSAGES.5–8 pending); §13 prompt log updated; §14 five new pattern notes;
-DOC.74 logged)
-### Last Updated: August 2026 — v5.5 (DOC.75: Phase MESSAGES complete —
-§7 XHR list 7→8 (DirectMessageComposer.tsx 8th); §7 storage paths updated
-(messages/ namespace added); §7 six new patterns added (@tailwindcss/typography
-absent, forwardRef+useImperativeHandle for editor components, latent dead prop
-detection, sub-component prop threading chain, void-in-useEffect, router.push
-R12 clarification); §8 XHR list 7→8; §10 XHR grep 7→8; §11 three new checklist
-items (@tailwindcss/typography, prop threading chain, logAction() diff update);
-§13 Phase MESSAGES ✓ Complete — MESSAGES.5–7 build summaries added, pending
-block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
-pattern notes; DOC.75 logged)
-### Last Updated: August 2026 — v5.6 (DOC.77: ADMIN.45/46 + Phase TZ TZ.A–
-TZ.4b documented — §7 DST-aware date filtering updated (getOrgTimezone());
-§7 calendar-availability.ts + calendar-layout.ts partial exemption corrections;
-§7 resolveEmailSettings() return type updated (+timezone); §7 six new TZ
-patterns (getOrgTimezone, resolveLayoutSettings rename, formatCT timezone
-param, client-before-usage ordering, onEmptyChange ref-reactivity fix,
-data-timezone body attribute); §10 new 'America/Chicago' hardcoded grep
-check; §11 five new checklist items (TZ patterns); §13 ADMIN.45 + ADMIN.46 +
-Phase TZ in-progress block; §14 six new pattern notes; version history v5.6)
-### Last Updated: August 2026 — v5.7 (DOC.79: Phase TZ complete —
-§7 calendar-availability.ts getAvailableWindows() ✓ (TZ.5b applied —
-remove "requires TZ.5b" language); §7 calendar-layout.ts
-computeEventPosition() ✓ (same); §7 four new TZ.5b patterns
-(useNowPosition() hook, module-level helper parameterization, split-state
-pattern, sibling helper asymmetry); §7 'America/Chicago' grep note updated
-(Phase TZ complete); §10 'America/Chicago' grep completion note updated;
-§13 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b summaries, TZ.6 this
-prompt); §13 prompt log through DOC.79; §14 four new pattern notes; v5.7)
-### Last Updated: August 2026 — v5.8 (DOC.82: Phase MM
-complete — §7 six new patterns (proxy.ts maintenance gate
-position, /crew/maintenance R20 exception, SetupPanel dual-
-client pattern, SaveStatus 'saved' not 'success', settingsMap
-Map instance, ActionResult discriminated union narrowing); §11
-four new checklist items; §13 Phase MM ✓ Complete + prompt
-log MM.A/MM.1/MM.2/DOC.80/DOC.81/DOC.82; §14 five new
-pattern notes; v5.8 version history)
-### Last Updated: August 2026 — v5.9 (DOC.85: Beta
-phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/
-SHOWARCHIVE complete — §7 six new patterns (revalidatePath
-during render, error.tsx logging, ShowCard inline in
-ShowList, ShowForm vs ShowDetail distinction,
-saveFeatureFlags 6-point wiring, AnnouncementSection
-self-loading); §10 new grep check (revalidatePath in
-render); §11 seven new checklist items; §13 phase
-complete blocks for all five phases + prompt log;
-§14 six new pattern notes; v5.9 version history)
-### Last Updated: August 2026 — v6.0 (DOC.87: Phases
-QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — §2
-header v5.9→v6.0 + Last Updated; §7 public-route
-invariant updated (app/go/[token]/route.ts fifth sanctioned
-handler); §7 thirteen new patterns (@resvg/resvg-js
-SVG-to-PNG rasterization + serverExternalPackages,
-escapeXml() for SVG text injection, manual UA parsing,
-/go/[token] public redirect route, types/sidebar.ts shared
-module, grouped sidebar rendering, bg-brand-primary-light
-active nav fill, border-neutral-border TopBar token,
-dark:hover:bg-white/10 sidebar hover, admin identity block
-stacking, pre-prompt governance compliance pass, formatCT
-path in @/lib/utils/date, Client Component timezone
-invariant); §11 thirteen new checklist items; §13 Beta
-Build Complete; QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER
-✓ Complete blocks + prompt log through DOC.87; §14
-pre-prompt governance compliance rule + v6.0 history)
-### Last Updated: August 2026 — v6.1 (DOC.88: ADMIN.47–51
-+ Phase BETA complete — §2 header v6.0→v6.1 + Last Updated;
-§7 feature flag list updated (8→9 flags, feature_beta second
-opt-in-default flag); §7 six new patterns (resolveGroupHrefs
-self-healing nav merge, hide-not-lock Settings hub rule,
-Settings access tightening ADMIN.50, conditional Inventory
-Management sidebar link, Beta Feedback page role-branch
-pattern, ?? → || R18 sweep lesson); §10 feature flags grep
-updated (9 flags, feature_beta added); §11 four new checklist
-items (hide-not-lock, resolveGroupHrefs awareness, conditional
-sidebar links pattern, feature_beta in R32 grep); §13
-ADMIN.47–51 + Phase BETA ✓ Complete blocks + prompt log;
-§14 v6.1 version history; DOC.88 logged)
-### Last Updated: August 2026 — v6.2 (DOC.90: ADMIN.52–57
-complete — §7 eight new patterns (SeasonAtAGlance self-
-contained Server Component, visibleNotifications filter
-pattern, TipTap click-to-focus CSS custom property + onClick,
-notifications row cap removal, public/fonts/ vendored font
-convention, Turbopack createRequire literal string build
-failure, @resvg/resvg-js silent font failure on Vercel,
-migration files at repo root, Beta Feedback SA sidebar
-exclusion); §11 eight new checklist items; §13 ADMIN.52–57
-build summaries + prompt log; §14 v6.2 version history)
-### Last Updated: August 2026 — v6.3 (DOC.92: ADMIN.58–60
+*Created: July 2026 | Last session: DOC.96 (Aug 2026). Version history table
+below. Full build history by phase and prompt: §13. Doc-maintenance notes
+(ordering corrections, sync failures): end of §14.*
 
-complete — §7 five new patterns (show deletion single-guard +
-cascade, updateShowStatus() archive side-effect, NavOrderSection
-self-healing mirror, TopBar icon sizing convention, orphaned
-component/action deletion pattern); §10 one new grep check
-(show deletion guard audit); §11 one stale checklist item
-replaced (three-guard → single-guard + cascade) + three new
-items (archive side-effect, NavOrderSection coverage, TopBar
-icon sizing); §13 ADMIN.58/59/60 build summaries + prompt log;
-§14 v6.3 version history; DOC.92 logged)
+| Version | Date | Summary |
+|---|---|---|
+| v6.3 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, updateShowStatus() archive side-effect, NavOrderSection self-healing mirror, TopBar icon sizing convention (DOC.92) |
+| v6.2 | Aug 2026 | ADMIN.52–57 complete — SeasonAtAGlance self-contained component, TipTap click-to-focus, notifications row cap removed, public/fonts/ font convention (DOC.90) |
+| v6.1 | Aug 2026 | ADMIN.47–51 + Phase BETA complete — resolveGroupHrefs() self-healing nav, hide-not-lock Settings hub rule, feature flags 8→9 (feature_beta) (DOC.88) |
+| v6.0 | Aug 2026 | Phases QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — Beta Build Complete declared, thirteen new patterns incl. @resvg/resvg-js, grouped sidebar (DOC.87) |
+| v5.9 | Aug 2026 | Beta phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE complete — revalidatePath-during-render prohibition, six new patterns (DOC.85) |
+| v5.8 | Aug 2026 | Phase MM (Maintenance Mode) complete — proxy.ts maintenance gate, SetupPanel dual-client pattern, six new patterns (DOC.82) |
+| v5.7 | Aug 2026 | Phase TZ complete — TZ.5b calendar subsystem sweep, useNowPosition() hook, four new patterns (DOC.79) |
+| v5.6 | Aug 2026 | ADMIN.45/46 + Phase TZ foundation (TZ.A–TZ.4b) documented — getOrgTimezone(), six new patterns (DOC.77) |
+| v5.5 | Aug 2026 | Phase MESSAGES complete — XHR list 7→8, forwardRef+useImperativeHandle editor pattern, six new patterns (DOC.75) |
+| v5.4 | Aug 2026 | Phase MESSAGES.A–4 documented (in progress) — feature flags 7→8 (feature_messages), six new patterns (DOC.74) |
+| v5.3 | Aug 2026 | Phase NOTIFY complete — sidebar atomic edit four-part→three-part (TOOLTIP_ANCHOR_MAP removed), five new patterns (DOC.73) |
+
+---
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -3024,16 +2933,6 @@ npm run lint 2>&1
 # If suppressing with eslint-disable, the comment must
 # include a documented reason explaining why suppression
 # is correct (e.g. hydration-safe client-only API read).
-```
-
-```bash
-# Confirm no window.location on volunteer profile
-# components (router.refresh() standard, R12/ADMIN.19)
-grep -rn "window.location" \
-  app/crew/\(app\)/volunteers/ \
-  components/crew/volunteers/ \
-  --include="*.tsx" --include="*.ts"
-# Must return zero results
 ```
 
 ```bash
@@ -6844,7 +6743,7 @@ Phase AUDITIONS — Audition Management System ✓ Complete
                placements. AboutSystemEmails.tsx: 4 new triggers
                (11→15). Deferred Verifications v19: 65 items.
                9 files + 1 new.
-  30BN-DOC.59  ✓ Brief Update v4.7 (35 edits — Phase AUDITIONS
+  30BN-DOC.59 (Brief) ✓ Brief Update v4.7 (35 edits — Phase AUDITIONS
                complete; all §1/§3/§6/§7/§8/§9/§11/§13 updated;
                R23 3-arg signature; 5-file flag pattern; schema
                corrections; Migration 032 applied; HelpContent
@@ -6856,7 +6755,7 @@ getServerClient() association corrected)
 30BN-DOC.62 ✓ Process Update v4.7 (this prompt — §7
 stale getServerClient() sentence replaced;
 §13 DOC.61 + DOC.62 logged; v4.7 history)
-30BN-DOC.59 ✓ Process Update v4.5 (this prompt — Phase
+30BN-DOC.59 (Process) ✓ Process Update v4.5 (this prompt — Phase
 AUDITIONS: §7 audition assignment pattern;
 §10 feature_auditions grep; §11 stub tab
 checklist item; §13 phase log + DOC.58/59)
@@ -7466,7 +7365,7 @@ SeasonSelector.tsx); 12 other exports preserved.
                         Commit pushed.
   30BN-ADMIN.51      ✓ settings/page.tsx dead variable cleanup
                         post-ADMIN.50. 1 file. Commit f628541.
-  30BN-DOC.88        ✓ Process v6.0→v6.1 (ADMIN.47–51 + Phase
+  30BN-DOC.88 (Process) ✓ Process v6.0→v6.1 (ADMIN.47–51 + Phase
                         BETA complete — this prompt).
   30BN-ADMIN.52      ✓ SeasonAtAGlance 31-day cap + chrono sort
                         + AnnouncementWidget orange redesign.
@@ -7492,9 +7391,9 @@ SeasonSelector.tsx); 12 other exports preserved.
                         (Migration 044, 5 files). F1: migration
                         path corrected repo root vs supabase/
                         migrations/. Commit pushed.
-  30BN-DOC.88        ✓ Brief v6.3→v6.4 Part A (§1/§8/§9).
+  30BN-DOC.88 (Brief) ✓ Brief v6.3→v6.4 Part A (§1/§8/§9).
   30BN-DOC.89        ✓ Brief v6.4 Part B (§11/§13).
-  30BN-DOC.90        ✓ Process v6.1→v6.2 (ADMIN.52–57 —
+  30BN-DOC.90 (Process) ✓ Process v6.1→v6.2 (ADMIN.52–57 —
                         this prompt).
   30BN-ADMIN.58      ✓ Migration 045 + deleteShow() single-guard +
                         cascade + AlertDialog text. 3 files + 1 migration.
@@ -7506,9 +7405,22 @@ SeasonSelector.tsx); 12 other exports preserved.
   30BN-ADMIN.60      ✓ Beta Testing rename + NavOrderSection self-heal
                         + TopBar icons + SeasonSelector deleted +
                         setPinnedSeason() removed. 11 files. Commit 73ef219.
-  30BN-DOC.90        ✓ Brief v6.4→v6.5 Part A (§1/§8/§9).
+  30BN-DOC.90 (Brief) ✓ Brief v6.4→v6.5 Part A (§1/§8/§9).
   30BN-DOC.91        ✓ Brief v6.5 Part B (§11/§13 — ADMIN.58/59/60).
   30BN-DOC.92        ✓ Process v6.2→v6.3 (this prompt).
+  30BN-DOC.96        ✓ Process reduction pass: header
+                       condensed to version table (~118
+                       lines → ~15 lines); §14 version
+                       history tail compressed (~308 lines
+                       → ~25 lines); R27 cross-ref claim
+                       corrected (Brief R27 is now pointer
+                       stub); R32 false label and Brief
+                       cross-ref removed; R33 contradiction
+                       resolved; DOC.59/88/90 collisions
+                       disambiguated in §13; duplicate §10
+                       window.location grep check removed.
+                       Brief commit: f4403e8.
+                       Process commit: [PROC-HASH].
 ```
 
 ---
@@ -7579,7 +7491,7 @@ The task tracker enabled at the start of a build session is a single element upd
 
 Current convention (Phase 12 onward): prompts use "Enable live task tracking for this build:" followed by lettered tasks (Task A, Task B...). Earlier prompts used "Step tracker: ☐ Step 1..." format. Both work; the lettered task format is standard going forward. The core rule is unchanged: one tracker, updated in place, never re-emitted. Established Phase 4 build session.
 
-Note on placement: R27 governs session conduct, not a product or schema decision. It lives here in §14 for the same reason as R16 and R22. Brief §13 carries a cross-reference.
+Note on placement: R27 governs session conduct, not a product or schema decision. It lives here in §14 for the same reason as R16 and R22. Brief §13 R27 is now a pointer stub that defers to this section as the canonical source (condensed DOC.96), matching the R16/R17 pattern.
 
 ### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute (cross-reference)
 Documented in Brief §13 R28. Referenced here for R-number continuity. Core rule: after creating any SECURITY DEFINER function, immediately REVOKE EXECUTE from PUBLIC and anon; GRANT EXECUTE to authenticated only. Verify via pg_proc.proacl check. Confirmed failure mode found in 30BN-5.3 and fixed retroactively in ADMIN.13. See §6 for the required verification query and §10 for the grep/query check.
@@ -7822,13 +7734,12 @@ Never merge the two patterns into one file. This is the same principle as the
 iCalendar routes (CAL.7) — token-authenticated public routes use `getAdminClient()`
 regardless of how the token was issued.
 
-### R32 — Owner Admin Role Guard Pattern (cross-reference)
+### Owner Admin Role Guard Pattern
 
-Documented in Brief §13 R32. Referenced here for R-number continuity. See also §7 Owner Admin
-role guard pattern note. Core rule: after SETUP.0, operational role guards should pass
-owner_admin through alongside super_admin. Only the Setup Panel (/crew/settings/setup),
-owner_admin / super_admin account creation, and calendar_editor on Super Admin accounts
-remain Super Admin exclusive. See §10 grep check and §11 checklist item.
+See §7 Owner Admin role guard pattern note for full detail. Core rule: after SETUP.0,
+operational role guards should pass owner_admin through alongside super_admin. Only the Setup
+Panel (/crew/settings/setup), owner_admin / super_admin account creation, and calendar_editor
+on Super Admin accounts remain Super Admin exclusive. See §10 grep check and §11 checklist item.
 
 ### Sidebar Nav Exact-vs-Prefix Matching (established ADMIN.30)
 
@@ -7989,11 +7900,16 @@ When `org_logo_url` (or any `app_settings` value) references a URL from Supabase
 ### R33 — CSS Custom Properties After Phase THEME (cross-reference)
 
 Documented in Brief §13 R33. Referenced here for R-number continuity. Core rule: after Phase
-THEME ships, all new code referencing brand-driven colors must use var(--brand-primary) and
-var(--brand-accent) CSS custom properties — not Tailwind brand utility classes (bg-navy,
-text-orange, etc.). The @theme block in globals.css is NOT modified (R7 still applies).
-Phase THEME.A audits all current usages before any replacements are made. Enforced from THEME.1
-onward.
+THEME ships, brand-driven colors are backed by CSS custom properties (var(--brand-primary),
+var(--brand-accent)) injected in app/layout.tsx. In application code these are consumed via
+the @layer utilities classes (bg-brand-primary, text-brand-primary, etc. — see the R33
+Enforcement note above), not written as raw var() inline styles; the utility classes resolve
+to the custom properties under the hood. The prohibition is on the OLD static Tailwind brand
+tokens (bg-navy, text-orange, etc.), which resolve to hardcoded hex values in @theme and never
+respond to app_settings color changes — not on the bg-brand-primary utility class family,
+which is the correct current pattern and is consistent with the Enforcement note above. The
+@theme block in globals.css is NOT modified (R7 still applies). Phase THEME.A audited all
+current usages before any replacements were made. Enforced from THEME.1 onward.
 
 ### R34 — All Non-Core Features Must Be Built Flag-Ready (cross-reference)
 
@@ -8925,309 +8841,27 @@ needed by `NavOrderSection.tsx`.
 
 *This document must be updated whenever a new standing rule is agreed upon.*
 *Version history:*
-*v1.0 (July 2026 — initial)*
-*v1.1 (July 2026 — Phase 1 complete: R16 (no browser verification in Claude Code) and R17 (shadcn var() injection revert) added in new §14 — deviation from §12 protocol, kept here rather than Brief §13 per owner decision; shadcn color class grep check added to §10; Vercel preset and shadcn tailwind.config checks added to §11; ADMIN/DOC numbering convention clarified in §3; Phase 1 marked complete and Document & Admin Prompts log added in §13)*
-*v1.2 (July 2026 — Phase 2 complete: build report timing convention added to §8; Phase 2 marked complete in §13; DOC.1/DOC.2 added to prompt log)*
-*v1.3 (July 2026 — Phase 3 complete: step tracker convention added to §8; new grep checks and post-build checklist items added to §10 and §11; ADMIN.1–ADMIN.7 and DOC.3–DOC.4 added to prompt log; Phase 3 marked complete; Phases 4 and 5 updated with new prompt slots 4.4 and 5.3; R19–R22 cross-references added to §14)*
-*v1.4 (July 2026 — Phase 4 complete: step tracker re-emit behavior corrected (R27), admin client public-read use case documented (§7), src/ path errors fixed in grep checks (§10), R23/R26 grep checks added (§10), R23/R26 post-build checklist items added (§11), Phase 4 marked complete in §13, ADMIN.8–ADMIN.12 and DOC.5–DOC.6 added to prompt log, R23–R27 added to §14)*
-*v1.5 (July 2026 — Phase 5 complete: SECURITY DEFINER privilege verification added to §6, getServerClient vs getAdminClient distinction clarified in §7 (confirmed pattern from 5.3 Q1), DB-query verification pattern added to §8 (established ADMIN.13), R28 pg_proc.proacl check added to §10, env var count updated to six and R28 checklist item added to §11, Phase 5 marked complete and ADMIN.13/DOC.7/DOC.8 added to prompt log in §13, R28 cross-reference added to §14)*
-*v1.6 (July 2026 — Phases 6 and 7 complete: revalidatePath grep check added to §10 (R29), drag-library guard grep check added to §10 (Phase 6 decision), R29/drag-library checklist items added to §11, Phases 6 and 7 marked complete in §13, ADMIN.14/DOC.9/DOC.10 added to prompt log in §13, R16 clarified with verification session pattern in §14, R29/R30 cross-references added to §14)*
-*v1.7 (July 2026 — Phases 8–10 complete, ADMIN.15–19: §1 unchanged; §4 migration example corrected (002 filename); §5 read/audit session and FIX prompt patterns added; §6 Call Board RLS exception + "RLS Always True" advisory note added; §7 Call Board third client context documented; §8 lint capture rule and read-only build report format added; §10 R12 grep updated, lint baseline check added, window.location check added, hours_confirmed check added; §11 four new checklist items added; §12 batching pattern documented; §13 ADMIN.15–19 + DOC.11–13 logged, Phases 8–10 marked complete, Beta phases 18–20 added; §14 R12 cross-reference stub added, R29 additional failure modes added; DOC.14 logged)*
-*v1.8 (July 2026 — 9.2 and 10.1 build corrections: §7 server-only file split pattern documented (lib/milestones-shared.ts); §7 DST-aware date filtering note added; §13 9.2 entry corrected (lib/milestones-shared.ts, acknowledgeMilestone audit in 10.1 not 9.2, CTA destination); §13 10.1 entry corrected (Slot Claims group, DST-aware dates, changePassword getAdminUser gap, settings hub card); DOC.16 logged)*
-*v2.0 (July 2026 — Alpha feature-complete: §7 phone normalization utility pattern added (ADMIN.21); §10 phone normalization grep check added; §11 three new checklist items (phone normalization, next/link, sendBatchEmails helper); §13 Phase 11.1 and 11.2 marked complete; §13 DOC.14–DOC.19 + ADMIN.20–24 added to prompt log; §13 Phase 18 Beta items marked complete (ADMIN.22–24); §14 next/link internal navigation note added; §14 DOC prompt completeness verification note added (DOC.17 failure mode); DOC.18/DOC.19 logged)*
-*v2.1 (July 2026 — Alpha build complete: §8 live task tracking convention updated (lettered tasks, "enable live task tracking" instruction); §8 react/no-unescaped-entities note added (12.2b Q1); §10 window.location comment corrected (CategoriesTable fixed in 12.1); §11 two new checklist items (honeypot on public forms 12.1, react/no-unescaped-entities 12.2b); §13 Phase 12 marked complete (12.1–12.4); §13 Phase 18 Call Board hours marked built (12.3); §13 Phase 20 thank-you email marked built in Alpha (12.4); §13 prompt log updated (DOC.20–22, 12.1–12.4); §14 R27 updated for lettered task convention; §14 escapeHtml() email template note added (12.2a); DOC.22 logged)*
-*Cross-reference: 30BN_BRIEF_v1.md v3.3*
-*v3.0 (July 2026 — Beta Phase CAL active: §7 calendar client patterns added (getServerClient() for calendar actions, parameter-passing pattern for utility functions, calendar-availability.ts pure client-safe); §7 FK replacement migration pattern added (CAL.1); §8 commit-before-build-report standard added (CAL.5b); §10 show_type regression grep check added (CAL.1); §10 calendar contact phone grep check added (CAL.5a); §11 three new checklist items (calendar mutations + two routes to revalidate, contact phone normalization, performance type exclusion from manual creation); §13 Phase CAL added to Beta Build section (CAL.1–CAL.5b complete, CAL.6–CAL.8 planned); §13 ADMIN.25 + CAL.1–CAL.5b + all fix prompts + DOC.25a/25b added to prompt log; §14 five new rules: codebase sweep before column removal, commit-before-build-report, post-build audit session pattern, calendar server action client rule, DOC prompt task tracker accuracy; DOC.26 logged)*
-*v3.1 (July 2026 — Phase CAL complete: §7 iCalendar route getAdminClient() exception added (CAL.7); createUser() auth.admin exception clarified (ADMIN.26 confirmed pattern); Content-Disposition fixed-filename rule added (ADMIN.26); calendar-recurrence.ts + calendar-layout.ts pure client-safe noted (CAL.10a, CAL.9); §11 three new checklist items (Content-Disposition filename safety, recurring event creation pattern, recurring event edit/cancel scope pattern); §13 Phase CAL marked complete (CAL.1–CAL.10c); §13 DOC.26–27 + CAL.6–CAL.10c + ADMIN.26 added to prompt log; §14 two new rules: Content-Disposition fixed filename, calendar-recurrence.ts pure client-safe; DOC.29 logged)*
-*v3.2 (July 2026 — Phase 13 complete: §2 header updated (Phase 13 complete, Phase 14 next); §14 logEmailSent() helper pattern added (13.1 — internal to lib/email.ts, getAdminClient(), errors swallowed, never before send, inline pattern for action/cron files); §14 blast.ts getServerClient() note added (13.3a — authenticated session, resolveBlastRecipients receives client as parameter); §8 single-fenced-code-block rule added for all prompts (13.3b/13.4a confirmed correction); §10 blast sanitization grep + logEmailSent export grep added; §11 three new checklist items (logEmailSent() after send, blast body sanitizeHtml not escapeHtml, no <form> in Client Components); §13 Phase 13 marked complete (13.1–13.4b each described, 13.4c pending); §13 prompt log updated (DOC.31–DOC.32 + 13.1–13.4b added); §14 single-fenced-code-block rule added; §14 escapeHtml() note updated (TipTap exception + blast.ts local copy); §14 R31 cross-reference added; DOC.32 logged)*
-*v3.3 (July 2026 — HELP phase + OpenCall OS additions: §2 header updated (HELP phase + OpenCall OS, Phase 14 next); §7 Owner Admin role guard pattern added (SETUP.0 design — checks super_admin || owner_admin for operational features, super_admin-only for Setup Panel + account escalation); §7 getFeatureFlags() pattern added (Phase SETUP design — all feature flag reads through lib/feature-flags.ts); §7 lib/actions/setup.ts getServerClient() note added (Phase SETUP design); §10 three new grep checks added (proxy.ts/middleware.ts, feature flags, owner_admin role guards); §11 two new checklist items (owner_admin role guards, feature flags via getFeatureFlags()); §13 13.4c marked complete (npm sweep: next 16.2.11, 6 remaining blocked upstream); §13 Phase HELP section added (HELP.1–HELP.2d + ADMIN.27–29 all complete); §13 Phase SETUP section added (SETUP.0–4 pending); §13 Phase THEME section added (THEME.A/1–3 pending); §13 prompt log updated (DOC.33–34, HELP.1–HELP.2d, ADMIN.27–29); §14 ADMIN.28 proxy.ts rename note added; §14 ADMIN.27 light-mode-always note added; §14 HelpTooltip Client Component clarification added; §14 R32 cross-reference added (owner_admin role guard); §14 R33 cross-reference added (CSS custom properties post-THEME); DOC.35 logged)*
-*v3.4 (July 2026 — SETUP.0 complete: §2 header updated (SETUP.0 complete, Phase 14 next); §7 Owner Admin role guard pattern note updated (not-yet-built language removed); §10 owner_admin grep check comment updated (post-sweep standing verification); §13 Phase SETUP updated (SETUP.0 ✓ with full summary, "(pending)" removed from header, DOC.36 added to prompt log); SETUP.1–4 still pending; DOC.36 logged)*
-*v3.5 (July 2026 — Phase 14 complete + Phase 15.1–15.2 complete: §2 header updated (Phase 14 complete, Phase 15.3 next); §7 five new patterns added: public-route action file invariant (getAdminClient() only + header comment + *-admin.ts split — 14.1/15.2), P-DC upload pattern (signedUploadUrl → client PUT → confirm action, XHR for progress, media bucket only — 15.2), lib/data/*.ts parameter-passing pattern (client as parameter, never construct internally — 15.1/CAL.3 principle), conditional zod schema factory pattern (runtime flag → factory function in both client and server — 14.1-FIX), storage bucket single-bucket note; §8 XHR-over-fetch convention added (ConsentUploadForm.tsx — only sanctioned XHR use, must include deviation comment); §10 three new grep checks: media bucket (no documents bucket), getServerClient in public-route files (must be zero), XHR usage (ConsentUploadForm only); §11 five new checklist items: P-DC pattern, public-route file invariant, storage bucket + path namespacing, attendance slot_claim_id explicit, zod factory for conditional schemas; §13 Phase 14 marked complete (14.1, 14.1-FIX, 14.2, 14.3); §13 Phase 15 added (15.1 ✓, 15.2 ✓, 15.2-AUDIT ✓, 15.2-FIX ✓, DOC.37a ✓, DOC.37b ✓, DOC.38 ✓, 15.3–15.4 pending); §14 post-build audit session pattern updated (compaction mid-build = mandatory AUDIT trigger, extended from CAL.5b-AUDIT with 15.2-AUDIT evidence); §14 three new rules: public-route action file invariant, storage bucket naming (single media bucket), escapeHtml() storage path exemption; DOC.38 logged)*
-*v3.6 (July 2026 — Phase 15 complete + ADMIN.30: §2 header updated (Phase 15 complete, SETUP.1–4 + THEME pending); §7 P-DC upload path note updated (library/ forward reference removed); §7 detectLinkType() independence pattern added (three intentional implementations — route handler, Client Component, Server Component — recognized DRY exception, do not extract to shared utility); §8 XHR-over-fetch note extended (MediaLibrary.tsx added as second sanctioned XHR use alongside ConsentUploadForm.tsx — both for upload progress); §10 XHR grep check updated (two sanctioned files: ConsentUploadForm.tsx + MediaLibrary.tsx); §11 one new checklist item (detectLinkType() / isViewableMimeType() evaluation for new document entry types); §13 Phase 15 marked complete (15.3 ✓ with commit 26a4585, 15.4 ✓ with commit 63570b8); §13 prompt log updated (15.3 ✓, 15.4 ✓, ADMIN.30 ✓, DOC.37c ✓, DOC.39 ✓); §14 HelpTooltip Client Component note updated (26 → 32 total placements); §14 Storage Bucket Naming library/ note updated (forward reference removed); §14 two new rules: detectLinkType() independence DRY exception (15.3/15.4); sidebar nav exact-vs-prefix matching pattern (ADMIN.30 — special-case parent link, never modify isActivePath() globally); document header v3.6; DOC.39 logged)*
-*v3.7 (July 2026 — HELP.2e + DOC.41/42: §2 header updated (HELP.2e owner_admin sweep + DOC.41/42 logged); §13 prompt log updated (HELP.2e ✓ — 47 HelpContent.tsx ALL_SECTIONS entries updated, commit f4394bd; DOC.41 ✓ — Brief v3.7; DOC.42 ✓ — this prompt); document header v3.7; DOC.42 logged)*
-*v3.8 (July 2026 — Phase SETUP complete + ADMIN.31/31b: §2 header updated (SETUP complete + ADMIN.31/31b); §7 feature flag pattern updated (built SETUP.1 — "not yet built" removed, three active flags noted, proxy.ts conditional fetch noted, missing key behavior noted); §7 setup.ts note updated (dual-client pattern documented — getServerClient() for mutations, getAdminClient() for getSignedBrandUploadUrl()); §7 P-DC storage bucket note updated (two sanctioned buckets: media + brand, path namespacing for each); §7 XHR sanctioned files updated (ConsentUploadForm + MediaLibrary + BrandImageUploader — count 2 → 3); §10 feature flags grep updated (flag list trimmed to 3 active flags, SetupPanel.tsx exclusion added); §10 XHR grep updated (3 sanctioned files); §10 storage grep updated (brand bucket note + second grep for all buckets); §10 new proxy.ts matcher grep check added (SETUP.1 F1); §11 five new checklist items: R34 flag-ready for new features, resolveEmailSettings() in new email functions, payload builder logoUrl param, revalidatePath layout cascade on flag saves, proxy.ts matcher audit before public guards; §13 Phase SETUP marked complete (SETUP.1–4 all ✓ with commit hashes); §13 ADMIN.31 + ADMIN.31b + DOC.43a logged; §13 Phase 19 description updated (expanded scope); §13 Phase 21 + Phase CAST + ADMIN.32/33 added; §14 four new rules: proxy.ts matcher must include all guarded paths (SETUP.1 F1), setup.ts dual-client pattern (SETUP.2), resolveEmailSettings/resolveOrgIdentity use getAdminClient() (SETUP.3/ADMIN.31), R34 cross-reference added; DOC.43b logged)*
-*v3.9 (July 2026 — ADMIN.32–34 complete: §2 header updated (ADMIN.32–34 + DOC.44 logged); §7 Owner Admin role guard EXCEPTIONS updated (OA can now create/assign OA — only SA creation/deactivation remains SA-only); §14 resolveEmailSettings() return type updated (orgName + orgContactEmail added; FROM_ADDRESS/REPLY_TO deletion documented; payload builder from/replyTo params documented); §14 resolveOrgIdentity() return type updated (org_logo_url added; admin layout prop pattern documented); §14 new pattern: || vs ?? for app_settings fallbacks (confirmed failure mode ADMIN.34 F2); §14 new pattern: next.config.ts images.remotePatterns for Supabase Storage; §10 new grep check: FROM_ADDRESS/REPLY_TO must be zero; §10 Owner Admin grep comment updated (only SA-creation escalation guards remain legitimate SA-only hits); §11 payload builder checklist item updated (from/replyTo params, FROM_ADDRESS/REPLY_TO deleted); §11 resolveEmailSettings() checklist item updated (orgName + orgContactEmail); §11 Owner Admin role guard checklist item updated (OA can create OA); §11 two new checklist items (|| vs ?? pattern, no hardcoded org strings in email body copy); §13 ADMIN.32 + ADMIN.33 + ADMIN.34 all marked complete with summaries; Phase 21 prerequisites marked complete; DOC.43b-FIX + DOC.44 + DOC.45 added to prompt log; DOC.45 logged)*
-*v4.0 (July 2026 — Phase THEME complete: §2 header updated (THEME complete + Phase 19/21 pre-launch + DOC.47/DOC.48 logged); §14 resolveEmailSettings() return type updated (brandPrimary + brandAccent + brandPrimaryLight added; email client constraint note added — string interpolation not CSS custom properties); §14 new pattern: lightenHex() from lib/utils/color.ts for server-side hex tint computation (email templates + PDF exports; do not use color-mix() in email or @react-pdf/renderer contexts); §14 new pattern: @react-pdf/renderer createStyles() factory pattern (StyleSheet.create() at module scope ignores props — confirmed failure mode THEME.4; factory function called inside component body is required); §14 R33 enforcement note added (post-THEME web UI code must use @layer utilities classes — bg-brand-primary etc. — never static token names); §10 two new grep checks (brand static Tailwind classes must be zero; brand hex in email templates outside resolveEmailSettings() fallbacks must be zero); §11 email send function checklist item updated (brand color params added); §11 payload builder checklist item updated (brand params added); §11 three new checklist items (post-THEME UI code uses utility classes, PDF factory pattern, email brand hex grep); §13 Phase THEME marked complete (THEME.A/1/2a–2d/3/3b-4 all ✓ with commit hashes); §13 Phase 19 status updated (pre-launch, 3-prompt structure confirmed); §13 Phase 21 updated (pre-launch); §13 prompt log: DOC.43b-FIX through DOC.48 + THEME.A through THEME.3b-4 added (14 new entries); DOC.48 logged)*
-*v4.1 (July 2026 — Phase 19 complete + ADMIN.35–38: §1 header updated (v4.1, Phase 19 + ADMIN.35–38 summary); §7 three new patterns added: Google OAuth callback dual-client pattern (getAdminClient() for pending_registrations ops — newly-OAuth'd user fails session-client RLS; ADMIN.36/38), is_active sign-out pattern (signOut() before redirect on inactive Google auth — ADMIN.38), updateVolunteerInfo() public-route identity (app/update/actions.ts is the /update submit action, distinct from updateVolunteer() in lib/actions/volunteers.ts — any new profile field must update both — 19.2); §7 revalidatePath via .select() pattern added (deleteNote/editNote — retrieve parent ID in single operation to avoid pre-delete SELECT — ADMIN.37); §11 three new checklist items: /update two-file field update pattern (19.2), z.string().optional() for <select> fields (enum rejects '' silently — 19.1/19.3), role guard allowlist pattern for volunteer mutations (Production must be explicitly blocked — ADMIN.37/38); §13 Phase 19 marked complete (19.1–19.3 ✓); §13 prompt log ADMIN.35-AUDIT + ADMIN.35–38 + 19.1–19.3 + DOC.50–51 added; §14 dark mode cascade defect note added (hand-authored @layer utilities compile after Tailwind auto-generated — bg-brand-primary-light overrides dark:bg-dark-bg; ADMIN.35-AUDIT root cause; ADMIN.39 sweep pending); §14 editNote()/deleteNote() role guard gap noted (should allow Editor — deferred to ADMIN.39); DOC.51 logged)*
-*v4.2 (July 2026 — ADMIN.39-AUDIT + ADMIN.39a–c dark mode cascade closure: §1 header updated (v4.2); §14 editNote/deleteNote contradiction corrected — "needs correction to include Editor" replaced with "Editors confirmed append-only, guard correct as-is, migration required if ever revisited"; §7 ADMIN.39a–c pattern set added (governing hover rule, static neutral substitution table, dark:text-brand-primary-mid text fix pattern, two-part dark target correction pattern, has-[:checked]: variant scope rule, read-before-edit discipline note); §10 R35 grep check added; §11 R35 pairing checklist item added; §11 has-[:checked]: scope checklist item added; §13 stale Phase 14/15 pending stubs removed; §13 dark mode cascade sweep marked complete (ADMIN.39-AUDIT + 39a/39b/39c ✓); §13 ADMIN.40 carry-forward added; §13 prompt log completed (ADMIN.39-AUDIT, ADMIN.39a–c, DOC.51–53 all added); §14 R35 formal rule added (three correct options: native+native, hand-authored+hand-authored in correct order, hand-authored dark: text variant); DOC.54 logged)*
-*v4.3 (July 2026 — ADMIN.40–42 + Phase 21 lock: §1 header updated (v4.3); §7 R36 opacity-variant gap pattern added (hand-authored @layer utilities do not auto-generate /NN or stacked-variant rules; each combination requires explicit authoring; silent failure mode; 3 accessibility gaps confirmed in ADMIN.42-AUDIT; all closed ADMIN.42); §10 R36 grep check added; §11 R36 checklist item added; §13 phase tracker: globals.css opacity-variant gap marked complete (ADMIN.41/42), Phase 21 architecture noted as locked and build-ready; §13 prompt log ADMIN.40 + ADMIN.41 + ADMIN.42-AUDIT + ADMIN.42 + DOC.54 + DOC.55 added; DOC.55 logged)*
-*v4.4 (August 2026 — Phase 21 complete: §1 header updated (v4.4); §7 feature flag list updated (three → four active flags; feature_rehearsals added — Phase 21 / Migration 031); §7 public-route invariant updated (lib/actions/rehearsals.ts added as third canonical example; split pattern confirmed for rehearsal domain); §7 three new patterns added: admin_users.id = auth.uid() for RLS policies (no auth_user_id column — confirmed failure mode 21.1 F1; cross-references R37), Sidebar data-driven three-part atomic edit (NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist — silent failure mode confirmed 21.2), getRehearsalAttendanceForEvent() effective-roster-first pattern (must return ALL roster members with status: null for unmarked — not just rehearsal_attendance rows); §10 two grep updates: feature flags grep updated (four flags), getServerClient public-route check updated (add rehearsals.ts); §11 three new checklist items: effective-roster-first attendance queries, batch attendance single upsert, Deferred Verifications scope boundary (manual browser-only, not DB-confirmable items); §13 Phase 21 marked complete (21.A/21.1/21.2/21.3 all ✓ with summaries); §13 prompt log: 21.A + 21.1 + 21.2 + 21.3 + DOC.56 + DOC.57 added; §14 R34 updated (feature_rehearsals added to flagged features list); §14 public-route invariant updated (rehearsals.ts added, Brief single-file spec correction noted); §14 R37 cross-reference added (admin_users.id = auth.uid() — no auth_user_id column); DOC.57 logged)*
-*v4.5 (August 2026 — Phase AUDITIONS specced as pre-launch build, companion to Brief DOC.58: reconstructed retroactively during the DOC.60 session — the header was bumped to v4.5 by the real DOC.59 prompt, but no corresponding version-history entry was ever appended to this file; the history section jumped straight from v4.4 to what is now v4.6 below. §7 audition Production assignment pattern added (two independent paths — show assignment vs. direct audition assignment); §10 feature flags grep updated (feature_auditions, 5th active flag); §11 new checklist item (stub tabs for not-yet-built dependencies — Email Templates tab pattern); §13 Phase AUDITIONS 11-prompt pending block added; DOC.58 + DOC.59 logged)*
-*v4.6 (August 2026 — Phase AUDITIONS complete: §1 header updated (v4.6, Phase AUDITIONS complete); §7 public-route invariant: lib/actions/auditions.ts added as 4th canonical file; §7 split pattern extended (Phase AUDITIONS domain); §7 P-DC storage: audition-materials/ path namespace added; §7 feature flags: 4→5 active flags; getFeatureFlags() client-agnostic behavior clarified (does not require getServerClient() — corrects a misconception an earlier draft of this prompt would have introduced); inline single-key app_settings read documented as a lightweight alternative for public routes (not a necessity); 5-file flag addition pattern (setup/page.tsx type companion); §7 formatWallClockCT 3-arg signature + formatTime() helper pattern added (recurring failure mode ×3); §7 TipTap immediatelyRender: false + async setContent() patterns; §7 show_editors.admin_id naming note; §7 Supabase FK join Array.isArray normalization pattern; §7 XHR P-DC body format (FormData, not raw); §7 migration/DB drift pattern (inline fix tracking + follow-up migration requirement); §8 XHR: 3→5 sanctioned files (2 audition components added); §8 FormData body format note; §10 getServerClient grep: 4th public-route file (auditions.ts); §10 XHR grep: 5 files + FormData note; §10 feature flags grep: setup/page.tsx added to exclusions; §11 R23 checklist item: 3-arg signature + formatTime() helper; §11 two new TipTap items (immediatelyRender, async setContent); §11 HelpContent live-file discipline item; §11 notFound() consistency item; §11 PRE-PHASE-17 migration debt item (033 required); §11 inline schema fix flag item; §13 Phase AUDITIONS: pending → ✓ Complete (10 prompts, full build summaries — including a correction to the AUDITIONS.4b entry's HelpContent section-order claim); Phase 17 tracker: PRE-PHASE-17 note added (033 migration); DOC.59 ✓ + DOC.60 ✓ logged; §14 R23: 3-arg signature + formatTime() pattern; §14 R34: feature_auditions (5th flag); §14 public-route canonical files: auditions.ts (4th); §14 R38 cross-reference added (TipTap merge tag extension, immediatelyRender, escapeHtml in substituteMergeTags); §14 migration/DB drift rule added; missing v4.5 version-history entry reconstructed (see above); DOC.60 logged)*
 
-*v4.7 (August 2026 — DOC.62 correction: §7 feature flag pattern stale sentence corrected — paragraph beginning "getFeatureFlags() uses getServerClient()" replaced with accurate client-agnostic framing; the earlier text directly contradicted the corrective block two paragraphs below it in the same section; both paragraphs now agree; §13 prompt log: DOC.61 + DOC.62 added; document header bumped to v4.7; DOC.62 logged)*
+*Documentation history notes (doc-maintenance record
+— ordering corrections, sync failures, draft
+corrections; not build history; for full build
+history by phase and prompt see §13):*
 
-*v4.8 (August 2026 — DOC.65: §2 header updated (v4.8); §7 feature flag active flag list updated (five → seven: feature_inventory added Migration 034 / INVENTORY.1, feature_forums pending Migration 035 / Phase FORUMS); §7 inline single-key note updated — getUpcomingAuditions() stale comment Q-item closed (fixed in ADMIN.44); §7 migration/DB drift updated — 033 applied (DB-VERIFY.5), drift cleared; §7 Sidebar atomic edit extended (three-part → four-part: TOOLTIP_ANCHOR_MAP lookup map added as 4th required location — replaces hardcoded || ternary, established INVENTORY.1); §7 inventory_manager toggle pattern added (DB CHECK constraint, app-layer role guard, Editor-row-only toggle, SA/OA caller guard, types/audit.ts location); §10 R32 grep updated (feature_inventory + feature_forums added to grep pattern; comment updated to Migration 034); §11 PRE-PHASE-17 item updated — 033 applied, debt cleared; §13 PRE-PHASE-17 action note updated (applied); §13 Phase INVENTORY in-progress block + DB-VERIFY.5/033 + ADMIN.43 + INVENTORY.A + ADMIN.44 + INVENTORY.1 + DOC.64 + DOC.65 logged; §13 version history ordering corrected (v4.7 was before v4.6); DOC.65 logged)*
+*- v4.2: An earlier draft of the editNote/deleteNote
+role-guard pattern said "needs correction to include
+Editor"; this was corrected here to "Editors
+confirmed append-only, the guard is correct as-is."*
+*- v4.5: The version history jumped from v4.4 to
+v4.6; v4.5 was missing and was reconstructed
+retroactively during the DOC.60 session. Direct
+counterpart to Brief v4.2's doc-sync incident.*
+*- v4.8: The §13 version history had an ordering
+error (v4.7 was listed before v4.6); corrected to
+chronological order here.*
+*- v5.3: When documenting the TOOLTIP_ANCHOR_MAP
+removal and sidebar three-part edit change, no
+pre-existing §11 checklist item for the four-part
+pattern was found in the live file to update —
+flagged in the build report rather than fabricated.*
 
-*v4.9 (August 2026 — DOC.67: Phase INVENTORY complete — §2 header updated (v4.9); §7 inventory_manager pattern: types/audit.ts corrected to lib/audit.ts (no types/audit.ts exists — inaccuracy from DOC.65 now fixed); §7 P-DC storage: inventory/ path namespace added (Phase INVENTORY.3); §7 two new patterns added: (1) storage dual-client pattern — storage API calls require getAdminClient() regardless of session (storage.objects has zero RLS; confirmed failure mode: getServerClient() returns null signed URLs silently); (2) Supabase aliased dual self-join workaround — two-fetch-plus-TypeScript-join pattern for queries needing two FKs to the same table (Supabase JS cannot alias self-joins; confirmed across INVENTORY.2/3/4); §8 XHR: 5 → 6 sanctioned files (InventoryPhotoUploader.tsx added — Phase INVENTORY.3); §10 XHR grep: 5 → 6 files; §11 three new checklist items: (1) storage dual-client (getAdminClient() for storage.objects), (2) route handler .tsx extension when JSX embedded (confirmed failure INVENTORY.5 F1), (3) HelpContent live convention discipline (read live file — show() predicates, shared class constants, backtick possessives — INVENTORY.5 F3); §13 Phase INVENTORY ✓ Complete — INVENTORY.1 summary corrected (lib/audit.ts not types/audit.ts; types/admin.ts + lib/auth.ts unplanned additions noted); INVENTORY.2–5 phase tracker entries added; prompt log: INVENTORY.2–5 + DOC.66 + DOC.67 added; DOC.67 logged)*
-
-*v5.0 (August 2026 — DOC.70: Phase FORUMS complete — §2 header bumped to v5.0; §7 feature flag list: feature_forums confirmed active (Migration 035 applied, FORUMS.1); §7 P-DC media bucket: forums/ and forums/temp/ path namespaces added; §7 XHR: 6 → 7 sanctioned files (ForumPostComposer.tsx — 7th, FORUMS.4); §7 TOOLTIP_ANCHOR_MAP: /crew/forums → 'forums' entry added (FORUMS.1 — now 4 entries); §7 three new patterns added: (1) lib/data/*.ts must NOT have 'use server' — data modules are internal utilities, not action endpoints (FORUMS.3); (2) TipTap useEditor() → always type as Editor|null explicitly — ReturnType<typeof useEditor> resolves wrong overload when immediatelyRender:false (FORUMS.5 Q3); (3) non-blocking void IIFE pattern for fire-and-forget async side-effects in server actions (FORUMS.5 — sendForumNotificationEmail call site); §8 XHR count 6 → 7 (same as §7 update — confirmed single occurrence, not a separate duplicate); §10 R32 grep comment updated (all 7 flags active, Migration 035 applied); §10 XHR grep updated (seven total, ForumPostComposer.tsx added); §11 four new checklist items: lib/data/ no 'use server', TipTap Editor|null typing, R8 compliance for notification emails, forums/ storage path namespace; §13 Phase FORUMS: no prior block existed in this document — new ✓ Complete block added (FORUMS.A–5 with commits and key findings), inserted after Phase INVENTORY and before Phase 17; §13 prompt log: FORUMS.A–5 + DOC.68–70 added; §14 three new pattern notes: lib/data/ no 'use server' (FORUMS.3), forum access TypeScript-join pattern (FORUMS.3), buildEmailHtml/logEmailSent signature discipline (FORUMS.5 Q1); DOC.70 logged)*
-
-*v5.1 (August 2026 — DOC.71: FORUMS.5-FIX documented — §2 header bumped to v5.1; §7 new pattern added ('use server' files may only export async functions — plain object/constant exports cause Vercel build failure not caught by lint or tsc; correct pattern: companion file without 'use server'; export type is safe; confirmed FORUMS.5-FIX, commit 02f4569); §10 new grep check added (grep 'use server' files for export const non-function values); §11 new checklist item (any new shared constant needed by multiple 'use server' files must go in a companion non-server module); §13 prompt log: FORUMS.5-FIX + DOC.71 added; DOC.71 logged)*
-
-*v5.2 (August 2026 — DOC.72: Phase STYLE complete — §2
-header bumped to v5.2; §7 six new patterns added:
-(1) darkenHex() for server-side hex darkening (STYLE.A);
-(2) resolveBrandColors() return shape — brand.primary/
-brand.accent not brandPrimary/brandAccent (STYLE.A F2);
-(3) @theme token naming — --color- prefix required for
-Tailwind utility generation (STYLE.A F3); (4) @layer
-utilities dark variant selector -- :where() form confirmed
-(STYLE.A F4); (5) left border accent pattern — border-l-4
-+ style={{ borderLeftColor }} (STYLE.6); (6) hardcoded
-class literal discipline — no computed class construction
-(STYLE.3/STYLE.6); §11 four new checklist items (@theme
---color- prefix, resolveBrandColors() identifiers, named
-badge exports, hardcoded class literals); §13 Phase STYLE
-✓ Complete block added (STYLE.A–STYLE.8, all 9 prompts
-with commits); §14 three new pattern notes (STYLE.A/STYLE.3/
-STYLE.6 confirmed patterns); document header bumped to v5.2;
-DOC.72 logged)*
-
-*v5.3 (August 2026 — DOC.73: Phase NOTIFY complete — §2
-header bumped to v5.3; §7 sidebar atomic edit updated
-(four-part → three-part; TOOLTIP_ANCHOR_MAP removed in
-NOTIFY.1/NOTIFY.4-CLEANUP; HelpTooltips removed from all
-sidebar nav links); §7 five new NOTIFY patterns added:
-createNotification() companion-module + client-as-parameter
-(NOTIFY.2), sendForumNotificationEmail() return shape and
-early-return path correctness (NOTIFY.3/NOTIFY.3-FIX),
-resolveCalendarRecipients() private-unexported-helper pattern
-(NOTIFY.3), getForumUnreadCount() archived-forum filter via
-forum_threads join (NOTIFY.3), ephemeral vs persistent
-notification track distinction (NOTIFY.1/NOTIFY.2); §10
-two new grep checks (createNotification write points,
-sendForumNotificationEmail return type); §11 four new
-items added (createNotification void IIFE discipline, ephemeral vs
-persistent track distinction, forum unread archived filter,
-private unexported helpers in 'use server' files) — no
-pre-existing §11 sidebar four-part/TOOLTIP_ANCHOR_MAP
-checklist item was found in the live file to update (§7 was
-the only location carrying that pattern; flagged, not
-fabricated — see DOC.73 build report Flags); §13 Phase
-NOTIFY ✓ Complete block added (NOTIFY.A through NOTIFY.4-
-CLEANUP with commits); §13 prompt log: NOTIFY.A through
-DOC.73 added; §14 three new pattern notes (createNotification
-client-as-parameter, ephemeral/persistent distinction,
-private unexported helpers); document header bumped to v5.3;
-DOC.73 logged)*
-
-*v5.4 (August 2026 — DOC.74: Phase MESSAGES.A–4 documented — §2 header bumped
-to v5.4; §7 feature flag list updated (7→8, feature_messages added, first opt-
-in-default flag defaulting to 'false'); §7 six new MESSAGES pattern notes added:
-SetupPanel fd.append() for feature toggles (MESSAGES.3 F1), Sidebar prop double-
-location with destructuring default (MESSAGES.3 F3), EMPTY_COUNTS cascade on
-NotificationCounts expansion (MESSAGES.2 F1), Style Sandbox text tokens vs. live
-production system (MESSAGES.4 F1), DM privacy + getServerClient() exclusivity for
-message tables (MESSAGES.2/3), createNotification/sendDirectMessageEmail sibling
-void IIFE pattern (MESSAGES.2); §10 R32 grep updated (feature_messages added,
-7→8 flag count); §10 createNotification grep extended (lib/actions/messages.ts
-added as 4th file); §11 five new checklist items (R39 SQL policy naming,
-R40 .bind() type assertion, EMPTY_COUNTS cascade, SetupPanel fd.append(),
-Sidebar double-location); §13 10 missing STYLE flat log entries inserted before
-NOTIFY.A (STYLE.A–STYLE.8 + DOC.72 — gap from DOC.72/v5.2 now resolved);
-§13 Phase MESSAGES in-progress block added (MESSAGES.A–4 ✓, MESSAGES.5–8
-pending); §13 prompt log updated (MESSAGES.A–4 + DOC.74); §14 five new pattern
-notes (SetupPanel fd.append(), Sidebar double-location, EMPTY_COUNTS cascade,
-Style Sandbox text tokens, DM privacy model + thread_reads asymmetry + sender
-mark-as-read); DOC.74 logged)*
-
-*v5.5 (August 2026 — DOC.75: Phase MESSAGES complete — §2 header bumped to
-v5.5; §7 XHR list updated 7→8 (DirectMessageComposer.tsx 8th sanctioned XHR
-file, Phase MESSAGES.6); §7 storage paths updated (messages/temp/ + messages/
-[replyId]/ namespaces added, MESSAGES.6); §7 six new patterns added:
-@tailwindcss/typography absent — use arbitrary CSS variant selectors for
-TipTap HTML (MESSAGES.5/6); forwardRef+useImperativeHandle for shared editor
-components (MESSAGES.6); prop typed but not destructured — latent dead prop
-pattern (MESSAGES.7); sub-component prop threading chain for tabbed detail
-views (MESSAGES.7 ×3); void-in-useEffect for server action calls (MESSAGES.5);
-router.push() R12 clarification — genuine navigation not a mutation substitute
-(MESSAGES.5); §8 XHR count and list 7→8; §10 XHR grep 7→8 with
-DirectMessageComposer.tsx; §11 three new checklist items (@tailwindcss/
-typography, prop threading chain audit, logAction() diff update for new flags);
-§13 Phase MESSAGES ✓ Complete — MESSAGES.5–7 build summaries added, pending
-block replaced; §13 prompt log updated (MESSAGES.5–7 + DOC.75); §14 five new
-pattern notes (see §7 above + complex build direct terminal execution); DOC.75
-logged)*
-
-*v5.6 (August 2026 — DOC.77: ADMIN.45/46 + Phase TZ TZ.A–TZ.4b documented —
-§2 version + Last Updated; §7 DST-aware date filtering updated (getOrgTimezone()
-not hardcoded CT); §7 calendar-availability.ts partial exemption correction
-(getAvailableWindows is timezone-sensitive); §7 calendar-layout.ts partial
-exemption correction (computeEventPosition is timezone-sensitive); §7
-resolveEmailSettings() return type updated (+timezone); §7 six new Phase TZ
-+ ADMIN.46 patterns (getOrgTimezone/data-timezone pair, resolveLayoutSettings
-rename, formatCT timezone param + last-position constraint, client-before-usage
-reordering, onEmptyChange ref-reactivity fix, data-timezone body attribute); §10
-new 'America/Chicago' hardcoded grep check; §11 five new checklist items (TZ
-server-side resolution, TZ client-side read with SSR guard, client-before-usage
-ordering, formatCT tz argument, resolveEmailSettings timezone destructuring); §13
-ADMIN.45 + ADMIN.46 + Phase TZ in-progress block (TZ.A–TZ.4b ✓ with commits,
-TZ.5a/5b/TZ.6 pending); §13 prompt log through DOC.77; §14 six new pattern notes
-(getOrgTimezone pair, resolveLayoutSettings rename, formatCT param, client-before-
-usage, refs-not-reactive/onEmptyChange, ical.ts exempt); DOC.77 logged)*
-
-*v5.7 (August 2026 — DOC.79: Phase TZ complete — §2 version + Last Updated;
-§7 calendar-availability.ts getAvailableWindows() ✓ (TZ.5b applied — removed
-"requires TZ.5b" language, added caller note); §7 calendar-layout.ts
-computeEventPosition() ✓ (same); §7 four new TZ.5b patterns (useNowPosition()
-hook timezone dep, module-level helper parameterization, split-state one-read
-rule, sibling helper asymmetry audit); §7 'America/Chicago' grep note updated
-(Phase TZ complete); §10 'America/Chicago' grep updated (Phase TZ complete);
-§13 Phase TZ ✓ Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b build summaries; TZ.6
-this prompt); §13 prompt log through DOC.79; §14 four new pattern notes
-(useNowPosition() dep correctness, module-level no-document, split-state
-single-read, sibling helper audit); DOC.79 logged)*
-
-*v5.8 (August 2026 — DOC.82: Phase MM complete — §2
-header updated (v5.7 → v5.8); §7 six new patterns added
-(proxy.ts maintenance gate always-first position (MM.1),
-/crew/maintenance R20 exception rules (MM.1), saveMaintenanceMode()
-dual-client note and proxy.ts getAdminClient() vs session
-client inconsistency accepted (MM.1 Q3), SaveStatus type
-'saved' not 'success' in SetupPanel sub-components (MM.2 Q1),
-settingsMap Map instance — .get() not bracket access (MM.2 Q1),
-ActionResult discriminated union 'error' in result narrowing
-(MM.2 Q1)); §11 four new checklist items (SaveStatus 'saved',
-settingsMap .get(), ActionResult narrowing, proxy.ts maintenance
-gate position); §13 Phase MM ✓ Complete block added (MM.A,
-MM.1, MM.2 with commits 4196623/769ecdd); §13 prompt log
-updated (MM.A, MM.1, MM.2, DOC.80, DOC.81, DOC.82); §14
-five new pattern notes (maintenance gate position, /crew/
-maintenance R20 exception, SaveStatus 'saved', settingsMap
-Map instance, ActionResult discriminated union); DOC.82 logged)*
-
-*v5.9 (August 2026 — DOC.85: Beta phases FORUMS-FIX/
-FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE complete — §2
-header v5.8→v5.9 + Last Updated; §7 six new patterns
-(revalidatePath during render prohibition (FORUMS-FIX),
-app/error.tsx must log caught error (FORUMS-FIX.B),
-ShowCard inline in ShowList not separate file
-(SHOWDELETE.A/SHOWARCHIVE.A), ShowForm.tsx vs ShowDetail.tsx
-distinction (SHOWARCHIVE.A), saveFeatureFlags() 6-point
-wiring not 4-point (ANNOUNCE.2 A4), AnnouncementSection
-self-loading single-useEffect pattern (ANNOUNCE.2));
-§10 new grep check (revalidatePath in Server Component
-render bodies); §11 seven new checklist items (revalidatePath
-during render, error.tsx logging, ShowCard inline location,
-attendance NO ACTION FK guard, ShowEditorActionResult return
-type, saveFeatureFlags 6-point wiring, dashboard_announcement_*
-prefix vs announcement_banner_*); §13 phase complete blocks
-for FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE
-added; §13 prompt log updated (FORUMS-FIX.A/B, FORUMS-UX.1,
-ANNOUNCE.A/1/2, SHOWDELETE.A/1, SHOWARCHIVE.A/1, DOC.83,
-DOC.84, DOC.85); §14 six new pattern notes (revalidatePath
-runtime error pattern, error.tsx both-conditions rule,
-ShowCard inline+state-in-parent, ShowForm vs ShowDetail,
-saveFeatureFlags 6-point internal structure,
-self-loading sub-component useEffect); DOC.85 logged)*
-
-*v6.0 (August 2026 — DOC.87: Phases QRBANNER/QRANALYTICS/
-SIDEBAR/NAVORDER complete — §2 header v5.9→v6.0 + Last
-Updated; §7 public-route invariant updated (app/go/[token]/
-route.ts fifth sanctioned public handler added); §7 thirteen
-new patterns (@resvg/resvg-js SVG-to-PNG with serverExternal
-Packages requirement (QRBANNER.1); escapeXml() for SVG text
-injection (QRBANNER.1); manual UA parsing Edge-before-Chrome/
-tablet-before-mobile/fallback (QRANALYTICS.1); /go/[token]
-public redirect route invariants — PUBLIC ROUTE header,
-getAdminClient(), no flag gate, no proxy matcher needed,
-best-effort scan insert, Response.redirect(), app-generated
-redirect_token (QRANALYTICS.1); types/sidebar.ts shared
-module — pure types/constants, no 'use server', no imports
-(NAVORDER.1); grouped sidebar rendering — GROUP_HREF_DEFAULTS,
-resolvedGroupOrder, groupItems, single .map(), three-part
-atomic edit still applies, navOrder optional/no-default
-(SIDEBAR.2/NAVORDER.1); bg-brand-primary-light as R35-safe
-active nav fill — full active state recipe (SIDEBAR.2);
-border-neutral-border as native Tailwind TopBar border token
-(SIDEBAR.3); dark:hover:bg-white/10 for inactive sidebar
-hover in dark mode — replaces imperceptible dark-surface/50
-(SIDEBAR.3); admin identity block flex-col stacking — hidden
-sm:flex, items-end, gap-0.5, py-0.5 badge, no max-w
-(SIDEBAR.6); pre-prompt governance compliance pass — four
-checks: className template literals, lucide icon existence
-via node -e, getServerClient() await, cardClasses not
-importable (SIDEBAR.4/QRANALYTICS.1/NAVORDER.1); formatCT
-lives in @/lib/utils/date not @/lib/utils/time — no
-time.ts file exists (QRANALYTICS.2); Client Component
-timezone invariant — never prop-drill timezone, body
-attribute is the distribution mechanism (QRANALYTICS.2b));
-§11 thirteen new checklist items (resvg serverExternal
-Packages, escapeXml() SVG injection, manual UA parsing,
-/go/[token] route invariants, navOrder optional no-default,
-three-part atomic sidebar edit, className template literal,
-lucide icon verification, SetupPanel card classes not
-importable, saveSidebarNavOrder revalidation scope, active
-nav state full recipe, getServerClient() await required,
-label vs banner_text distinct fields); §13 Beta Build
-Complete declared; QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER
-✓ Complete blocks added; prompt log updated (DOC.86,
-QRBANNER.1, QRANALYTICS.A/1/2/2b, SIDEBAR.A/1/2/3/4/5/6,
-NAVORDER.A/1, DOC.87); §14 pre-prompt governance compliance
-pass rule added (four checks, established SIDEBAR.4/
-QRANALYTICS.1/NAVORDER.1); DOC.87 logged)*
-
-*v6.1 (August 2026 — DOC.88: ADMIN.47–51 + Phase BETA
-complete — §2 header v6.0→v6.1 + Last Updated; §7 feature
-flag list updated (8→9, feature_beta second opt-in-default
-documented); §7 six new patterns (resolveGroupHrefs self-healing
-nav merge (ADMIN.49), hide-not-lock Settings hub rule (ADMIN.49),
-Settings hub + audit-log SA/OA-only proxy+server guards (ADMIN.50),
-conditional role+column-gated sidebar link pattern (ADMIN.50),
-Beta Feedback role-branched Server Component pattern (BETA.1),
-?? → || R18 scope clarification (ADMIN.48)); §10 feature flags
-grep updated (8→9 flags, feature_beta added); §11 four new
-checklist items (hide-not-lock, resolveGroupHrefs awareness,
-conditional sidebar link, feature_beta R32 grep); §13 ADMIN.47–51
-+ Phase BETA ✓ Complete build summaries; §13 prompt log updated
-(ADMIN.47–51 + BETA.A/BETA.1 + DOC.88); §14 v6.1 history;
-DOC.88 logged)*
-
-*v6.2 (August 2026 — DOC.90: ADMIN.52–57 complete — §2
-header v6.1→v6.2 + Last Updated; §7 nine new patterns
-(SeasonAtAGlance self-contained Server Component + timezone
-prop threading (ADMIN.52); visibleNotifications derived-state
-filter — client-derived unreadPersistent, filter not map for
-mark-read (ADMIN.53); TipTap click-to-focus — dm-editor-wrapper
-+ CSS custom property + onClick, plain globals.css rule for
-ProseMirror (ADMIN.54); notifications row cap removal —
-getUserNotifications() uncapped, client array authoritative
-(ADMIN.54); public/fonts/ vendored font convention — TTF/OTF,
-process.cwd() resolution, font options only when needed
-(ADMIN.56-FIX); Turbopack createRequire() literal string
-build failure — invisible to lint/tsc, fix with runtime
-expression (ADMIN.56-FIX); @resvg/resvg-js silent font
-failure on serverless Linux — loadSystemFonts silently finds
-zero fonts, pixel-count diagnosis, always supply explicit font
-(ADMIN.56); migration files at repo root not supabase/migrations/
-— R21 re-confirmation (ADMIN.57 F1); Beta Feedback SA sidebar
-exclusion — filter after resolveGroupHrefs before getGroupItems
-(ADMIN.55)); §11 eight new checklist items (TipTap click-to-focus
-dm-editor-wrapper, globals.css plain rule for ProseMirror,
-@resvg/resvg-js explicit font, process.cwd() for asset paths,
-migration at repo root, visibleNotifications architecture,
-SetupPanel upsert loop generic pickup, sidebar role exclusion
-filter); §13 ADMIN.52–57 + ADMIN.56-FIX narrative build
-summaries + tabular log entries through DOC.90; §14 v6.2
-history; DOC.90 logged)*
-
-*v6.3 (August 2026 — DOC.92: ADMIN.58–60 complete — §2 header v6.2→v6.3
-
-Last Updated; §7 five new patterns (show deletion single-guard + cascade
-— one guard, attendance FKs CASCADE, volunteer hours retained, notifications
-best-effort cleanup (ADMIN.58); updateShowStatus() archive side-effect —
-two-step calendar event cancel, revalidate /calendar routes for all status
-changes (ADMIN.59); NavOrderSection parseNavOrder() must mirror
-resolveGroupHrefs() self-healing — both sidebar and reorder UI self-heal
-for new nav additions (ADMIN.60); TopBar primary vs secondary icon sizing
-— w-5 h-5 for Mail/Bell/ThemeToggle, w-4 h-4 for secondary buttons, never
-size prop (ADMIN.60); orphaned component/action deletion pattern — grep
-before delete, remove function not file when other exports exist, document
-orphaned app_settings key (ADMIN.59/60)); §10 one new grep check (show
-deletion guard audit — confirm deleteShow() has ONE guard post-ADMIN.58);
-§11 one stale checklist item replaced (three-guard → single-guard + cascade
-(ADMIN.58)) + three new items (updateShowStatus() archive side-effect,
-NavOrderSection self-healing coverage, TopBar icon sizing); §13 ADMIN.58/59/60
-narrative build summaries + ADMIN.58/59/60 + DOC.90/91/92 prompt log entries;
-§14 v6.3 history; DOC.92 logged)*
+*Full build history by phase and prompt: see §13.*
