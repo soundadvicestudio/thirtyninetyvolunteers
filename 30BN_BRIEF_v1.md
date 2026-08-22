@@ -97,6 +97,21 @@ extended (SETUP_KEYS 30→31); §8 Maintenance Page restoration
 field; §8 QR Generator font fix + ribbon redesign; §8 Sidebar
 Beta Feedback SA exclusion; §9 Migration 044 status block;
 §11 ADMIN.52–57 build summaries; §13 new patterns; DOC.88 logged)
+### Last Updated: August 2026 — v6.5 (DOC.90/DOC.91: ADMIN.58–60
+
+complete — §1 current phase updated; §8 Dashboard: Quick Stats
+31-day tile updates (labels + queries), SeasonAtAGlance full
+overhaul (season selector removed, pure 31-day rolling, auditions
+added, self-contained, dashboard/page.tsx simplified);
+§8 Show Management: deleteShow() single-guard + cascade
+(ADMIN.58), updateShowStatus() archive side-effect (cancel
+future calendar events + revalidations), ShowList.tsx archived
+filter + Opportunities link removed; §8 Sidebar: Beta Feedback
+renamed to Beta Testing (all label locations), NavOrderSection
+self-healing merge fix, TopBar icon sizing standardized;
+§9 Migration 045 status block + app_settings dashboard_season_id
+orphaned note; §11 ADMIN.58/59/60 build summaries + prompt log;
+§13 five new pattern notes; DOC.90 + DOC.91 logged)
 
 ---
 
@@ -117,17 +132,21 @@ Beta Feedback SA exclusion; §9 Migration 044 status block;
 **Alpha URL:** `https://thirtyninetyvolunteers-a9wa3ttc3-soundadvicestudios-projects.vercel.app`
 **Production URL:** `https://30byninetyvolunteers.com` (live)
 **Current phase:** Active Beta — Executive Committee
-testing. Pre-Phase-17 improvement work underway.
+testing. Platform is in active pre-launch refinement.
 Completed Beta phases: FORUMS-FIX ✓, FORUMS-UX ✓,
 ANNOUNCE ✓, SHOWDELETE ✓, SHOWARCHIVE ✓, QRBANNER ✓,
 QRANALYTICS ✓, SIDEBAR ✓, NAVORDER ✓, Phase BETA ✓
 (Beta Feedback System). All planned Beta phases complete.
-Phase 17 (Launch) deferred pending Beta refinement.
-Post-Beta ADMIN prompts: ADMIN.47–57 ✓ (ADMIN.47–51:
+Phase 17 (Launch) remains next, deferred pending continued
+pre-launch refinement.
+Post-Beta ADMIN prompts: ADMIN.47–60 ✓ (ADMIN.47–51:
 carry-forward cleanup, Settings access tightening, hide-not-lock
 rule, Inventory Manager sidebar link; ADMIN.52–57: pre-launch
 dashboard refinements, notification panel cleanup, QR banner
-fix + ribbon redesign, maintenance restoration field).
+fix + ribbon redesign, maintenance restoration field; ADMIN.58–60:
+show deletion single-guard + cascade, dashboard 31-day rolling
+view + auditions + shows cleanup, Beta Testing rename + NavOrder
+self-heal + TopBar icon sizing).
 Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
@@ -628,46 +647,76 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 - **Quick Stats** (built ADMIN.20, all roles): four stat
   tiles at the top of the dashboard. Total Active
   Volunteers (count WHERE status = 'active'); Upcoming
-  Shows This Month (live shows with at least one
-  show_date in the current org-timezone calendar month,
-  computed via `date-fns-tz` with the resolved org timezone
-  via getOrgTimezone() — DST-safe);
-  Volunteers Needed (sum of open slots across all live
-  shows); New Volunteers (7 Days) (created_at in last
-  7 days). Uses `getServerClient()`. Components:
+  Shows (31 Days) (live shows with at least one show_date
+  in the next 31 days from today, computed via
+  `formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)`
+  string comparison — R23 pattern, DST-safe);
+  Volunteers Needed (31 Days) (sum of open slots across
+  live shows that have at least one show_date in the next
+  31 days — two-step: get qualifying show IDs, then sum
+  open slots for those shows only. Timezone resolved
+  internally via `getOrgTimezone(supabase)`.); New Volunteers
+  (7 Days) (created_at in last 7 days). Uses
+  `getServerClient()`. Components:
   `components/crew/dashboard/QuickStats.tsx`.
-- **Season at a Glance** (built ADMIN.20, refined ADMIN.52–53,
-  all roles): per-show staffing view for the pinned season, or
-  upcoming live shows as fallback when no season is pinned. Each
-  show card lists roles with a staffing indicator per role: red
-  (0 claimed), yellow (partial), green (fully claimed). Super
-  Admin-only season selector dropdown in section header —
-  selecting a season upserts `app_settings.dashboard_season_id`
-  via `setPinnedSeason()` in `lib/actions/settings.ts` and
-  revalidates the dashboard in place. Editors and Viewers see
-  the pinned season data but have no selector. **31-day preview
-  cap (ADMIN.52):** Only shows whose earliest `show_date` is
-  within 31 days from today are displayed — sorted
-  chronologically by earliest show date (ascending). Shows
-  beyond the 31-day window are excluded. An always-visible
-  'View all shows →' link in the section header links to
-  `/crew/shows`. When all shows are excluded by the cap, an
-  empty state displays 'No upcoming shows in the next 31 days.'
-  When some shows are hidden, a truncation note shows 'Showing N
-  of M shows — View all →'. **Fallback header (ADMIN.53):** When
-  no season is pinned, the section header reads 'Upcoming Shows
-  (Next 31 Days)' (not 'All Live Shows' — corrected to reflect
-  the 31-day cap). **Architecture:** `SeasonAtAGlance.tsx` is a
-  self-contained Server Component that fetches its own show data
-  internally — show data does not cross the `dashboard/page.tsx`
-  → component boundary. The `timezone` prop is passed from the
-  page (already resolved via `getOrgTimezone(supabase)`) to
-  avoid a redundant fetch. The 31-day cutoff uses
-  `formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)` —
-  the string-comparison pattern (safer than raw Date object
-  comparison for bare date columns per R23). Components:
-  `components/crew/dashboard/SeasonAtAGlance.tsx`,
-  `components/crew/dashboard/SeasonSelector.tsx`.
+- **Season at a Glance / Upcoming Widget** (built ADMIN.20,
+  overhauled ADMIN.59, all roles): Pure 31-day rolling
+  view of upcoming shows AND upcoming auditions. Season
+  selector completely removed (ADMIN.59) — the widget
+  no longer reads `dashboard_season_id` or renders
+  `SeasonSelector`. Component receives only
+  `{ timezone: string }` from `dashboard/page.tsx`.
+
+  Shows query: all live shows with at least one
+  `show_date` between today and +31 days (no season filter
+  — includes unseasoned shows). Staffing indicator dots per
+  role: red (0 claimed), yellow (partial), green (fully
+  claimed). Link to `/crew/shows/[id]`.
+
+  Auditions query (ADMIN.59, flag-gated on
+  `feature_auditions`): published auditions with
+  `date_start` within next 31 days. When flag is off,
+  auditions query is skipped entirely. Renders with an
+  "Audition" badge in place of staffing dots + link to
+  `/crew/auditions/[id]` + linked show name (or "Standalone
+  Audition").
+
+  Combined list: Shows and auditions merged into a
+  single chronological list sorted by earliest upcoming
+  date ascending. Discriminated union type:
+  `{ kind: 'show', ... } | { kind: 'audition', ... }`.
+
+  Section header: "Upcoming (Next 31 Days)" — permanent,
+  no dynamic season name. "View all shows →" link to
+  `/crew/shows` always visible. Empty state: "Nothing
+  scheduled in the next 31 days."
+
+  31-day cutoff: `formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)` — string-comparison pattern
+  (R23). `today` string also computed via same
+  `formatCT(new Date(), 'yyyy-MM-dd', timezone)` pattern.
+
+  **Architecture:** Genuinely self-contained Server
+  Component — `dashboard/page.tsx` passes only `timezone`
+  (already resolved via `getOrgTimezone(supabase)` in the
+  page). No show data, no season data, no season ID crosses
+  the page→component boundary (the Brief's prior claim of
+  "self-contained" was only partially true before ADMIN.59).
+
+  **dashboard/page.tsx simplification (ADMIN.59):** Seasons
+  fetch and `dashboard_season_id`/`pinnedSeasonId`/
+  `pinnedSeasonName`/`seasonList` variables all removed.
+  `Promise.all` reduced from 5 to 3 queries. `SeasonSelector`
+  import removed.
+
+  **Orphaned code (ADMIN.59/60):** `SeasonSelector.tsx`
+  deleted. `setPinnedSeason()` removed from
+  `lib/actions/settings.ts`. `dashboard_season_id` key in
+  `app_settings` is now orphaned — no code reads or writes
+  it. Harmless to leave in DB; optional manual cleanup via
+  `DELETE FROM app_settings WHERE key = 'dashboard_season_id'`.
+
+  Components: `components/crew/dashboard/SeasonAtAGlance.tsx`
+  (`SeasonSelector.tsx` deleted in ADMIN.60).
 - **Pending Hours Review** (Editor/Super Admin only):
   all past `attendance` records with `status = 'showed'`
   and `hours_confirmed = false`, grouped by show + date.
@@ -910,35 +959,37 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     scanability requirement). Generated server-side via `generateQR()` in `lib/qr.ts`.
     Both `check_in_token` columns added in Migration 024.
   - Settings tab: assigned editors (add/remove any time), status selector (all four values: Draft/Live/Past/Archived). Note: there is no separate public visibility boolean — public visibility is controlled entirely by status = 'live'.
-    **Show Delete (Phase SHOWDELETE ✓ Complete):**
-    `deleteShow(showId)` server action in
-    `lib/actions/shows.ts`. Role guard: strict
-    `['super_admin', 'owner_admin', 'editor'].includes(
-    admin.role)` — does NOT use `updateShowStatus()`'s
-    broader guard (which allows production-role users in
-    show_editors). Three guards in strict order before delete:
+    **Show Delete (updated ADMIN.58 — single guard + cascade):**
+    `deleteShow(showId)` server action in `lib/actions/shows.ts`.
+    Role guard: strict `['super_admin', 'owner_admin', 'editor']
+    .includes(admin.role)`. ONE guard before delete:
 
     1. **Archived check:** Show must exist and have
        `status = 'archived'`. Returns `{ error: 'Only
        archived shows can be deleted.' }` if not.
 
-    2. **Active claims check (two-step query):** Fetch
-       `show_date` IDs for this show, then check
-       `slot_claims.status IN ('claimed', 'waitlisted')`.
-       Uses both statuses — same pattern as `updateShow()`
-       in this file. Returns error if any active claims exist.
-       (Note: a nested Supabase subquery in `.in()` does NOT
-       compile — must use the two-step approach.)
+    Guards 2 (active slot_claims) and 3 (attendance records)
+    removed in ADMIN.58. The former blocking guards were
+    replaced by DB cascade changes (Migration 045).
 
-    3. **Attendance records check (critical — SHOWDELETE.A
-       F1):** `attendance` has a direct `show_id` FK with
-       `ON DELETE NO ACTION`. Any show with even one
-       attendance record (any past show where volunteer hours
-       were ever marked) will throw a raw Postgres FK
-       violation without this guard. Checks
-       `attendance.show_id = showId`. Returns `{ error:
-       'This show has attendance records and cannot be
-       deleted.' }` if any exist.
+    **Cascade behavior (Migration 045):**
+    `attendance.show_id` and `attendance.show_date_id` FKs
+    changed from `ON DELETE NO ACTION` to `ON DELETE CASCADE`.
+    When a show is deleted: `show_dates` CASCADE → `volunteer_roles`
+    CASCADE → `slot_claims` CASCADE (including active commitments).
+    `attendance` rows CASCADE via both FKs. `show_editors` CASCADE.
+    `calendar_events` linked via `source_show_date_id` CASCADE.
+
+    **Volunteer hours retained:** `volunteer_hours_log.source_id`
+    is a bare UUID with no FK — attendance deletion leaves orphaned
+    `source_id`s but does not affect `volunteers.total_hours` or the
+    log itself. Hours earned at a deleted show are retained on the
+    volunteer's record permanently. This is intentional.
+
+    **Notifications cleanup:** Best-effort delete of `notifications`
+    rows whose `href LIKE '/crew/shows/${showId}%'` via
+    `getAdminClient()` (service role needed — notifications have
+    self-scoped RLS). Non-blocking: failure never prevents delete.
 
     `logAction('show.delete', ...)` fires BEFORE the DELETE
     (row will not exist after). `'show.delete'` added to
@@ -954,14 +1005,16 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     controlled (no `AlertDialogTrigger`) — matches pattern
     in `ShowForm.tsx`. Uses `AlertDialogPrimitive.Cancel` and
     `AlertDialogPrimitive.Action` from `radix-ui`.
-    Confirmation text: "This will permanently delete
-    '[show.name]' and all associated dates, slot assignments,
-    and calendar events. This cannot be undone." Visible
-    only when `canEdit && show.status === 'archived'`.
+    **AlertDialog confirmation text (ADMIN.58):** "This will
+    permanently delete '[show.name]', all associated dates,
+    volunteer slot claims (including active commitments), attendance
+    records, and calendar events. Volunteer hours already credited
+    to volunteers will not be affected. This cannot be undone."
+    Visible only when `canEdit && show.status === 'archived'`.
     `ShowEditorActionResult` return type (not `ActionResult`
     — the live file uses `ShowEditorActionResult` throughout).
-    Commits: SHOWDELETE.A (audit, no code); SHOWDELETE.1:
-    b4824dc.
+    `router.push('/crew/shows')` on success. Commits:
+    SHOWDELETE.A/SHOWDELETE.1 (original); ADMIN.58: b075a66.
 
     Also in Settings tab: a read-only "Default Hours per Volunteer" field showing
     the effective default hours for this show. Resolved value: `show.default_hours`
@@ -1024,7 +1077,47 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
        appear automatically without any status change — the
        accordion is a display filter only.
 
+    **Status filter on season/unseasoned groups (ADMIN.59):**
+    Season groups and the Unseasoned group now exclude shows
+    with `status === 'archived'` or `status === 'past'` from
+    their rendered lists. Only live and draft shows appear
+    in these sections. Archived and past shows appear exclusively
+    in the Archived Shows accordion at the bottom. The client-
+    side `statusFilter` dropdown (default `'all'`) remains but now
+    operates on a pre-filtered set. The Standing Opportunities
+    link that previously appeared on the Shows page header was
+    also removed in ADMIN.59 — Opportunities has its own
+    dedicated sidebar link.
+
     Commit: 6557260.
+
+    **Archive side-effect — calendar cleanup (ADMIN.59):**
+    When `updateShowStatus()` is called with `newStatus ===
+    'archived'`, after the status UPDATE completes, a two-step
+    calendar cleanup fires:
+
+    1. Fetch `show_date` IDs for this show
+    2. Cancel all `calendar_events` WHERE
+       `source_show_date_id IN [showDateIds] AND
+       status = 'approved' AND end_time > now()`
+
+    Future approved performance events disappear from both the
+    public `/calendar` and admin `/crew/calendar` immediately.
+    Past events (already ended) are left as approved history.
+
+    `revalidatePath('/calendar')`, `revalidatePath('/crew/calendar')`,
+    and `revalidatePath('/crew/calendar/pending')` added to
+    `updateShowStatus()` for ALL status changes (not just archive).
+
+    This archive side-effect fires via ALL archive paths:
+
+    - Archive quick-action button on `ShowCard` (calls
+      `updateShowStatus(show.id, 'archived')`)
+    - Settings tab status dropdown → Save Status
+      (also calls `updateShowStatus()`)
+    - Show hard-delete (ADMIN.58): `calendar_events` already CASCADE
+      via `source_show_date_id` → `show_dates` → `ON DELETE CASCADE` —
+      no explicit cleanup needed for the delete path.
 - Post-event attendance marking (Editors only, only available after show date has passed):
   - Per-volunteer, per-date: Showed / No-Show / Excused
   - Showed: triggers hours increment + milestone check
@@ -2347,11 +2440,11 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   changed from "Directory" to "Crew Directory"), Opportunities.
   Utilities: Inventory, Forms, QR Generator, Check-In,
   Communication, Media.
-  Settings: Beta Feedback (`/crew/settings/beta` — flag-gated, first
+  Settings: Beta Testing (`/crew/settings/beta` — flag-gated, first
   in group), Settings (`/crew/settings` — SA/OA only via FLAG_GATED_HREFS),
   Help. Plus conditional Inventory Management link for Editors with
   `inventory_manager = true` (special-case append, not part of orderable nav).
-  Beta Feedback is additionally hidden from `super_admin` role
+  Beta Testing is additionally hidden from `super_admin` role
   (ADMIN.55) — SA reaches it via the Settings hub. A filter on
   the resolved hrefs array for the settings group removes
   `/crew/settings/beta` when `admin.role === 'super_admin'`,
@@ -2399,6 +2492,17 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   order from before the new link was added. Applied to all groups in the
   `.map()` render loop.
 
+  **NavOrderSection.tsx self-healing merge (ADMIN.60):**
+  `parseNavOrder()` in `NavOrderSection.tsx` now applies the
+  same self-healing merge as `resolveGroupHrefs()` in
+  `Sidebar.tsx`. After parsing the saved `sidebar_nav_order`
+  JSON, for each group key, any hrefs in `DEFAULT_LINK_ORDER[group]`
+  missing from the saved array are appended. This ensures
+  newly added nav links appear in the reorder UI regardless
+  of when the SA last saved their nav order — closing the gap
+  where the rendered sidebar self-healed (via `resolveGroupHrefs()`)
+  but the Platform Setup reorder UI did not.
+
   **Conditional Inventory Management link (ADMIN.50):** A special-case
   conditional link appended inside the Settings group render block, gated
   on a new `showInventorySettings` prop (added to SidebarProps interface
@@ -2419,7 +2523,7 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   **Dual-highlight fix (BETA.1):** `renderLink()` active-state logic
   special-cases `/crew/settings` — the active condition adds
   `&& !pathname.startsWith('/crew/settings/beta')` to prevent the
-  Settings link from showing active when visiting the Beta Feedback page.
+  Settings link from showing active when visiting the Beta Testing page.
   Identical pattern to the confirmed Shows/Opportunities fix (ADMIN.30).
   Do NOT modify `isActivePath()` itself.
 
@@ -2459,6 +2563,16 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
   (conditional on flags.messages), NotificationPanel,
   ThemeToggle, admin identity block (name + role badge),
   Platform Setup (SA-only), Change Password, Sign Out.
+
+- **Icon size standardization (ADMIN.60):** The three primary
+  action icons in the TopBar right side are standardized to
+  `className="w-5 h-5"` (20px): Mail icon (`MessagesIcon.tsx`),
+  Bell icon (`NotificationPanel.tsx`), and Sun/Moon icons
+  (`ThemeToggle.tsx`). Previously, Mail and Bell used
+  `size={20}` prop and ThemeToggle used `className="w-4 h-4"`
+  (16px — smaller and inconsistent). Secondary action buttons
+  (Change Password, Sign Out, Platform Setup) retain
+  `className="w-4 h-4"`.
 
 - **Commits:** SIDEBAR.3 (99c680b), SIDEBAR.4 (57ec5fe),
   SIDEBAR.6 (2566a92).
@@ -2611,7 +2725,7 @@ reads the flag to gate OA publish authorization, (6)
 reads the flag to gate OA page access. See §13 pattern note.
 
 **10th toggle — `feature_beta` (Phase BETA):**
-Beta Feedback (`feature_beta`) — opt-in, defaults to `'false'`
+Beta Testing (`feature_beta`) — opt-in, defaults to `'false'`
 (disabled). Enables the `/crew/settings/beta` page for crew
 members to submit feature requests, bug reports, and general
 feedback. Unlike `announcements_oa_enabled`, `feature_beta` IS
@@ -2637,7 +2751,7 @@ standard 5-file wiring.
 and only flag that defaults to OFF; opt-in only) | `/crew/messages/*`, `/crew/users`,
 message server action guards in `lib/actions/messages.ts`, Messages + Directory
 sidebar links |
-| Beta Feedback | `feature_beta` | `'false'` (disabled by default — second opt-in-only flag) | `/crew/settings/beta`, `submitBetaFeedback()`/`completeBetaFeedback()` server action guards, Beta Feedback sidebar link |
+| Beta Testing | `feature_beta` | `'false'` (disabled by default — second opt-in-only flag) | `/crew/settings/beta`, `submitBetaFeedback()`/`completeBetaFeedback()` server action guards, Beta Testing sidebar link |
 
 Note: Standing Opportunities, Volunteer Hours & Milestones, Document Management, and Forms are core features — not feature-flagged. All clients have access to these.
 
@@ -2661,14 +2775,15 @@ Key files (Phase SETUP):
 
 ---
 
-**Beta Feedback (`/crew/settings/beta` — Phase BETA ✓ Complete):**
+**Beta Testing (`/crew/settings/beta` — Phase BETA ✓ Complete):**
 Gated behind `feature_beta` flag (R34 compliant — opt-in,
 defaults to `'false'`). Crew-only — no public-facing surface.
 
 **Purpose:** Allows crew members (all roles except SA) to submit
-feature requests, bug reports, and general feedback during the
-Beta period. Super Admin sees a queue of all submissions; all
-other roles see a submission form.
+feature requests, bug reports, and general feedback via the
+Beta Testing page during the Beta period. Super Admin sees a
+queue of all submissions (page heading: "Beta Testing Queue");
+all other roles see a submission form.
 
 **Schema (Migration 043 — `beta_feedback` table):**
 `id` (uuid PK), `submitted_by` (FK → admin_users ON DELETE
@@ -3266,8 +3381,30 @@ Beta period. Seeds `feature_beta = 'false'` in `app_settings`
   `lib/actions/setup.ts`. Migration file location: repo root
   (same as all prior migrations — not `supabase/migrations/`).
 
-**Next migration:** 045 (none currently planned).
-Migration 044 is applied.
+**Migration 045 status:** Applied —
+`045_show_delete_cascade.sql` (ADMIN.58, commit b075a66).
+Two FK changes on the `attendance` table:
+
+- `attendance_show_id_fkey`: changed from `ON DELETE NO ACTION`
+  to `ON DELETE CASCADE` (references `shows(id)`)
+- `attendance_show_date_id_fkey`: changed from
+  `ON DELETE NO ACTION` to `ON DELETE CASCADE`
+  (references `show_dates(id)`)
+
+These changes allow shows to be hard-deleted even when
+attendance records exist — the attendance rows cascade
+automatically. Previously, any show with even one attendance
+record would throw a Postgres FK violation on DELETE.
+Volunteer hours (stored in `volunteers.total_hours` and
+`volunteer_hours_log`) are NOT affected by these cascades —
+`volunteer_hours_log.source_id` is a bare UUID with no FK,
+so it becomes orphaned but does not error.
+
+Verified via live query: both FKs confirmed `confdeltype = 'c'`
+(CASCADE) after apply.
+
+**Next migration:** 046 (none currently planned).
+Migration 045 is applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -5100,14 +5237,16 @@ Every new feature flag requires exactly 5 file changes:
 5. `lib/actions/setup.ts` — `saveFeatureFlags()` revalidatePath for the new route
 Missing any of the five produces a silent failure (wrong TypeScript types, toggle that doesn't save, stale cache on flag change).
 
-Runtime-added key (not seeded in Migration 001):
-```
-dashboard_season_id → uuid | null
-```
-
-Added by `setPinnedSeason()` via ON CONFLICT upsert
-when a Super Admin first selects a season on the
-dashboard. Null or absent = fallback to all live shows.
+`dashboard_season_id` — orphaned key (ADMIN.59):
+Previously added at runtime by `setPinnedSeason()` in
+`lib/actions/settings.ts` when a Super Admin pinned a
+season on the dashboard. As of ADMIN.59, `SeasonAtAGlance`
+no longer reads this key, `SeasonSelector.tsx` is deleted,
+and `setPinnedSeason()` is removed. The key may still exist
+in the `app_settings` table for deployments where it was
+previously written. No code reads or writes it. Harmless
+to leave; optional manual cleanup:
+`DELETE FROM app_settings WHERE key = 'dashboard_season_id'`.
 
 **Default `hearing_options` seed:**
 Social Media (Instagram/Facebook/TikTok) · Word of Mouth · Program/QR Code · Our Website · Previous Patron/Audience Member · Another Volunteer · Other
@@ -8543,7 +8682,7 @@ BetaFeedbackForm.tsx` (new): 'use client', no `<form>` element
 (R13.3a), controlled state, type segmented control, textarea
 with character count, inline success/error. Feature flag
 5-file pattern: `lib/feature-flags.ts` (9th flag `beta:
-boolean`), `SetupPanel.tsx` (10th toggle "Beta Feedback"),
+boolean`), `SetupPanel.tsx` (10th toggle "Beta Testing"),
 `setup/page.tsx` (SETUP_KEYS 29→30, `|| 'false'` fallback),
 `lib/actions/setup.ts` (`saveFeatureFlags()` all 6 wiring
 points including both `keys` array and `.upsert()` array),
@@ -8551,7 +8690,7 @@ points including both `keys` array and `.upsert()` array),
 + crew flag block). `Sidebar.tsx`: Beta Feedback nav entry
 (`MessageSquarePlus` icon), `FLAG_GATED_HREFS` entry, prepended
 to `SETTINGS_HREFS`, dual-highlight fix in `renderLink()`.
-`types/sidebar.ts`: `'/crew/settings/beta': 'Beta Feedback'`
+`types/sidebar.ts`: `'/crew/settings/beta': 'Beta Testing'`
 in HREF_LABELS; `/crew/settings/beta` prepended to
 `DEFAULT_LINK_ORDER['settings']`. `settings/page.tsx`: Beta
 Feedback hub card (`canAccessAdminSettings` gate, no LockedCard
