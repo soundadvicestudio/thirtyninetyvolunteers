@@ -1,6 +1,9 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.5
-*Created: July 2026. Full narrative version history (v1 through v6.5) is recorded at the end of this document under §13.*
+*Created: July 2026 | Last session: DOC.95 (Aug 2026).
+Version history table: top of this document. Full build
+history by phase and prompt: §11. Doc-maintenance notes
+(ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
@@ -7325,6 +7328,16 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      11 files. Commit 73ef219.
 30BN-DOC.90        ✓ Brief v6.4→v6.5 Part A (§1/§8/§9).
 30BN-DOC.91        ✓ Brief v6.5 Part B (§11/§13 — this prompt).
+30BN-DOC.93        ✓ Brief reduction pass: version history
+                     header condensed to table (~112 lines
+                     → ~19 lines); four §8 build-log blocks
+                     replaced with §11 pointers (~75 lines);
+                     two stale phase labels fixed; Migration
+                     033 block trimmed; §7 Production row
+                     updated (added /crew/messages +
+                     /crew/users); §2 Settings sentences
+                     compressed to §7 pointers. Commit
+                     fc016af.
 30BN-DOC.94        ✓ §13 version history tail compressed
                      (~315 lines → ~20 lines). 40 redundant
                      entries replaced with pointer to §11.
