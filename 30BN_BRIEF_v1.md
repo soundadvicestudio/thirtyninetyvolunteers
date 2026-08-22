@@ -7346,6 +7346,15 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      (no per-version tail entries remain;
                      header table is version registry).
                      Orphaned cross-reference line removed.
+30BN-DOC.96        ✓ Brief §13 R27 condensed to Process
+                     pointer stub (canonical owner is
+                     Process §14). Process reduction pass:
+                     header condensed to table, §14 tail
+                     compressed (~308 lines → ~25 lines),
+                     R27/R32/R33 correctness fixes, DOC
+                     collision disambiguation, duplicate
+                     §10 grep check removed. Commits:
+                     Brief [BRIEF-HASH], Process [PROC-HASH].
 
 ### Phase QRBANNER — QR Code Label Banner ✓ Complete
 
@@ -9366,8 +9375,8 @@ React's rules of hooks prohibit calling `useFieldArray` inside a render loop ove
 ### R26 — Roles Belong to show_dates, Not shows
 `volunteer_roles.show_date_id` is the FK parent as of Migration 006. Each show date has its own independent role configuration. Any code that needs "all roles for a show" must join through `show_dates`: `volunteer_roles JOIN show_dates ON volunteer_roles.show_date_id = show_dates.id WHERE show_dates.show_id = [id]`. Never assume or attempt to query volunteer_roles by show_id — that column no longer exists. Established ADMIN.11.
 
-### R27 — Step Tracker Is a Single Persistent Widget
-The step tracker declared at the start of a build session is a single element that updates in place as work progresses. It must not be re-emitted or repeated after individual steps — doing so produces multiple copies that obscure build progress rather than clarifying it. Prompts must not include the instruction to "re-emit the tracker after each step." Claude Code manages the live-update behavior natively when given an initial tracker declaration. Established Phase 4 build session.
+### R27 — Live Task Tracking (process rule)
+Documented in 30BN_PROCESS_v1.md §14. Referenced here for R-number continuity.
 
 ### R28 — SECURITY DEFINER RPCs Must Revoke Public/Anon Execute
 PostgreSQL grants EXECUTE to PUBLIC by default when a function is created. For SECURITY DEFINER functions, this means the anon role can call them directly via PostgREST and bypass RLS entirely — exposing any data the function returns regardless of row-level policies. After creating any SECURITY DEFINER function, immediately add:
