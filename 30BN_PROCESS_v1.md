@@ -1,11 +1,12 @@
 # 30 By Ninety Theatre — Build Governance
 ## 30BN_PROCESS_v1.md — v6.3
-*Created: July 2026 | Last session: DOC.96 (Aug 2026). Version history table
+*Created: July 2026 | Last session: DOC.101 (Aug 2026). Version history table
 below. Full build history by phase and prompt: §13. Doc-maintenance notes
 (ordering corrections, sync failures): end of §14.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.4 | Aug 2026 | UPSTYLE.1–5 + fixes complete — Platform Setup tabs + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed (DOC.101) |
 | v6.3 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, updateShowStatus() archive side-effect, NavOrderSection self-healing mirror, TopBar icon sizing convention (DOC.92) |
 | v6.2 | Aug 2026 | ADMIN.52–57 complete — SeasonAtAGlance self-contained component, TipTap click-to-focus, notifications row cap removed, public/fonts/ font convention (DOC.90) |
 | v6.1 | Aug 2026 | ADMIN.47–51 + Phase BETA complete — resolveGroupHrefs() self-healing nav, hide-not-lock Settings hub rule, feature flags 8→9 (feature_beta) (DOC.88) |
@@ -7421,6 +7422,136 @@ SeasonSelector.tsx); 12 other exports preserved.
                        window.location grep check removed.
                        Brief commit: f4403e8.
                        Process commit: 1e4d637.
+  30BN-UPSTYLE.1    ✓ Platform Setup four-tab layout
+                       (Identity / Communication /
+                       Platform / Announcements).
+                       CSS-hide pattern (not conditional
+                       mount) for NavOrderSection lazy
+                       state + AnnouncementSection TipTap
+                       useEffect. MaintenanceModeSection
+                       relocated in source order (DOM-only,
+                       no visual change). StyleSandbox.tsx:
+                       SidebarMockup + TopNavMockup imports,
+                       JSX, dividers removed. SidebarMockup
+                       .tsx + TopNavMockup.tsx deleted.
+                       2 files modified, 2 deleted.
+                       Commit: 8f7d66d.
+  30BN-UPSTYLE.2    ✓ Option A three-zone section card
+                       (shaded header / white body / shaded
+                       footer + right-aligned Save) applied
+                       to all 7 SetupPanel sub-components,
+                       Logo + Favicon inline blocks,
+                       NavOrderSection (header zone only),
+                       AnnouncementSection. cardClasses
+                       outer wrapper: overflow-hidden, no
+                       bg/padding. Self-caught missing
+                       </div> on 5 body zones via interim
+                       tsc check. SetupPanelMockup.tsx
+                       removed + deleted. 4 files modified,
+                       1 deleted. Commit: 7643e57.
+  30BN-UPSTYLE.2-FIX ✓ Footer justify-between →
+                       justify-end gap-3 across 7 footers
+                       in SetupPanel.tsx + 1 in
+                       AnnouncementSection.tsx. 2
+                       pre-existing justify-between uses
+                       (ToggleRow internal + role-selector
+                       row) correctly left untouched.
+                       2 files. Commit: 714b2c7.
+  30BN-UPSTYLE.3    ✓ Media Library rebuilt from
+                       pills+table to two-panel
+                       sidebar+div-list. w-52 folder
+                       sidebar; active folder bg-brand-
+                       primary-light (R35-safe, no dark:bg-*
+                       pairing). Div-based document list
+                       (zero table/tr/td). getBadge(
+                       entryType, mimeType) helper: PDF/
+                       Video/Image/Link + File fallback.
+                       TIER_BADGE_CLASSES updated (Public
+                       green, Link Only yellow, Backend
+                       gray). Upload File + Add Link moved
+                       to document panel toolbar; New Folder
+                       kept in page header. MediaLibrary
+                       Mockup.tsx removed + deleted.
+                       page.tsx: max-w-4xl added.
+                       3 files modified, 1 deleted.
+                       Commit: 21ec778.
+  30BN-UPSTYLE.4    ✓ Communication page (BlastComposer
+                       .tsx) both steps restyled. Compose:
+                       pill-group recipient tabs (bg-neutral-
+                       surface container, sm:w-auto
+                       preserved), w-8 h-8 toolbar buttons,
+                       flex justify-end footer. Confirm:
+                       grid grid-cols-2 summary, orange
+                       warning banner (bg-orange-50 border
+                       border-orange-200 dark:bg-orange-900/
+                       20), Send button fixed to bg-brand-
+                       accent hover:bg-brand-accent-dark
+                       (pre-existing bug: was hovering to
+                       bg-brand-primary-mid). page.tsx and
+                       globals.css confirmed no-op (already
+                       satisfied). CommunicationMockup.tsx
+                       removed + deleted. 2 files modified,
+                       1 deleted. Commit: 963ba1d.
+  30BN-UPSTYLE.5    ✓ Check-In Dashboard rebuilt. page.tsx:
+                       max-w-4xl added. CheckInDashboard
+                       .tsx: StatusBadge all branches updated
+                       to rounded-full pill badges. Roster
+                       table rebuilt from table/tr/td to
+                       div-based: role-group headers are
+                       bg-neutral-surface bars with role name
+                       + derived checked-in count (display-
+                       only, no new state). Role column
+                       dropped (redundant with group header).
+                       Live indicator relocated under show
+                       name; gained green animate-pulse dot
+                       + 'Auto-refreshing' text; existing
+                       RefreshCw, isRefreshing spin state,
+                       onClick unchanged; 'Refresh' text
+                       label dropped (icon-only, aria-label
+                       added). CheckInMockup.tsx removed +
+                       deleted. 3 files modified, 1 deleted.
+                       Commit: af44b3d.
+  30BN-UPSTYLE.5-FIX ✓ Check-In Dashboard card wrapper +
+                       accordion token fixes. New inner card
+                       wrapper (bg-white border border-
+                       neutral-border rounded-lg overflow-
+                       hidden p-6 space-y-4) around show
+                       name/location + date selector +
+                       RosterTable only — outer div (which
+                       wraps full component) unchanged.
+                       mb-4 removed from show-name and date-
+                       selector wrappers. Accordion row:
+                       border-divider → border-neutral-border.
+                       Accordion header button: bg-gray-50
+                       → bg-neutral-surface. 1 file modified.
+                       Commit: 1f35e57.
+  30BN-UPSTYLE.5-FIX2 ✓ Check-In centered layout + heading
+                       zone. page.tsx: max-w-4xl →
+                       max-w-4xl mx-auto px-4 py-8
+                       (mx-auto was missing — content not
+                       centered). Option A heading zone
+                       (pb-4 border-b border-neutral-border
+                       dark:border-dark-border mb-6) wrapped
+                       around h1 + subtitle in page.tsx
+                       (heading lives in Server Component
+                       shell, not CheckInDashboard.tsx).
+                       CheckInDashboard.tsx not modified.
+                       1 file modified. Commit: c60758d.
+  30BN-DOC.98       ✓ Brief Part A: v6.6 version table row;
+                       §8 Platform Setup (tabbed layout +
+                       three-zone card); §8 Style Sandbox
+                       (count 17→11, inventory updated);
+                       §8 Media Library (two-panel, getBadge,
+                       TIER_BADGE_CLASSES); §8 Communication
+                       (UPSTYLE.4); §8 Check-In (UPSTYLE.5).
+  30BN-DOC.99       ✓ Brief Part B: §11 Phase UPSTYLE
+                       section added; §11 overview updated;
+                       §13 UPSTYLE series + CSS-hide rule +
+                       three-zone card + Media Library
+                       two-panel documented. Header → DOC.99.
+  30BN-DOC.100      ✓ UPSTYLE.5-FIX and UPSTYLE.5-FIX2
+                       added to §11 Phase UPSTYLE log.
+                       Commits 1f35e57 and c60758d recorded.
 ```
 
 ---
@@ -8836,6 +8967,67 @@ styling must define its own inline class string. NAVORDER.1 F2: the
 prompt spec assumed these were importable; Claude Code read the live
 `SetupPanel.tsx` and applied only the structural class strings actually
 needed by `NavOrderSection.tsx`.
+
+### UPSTYLE prompt series — style upgrade pattern (established Build Pt 27)
+
+UPSTYLE prompts apply the Option A design from a Style Sandbox mockup
+to the corresponding live page, then remove the mockup from the
+Sandbox. The audit is embedded as Task A of the implementation prompt
+(not a separate prompt), with a mandatory stop after Task A before
+implementation proceeds.
+
+**CSS-hide rule (established UPSTYLE.1):**
+When grouping page content into tabs or panels that contain components
+with lazy-initialized useState or TipTap useEffect([editor]) loading
+patterns, always use CSS-hide (`className={activeTab === 'x' ?
+'space-y-6' : 'hidden'}`) — never conditional rendering (`&&` or
+ternary mount). Conditional mounting resets all state on every tab
+switch. CSS-hide keeps all components mounted while hiding inactive
+ones visually. Established in UPSTYLE.1 for the Platform Setup
+four-tab layout (NavOrderSection lazy useState + AnnouncementSection
+TipTap useEffect both survive tab switches).
+
+**Option A three-zone section card pattern (implemented UPSTYLE.2):**
+All Platform Setup section cards use a three-zone layout. Full
+className specification is in Brief §8 Platform Setup — section card
+pattern block. Key rules:
+- `justify-end` (not `justify-between`) on the footer zone so the
+  Save button stays right-aligned when SaveFeedback renders null at
+  idle state (UPSTYLE.2-FIX)
+- `overflow-hidden` on the outer wrapper so the shaded header does
+  not escape the rounded corners
+- Each sub-component defines its own local `cardClasses` — not
+  importable from SetupPanel.tsx
+- Logo/Favicon inline blocks use header + body zones only (no
+  footer — BrandImageUploader owns saving)
+
+**Platform Setup tabbed layout (UPSTYLE.1):**
+SetupPanel.tsx uses `activeTab` state with four values: `'identity' |
+'communication' | 'platform' | 'announcements'`. All eleven section
+items are always mounted; inactive groups use `className={activeTab
+=== 'X' ? 'space-y-6' : 'hidden'}`. Tab groupings: Identity
+(OrgIdentity, BrandColors, Logo, Favicon); Communication (EmailConfig,
+FeatureFlags); Platform (MaintenanceMode, InstanceLabel, NotFoundPage,
+NavOrder); Announcements (AnnouncementSection).
+
+**Page-level Option A heading zone + centering (established
+UPSTYLE.5-FIX2):**
+Page heading zones use `<div className="pb-4 border-b
+border-neutral-border dark:border-dark-border mb-6">` wrapping h1 +
+subtitle. The heading may live in the Server Component page.tsx shell
+rather than the Client Component — always grep before assuming the
+location. Page content width: `max-w-Nxl mx-auto px-4 py-8` on the
+page.tsx outer wrapper. `mx-auto` is required for centering —
+`max-w-*` alone does not center the content.
+
+**Media Library two-panel layout (UPSTYLE.3):**
+MediaLibrary.tsx is a two-panel flex layout. Active folder:
+`bg-brand-primary-light text-brand-primary font-medium` — no
+`dark:bg-*` pairing (R35-safe). Document list is div-based (zero
+table/tr/td in the file). When referencing the live file for the
+detectLinkType/isPlayable/getPlayLabel helpers: these remain defined
+inside MediaLibrary.tsx (not imported) per the recognized DRY
+exception in §14.
 
 ---
 
