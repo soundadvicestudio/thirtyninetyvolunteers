@@ -7,6 +7,7 @@ history by phase and prompt: §11. Doc-maintenance notes
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.6 | Aug 2026 | UPSTYLE.1–5 complete — Platform Setup tabbed layout + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed from Style Sandbox (DOC.98/99) |
 | v6.5 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, dashboard 31-day overhaul (SeasonAtAGlance + QuickStats), Beta Testing rename, NavOrderSection self-heal (DOC.90/91) |
 | v6.4 | Aug 2026 | ADMIN.52–57 complete — Dashboard/Notification Panel refinements, QR Generator font fix + ribbon redesign, Maintenance Page restoration field (DOC.88) |
 | v6.3 | Aug 2026 | ADMIN.47–51 + Phase BETA complete — hide-not-lock Settings hub rule, Settings access tightened, Beta Feedback shipped (DOC.87) |
@@ -2198,6 +2199,8 @@ Mobile (13.4b): Recipient mode tab bar stacks vertically below `sm` breakpoint. 
 
 Component: `components/crew/communication/BlastComposer.tsx` ('use client'). Page: `app/crew/(app)/communication/page.tsx` (Server Component — fetches `default_reply_to` and visible categories).
 
+**Visual treatment (UPSTYLE.4):** Both steps of the BlastComposer have been restyled to the Option A design language. Compose step: recipient mode selector uses a pill-group container (`bg-neutral-surface` rounded container with `bg-brand-primary text-white` active tab and `text-gray-600` inactive tabs). TipTap toolbar uses `w-8 h-8` icon-button treatment. Preview button in `flex justify-end` footer. Confirm step: recipient summary uses a `grid grid-cols-2` layout. Orange warning banner (`bg-orange-50 border border-orange-200 text-orange-800 dark:bg-orange-900/20`) appears above the button row. Send button uses `bg-brand-accent hover:bg-brand-accent-dark` (pre-existing hover-to-wrong-color bug fixed in UPSTYLE.4). Page is constrained to `max-w-3xl` (was already present, confirmed UPSTYLE.4 Task A).
+
 **In-App Help System (`/crew/help`, HELP phase + ADMIN.30 — complete):**
 Role-filtered single-page help guide. The page reads the current admin's role and `calendar_editor` flag via `getAdminUser()` and renders only the sections relevant to that role. TOC is dynamically built from the same role-filtered section registry (`ALL_SECTIONS` array in `components/crew/help/HelpContent.tsx`).
 
@@ -2600,6 +2603,18 @@ Section 8 — Platform Identity: `instance_label`. Internal deployment label (e.
 
 Section 9 — 404 Page (added ADMIN.33): `not_found_heading`, `not_found_body`. Two text fields. Heading max 100 chars, body max 300 chars. Controls the heading and body text shown on `app/not-found.tsx`. Seeded in Migration 028 with defaults: heading = "Page Not Found", body = "We couldn't find what you were looking for." (matches the original hardcoded text exactly — no visible change on deploy). Super Admin only (Setup Panel).
 
+**Tabbed layout (UPSTYLE.1):** The nine sections plus NavOrderSection and AnnouncementSection are organized into four tabs rendered as a pill-style tab bar at the top of the Setup Panel. All tab content is always mounted — inactive tabs use `className="hidden"`, never conditional rendering, preserving NavOrderSection's lazy-initialized state and AnnouncementSection's TipTap editor state across tab switches. Tab groupings:
+- **Identity** — Org Identity, Brand Colors, Logo, Favicon
+- **Communication** — Email Configuration, Feature Flags
+- **Platform** — Maintenance Mode, Platform Identity, 404 Page, Nav Order
+- **Announcements** — Dashboard Announcement
+
+**Section card pattern (UPSTYLE.2):** All section cards use a three-zone layout with `overflow-hidden` on the outer wrapper (no padding or background on the outer div):
+- **Header zone:** `bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border px-6 py-4` — contains section title
+- **Body zone:** `bg-white dark:bg-dark-surface px-6 py-5 space-y-4` — contains all form fields
+- **Footer zone:** `bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3` — SaveFeedback (left) and Save button (right). `justify-end` ensures the button stays right-aligned even when SaveFeedback renders null at idle state (UPSTYLE.2-FIX).
+NavOrderSection.tsx and AnnouncementSection.tsx both follow the same pattern with their own local `cardClasses` constants (not importable from SetupPanel.tsx).
+
 Key files (Phase SETUP):
 - `app/crew/(app)/settings/setup/page.tsx` — Server Component, double-guarded, fetches 31 `app_settings` keys (30 SETUP keys + `default_reply_to`)
 - `components/crew/settings/SetupPanel.tsx` — Client Component, nine sections
@@ -2735,13 +2750,13 @@ Card (2×2 grid), Badges (role + brand-derived), Token
 Reference (all 11 CSS custom properties with color swatches
 via inline style={{ background: 'var(--token)' }}).
 
-**Section 2 — Page Mockups:** Fifteen full-fidelity static
+**Section 2 — Page Mockups:** Eleven full-fidelity static
 reproductions of admin pages using the Option A design
 patterns. All data is hardcoded representative values — no
 DB queries. Mockups live entirely within the sandbox; zero
 production files are touched. Added STYLE.2 through STYLE.8.
 
-Page mockup inventory (17 total):
+Page mockup inventory (11 remaining — 6 removed as each was incorporated into the live platform via UPSTYLE prompts):
 1. Dashboard — stat tiles with border-t-brand-primary accent,
    activity feed with NEW badge using bg-brand-primary-subtle
 2. Calendar — Month view, location color chips inline style,
@@ -2768,35 +2783,6 @@ Page mockup inventory (17 total):
 11. QR Generator — generator card, 10×10 static QR grid
     (bg-white always — scanability rule, no dark: override),
     3-entry history panel
-12. Check-In Dashboard — roster grouped by role, 5 attendance
-    status badge variants, animate-pulse live indicator
-13. Communication — Compose step (recipient tabs, static
-    TipTap toolbar, body) + Confirm step (orange warning
-    banner using bg-orange-50, Send button using bg-brand-accent)
-14. Media Library — two-panel layout (folder browser left +
-    document table right); active folder uses bg-brand-
-    primary-light; type and access tier badge system
-15. Setup Panel — 3 section cards (Org Identity, Brand Colors,
-    Feature Flags) with header/body/footer pattern; color
-    swatches via inline style; toggle switch visuals
-
-**Phase SIDEBAR mockups ✓ Complete (SIDEBAR.1):**
-Two additional mockups added to Section 2:
-16. Sidebar (`SidebarMockup.tsx`) — grouped/sectioned
-    navigation with Dashboard ungrouped above four
-    groups (Events, People, Utilities, Settings), active
-    Dashboard link with border-l-4 left accent +
-    bg-brand-primary-light fill + rounded-r, group
-    labels in text-xs uppercase tracking-wider,
-    unread badge on Forums (3) and Messages (2),
-    footer with Help + Platform Setup + ThemeToggle
-    placeholder. Named export only, no 'use client'.
-    Commit 6571a7b.
-17. Top Nav (`TopNavMockup.tsx`) — polished TopBar
-    with border-neutral-border (Option A token, replacing
-    border-divider), badge-decorated Mail + Bell icons,
-    admin name + role badge, visual Sign Out button.
-    Named export only, no 'use client'. Commit 6571a7b.
 
 **Option A design patterns (applied throughout mockups):**
 These are the intended targets for STYLE-ROLLOUT:
@@ -2805,7 +2791,7 @@ These are the intended targets for STYLE-ROLLOUT:
 - Data table header: `bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border`
 - Table row hover: `hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors` (both native Tailwind — R35 safe)
 - Left border accent: `border-l-4` (Tailwind, sets width) + `style={{ borderLeftColor: 'var(--brand-primary)' }}` (CSS custom property, sets color). Never use `border-brand-primary` alongside a full `border` class — it overrides all four border sides.
-- Section card pattern (Setup Panel): header/body/footer with `bg-neutral-surface` header + `border-t border-neutral-border` footer + "Save Changes" per section
+- Section card pattern: three-zone header/body/footer — `bg-neutral-surface` shaded header with section title, white body with fields, `bg-neutral-surface` shaded footer with right-aligned Save button. `overflow-hidden` on outer wrapper (no bg/padding at outer level). Implemented in UPSTYLE.2. See Platform Setup section above for full className specification.
 - Activity feed NEW badge: `bg-brand-primary-subtle text-brand-primary` (hand-authored — R35: no native dark: pairing on same property)
 - Staffing progress bars: hardcoded complete class strings for color (`bg-green-500`, `bg-yellow-400`, `bg-red-500`) and width (`w-[87.5%]`, `w-[58.3%]`, `w-0`) — never computed dynamically (Tailwind purge risk)
 - Season accordion: expanded state uses `style={{ borderLeftColor: 'var(--brand-primary)' }}`; collapsed state uses `style={{ borderLeftColor: 'var(--color-neutral-border)' }}`
@@ -2825,13 +2811,11 @@ mockup prompts.
 - `lib/utils/color.ts` — `darkenHex()` added alongside `lightenHex()` (STYLE.A)
 - `app/globals.css` — `--color-neutral-surface` / `--color-neutral-border` in @theme block; new @layer utilities classes for brand-derived tokens
 - `app/layout.tsx` — `resolveBrandColors()` extended to inject 9 total custom properties
-- Mockup components (17 files):
+- Mockup components (11 files):
   `DashboardMockup.tsx`, `CalendarMockup.tsx`, `RehearsalsMockup.tsx`,
   `AuditionsMockup.tsx`, `InventoryMockup.tsx`, `VolunteersMockup.tsx`,
   `ForumsMockup.tsx`, `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`,
-  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`, `CheckInMockup.tsx`,
-  `CommunicationMockup.tsx`, `MediaLibraryMockup.tsx`, `SetupPanelMockup.tsx`,
-  `SidebarMockup.tsx`, `TopNavMockup.tsx`
+  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`
 
 ---
 
@@ -2895,9 +2879,11 @@ will provide you with the consent form." Logged with
 `trigger:consent_form_request`. `escapeHtml()` on volunteer name only.
 
 **Master Media Library (`/crew/media`, built Phase 15.3):**
-All roles (including Production). Folder browser (left panel) + document table
-(right panel). Each document row shows: title, type badge, access tier badge,
-action buttons (Copy Link, QR download, Play/View).
+All roles (including Production).
+
+**Layout (rebuilt UPSTYLE.3):** Two-panel horizontal flex layout — a fixed-width (`w-52`) vertical folder sidebar on the left, and a document list panel on the right. The folder sidebar renders 'All Files' plus each real folder as full-width row buttons with a Folder icon. Active folder uses `bg-brand-primary-light text-brand-primary font-medium` with no `dark:bg-*` pairing (R35-safe). The document list is div-based (no `<table>` — converted from table to divs in UPSTYLE.3); each row is a flex div with title + badges on the left and action links (Copy Link · QR · Play/View) on the right.
+
+**Type badges (UPSTYLE.3):** A new `getBadge(entryType, mimeType)` helper function maps `entry_type` + `mime_type` to four named badge variants: PDF (red), Video (purple), Image (green), Link (blue), with a neutral File fallback for unrecognized mime types. `TIER_BADGE_CLASSES` (access tier badge map) updated to match the Option A palette: Public (green), Link Only (yellow), Backend (gray).
 
 Upload and link entry: "Upload File" button triggers P-DC pattern (signed
 upload URL from `getConsentUploadUrl()` variant in `lib/actions/documents.ts`,
@@ -2996,6 +2982,8 @@ roster data.
 accordion state. Server action `getCheckInRosterForDate()` in `lib/actions/checkin-admin.ts`
 (uses `getServerClient()` — authenticated admin session; separate file from
 `lib/actions/checkin.ts` which is public-route `getAdminClient()` only).
+
+**Visual treatment (UPSTYLE.5):** The Check-In Dashboard roster was rebuilt from a `<table>` structure to a div-based layout matching the Option A design. Role-group headers render as `bg-neutral-surface dark:bg-dark-nav` bars showing the role name and a 'X / Y checked in' derived count. Volunteer rows are flat name+badge divs (Role column dropped — redundant with group header). Five attendance status pill badges: Checked In (QR) and Checked In (Admin) share green styling; Awaiting is gray; No-Show is red; Excused is yellow. The animate-pulse live indicator (green pulse dot + 'Auto-refreshing' text + RefreshCw icon) was repositioned from inside the show-name header row to directly under the page h1, matching the mockup. The existing polling mechanism, isRefreshing spin state, and manual refresh onClick are unchanged. Page constrained to `max-w-4xl`.
 
 ---
 
