@@ -250,32 +250,34 @@ export function CheckInDashboard({ initialData }: Props) {
         </button>
       </div>
 
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-dark dark:text-dark-text">{topShow.showName}</h2>
-        <p className="text-sm text-mid-gray dark:text-dark-muted">{topShow.locationName}</p>
-      </div>
-
-      {topShow.upcomingDates.length > 1 && (
-        <div className="mb-4 max-w-sm">
-          <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Show Date</label>
-          <select value={selectedDateId} onChange={(e) => handleDateChange(e.target.value)} className={selectClasses}>
-            {topShow.upcomingDates.map((d) => (
-              <option key={d.id} value={d.id}>
-                {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a", tz)}
-              </option>
-            ))}
-          </select>
+      <div className="bg-white dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden p-6 space-y-4">
+        <div>
+          <h2 className="text-xl font-bold text-dark dark:text-dark-text">{topShow.showName}</h2>
+          <p className="text-sm text-mid-gray dark:text-dark-muted">{topShow.locationName}</p>
         </div>
-      )}
 
-      <RosterTable
-        roster={currentRoster ?? topShow.roster}
-        showDateLabel={
-          selectedDate
-            ? formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy — h:mm a', tz)
-            : ''
-        }
-      />
+        {topShow.upcomingDates.length > 1 && (
+          <div className="max-w-sm">
+            <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Show Date</label>
+            <select value={selectedDateId} onChange={(e) => handleDateChange(e.target.value)} className={selectClasses}>
+              {topShow.upcomingDates.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {formatWallClockCT(d.show_date, d.show_time, "EEEE, MMMM d, yyyy 'at' h:mm a", tz)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <RosterTable
+          roster={currentRoster ?? topShow.roster}
+          showDateLabel={
+            selectedDate
+              ? formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy — h:mm a', tz)
+              : ''
+          }
+        />
+      </div>
 
       {otherShows.length > 0 && (
         <div className="mt-10">
@@ -286,12 +288,12 @@ export function CheckInDashboard({ initialData }: Props) {
               return (
                 <div
                   key={show.showId}
-                  className="border border-divider dark:border-dark-border rounded-lg overflow-hidden"
+                  className="border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden"
                 >
                   <button
                     type="button"
                     onClick={() => handleExpand(show.showId, show.nearestDateId)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-dark-nav text-left cursor-pointer"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-neutral-surface dark:bg-dark-nav text-left cursor-pointer"
                   >
                     <div>
                       <p className="font-semibold text-dark dark:text-dark-text">{show.showName}</p>
