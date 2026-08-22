@@ -27,26 +27,30 @@ function StatusBadge({
 }) {
   if (status === 'showed') {
     return (
-      <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+      <span className="text-xs font-medium rounded-full px-2.5 py-0.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
         {source === 'checkin' ? '✓ Checked In (QR)' : '✓ Checked In (Admin)'}
       </span>
     )
   }
   if (status === 'no_show') {
     return (
-      <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+      <span className="text-xs font-medium rounded-full px-2.5 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
         ✗ No-Show
       </span>
     )
   }
   if (status === 'excused') {
     return (
-      <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+      <span className="text-xs font-medium rounded-full px-2.5 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-700">
         Excused
       </span>
     )
   }
-  return <span className="text-xs text-mid-gray dark:text-dark-muted">— Awaiting</span>
+  return (
+    <span className="text-xs font-medium rounded-full px-2.5 py-0.5 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+      — Awaiting
+    </span>
+  )
 }
 
 function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDateLabel: string }) {
@@ -78,42 +82,28 @@ function RosterTable({ roster, showDateLabel }: { roster: CheckInRoster; showDat
       </p>
 
       {roster.claims.length > 0 && (
-        <div className="overflow-x-auto border border-divider dark:border-dark-border rounded-lg">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left text-mid-gray dark:text-dark-muted bg-gray-50 dark:bg-dark-nav">
-                <th className="px-4 py-2 font-semibold">Volunteer Name</th>
-                <th className="px-4 py-2 font-semibold">Role</th>
-                <th className="px-4 py-2 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-dark-surface">
-              {Array.from(grouped.entries()).map(([roleName, entries]) => (
-                <Fragment key={roleName}>
-                  <tr className="bg-gray-50/50 dark:bg-dark-nav/50">
-                    <td
-                      colSpan={3}
-                      className="px-4 py-1.5 text-xs font-semibold text-mid-gray dark:text-dark-muted uppercase tracking-wide"
-                    >
-                      {roleName}
-                    </td>
-                  </tr>
-                  {entries.map((entry) => (
-                    <tr
-                      key={entry.claimId}
-                      className="border-b border-divider dark:border-dark-border last:border-b-0"
-                    >
-                      <td className="px-4 py-2 text-dark dark:text-dark-text align-top">{entry.volunteerName}</td>
-                      <td className="px-4 py-2 text-dark dark:text-dark-text align-top">{entry.roleName}</td>
-                      <td className="px-4 py-2 align-top">
-                        <StatusBadge status={entry.attendance?.status ?? null} source={entry.attendance?.source} />
-                      </td>
-                    </tr>
-                  ))}
-                </Fragment>
+        <div className="bg-white dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden">
+          {Array.from(grouped.entries()).map(([roleName, entries]) => (
+            <Fragment key={roleName}>
+              <div className="bg-neutral-surface dark:bg-dark-nav border-b border-t border-neutral-border dark:border-dark-border px-4 py-2.5 flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  {roleName}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {entries.filter((e) => e.attendance?.status === 'showed').length} / {entries.length} checked in
+                </span>
+              </div>
+              {entries.map((entry) => (
+                <div
+                  key={entry.claimId}
+                  className="flex items-center justify-between px-4 py-3 border-b border-neutral-border dark:border-dark-border last:border-b-0"
+                >
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{entry.volunteerName}</span>
+                  <StatusBadge status={entry.attendance?.status ?? null} source={entry.attendance?.source} />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </Fragment>
+          ))}
         </div>
       )}
 
@@ -244,23 +234,25 @@ export function CheckInDashboard({ initialData }: Props) {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-xl font-bold text-dark dark:text-dark-text">{topShow.showName}</h2>
-          <p className="text-sm text-mid-gray dark:text-dark-muted">{topShow.locationName}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-mid-gray dark:text-dark-muted">Last updated {secondsSinceUpdate}s ago</span>
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          Auto-refreshing · Last updated {secondsSinceUpdate}s ago
+        </span>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          aria-label="Refresh now"
+          className="text-gray-400 hover:text-brand-primary dark:hover:text-brand-primary-mid disabled:opacity-50 cursor-pointer"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-dark dark:text-dark-text">{topShow.showName}</h2>
+        <p className="text-sm text-mid-gray dark:text-dark-muted">{topShow.locationName}</p>
       </div>
 
       {topShow.upcomingDates.length > 1 && (

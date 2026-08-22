@@ -12,7 +12,6 @@ import { ShowsMockup } from './ShowsMockup'
 import { OpportunitiesMockup } from './OpportunitiesMockup'
 import { FormsMockup } from './FormsMockup'
 import { QRGeneratorMockup } from './QRGeneratorMockup'
-import { CheckInMockup } from './CheckInMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -268,8 +267,6 @@ export default function StyleSandbox() {
         <FormsMockup />
         <div className="border-t border-neutral-border my-8" />
         <QRGeneratorMockup />
-        <div className="border-t border-neutral-border my-8" />
-        <CheckInMockup />
       </div>
     </div>
   )

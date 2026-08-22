@@ -22,7 +22,7 @@ export default async function CheckInPage() {
   const data = await getCheckInDashboardData(supabase, tz)
 
   return (
-    <div>
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
         Check-In Dashboard
         <HelpTooltip anchor="check-in-dashboard" label="Live Check-In Dashboard" />
