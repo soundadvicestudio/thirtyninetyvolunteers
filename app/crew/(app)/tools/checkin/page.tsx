@@ -22,14 +22,16 @@ export default async function CheckInPage() {
   const data = await getCheckInDashboardData(supabase, tz)
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
-        Check-In Dashboard
-        <HelpTooltip anchor="check-in-dashboard" label="Live Check-In Dashboard" />
-      </h1>
-      <p className="text-sm text-mid-gray dark:text-dark-muted mb-6">
-        Live roster and check-in status for the next upcoming show. Refreshes automatically every 10 seconds.
-      </p>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="pb-4 border-b border-neutral-border dark:border-dark-border mb-6">
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1 flex items-center gap-1.5">
+          Check-In Dashboard
+          <HelpTooltip anchor="check-in-dashboard" label="Live Check-In Dashboard" />
+        </h1>
+        <p className="text-sm text-mid-gray dark:text-dark-muted mb-6">
+          Live roster and check-in status for the next upcoming show. Refreshes automatically every 10 seconds.
+        </p>
+      </div>
       <CheckInDashboard
         initialData={data}
         topShowId={data.noUpcomingShows ? null : data.topShow.showId}
