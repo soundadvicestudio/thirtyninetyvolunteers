@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, Link2, FolderPlus, Pencil, Copy, Check, QrCode, Trash2, X } from 'lucide-react'
+import { Upload, Link2, FolderPlus, Folder, Pencil, Copy, Check, QrCode, Trash2, X } from 'lucide-react'
 import { formatCT } from '@/lib/utils/date'
 import {
   getMediaUploadUrl,
@@ -61,8 +61,8 @@ const TIER_LABELS: Record<AccessTier, string> = {
 
 const TIER_BADGE_CLASSES: Record<AccessTier, string> = {
   public: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  link_only: 'bg-[#729ABF]/20 text-[#729ABF] dark:bg-[#729ABF]/20 dark:text-[#729ABF]',
-  backend: 'bg-mid-gray/20 text-mid-gray dark:bg-dark-bg dark:text-dark-muted',
+  link_only: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-700',
+  backend: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 }
 
 function hasAccessGrantMatch(grants: AccessGrantRow[], role: AdminRole, adminId: string): boolean {
@@ -110,6 +110,28 @@ function getPlayLabel(doc: MediaDocument): string {
     if (t === 'audio') return '♪ Play'
   }
   return 'View'
+}
+
+const BADGE_BASE_CLASSES = 'text-xs font-medium rounded-full px-2 py-0.5'
+
+// Maps entry_type + mime_type to the Option A type badge variant
+// (PDF / Video / Image / Link). Files whose mime_type doesn't match any
+// of the four variants (e.g. audio, unknown) fall back to a neutral
+// "File" badge.
+function getBadge(entryType: MediaDocument['entry_type'], mimeType: string | null) {
+  if (entryType === 'link') {
+    return <span className={`${BADGE_BASE_CLASSES} bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400`}>Link</span>
+  }
+  if (mimeType === 'application/pdf') {
+    return <span className={`${BADGE_BASE_CLASSES} bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400`}>PDF</span>
+  }
+  if (mimeType?.startsWith('video/')) {
+    return <span className={`${BADGE_BASE_CLASSES} bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400`}>Video</span>
+  }
+  if (mimeType?.startsWith('image/')) {
+    return <span className={`${BADGE_BASE_CLASSES} bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400`}>Image</span>
+  }
+  return <span className={`${BADGE_BASE_CLASSES} bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400`}>File</span>
 }
 
 // XHR (not fetch) is required here specifically for upload progress events
@@ -701,46 +723,44 @@ function DocumentEditForm({
   }
 
   return (
-    <tr>
-      <td colSpan={6} className="px-4 py-3 bg-gray-50/30 dark:bg-dark-bg/40">
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={isSubmitting}
-            className={`${inputClasses} flex-1 min-w-[140px]`}
-          />
-          <input
-            type="text"
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={isSubmitting}
-            className={`${inputClasses} flex-1 min-w-[160px]`}
-          />
-          <AccessTierSelect value={accessTier} onChange={setAccessTier} />
-          <FolderSelect folders={folders} value={folderId} onChange={setFolderId} />
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="text-sm font-semibold text-dark dark:text-dark-text hover:underline cursor-pointer disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        </div>
-        {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
-      </td>
-    </tr>
+    <div className="px-4 py-3 bg-gray-50/30 dark:bg-dark-bg/40">
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={isSubmitting}
+          className={`${inputClasses} flex-1 min-w-[140px]`}
+        />
+        <input
+          type="text"
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={isSubmitting}
+          className={`${inputClasses} flex-1 min-w-[160px]`}
+        />
+        <AccessTierSelect value={accessTier} onChange={setAccessTier} />
+        <FolderSelect folders={folders} value={folderId} onChange={setFolderId} />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSubmitting}
+          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer disabled:opacity-50"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="text-sm font-semibold text-dark dark:text-dark-text hover:underline cursor-pointer disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+      {error && <p className="text-sm text-brand-accent mt-2">{error}</p>}
+    </div>
   )
 }
 
@@ -880,6 +900,7 @@ export function MediaLibrary({
   }, [visibleDocuments])
 
   const qrDocument = qrDocumentId ? (documents.find((d) => d.id === qrDocumentId) ?? null) : null
+  const currentFolder = selectedFolderId ? (visibleFolders.find((f) => f.id === selectedFolderId) ?? null) : null
 
   async function handleCopyLink(doc: MediaDocument) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ''
@@ -918,46 +939,20 @@ export function MediaLibrary({
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Media Library</h1>
-        <div className="flex items-center gap-2 flex-wrap">
+        {canManage && (
           <button
             type="button"
             onClick={() => {
-              setShowUploadForm((v) => !v)
-              setShowLinkForm(false)
-              setShowNewFolderForm(false)
-            }}
-            className="flex items-center gap-2 bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
-          >
-            <Upload size={16} />
-            Upload File
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowLinkForm((v) => !v)
+              setShowNewFolderForm((v) => !v)
               setShowUploadForm(false)
-              setShowNewFolderForm(false)
+              setShowLinkForm(false)
             }}
-            className="flex items-center gap-2 bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+            className="flex items-center gap-2 border border-brand-primary text-brand-primary dark:border-brand-primary-mid dark:text-brand-primary-mid hover:bg-white dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
           >
-            <Link2 size={16} />
-            Add Link
+            <FolderPlus size={16} />
+            New Folder
           </button>
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowNewFolderForm((v) => !v)
-                setShowUploadForm(false)
-                setShowLinkForm(false)
-              }}
-              className="flex items-center gap-2 border border-brand-primary text-brand-primary dark:border-brand-primary-mid dark:text-brand-primary-mid hover:bg-white dark:hover:bg-dark-surface/50 transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
-            >
-              <FolderPlus size={16} />
-              New Folder
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {showUploadForm && (
@@ -967,50 +962,6 @@ export function MediaLibrary({
         <LinkForm folders={visibleFolders} documentTypes={documentTypes} onClose={() => setShowLinkForm(false)} />
       )}
       {showNewFolderForm && <NewFolderForm onClose={() => setShowNewFolderForm(false)} />}
-
-      <div className="flex items-center gap-2 flex-wrap overflow-x-auto pb-2">
-        <button
-          type="button"
-          onClick={() => setSelectedFolderId(null)}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors ${
-            selectedFolderId === null
-              ? 'bg-brand-primary text-white'
-              : 'bg-white/50 text-dark hover:bg-gray-100 dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
-          }`}
-        >
-          All Files ({visibleDocuments.length})
-        </button>
-        {visibleFolders.map((folder) => (
-          <div key={folder.id} className="group flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => setSelectedFolderId(folder.id)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap cursor-pointer transition-colors ${
-                selectedFolderId === folder.id
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-white/50 text-dark hover:bg-gray-100 dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface/70'
-              }`}
-            >
-              {folder.name} ({folderDocCounts[folder.id] ?? 0})
-            </button>
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => setEditingFolderId(folder.id)}
-                aria-label={`Edit ${folder.name}`}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded text-mid-gray hover:bg-white cursor-pointer dark:text-dark-muted dark:hover:bg-dark-surface/50 transition-opacity"
-              >
-                <Pencil size={14} />
-              </button>
-            )}
-          </div>
-        ))}
-        {visibleFolders.length === 0 && (
-          <span className="text-sm text-mid-gray dark:text-dark-muted whitespace-nowrap">
-            No folders yet. Create a folder to organize your media.
-          </span>
-        )}
-      </div>
 
       {editingFolderId &&
         (() => {
@@ -1031,25 +982,113 @@ export function MediaLibrary({
 
       {rowError && <p className="text-sm text-brand-accent">{rowError}</p>}
 
-      <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-x-auto">
-        {filteredDocuments.length === 0 ? (
-          <p className="text-mid-gray dark:text-dark-muted text-sm p-6">No documents here yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-divider dark:border-dark-border text-left">
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Title</th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Type</th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Entry</th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text whitespace-nowrap">
-                  Tier <HelpTooltip anchor="media-library-access" label="Sharing and Access" />
-                </th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Uploaded</th>
-                <th className="px-4 py-2 font-semibold text-dark dark:text-dark-text">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDocuments.map((doc) =>
+      <div className="bg-white dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden flex min-h-[400px]">
+        <div className="w-52 flex-shrink-0 border-r border-neutral-border dark:border-dark-border flex flex-col">
+          <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border dark:border-dark-border px-3 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+            Folders
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="group relative">
+              <button
+                type="button"
+                onClick={() => setSelectedFolderId(null)}
+                className={
+                  selectedFolderId === null
+                    ? 'w-full text-left px-3 py-2.5 flex items-center gap-2 cursor-pointer text-sm border-b border-neutral-border dark:border-dark-border last:border-b-0 bg-brand-primary-light text-brand-primary font-medium'
+                    : 'w-full text-left px-3 py-2.5 flex items-center gap-2 cursor-pointer text-sm border-b border-neutral-border dark:border-dark-border last:border-b-0 text-gray-700 dark:text-gray-300 hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors'
+                }
+              >
+                <Folder
+                  className={selectedFolderId === null ? 'w-4 h-4 flex-shrink-0' : 'w-4 h-4 text-gray-400 flex-shrink-0'}
+                />
+                All Files ({visibleDocuments.length})
+              </button>
+            </div>
+            {visibleFolders.map((folder) => (
+              <div key={folder.id} className="group relative">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFolderId(folder.id)}
+                  className={
+                    selectedFolderId === folder.id
+                      ? 'w-full text-left px-3 py-2.5 pr-8 flex items-center gap-2 cursor-pointer text-sm border-b border-neutral-border dark:border-dark-border last:border-b-0 bg-brand-primary-light text-brand-primary font-medium'
+                      : 'w-full text-left px-3 py-2.5 pr-8 flex items-center gap-2 cursor-pointer text-sm border-b border-neutral-border dark:border-dark-border last:border-b-0 text-gray-700 dark:text-gray-300 hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors'
+                  }
+                >
+                  <Folder
+                    className={
+                      selectedFolderId === folder.id ? 'w-4 h-4 flex-shrink-0' : 'w-4 h-4 text-gray-400 flex-shrink-0'
+                    }
+                  />
+                  <span className="truncate">
+                    {folder.name} ({folderDocCounts[folder.id] ?? 0})
+                  </span>
+                </button>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingFolderId(folder.id)}
+                    aria-label={`Edit ${folder.name}`}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded text-mid-gray hover:bg-white cursor-pointer dark:text-dark-muted dark:hover:bg-dark-surface/50 transition-opacity"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {visibleFolders.length === 0 && (
+              <p className="text-xs text-mid-gray dark:text-dark-muted px-3 py-3">
+                No folders yet. Create a folder to organize your media.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border dark:border-dark-border px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                {currentFolder ? currentFolder.name : 'All Files'}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                {filteredDocuments.length} {filteredDocuments.length === 1 ? 'file' : 'files'}
+              </span>
+              <HelpTooltip anchor="media-library-access" label="Sharing and Access" />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUploadForm((v) => !v)
+                  setShowLinkForm(false)
+                  setShowNewFolderForm(false)
+                }}
+                className="flex items-center gap-1.5 bg-brand-primary text-white rounded-md px-3 py-1.5 text-xs font-medium hover:bg-brand-primary-dark transition-colors cursor-pointer"
+              >
+                <Upload size={14} />
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLinkForm((v) => !v)
+                  setShowUploadForm(false)
+                  setShowNewFolderForm(false)
+                }}
+                className="flex items-center gap-1.5 border border-neutral-border bg-neutral-surface text-gray-700 dark:text-gray-300 rounded-md px-3 py-1.5 text-xs font-medium hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <Link2 size={14} />
+                Add Link
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto divide-y divide-neutral-border dark:divide-dark-border">
+            {filteredDocuments.length === 0 ? (
+              <p className="text-mid-gray dark:text-dark-muted text-sm p-6">No documents here yet.</p>
+            ) : (
+              filteredDocuments.map((doc) =>
                 editingDocumentId === doc.id ? (
                   <DocumentEditForm
                     key={doc.id}
@@ -1058,106 +1097,107 @@ export function MediaLibrary({
                     onClose={() => setEditingDocumentId(null)}
                   />
                 ) : (
-                  <tr key={doc.id} className="border-b border-divider dark:border-dark-border last:border-b-0">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-dark dark:text-dark-text">{doc.title}</div>
-                      {doc.attachedName && (
-                        <div className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
-                          {doc.attached_to_type === 'show' ? 'Show' : 'Rehearsal'}: {doc.attachedName}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-dark dark:text-dark-text">{doc.document_types?.name ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-[#729ABF]/20 text-[#729ABF]">
-                        {doc.entry_type === 'file' ? 'File' : 'Link'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-semibold rounded-full px-2.5 py-0.5 ${TIER_BADGE_CLASSES[doc.access_tier]}`}>
+                  <div
+                    key={doc.id}
+                    className="px-4 py-3.5 flex items-center gap-3 flex-wrap hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors"
+                  >
+                    <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">
+                          {doc.title}
+                        </span>
+                        {doc.attachedName && (
+                          <span className="text-xs text-mid-gray dark:text-dark-muted">
+                            {doc.attached_to_type === 'show' ? 'Show' : 'Rehearsal'}: {doc.attachedName}
+                          </span>
+                        )}
+                      </div>
+                      {getBadge(doc.entry_type, doc.mime_type)}
+                      <span
+                        className={`${BADGE_BASE_CLASSES} ${TIER_BADGE_CLASSES[doc.access_tier]}`}
+                      >
                         {TIER_LABELS[doc.access_tier]}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-dark dark:text-dark-text whitespace-nowrap">
-                      {formatCT(doc.created_at, 'MMM d, yyyy', tz)}
-                      {doc.uploaderName && (
-                        <span className="text-mid-gray dark:text-dark-muted"> · {doc.uploaderName}</span>
+                      {doc.document_types?.name && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{doc.document_types.name}</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        {isPlayable(doc) && (
-                          <a
-                            href={`/documents/${doc.access_token}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-semibold px-2 py-1 rounded bg-brand-primary text-white hover:opacity-80 transition-opacity whitespace-nowrap"
-                          >
-                            {getPlayLabel(doc)}
-                          </a>
-                        )}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {formatCT(doc.created_at, 'MMM d, yyyy', tz)}
+                        {doc.uploaderName && ` · ${doc.uploaderName}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {isPlayable(doc) && (
+                        <a
+                          href={`/documents/${doc.access_token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold px-2 py-1 rounded bg-brand-primary text-white hover:opacity-80 transition-opacity whitespace-nowrap"
+                        >
+                          {getPlayLabel(doc)}
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(doc)}
+                        aria-label="Copy link"
+                        className="p-1.5 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
+                      >
+                        {copiedDocumentId === doc.id ? <Check size={16} /> : <Copy size={16} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQrDocumentId(doc.id)}
+                        aria-label="Show QR code"
+                        className="p-1.5 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
+                      >
+                        <QrCode size={16} />
+                      </button>
+                      {canManage && (
                         <button
                           type="button"
-                          onClick={() => handleCopyLink(doc)}
-                          aria-label="Copy link"
+                          onClick={() => setEditingDocumentId(doc.id)}
+                          aria-label={`Edit ${doc.title}`}
                           className="p-1.5 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
                         >
-                          {copiedDocumentId === doc.id ? <Check size={16} /> : <Copy size={16} />}
+                          <Pencil size={16} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setQrDocumentId(doc.id)}
-                          aria-label="Show QR code"
-                          className="p-1.5 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
-                        >
-                          <QrCode size={16} />
-                        </button>
-                        {canManage && (
-                          <button
-                            type="button"
-                            onClick={() => setEditingDocumentId(doc.id)}
-                            aria-label={`Edit ${doc.title}`}
-                            className="p-1.5 rounded text-brand-primary hover:bg-gray-100 cursor-pointer dark:text-brand-primary-mid dark:hover:bg-dark-surface/50"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                        )}
-                        {canDelete &&
-                          (confirmingDeleteId === doc.id ? (
-                            <span className="flex items-center gap-1 whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(doc.id)}
-                                className="text-xs font-semibold text-white bg-brand-accent hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmingDeleteId(null)}
-                                className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </span>
-                          ) : (
+                      )}
+                      {canDelete &&
+                        (confirmingDeleteId === doc.id ? (
+                          <span className="flex items-center gap-1 whitespace-nowrap">
                             <button
                               type="button"
-                              onClick={() => setConfirmingDeleteId(doc.id)}
-                              aria-label={`Delete ${doc.title}`}
-                              className="p-1.5 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer dark:hover:bg-dark-surface/50"
+                              onClick={() => handleDelete(doc.id)}
+                              className="text-xs font-semibold text-white bg-brand-accent hover:bg-opacity-90 transition-colors rounded px-2 py-1 cursor-pointer"
                             >
-                              <Trash2 size={16} />
+                              Confirm
                             </button>
-                          ))}
-                      </div>
-                    </td>
-                  </tr>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmingDeleteId(null)}
+                              className="text-xs font-semibold text-mid-gray dark:text-dark-muted hover:underline cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDeleteId(doc.id)}
+                            aria-label={`Delete ${doc.title}`}
+                            className="p-1.5 rounded text-brand-accent hover:bg-brand-accent-light cursor-pointer dark:hover:bg-dark-surface/50"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        ))}
+                    </div>
+                  </div>
                 )
-              )}
-            </tbody>
-          </table>
-        )}
+              )
+            )}
+          </div>
+        </div>
       </div>
 
       {qrDocument && <QrModal doc={qrDocument} onClose={() => setQrDocumentId(null)} />}
