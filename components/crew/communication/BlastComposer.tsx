@@ -154,8 +154,8 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
   const modeButtonClass = (mode: RecipientMode) =>
     recipientMode === mode
-      ? 'w-full sm:w-auto px-4 py-2 rounded bg-brand-primary text-white text-sm'
-      : 'w-full sm:w-auto px-4 py-2 rounded border border-divider dark:border-dark-border text-dark dark:text-dark-text bg-white dark:bg-dark-surface text-sm'
+      ? 'w-full sm:w-auto bg-brand-primary text-white rounded-md px-3 py-2 text-sm font-medium text-center'
+      : 'w-full sm:w-auto text-gray-600 dark:text-gray-400 rounded-md px-3 py-2 text-sm text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-nav'
 
   function handleSetLink() {
     const previousUrl =
@@ -194,72 +194,72 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-dark dark:text-dark-text">Confirm &amp; Send</h2>
 
-        <div className="bg-white dark:bg-dark-surface rounded-lg p-5 space-y-3">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
-              Subject
-            </span>
-            <p className="text-dark dark:text-dark-text mt-0.5">{subject}</p>
+        <div className="bg-white dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Subject
+              </div>
+              <div className="text-sm text-gray-900 dark:text-white mt-0.5">{subject}</div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Reply-To
+              </div>
+              <div className="text-sm text-gray-900 dark:text-white mt-0.5">{replyTo}</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Recipients
+              </div>
+              <div className="text-sm text-gray-900 dark:text-white mt-0.5">
+                {recipientMode === 'all' && 'All Active Volunteers'}
+                {recipientMode === 'category' && 'By Category'}
+                {recipientMode === 'individual' && 'Individual'}
+                {' — '}
+                <strong>{preview?.recipientCount ?? 0}</strong>
+                {' volunteers'}
+              </div>
+              {preview?.sampleEmails && preview.sampleEmails.length > 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {preview.sampleEmails.join(', ')}
+                  {(preview.recipientCount ?? 0) > 5 ? ' and more...' : ''}
+                </p>
+              )}
+            </div>
           </div>
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
-              Reply-To
-            </span>
-            <p className="text-dark dark:text-dark-text mt-0.5">{replyTo}</p>
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
-              Recipients
-            </span>
-            <p className="text-dark dark:text-dark-text mt-0.5">
-              {recipientMode === 'all' && 'All Active Volunteers'}
-              {recipientMode === 'category' && 'By Category'}
-              {recipientMode === 'individual' && 'Individual'}
-              {' — '}
-              <strong>{preview?.recipientCount ?? 0}</strong>
-              {' volunteers'}
-            </p>
-            {preview?.sampleEmails && preview.sampleEmails.length > 0 && (
-              <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
-                {preview.sampleEmails.join(', ')}
-                {(preview.recipientCount ?? 0) > 5 ? ' and more...' : ''}
-              </p>
-            )}
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted">
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Preview
-            </span>
-            <p className="text-dark dark:text-dark-text mt-0.5 text-sm">
+            </div>
+            <p className="text-sm text-gray-900 dark:text-white mt-0.5">
               {(editor?.getText() ?? '').slice(0, 150)}
               {(editor?.getText() ?? '').length > 150 ? '...' : ''}
             </p>
           </div>
-        </div>
 
-        <div className="border border-brand-accent bg-brand-accent-light rounded-lg p-4">
-          <p className="text-sm text-dark font-semibold">
+          <div className="bg-orange-50 border border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300 rounded-lg px-4 py-3 text-sm">
             ⚠ This will send <strong>{preview?.recipientCount ?? 0}</strong> emails. This action{' '}
             {"can't"} be undone.
-          </p>
+          </div>
         </div>
 
         {actionError && <p className="text-red-500 text-sm">{actionError}</p>}
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-3 justify-end">
           <button
             onClick={() => {
               setStep('compose')
               setActionError(null)
             }}
-            className="px-5 py-2 border border-divider dark:border-dark-border rounded text-sm text-dark dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border"
+            className="border border-neutral-border bg-neutral-surface dark:bg-dark-surface dark:border-dark-border text-gray-700 dark:text-gray-300 rounded-md px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-border"
           >
             ← Back
           </button>
           <button
             onClick={handleSend}
             disabled={sendLoading}
-            className="px-6 py-2 bg-brand-accent text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-brand-primary-mid"
+            className="bg-brand-accent text-white rounded-md px-6 py-2.5 text-sm font-medium disabled:opacity-50 hover:bg-brand-accent-dark"
           >
             {sendLoading ? 'Sending...' : 'Send Email Blast'}
           </button>
@@ -275,7 +275,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       {/* Recipient mode selector */}
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Recipients</label>
-        <div className="flex flex-col sm:flex-row gap-2 mt-2">
+        <div className="bg-neutral-surface dark:bg-dark-nav border border-neutral-border dark:border-dark-border rounded-lg p-1 flex flex-col sm:flex-row gap-1 mt-2">
           <button onClick={() => setRecipientMode('all')} className={modeButtonClass('all')}>
             All Volunteers
           </button>
@@ -377,13 +377,13 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
       {/* Subject */}
       <div>
-        <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Subject</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
         <input
           type="text"
           value={subject}
           maxLength={200}
           onChange={(e) => setSubject(e.target.value)}
-          className="w-full border border-divider dark:border-dark-border rounded px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface"
+          className="w-full border border-neutral-border dark:border-dark-border rounded-md px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-dark-surface"
         />
         <div className="flex justify-between mt-1">
           {errors.subject && <p className="text-red-500 text-xs">{errors.subject}</p>}
@@ -407,14 +407,14 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
       <div>
         <label className="block text-sm font-semibold text-dark dark:text-dark-text mb-1">Message</label>
         {/* Toolbar */}
-        <div className="flex flex-wrap gap-1 p-2 border-b border-divider dark:border-dark-border bg-gray-50 dark:bg-dark-surface rounded-t-md">
+        <div className="bg-neutral-surface dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-t-md px-2 py-1.5 flex items-center gap-0.5 flex-wrap">
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleBold().run()}
-            className={`px-2 py-1 text-xs rounded font-bold ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm font-bold cursor-pointer ${
               editor?.isActive('bold')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             B
@@ -422,10 +422,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleItalic().run()}
-            className={`px-2 py-1 text-xs rounded italic ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm italic cursor-pointer ${
               editor?.isActive('italic')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             I
@@ -433,10 +433,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleUnderline().run()}
-            className={`px-2 py-1 text-xs rounded underline ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm underline cursor-pointer ${
               editor?.isActive('underline')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             U
@@ -444,10 +444,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={`px-2 py-1 text-xs rounded font-bold ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm font-bold cursor-pointer ${
               editor?.isActive('heading', { level: 1 })
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             H1
@@ -455,10 +455,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`px-2 py-1 text-xs rounded font-semibold ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm font-semibold cursor-pointer ${
               editor?.isActive('heading', { level: 2 })
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             H2
@@ -466,7 +466,7 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().setHorizontalRule().run()}
-            className="px-2 py-1 text-xs rounded text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border"
+            className="w-8 h-8 rounded flex items-center justify-center text-sm cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav"
             title="Insert horizontal rule"
           >
             —
@@ -474,10 +474,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleBulletList().run()}
-            className={`px-2 py-1 text-xs rounded ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm cursor-pointer ${
               editor?.isActive('bulletList')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             • List
@@ -485,10 +485,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-            className={`px-2 py-1 text-xs rounded ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm cursor-pointer ${
               editor?.isActive('orderedList')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
           >
             1. List
@@ -496,10 +496,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
           <button
             type="button"
             onClick={handleSetLink}
-            className={`px-2 py-1 text-xs rounded ${
+            className={`w-8 h-8 rounded flex items-center justify-center text-sm cursor-pointer ${
               editor?.isActive('link')
                 ? 'bg-brand-primary text-white'
-                : 'text-dark dark:text-dark-text hover:bg-divider dark:hover:bg-dark-border'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-nav'
             }`}
             title="Insert or edit link"
           >
@@ -511,10 +511,10 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
         <EditorContent
           editor={editor}
           className="min-h-[180px] px-3 py-2 text-sm
-            text-dark dark:text-dark-text
+            text-gray-700 dark:text-gray-300
             bg-white dark:bg-dark-surface
             rounded-b-md border-x border-b
-            border-divider dark:border-dark-border
+            border-neutral-border dark:border-dark-border
             [&_.ProseMirror]:outline-none
             [&_.ProseMirror]:min-h-[160px]
             [&_.ProseMirror_p]:mb-3
@@ -538,13 +538,15 @@ export default function BlastComposer({ defaultReplyTo, categories }: Props) {
 
       {actionError && <p className="text-red-500 text-sm">{actionError}</p>}
 
-      <button
-        onClick={handlePreview}
-        disabled={previewLoading}
-        className="px-6 py-2 bg-brand-primary text-white rounded text-sm font-semibold disabled:opacity-50 hover:bg-brand-primary-mid"
-      >
-        {previewLoading ? 'Loading...' : 'Preview & Send →'}
-      </button>
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={handlePreview}
+          disabled={previewLoading}
+          className="bg-brand-primary text-white rounded-md px-6 py-2.5 text-sm font-medium disabled:opacity-50 hover:bg-brand-primary-dark"
+        >
+          {previewLoading ? 'Loading...' : 'Preview & Send →'}
+        </button>
+      </div>
     </div>
   )
 }
