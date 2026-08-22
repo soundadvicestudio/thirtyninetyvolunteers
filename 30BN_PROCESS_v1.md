@@ -7420,7 +7420,7 @@ SeasonSelector.tsx); 12 other exports preserved.
                        disambiguated in §13; duplicate §10
                        window.location grep check removed.
                        Brief commit: f4403e8.
-                       Process commit: [PROC-HASH].
+                       Process commit: 1e4d637.
 ```
 
 ---

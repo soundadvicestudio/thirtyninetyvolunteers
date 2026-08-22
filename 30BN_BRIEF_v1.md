@@ -7346,6 +7346,12 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      (no per-version tail entries remain;
                      header table is version registry).
                      Orphaned cross-reference line removed.
+30BN-DOC.95        ✓ Brief header line 3 updated (stale
+                     "full narrative version history"
+                     reference replaced with accurate
+                     description of current §13 contents).
+                     Missing DOC.93 entry backfilled in
+                     §11 prompt log. Commit: e83d179.
 30BN-DOC.96        ✓ Brief §13 R27 condensed to Process
                      pointer stub (canonical owner is
                      Process §14). Process reduction pass:
@@ -7354,7 +7360,7 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      R27/R32/R33 correctness fixes, DOC
                      collision disambiguation, duplicate
                      §10 grep check removed. Commits:
-                     Brief [BRIEF-HASH], Process [PROC-HASH].
+                     Brief f4403e8, Process 1e4d637.
 
 ### Phase QRBANNER — QR Code Label Banner ✓ Complete
 
