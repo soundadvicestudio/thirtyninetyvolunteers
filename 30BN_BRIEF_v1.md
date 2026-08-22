@@ -7318,6 +7318,22 @@ SetupPanel.tsx. SETUP_KEYS + initialValues extended to 27.
                      post-ADMIN.50. 1 file. Commit f628541.
 30BN-DOC.87        ✓ Brief v6.2→v6.3 (ADMIN.47–51 + Phase
                      BETA complete — this prompt).
+30BN-ADMIN.52      ✓ SeasonAtAGlance 31-day cap + sort +
+                     AnnouncementWidget visual. Commit 97655be.
+30BN-ADMIN.53      ✓ Notification panel cleanup + Season at a
+                     Glance label fix. Commit a4dc731.
+30BN-ADMIN.54      ✓ Notifications cap removed + TipTap
+                     click-to-focus fix. Commit 32eeebd.
+30BN-ADMIN.55      ✓ Beta Feedback sidebar link hidden from
+                     Super Admin. Commit 52a4ae1.
+30BN-ADMIN.56      ✓ QR banner ribbon redesign + font fix
+                     attempt (Turbopack fail).
+30BN-ADMIN.56-FIX  ✓ QR banner font: public/fonts/ bundled
+                     Inter, process.cwd() pattern. Commit f8a66b4.
+30BN-ADMIN.57      ✓ Maintenance Mode estimated restoration
+                     time field. Migration 044.
+30BN-DOC.88        ✓ Brief v6.3→v6.4 Part A (§1/§8/§9).
+30BN-DOC.89        ✓ Brief v6.4 Part B (§11/§13 — this prompt).
 
 ### Phase QRBANNER — QR Code Label Banner ✓ Complete
 
@@ -8626,6 +8642,234 @@ both removed. 6 card conditions simplified to
 `admin.role === 'super_admin'` (Style Sandbox) all remain
 meaningful and unchanged. 1 file. Commit f628541.
 
+---
+
+**ADMIN.52 ✓** — Season at a Glance refinements + Announcement
+Widget visual upgrade.
+
+`SeasonAtAGlance.tsx`: 31-day preview cap applied (only shows
+whose earliest `show_date` is within 31 days displayed);
+chronological sort by earliest show date ascending (replaces
+alphabetical `.order('name')` DB sort); "View all shows →" link
+to `/crew/shows` in section header (always visible); empty state
+("No upcoming shows in the next 31 days.") and truncation note
+("Showing N of M shows — View all →") added. Architecture
+finding: `SeasonAtAGlance.tsx` is a self-contained Server
+Component that fetches its own data — no show data crosses the
+`dashboard/page.tsx` → component boundary. The `timezone` prop
+(already resolved in the page) is reused rather than calling
+`getOrgTimezone(supabase)` a second time. Cutoff uses
+`formatCT(addDays(new Date(), 31), 'yyyy-MM-dd', timezone)` —
+the string-comparison pattern (R23 — safer for bare date column
+comparison than raw Date object comparison).
+
+`AnnouncementWidgetClient.tsx`: visual redesign — card now uses
+`bg-orange-50 dark:bg-orange-900/10 border border-orange-200
+dark:border-orange-900/40 border-l-4` with
+`style={{ borderLeftColor: 'var(--brand-accent)' }}`; header
+gains `Megaphone` icon (lucide-react) + "Announcement" label;
+dismiss button uses `X` icon. AnnouncementWidget.tsx Server
+Component wrapper untouched. R35 confirmed safe: `dark-surface`
+is a native `@theme` token, so pairing `bg-orange-50` with
+`dark:bg-orange-900/10` is cascade-correct (both native
+Tailwind).
+
+2 files modified. Commit 97655be.
+
+---
+
+**ADMIN.53 ✓** — Notification panel cleanup + Season at a Glance
+label fix.
+
+`SeasonAtAGlance.tsx`: fallback section header when no season is
+pinned changed from "All Live Shows" to "Upcoming Shows (Next 31
+Days)" — corrects misleading label introduced by ADMIN.52's
+31-day cap (a show list capped at 31 days should not claim to
+show "all" live shows). 1 line changed.
+
+`NotificationPanel.tsx`: Four behavioral changes:
+(1) **Mark-as-read removes item** — optimistic update changed
+from `.map()` (set `read_at`) to `.filter()` (remove item); the
+notification disappears immediately from the panel rather than
+just losing its unread highlight. Server action still fires.
+(2) **Mark-all clears panel** — `setNotifications([])`;
+subsequent empty state shown.
+(3) **Empty state** — when `visibleNotifications.length === 0`,
+a centered "No new notifications" paragraph renders in place of
+the list. "Mark all read" button conditionally rendered only when
+`unreadPersistent > 0` (tautologically false guard removed).
+(4) **`direct_message` filtered** — `visibleNotifications`
+derived constant filters out `direct_message` type at render
+time; both the rendered list and bell badge (`unreadPersistent`)
+computed from `visibleNotifications` only. DB rows unchanged.
+Key architectural finding: `unreadPersistent` was previously a
+server-computed `counts.unreadPersistent` field maintained via
+`setCounts()` calls — the `counts` state was removed entirely;
+`unreadPersistent` is now purely client-derived from
+`visibleNotifications.filter(n => !n.read_at).length`.
+
+2 files modified. Commit a4dc731.
+
+---
+
+**ADMIN.54 ✓** — Remove notifications cap + TipTap click-to-focus
+fix.
+
+`lib/data/notifications.ts`: `.limit(20)` default parameter
+removed from `getUserNotifications()` — all persistent
+notifications now returned without a row cap. `lib/actions/
+notifications.ts`: pass-through `limit?: number` parameter
+removed (was unused after data layer change). `layout.tsx`:
+no change needed — call site already matched the new 2-arg
+signature.
+
+`components/crew/messages/DirectMessageComposer.tsx`:
+Click-to-focus bug root cause: `minHeight` was applied to
+`EditorContent`'s outer wrapper `<div>`, which never reached
+the `.ProseMirror` contenteditable child — clicks in empty
+space below content landed on the wrapper and never focused
+the editor. Fix: added `dm-editor-wrapper` class +
+`cursor-text` + `onClick={() => { if (!disabled) editor?.commands.focus() }}`
+on the wrapper div; inline `style={{ '--dm-min-height': minHeight } as CSSProperties}`
+preserves per-caller configurability (ReplyComposer uses 100px,
+ComposeForm uses 140px). Removed the now-ineffective
+`style={{ minHeight }}` from `<EditorContent>` itself.
+
+`app/globals.css`: Added plain CSS rule outside `@layer
+utilities`:
+`.dm-editor-wrapper .ProseMirror { min-height: var(--dm-min-height, 100px); outline: none; }`
+CSS custom property approach preserves the two existing
+per-caller height values — a hardcoded value would have silently
+broken one of the two composer instances.
+
+4 files modified. Commit 32eeebd.
+
+---
+
+**ADMIN.55 ✓** — Hide Beta Feedback sidebar link from Super Admin.
+
+`components/crew/Sidebar.tsx`: `super_admin` role no longer sees
+the Beta Feedback nav entry in the Settings group. SA reaches
+Beta Feedback via the Settings hub card. Implementation: a
+conditional filter on the resolved hrefs array for the settings
+group — when `groupKey === 'settings' && admin.role ===
+'super_admin'`, `/crew/settings/beta` is filtered from the hrefs
+array after `resolveGroupHrefs()` runs and before `getGroupItems()`
+converts hrefs to rendered items. `resolveGroupHrefs()` self-
+healing behavior is unaffected (filter runs after the merge).
+`showInventorySettings` conditional append unaffected (rendered
+outside the items array, after the main loop). Only the settings
+group key triggers the new branch; all other groups and all
+non-SA roles pass through unchanged.
+
+1 file modified. Commit 52a4ae1.
+
+---
+
+**ADMIN.56 ✓** — QR banner font fix + curled-ribbon redesign.
+
+Root cause (banner text not rendering): `@resvg/resvg-js`
+`Resvg` constructor was called with no font option.
+`loadSystemFonts: true` (the default) silently fails on Vercel's
+minimal serverless Linux runtime — no error thrown, zero glyph
+rendering. Verified empirically: pixel-count test with
+`loadSystemFonts: false` → 0 non-white pixels in banner zone;
+real font supplied → thousands of pixels.
+
+Initial font fix: `resolveBannerFontFile()` using
+`createRequire(import.meta.url).resolve('next/dist/compiled/@vercel/og/Geist-Regular.ttf')`.
+Passed local tests but failed Vercel Turbopack build: Turbopack
+statically analyzes `nodeRequire.resolve()` on a literal string
+argument and attempted to import the `.ttf` as a module →
+"Unknown module type" build error. See ADMIN.56-FIX for the
+correct font resolution approach.
+
+Ribbon redesign (shipped in ADMIN.56, font updated in
+ADMIN.56-FIX): Replaced plain white rect + text banner with a
+7-element curled-edge ribbon SVG: (1) white background rect;
+(2) `#EEF2FF` ribbon body; (3–4) `#B8C4E8` curl-shadow triangles
+at bottom corners; (5–6) `#D4DCF5` curl-face triangles
+overlapping the shadows; (7) centered `#293994` text (semibold,
+Arial). `BANNER_HEIGHT_UNITS → 10`, `BANNER_FONT_SIZE → 2.8`.
+All geometry (ribbonY, ribbonH, curlDepth, ribbonBottom, cx)
+derives from the dynamically-parsed viewBox width N — no
+hardcoded coordinates. `escapeXml()` preserved on bannerText.
+No CSS in SVG — SVG presentation attributes only (required for
+`@resvg/resvg-js` rasterization context).
+
+1 file modified (lib/qr.ts). Commit pushed (see ADMIN.56-FIX
+for the corrected commit).
+
+**ADMIN.56-FIX ✓** — Turbopack font resolution fix.
+
+Removed `createRequire`/`node:module` approach entirely. Inter
+Regular v4.0 (SIL Open Font License, 398KB, TrueType) downloaded
+from `rsms/inter` GitHub release and placed at
+`public/fonts/banner-font.ttf`. Font resolution rewritten to
+`path.join(process.cwd(), 'public', 'fonts', 'banner-font.ttf')`
++ `existsSync()`. `process.cwd()` is a runtime expression —
+Turbopack cannot statically resolve it at build time and never
+attempts to import the font file as a module. Font options
+(`font: { loadSystemFonts: false, fontFiles: [...], defaultFontFamily: 'Inter', sansSerifFamily: 'Inter' }`)
+passed to `Resvg` only when `trimmedBanner` is truthy — no-banner
+path unchanged, no font option passed. `npm run build` succeeded
+locally (Turbopack, 12.9s, 61 routes, clean). Empirical
+verification: 125,144-byte PNG vs 111,068-byte no-font PNG →
+glyphs present. `defaultFontFamily` changed from 'Geist' → 'Inter'
+(cosmetic only — both are clean geometric sans-serifs).
+
+New pattern established: `public/fonts/` as the convention for
+vendored non-Google-Fonts font files; `path.join(process.cwd(),
+'public', ...)` for referencing project assets in server-only
+files to avoid Turbopack static analysis. See §13.
+
+2 files modified (public/fonts/banner-font.ttf new,
+lib/qr.ts updated). Commit f8a66b4.
+
+---
+
+**ADMIN.57 ✓** — Maintenance Mode estimated restoration time field.
+
+`044_maintenance_restoration.sql` (new, repo root): seeds
+`maintenance_estimated_restoration → ''` in `app_settings` via
+`INSERT ... ON CONFLICT DO NOTHING`. Applied via Supabase MCP.
+
+`lib/actions/setup.ts`: `saveMaintenanceMode()` extended with
+4th field `maintenance_estimated_restoration`. The existing
+upsert loop iterates a keys/values structure generically —
+adding the 4th key required only adding it to those arrays, no
+structural change.
+
+`components/crew/settings/SetupPanel.tsx`:
+`MaintenanceModeSection` sub-component gains a fourth field
+("Estimated Restoration Time", text input, `maxLength={150}`,
+placeholder "e.g. Tuesday, August 26 at 6:00 PM", optional
+sub-label explaining it displays on the maintenance page when
+set). New `useState<string>` + `fd.append()` wired in
+`handleSave()`. `SetupPanelInitialValues` type extended with
+`maintenance_estimated_restoration: string`. `SaveStatus` type
+and `'error' in result` narrowing unchanged.
+
+`app/crew/(app)/settings/setup/page.tsx`: SETUP_KEYS extended
+(30 → 31), `maintenance_estimated_restoration` added to
+initialValues mapping via `settingsMap.get(...) || ''` (R18 +
+Map instance patterns). Type already extended in SetupPanel.tsx
+(imported, not locally declared).
+
+`app/crew/maintenance/page.tsx`: fetch extended to include
+`maintenance_estimated_restoration`. Conditional amber box
+rendered below the body paragraph and above the "Return to
+homepage" link when `estimatedRestoration` is non-empty:
+`border-amber-300 bg-amber-50 px-5 py-4 rounded-lg` with
+"Estimated restoration:" label in `font-semibold`. Light mode
+only — zero `dark:` classes added (confirmed via grep).
+
+Task A finding: all four target files matched the governance doc
+spec exactly — no surprises. Migration convention confirmed:
+files live at repo root, not `supabase/migrations/`.
+
+5 files created/modified. Commit pushed.
+
 ### Phase 17 — Launch
 
 **17.1 — Production Environment Audit + Setup Panel Configuration**
@@ -9490,6 +9734,133 @@ state initialized as `initialValues.feature_beta === 'true'`
 section as the 10th toggle (9th FeatureFlags-type flag —
 `announcements_oa_enabled` is not a FeatureFlags field).
 
+**`SeasonAtAGlance.tsx` is a self-contained Server Component
+(ADMIN.52):**
+`SeasonAtAGlance.tsx` fetches its own show data internally via
+`getServerClient()` — no show data is passed from
+`dashboard/page.tsx` as props. The `timezone` prop IS passed
+from the page (already resolved via `getOrgTimezone(supabase)`)
+to avoid a redundant `app_settings` query. Any future edit to
+the dashboard data flow must account for this architecture: the
+component is not dependent on the page's data fetch, but it does
+depend on the `timezone` prop for its date comparison logic.
+`totalShowCount` / `displayedShowCount` are also computed as
+local constants inside the component — no new props were needed
+to support the truncation note.
+
+**`visibleNotifications` filter pattern for NotificationPanel
+(ADMIN.53):**
+When a notification type must be excluded from both the rendered
+list AND the bell badge count, the correct approach is a single
+derived constant:
+```typescript
+const visibleNotifications = notifications.filter(
+  n => n.type !== 'direct_message'
+)
+```
+Drive both the rendered list AND `unreadPersistent` from
+`visibleNotifications`. Do NOT maintain a separate server-computed
+count for this — it will diverge from the client-filtered array
+after any optimistic update (mark-read removes items from local
+state, so the server count becomes stale immediately). The bell
+badge must be `totalEphemeral + unreadPersistent` where
+`unreadPersistent = visibleNotifications.filter(n => !n.read_at).length`.
+Established ADMIN.53.
+
+**TipTap click-to-focus — CSS custom property + wrapper onClick
+(ADMIN.54):**
+When a TipTap editor must fill its container so that clicking
+anywhere in the editor area (including empty space below content)
+focuses the editor, the fix requires TWO things applied together:
+(1) A `min-height` applied to `.ProseMirror` via a wrapper class
+in globals.css — NOT to `<EditorContent>` or its outer `<div>`
+(which never reach the contenteditable element). Use a CSS custom
+property to preserve per-caller configurability:
+```css
+.dm-editor-wrapper .ProseMirror {
+  min-height: var(--dm-min-height, 100px);
+  outline: none;
+}
+```
+Inject the value via inline `style={{ '--dm-min-height': minHeight } as CSSProperties}`.
+(2) `onClick={() => { if (!disabled) editor?.commands.focus() }}`
+on the wrapper div — forwards clicks in empty space to the
+editor. Both parts are required: the CSS ensures the clickable
+area is tall enough, the onClick ensures clicks in that area
+actually focus the editor. The globals.css rule is added as a
+plain rule outside `@layer utilities` — it targets a
+TipTap-rendered element that cannot be addressed via Tailwind
+directly. Established ADMIN.54.
+
+**`public/fonts/` convention for vendored font files (ADMIN.56-FIX):**
+When a server-only file (e.g., `lib/qr.ts`) needs to use a
+font file for SVG rasterization via `@resvg/resvg-js`, bundle
+the font at `public/fonts/[font-name].ttf` in the repo. Reference
+it at runtime via:
+```typescript
+import path from 'path'
+import { existsSync } from 'node:fs'
+
+const fontPath = path.join(process.cwd(), 'public', 'fonts', 'banner-font.ttf')
+const fontFileExists = existsSync(fontPath)
+```
+`process.cwd()` is a runtime expression — Turbopack cannot
+statically resolve it at build time and will NOT attempt to
+import the `.ttf` as a module. Files in `public/` are included
+in Vercel deployments and are readable at runtime via
+`process.cwd()`. Use TTF or OTF format — `@resvg/resvg-js`
+does not support WOFF or WOFF2 (web-compressed formats). Only
+pass font options to `Resvg` when the font is actually needed
+(e.g., only when `trimmedBanner` is truthy) — the no-banner
+path should omit font options entirely. Established ADMIN.56-FIX.
+First instance: `public/fonts/banner-font.ttf` (Inter Regular
+v4.0, SIL Open Font License, 398KB).
+
+**Turbopack `createRequire().resolve()` on literal strings causes
+build failures (ADMIN.56-FIX):**
+`createRequire(import.meta.url).resolve('some/path/file.ttf')`
+with a literal string argument is statically analyzed by
+Turbopack at build time. Turbopack follows the literal path,
+finds the target file, and attempts to import it as a module. If
+the file has no registered module type (e.g., `.ttf`), the build
+fails with "Unknown module type." This class of build failure
+passes `npm run lint` and `npx tsc --noEmit` cleanly — it only
+surfaces as a Vercel deployment failure. The fix: any path that
+must be resolved at RUNTIME rather than build time must use a
+runtime expression (e.g., `process.cwd()`, a variable, template
+literal with a variable) rather than a literal string in
+`require().resolve()` or `import.meta.resolve()`. Established
+ADMIN.56-FIX.
+
+**`@resvg/resvg-js` silent font failure on serverless Linux
+(ADMIN.56):**
+`@resvg/resvg-js` defaults to `font: { loadSystemFonts: true }`.
+On a developer machine, this works silently. On Vercel's minimal
+serverless Linux runtime, there are no system fonts — the flag
+silently succeeds (no error thrown) but discovers zero fonts,
+resulting in zero glyph rendering. SVG text elements render as
+empty space. The failure is invisible at the SVG level (the
+`<text>` element is present) and invisible in the rasterized
+PNG (non-white pixels exist from the decorative shapes around
+the text, but the glyphs produce no pixels). Diagnosis requires
+a pixel-count comparison test. The fix: always supply an
+explicit font file via `font: { loadSystemFonts: false, fontFiles: [fontPath] }`
+when text rendering is required. See `public/fonts/` pattern
+above. Established ADMIN.56/ADMIN.56-FIX.
+
+**Migration files live at the repo root (confirmed ADMIN.57):**
+All migration SQL files in this project are stored at the repo
+root (e.g., `039_maintenance_mode.sql`, `043_beta_feedback.sql`,
+`044_maintenance_restoration.sql`) — NOT under
+`supabase/migrations/` as Supabase's default CLI convention
+suggests. Any prompt that specifies a migration file path of
+`supabase/migrations/[name].sql` is incorrect for this project.
+Always place migration files at the repo root and follow the
+naming convention of existing files (e.g., `044_...sql`).
+Confirmed when ADMIN.57's prompt specified `supabase/migrations/`
+and Claude Code correctly adapted to the actual project
+convention. Established ADMIN.57 F1.
+
 ---
 
 *This document is updated at the completion of each build phase.*
@@ -9753,3 +10124,31 @@ QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — see
 Sandbox, §8 Sidebar + TopBar, §8 Platform Setup, §9
 Migrations 041+042, §11 complete blocks, §13 new
 patterns. DOC.85 + DOC.86 logged.)*
+
+*v6.4 (August 2026 — DOC.88/DOC.89: ADMIN.52–57 complete —
+§1 current phase updated (ADMIN.47–57 all ✓); §8 Dashboard:
+SeasonAtAGlance 31-day cap + chronological sort + "View all
+shows" link + empty/truncation states + "Upcoming Shows (Next
+31 Days)" fallback label (ADMIN.52–53); AnnouncementWidget
+visual redesign (orange card, accent border, Megaphone icon —
+ADMIN.52); §8 Notification System: NotificationPanel mark-read
+removes items, mark-all → empty state, direct_message filtered
+from panel + badge, 20-row cap removed, unreadPersistent
+client-derived from visibleNotifications (ADMIN.53–54); §8
+Platform Setup Section 1: maintenance_estimated_restoration
+4th field added, saveMaintenanceMode() extended, SETUP_KEYS
+30→31; §8 Maintenance Page: estimated restoration fetch +
+amber conditional box; §8 QR Generator: banner font fix
+(Inter bundled at public/fonts/, process.cwd() pattern,
+Turbopack createRequire fix), ribbon redesign (7-element
+curled-edge SVG, BANNER_HEIGHT_UNITS=10, BANNER_FONT_SIZE=2.8)
+(ADMIN.56/56-FIX); §8 Sidebar: Beta Feedback SA exclusion
+(ADMIN.55); §9 Migration 044 status block + next migration
+045; §11 ADMIN.52–57 + ADMIN.56-FIX build summaries + DOC.88
++ DOC.89 prompt log entries; §13 seven new pattern notes
+(SeasonAtAGlance self-contained Server Component,
+visibleNotifications filter pattern, TipTap click-to-focus
+CSS custom property pattern, public/fonts/ convention,
+Turbopack createRequire literal string failure, @resvg/resvg-js
+silent font failure, migration files at repo root);
+DOC.88 + DOC.89 logged)*
