@@ -711,56 +711,96 @@ function NotFoundPageSection({ initialValues }: { initialValues: SetupPanelIniti
 export default function SetupPanel({ initialValues }: { initialValues: SetupPanelInitialValues }) {
   const [logoUrl, setLogoUrl] = useState(initialValues.org_logo_url)
   const [faviconUrl, setFaviconUrl] = useState(initialValues.favicon_url)
+  const [activeTab, setActiveTab] = useState<
+    'identity' | 'communication' | 'platform' | 'announcements'
+  >('identity')
 
   return (
-    <div className="space-y-6">
-      <MaintenanceModeSection initialValues={initialValues} />
-      <OrgIdentitySection initialValues={initialValues} />
-      <BrandColorsSection initialValues={initialValues} />
-
-      <div className={cardClasses}>
-        <div>
-          <h2 className={headingClasses}>Organization Logo</h2>
-          <p className={descriptionClasses}>
-            Your logo appears in email templates and on the public landing page. Upload a file or
-            paste a URL to a publicly hosted image.
-          </p>
-        </div>
-        <BrandImageUploader
-          label="Logo"
-          settingsKey="org_logo_url"
-          storagePath="logo"
-          aspectRatio={undefined}
-          currentValue={logoUrl}
-          onSave={(url) => setLogoUrl(url)}
-        />
+    <div>
+      <div className="border-b border-divider dark:border-dark-border mb-6">
+        <nav className="-mb-px flex gap-6" aria-label="Setup sections">
+          {(
+            [
+              { key: 'identity', label: 'Identity' },
+              { key: 'communication', label: 'Communication' },
+              { key: 'platform', label: 'Platform' },
+              { key: 'announcements', label: 'Announcements' },
+            ] as const
+          ).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === key
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-mid-gray hover:text-dark dark:hover:text-dark-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       </div>
+      <div className="space-y-6">
+        <div className={activeTab === 'identity' ? 'space-y-6' : 'hidden'}>
+          <OrgIdentitySection initialValues={initialValues} />
+          <BrandColorsSection initialValues={initialValues} />
 
-      <div className={cardClasses}>
-        <div>
-          <h2 className={headingClasses}>Browser Favicon</h2>
-          <p className={descriptionClasses}>
-            The small icon that appears in browser tabs and bookmarks. Must be square. Upload a
-            file (PNG, JPG, or WebP — cropped to square automatically) or paste a URL to a square
-            image.
-          </p>
+          <div className={cardClasses}>
+            <div>
+              <h2 className={headingClasses}>Organization Logo</h2>
+              <p className={descriptionClasses}>
+                Your logo appears in email templates and on the public landing page. Upload a file or
+                paste a URL to a publicly hosted image.
+              </p>
+            </div>
+            <BrandImageUploader
+              label="Logo"
+              settingsKey="org_logo_url"
+              storagePath="logo"
+              aspectRatio={undefined}
+              currentValue={logoUrl}
+              onSave={(url) => setLogoUrl(url)}
+            />
+          </div>
+
+          <div className={cardClasses}>
+            <div>
+              <h2 className={headingClasses}>Browser Favicon</h2>
+              <p className={descriptionClasses}>
+                The small icon that appears in browser tabs and bookmarks. Must be square. Upload a
+                file (PNG, JPG, or WebP — cropped to square automatically) or paste a URL to a square
+                image.
+              </p>
+            </div>
+            <BrandImageUploader
+              label="Favicon"
+              settingsKey="favicon_url"
+              storagePath="favicon"
+              aspectRatio={1}
+              currentValue={faviconUrl}
+              onSave={(url) => setFaviconUrl(url)}
+            />
+          </div>
         </div>
-        <BrandImageUploader
-          label="Favicon"
-          settingsKey="favicon_url"
-          storagePath="favicon"
-          aspectRatio={1}
-          currentValue={faviconUrl}
-          onSave={(url) => setFaviconUrl(url)}
-        />
-      </div>
 
-      <EmailConfigSection initialValues={initialValues} />
-      <FeatureFlagsSection initialValues={initialValues} />
-      <InstanceLabelSection initialValues={initialValues} />
-      <NotFoundPageSection initialValues={initialValues} />
-      <NavOrderSection initialValues={initialValues} />
-      <AnnouncementSection />
+        <div className={activeTab === 'communication' ? 'space-y-6' : 'hidden'}>
+          <EmailConfigSection initialValues={initialValues} />
+          <FeatureFlagsSection initialValues={initialValues} />
+        </div>
+
+        <div className={activeTab === 'platform' ? 'space-y-6' : 'hidden'}>
+          <MaintenanceModeSection initialValues={initialValues} />
+          <InstanceLabelSection initialValues={initialValues} />
+          <NotFoundPageSection initialValues={initialValues} />
+          <NavOrderSection initialValues={initialValues} />
+        </div>
+
+        <div className={activeTab === 'announcements' ? 'space-y-6' : 'hidden'}>
+          <AnnouncementSection />
+        </div>
+      </div>
     </div>
   )
 }
