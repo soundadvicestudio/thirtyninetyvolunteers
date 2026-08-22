@@ -9383,6 +9383,38 @@ now'` added for accessibility). CheckInMockup.tsx
 removed and deleted. 3 files modified, 1 deleted.
 Commit: af44b3d.
 
+**UPSTYLE.5-FIX** ✓ — Check-In Dashboard card
+wrapper + accordion token fixes.
+CheckInDashboard.tsx: new inner card wrapper
+(`bg-white dark:bg-dark-surface border
+border-neutral-border dark:border-dark-border
+rounded-lg overflow-hidden p-6 space-y-4`) added
+around show name/location + date selector +
+RosterTable only — auto-refresh bar and Other
+Upcoming Shows section remain outside the card as
+siblings in the bare outer div (outer div wraps
+entire component through its closing tag). Show
+name/location wrapper and date selector wrapper:
+`mb-4` removed (parent `space-y-4` handles
+spacing). Other Upcoming Shows accordion row
+border: `border-divider` → `border-neutral-border`;
+accordion header button: `bg-gray-50` →
+`bg-neutral-surface`. 1 file modified.
+Commit: 1f35e57.
+
+**UPSTYLE.5-FIX2** ✓ — Check-In Dashboard
+centered layout + Option A heading zone. page.tsx
+outer wrapper: `max-w-4xl` → `max-w-4xl mx-auto
+px-4 py-8` (`mx-auto` was missing — content was
+not centered despite max-w-4xl being present).
+Option A heading zone (`pb-4 border-b
+border-neutral-border dark:border-dark-border
+mb-6`) wrapped around h1 + subtitle in page.tsx
+(heading content lives in the Server Component
+shell, not CheckInDashboard.tsx).
+CheckInDashboard.tsx not modified. 1 file
+modified. Commit: c60758d.
+
 ---
 
 ## 12. Open Decisions Log
