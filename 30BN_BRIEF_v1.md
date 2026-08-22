@@ -1,117 +1,20 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.4
-### Created: July 2026 | Last Updated: August 2026 — v5.5 (DOC.73: Phase NOTIFY complete documented — §1 current phase updated; §8 User Management badge note updated, Settings hub Platform Setup row removed, Sidebar section updated, Forums subscription note updated, new Notification System section added; §9 Migration 036 schema block added, next migration pointer updated, consent_form_submissions reviewed_at note added; §11 Phase NOTIFY build summary added, prompt log updated; §13 TOOLTIP_ANCHOR_MAP removal note added)
-### Last Updated: August 2026 — v5.6 (DOC.74: Phase MESSAGES.A–4 documented — §1
-current phase updated; §2 Production role updated (/crew/messages + /crew/users); §8
-Setup Panel Section 6 updated (7 → 8 toggles, feature_messages added, first opt-in-
-default flag); §8 Notification System updated (direct_message 7th type, MessagesIcon,
-messageUnread); §8 new Private Messaging section added (full forward spec + partial
-build summary MESSAGES.A–4); §9 4 new table schema blocks (message_threads,
-thread_replies, thread_reads, thread_reply_attachments); §9 notifications type CHECK
-updated (direct_message added); §9 Migration 037 status block added; §9
-feature_messages seed documented; §9 SETUP key counts updated (21 → 22); §11 Phase
-MESSAGES in-progress section added (MESSAGES.A–4 ✓, MESSAGES.5–8 pending); §11
-prompt log updated; §13 R39 + R40 added; DOC.74 logged)
-### Last Updated: August 2026 — v5.7 (DOC.75: Phase MESSAGES complete —
-§1 current phase updated (MESSAGES complete, Phase 17 next); §5 media
-bucket messages/ path namespaces added; §8 Private Messaging section fully
-updated (thread view attachment reference corrected, context placements
-marked ✓ complete, sanitize-at-write-time sub-section added,
-file attachments sub-section added, prompt structure 9 → 8 prompts with
-MESSAGES.5–7 all ✓, key files updated to MESSAGES.1–7); §11 Phase MESSAGES
-marked ✓ Complete, build summaries for MESSAGES.5–7 added, prompt log
-updated; §11 Phase 17.1 flag count 7 → 8 (feature_messages noted as
-new opt-in); §13 version history v5.7; DOC.75 logged)
-### Last Updated: August 2026 — v5.8 (DOC.76: ADMIN.45/46 + Phase TZ TZ.A–
-TZ.4b documented — §1 current phase updated (Phase TZ in active execution,
-TZ.5a/5b/TZ.6 remaining); §8 Setup Panel Section 1 updated (org_timezone
-select field added, SETUP_KEYS 23→24); §8 QuickStats/Audit Log/Check-In
-CT references updated; §8 ShowDetail defaultHours display added (ADMIN.46);
-§8 Private Messaging onEmptyChange/isComposerEmpty pattern added (ADMIN.46);
-§9 org_timezone key + Migration 038 added; §11 Phase TZ section added
-(TZ.A–TZ.4b ✓, TZ.5a/5b/TZ.6 remaining); §11 ADMIN.45 + ADMIN.46 logged;
-§13 resolveLayoutSettings rename + getOrgTimezone pattern + TZ phase notes
-added; version history v5.8)
-### Last Updated: August 2026 — v5.9 (DOC.78: Phase TZ complete —
-§1 version + current phase (Phase TZ ✓ Complete, Phase 17 next);
-§8 Public Calendar org-timezone-safe default language; §8 Calendar key
-files getAvailableWindows() + computeEventPosition() timezone params noted;
-§9 Migration 038 marked applied, next migration 039; §11 Phase TZ ✓
-Complete (TZ.5a-AUDIT + TZ.5a + TZ.5b build summaries); §11 prompt log
-through DOC.78; §13 useNowPosition() hook + module-level helper + TZ.5b
-split-state + sibling-helper asymmetry patterns; version history v5.9)
-### Last Updated: August 2026 — v6.0 (DOC.80: Phase MM
-complete + Beta phases planned — §1 version + current
-phase updated; §7 proxy.ts maintenance gate documented;
-§8 Platform Setup updated (9 sections, Maintenance Mode
-section added, SETUP_KEYS 24→27, action count updated);
-§8 /crew/maintenance page new section; §8 Dashboard
-planned ANNOUNCE widget noted; §8 Show Management planned
-delete noted; §8 QR Generator planned banner + analytics
-noted; §8 Style Sandbox planned mockups noted; §8 Forums
-discoverability note added; §9 Migration 039 documented,
-next migration 040, new app_settings keys added; §11 Phase
-MM complete + Beta phases planned; §13 new patterns +
-v6.0 version history)
-### Last Updated: August 2026 — v6.1 (DOC.83: Beta
-phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/
-SHOWARCHIVE complete — §1 version + current phase; §7
-revalidatePath-during-render rule; §8 Dashboard ANNOUNCE
-complete; §8 Forums FORUMS-FIX + FORUMS-UX complete; §8
-Show Management SHOWDELETE + SHOWARCHIVE + ShowForm fix;
-§8 Platform Setup SETUP_KEYS 27→28, saveAnnouncement,
-9th feature flag toggle; §8 Settings hub Dashboard
-Announcements card; §9 Migration 040, admin_users
-announcement_dismissed_at, 4 new app_settings keys,
-next migration 041)
-### Last Updated: August 2026 — v6.2 (DOC.85/DOC.86:
-Beta phases QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER
-complete — §1 current phase updated (all Beta phases ✓,
-Phase 17 Launch next); §3 @resvg/resvg-js + next.config.ts
-+ types/sidebar.ts; §7 /go/ public route; §8 QR Generator
-QRBANNER+QRANALYTICS complete; §8 Style Sandbox mockups
-16+17 complete; §8 Sidebar grouped nav + TopBar redesign;
-§8 Platform Setup SETUP_KEYS 28→29 + saveSidebarNavOrder
-+ NavOrderSection; §9 Migrations 041+042, qr_codes schema
-extended, qr_scan_events table, sidebar_nav_order key,
-next migration 043; §11 QRBANNER/QRANALYTICS/SIDEBAR/
-NAVORDER complete blocks + prompt log; §13 new patterns)
-### Last Updated: August 2026 — v6.3 (DOC.87: ADMIN.47–51 + Phase BETA
-complete — §1 current phase updated; §2 Editor/Viewer terminology updated;
-§7 Editor/Viewer roles updated (Settings access tightened); §7 proxy.ts
-new guards documented; §8 Audit Log access updated (SA/OA only); §8
-Settings hub table rewritten (hide-not-lock rule, Beta Feedback card added,
-15 cards total); §8 Sidebar updated (resolveGroupHrefs, showInventorySettings
-prop, Inventory Management conditional link, dual-highlight fix, Beta Feedback
-in Settings group); §8 Platform Setup updated (SETUP_KEYS 29→30,
-feature_beta, 9th toggle); §8 new Beta Feedback section added; §9 Migration
-043 + beta_feedback schema block + next migration updated to 044; §11
-ADMIN.47–51 + BETA.A + BETA.1 build summaries + prompt log; §13 hide-not-lock
-rule, resolveGroupHrefs pattern, Settings access rule, Inventory Management
-sidebar pattern, feature_beta opt-in pattern; DOC.87 logged)
-### Last Updated: August 2026 — v6.4 (DOC.88: ADMIN.52–57
-complete — §1 current phase updated; §8 Dashboard
-SeasonAtAGlance + AnnouncementWidget updated; §8 Notification
-System NotificationPanel updated; §8 Platform Setup Section 1
-extended (SETUP_KEYS 30→31); §8 Maintenance Page restoration
-field; §8 QR Generator font fix + ribbon redesign; §8 Sidebar
-Beta Feedback SA exclusion; §9 Migration 044 status block;
-§11 ADMIN.52–57 build summaries; §13 new patterns; DOC.88 logged)
-### Last Updated: August 2026 — v6.5 (DOC.90/DOC.91: ADMIN.58–60
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.5
+*Created: July 2026. Full narrative version history (v1 through v6.5) is recorded at the end of this document under §13.*
 
-complete — §1 current phase updated; §8 Dashboard: Quick Stats
-31-day tile updates (labels + queries), SeasonAtAGlance full
-overhaul (season selector removed, pure 31-day rolling, auditions
-added, self-contained, dashboard/page.tsx simplified);
-§8 Show Management: deleteShow() single-guard + cascade
-(ADMIN.58), updateShowStatus() archive side-effect (cancel
-future calendar events + revalidations), ShowList.tsx archived
-filter + Opportunities link removed; §8 Sidebar: Beta Feedback
-renamed to Beta Testing (all label locations), NavOrderSection
-self-healing merge fix, TopBar icon sizing standardized;
-§9 Migration 045 status block + app_settings dashboard_season_id
-orphaned note; §11 ADMIN.58/59/60 build summaries + prompt log;
-§13 five new pattern notes; DOC.90 + DOC.91 logged)
+| Version | Date | Summary |
+|---|---|---|
+| v6.5 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, dashboard 31-day overhaul (SeasonAtAGlance + QuickStats), Beta Testing rename, NavOrderSection self-heal (DOC.90/91) |
+| v6.4 | Aug 2026 | ADMIN.52–57 complete — Dashboard/Notification Panel refinements, QR Generator font fix + ribbon redesign, Maintenance Page restoration field (DOC.88) |
+| v6.3 | Aug 2026 | ADMIN.47–51 + Phase BETA complete — hide-not-lock Settings hub rule, Settings access tightened, Beta Feedback shipped (DOC.87) |
+| v6.2 | Aug 2026 | Beta phases QRBANNER/QRANALYTICS/SIDEBAR/NAVORDER complete — Beta Build fully shipped (DOC.85/86) |
+| v6.1 | Aug 2026 | Beta phases FORUMS-FIX/FORUMS-UX/ANNOUNCE/SHOWDELETE/SHOWARCHIVE complete (DOC.83) |
+| v6.0 | Aug 2026 | Phase MM (Maintenance Mode) complete + remaining Beta phases planned (DOC.80) |
+| v5.9 | Aug 2026 | Phase TZ (configurable org timezone) complete — full sweep finished (DOC.78) |
+| v5.8 | Aug 2026 | ADMIN.45/46 + Phase TZ foundation (TZ.A–TZ.4b) documented (DOC.76) |
+| v5.7 | Aug 2026 | Phase MESSAGES complete — MESSAGES.5–7 shipped (DOC.75) |
+| v5.6 | Aug 2026 | Phase MESSAGES.A–4 documented (in progress) — Private Messaging section added (DOC.74) |
+| v5.5 | Aug 2026 | Phase NOTIFY complete — Notification System section added (DOC.73) |
 
 ---
 
@@ -161,8 +64,8 @@ OpenCall OS: This platform is the master reference implementation for OpenCall O
 | **Volunteer Call Board** | Volunteer self-service portal display label. Route: `/callboard` |
 | **Call** | A single volunteer appearance at a show or event. Never "shift." |
 | **Super Admin** | Highest role. Full control including user management. |
-| **Editor** | Theater exec or volunteer manager. Full read/write operational access. Cannot access the Settings hub, any Settings sub-page, or the Audit Log — all SA/OA only (tightened ADMIN.50). Editors with `inventory_manager = true` get a direct Inventory Management sidebar link to `/crew/settings/inventory` instead of a Settings hub card. |
-| **Viewer** | Coordinator-level. Read-only access. No email sending, no editing. Cannot access the Settings hub or any Settings sub-page — SA/OA only. |
+| **Editor** | Theater exec or volunteer manager. Full read/write operational access. Settings hub, Settings sub-pages, Audit Log, and Inventory Management sidebar link: see §7. |
+| **Viewer** | Coordinator-level. Read-only access. No email sending, no editing. Settings hub and Settings sub-pages access: see §7. |
 | **Live** | Show status: visible to the public, open for slot claims. |
 | **Season** | A grouped set of shows for a given year (e.g., 2025–26 Season). |
 | **The Roster** | NOT USED. The volunteer database section is labeled **Volunteers**. |
@@ -364,7 +267,7 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 | Owner Admin | All `/crew/*` EXCEPT `/crew/settings/setup` | Yes | Yes | Full operational access identical to Super Admin in all areas except the Setup Panel. Can create and manage Editor, Viewer, Production, and Owner Admin accounts. Can deactivate other Owner Admin accounts. Cannot create Super Admin accounts or deactivate Super Admin accounts. Can edit and delete volunteer notes (ADMIN.33 — RLS updated Migration 028). Email blast composer: yes. Calendar direct-write: yes if `calendar_editor = true`. Introduced for OpenCall OS client deployments. Built SETUP.0. Permissions expanded ADMIN.33. |
 | Editor | All `/crew/*` except the Settings hub (`/crew/settings`), Settings sub-pages, and the Audit Log (`/crew/settings/audit-log`) | Yes | Yes | Full operational access. Cannot access the Settings hub, any Settings sub-page, or the Audit Log — all SA/OA only (tightened ADMIN.50). Editors with `inventory_manager = true` get a direct Inventory Management sidebar link to `/crew/settings/inventory` instead of a Settings hub card. Bulk email from show detail built in ADMIN.23. Full blast system built Phase 13. Calendar: by default submits events for approval; if `calendar_editor = true`, gets direct write access (events approved immediately). |
 | Viewer | All `/crew/*` except the Settings hub (`/crew/settings`) and any Settings sub-page | No | No | Read-only. No edit controls rendered. Cannot access the Settings hub or any Settings sub-page — all SA/OA only (tightened ADMIN.50). |
-| Production | `/crew/calendar`, `/crew/media`, `/crew/help`, `/crew/rehearsals` (assigned only), `/crew/auditions` (assigned only), `/crew/forums` (granted forums only) | Calendar submission only | No | Directors and Stage Managers. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Full read/write on assigned rehearsal schedules (Phase 21) and assigned auditions and shows (Phase AUDITIONS — AUDITIONS.2a). Assignment is per-resource and independent: show assignment (via show editors) grants access to all auditions linked to that show; direct audition assignment grants access to that audition only. Sidebar shows Calendar, Media Library, Help, Rehearsals, and Auditions. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library confirmed ADMIN.30. Rehearsals added Phase 21. Show + audition access added AUDITIONS.2a. |
+| Production | `/crew/calendar`, `/crew/media`, `/crew/help`, `/crew/rehearsals` (assigned only), `/crew/auditions` (assigned only), `/crew/forums` (granted forums only), `/crew/messages` (Private Messaging — Phase MESSAGES, `feature_messages` flag; full send/receive access when flag is on), `/crew/users` (Crew Directory — Phase MESSAGES, `feature_messages` flag; browsable directory for composing messages to other users when flag is on) | Calendar submission only | No | Directors and Stage Managers. Can submit events/rehearsal schedules for Super Admin approval. Cannot access volunteer database, shows, settings, or any other Production Crew section. Full read/write on assigned rehearsal schedules (Phase 21) and assigned auditions and shows (Phase AUDITIONS — AUDITIONS.2a). Assignment is per-resource and independent: show assignment (via show editors) grants access to all auditions linked to that show; direct audition assignment grants access to that audition only. Sidebar shows Calendar, Media Library, Help, Rehearsals, Auditions, and (when `feature_messages` is on) Messages and Crew Directory. Redirected to `/crew/calendar` on login. Built CAL.2. Help page access added HELP.2a. Media Library confirmed ADMIN.30. Rehearsals added Phase 21. Show + audition access added AUDITIONS.2a. |
 | Volunteer | `/callboard` | Own profile card only | No | Email or phone lookup → immediate cookie session |
 | Public | `/`, `/shows/*`, `/opportunities/*`, `/forms/*`, `/update`, `/checkin/*`, `/consent/*`, `/documents/*`, `/calendar`, `/rehearsal-checkin/[token]`, `/auditions/[id]`, `/audition-checkin/[token]`, `/auditions/upload/[token]`, `/auditions/cancel/[token]` | No | No | No auth required. `/consent/[token]` — under-18 consent form upload page (token-gated). `/documents/[token]` — universal document redirect route (enforces access tier; backend-tier documents redirect to `/crew/login`). `/rehearsal-checkin/[token]` — rehearsal self check-in page (token-gated, no auth required, Production users self-report identity via roster dropdown). `/auditions/[id]` — public audition signup page (open call and timed-slot modes, role selection, material uploads, is_minor/guardian fields, consent trigger for under-18). `/audition-checkin/[token]` — audition self check-in page (token-gated, no auth required, roster dropdown identity — same pattern as rehearsal check-in). `/auditions/upload/[token]` — late material upload page; upload_token from signup confirmation email; P-DC pattern. `/auditions/cancel/[token]` — audition signup cancellation page; cancel_token from confirmation email; sets status = 'withdrawn'. |
 
@@ -386,6 +289,14 @@ Added to the `@theme` block in `app/globals.css` as static hex values. Tailwind 
 **Phase INVENTORY proxy.ts additions (INVENTORY.1):** Two changes made to `proxy.ts` in INVENTORY.1: (1) `needsFlagCheck` extended to cover `/crew/inventory` — one condition appended to the existing chain. No matcher change needed (`/crew/:path*` already covers `/crew/inventory`). (2) Crew-route flag block for `/crew/inventory` added after the auditions block — redirects to `/crew/dashboard` when `flags.inventory` is false. No Production-role restriction exception added — Production has no inventory access (no proxy exception, no sidebar entry for Production).
 
 **Phase FORUMS proxy.ts additions (FORUMS.1):** Three changes were made to `proxy.ts` in FORUMS.1: (1) `needsFlagCheck` extended to cover `/crew/forums` — one condition appended after the inventory condition. No matcher change needed (`/crew/:path*` already covers `/crew/forums`). No public flag block needed — Forums has no public-facing routes (unlike Auditions which has `/auditions/:path*`). (2) Production-role restriction exception: `!pathname.startsWith('/crew/forums')` added to the Production allowlist alongside calendar, media, help, rehearsals, and auditions. Production users have forum access; per-forum filtering happens at the data layer (access grants). (3) Crew-route flag block for `/crew/forums` added after the inventory block — redirects to `/crew/dashboard` when `flags.forums` is false.
+
+**Phase MESSAGES (MESSAGES.3):** Two new `needsFlagCheck`
+entries (`/crew/messages`, `/crew/users`) and two
+corresponding crew flag-block guards added. No matcher
+change — `/crew/:path*` already covers both routes.
+`proxy.ts` also received `+messagesEnabled` prop
+threading through layout to Sidebar and TopBar (see §8
+Private Messaging and §11 MESSAGES.3).
 
 **Phase MM proxy.ts additions (MM.1):** One new block added to `proxy.ts` — the maintenance mode gate. It fires before all other checks (before `needsFlagCheck`, before flag fetches, before role-based route guards). Logic: if `pathname.startsWith('/crew/')` AND pathname is not `/crew/login` AND pathname does not start with `/crew/maintenance`, fetch `maintenance_mode` from `app_settings` via `getAdminClient()`. If value is `'true'`: query `admin_users` for the current user's role. If role is `super_admin`, pass through transparently. If role is any other role, redirect to `/crew/maintenance`. If no Supabase Auth session exists, redirect to `/crew/login` (standard auth flow handles this). No matcher change needed — `/crew/:path*` already covers all crew routes. No feature flag — Maintenance Mode is an operational control, not a feature. Documented as MM.1 build, commit 4196623.
 
@@ -1724,13 +1635,8 @@ Default view: active items only (toggle to show inactive). Filters: Category, Av
 **Deactivation and deletion:**
 Deactivating an item (retiring it) removes it from the default list view. Items with unreturned checkouts cannot be deactivated until those are returned (action returns an error). When deactivating, system prompts: keep as inactive record OR delete permanently. Permanent delete cascades via FK (photos, notes, checkout items, checkout history all deleted). Hard delete is exposed only after deactivation.
 
-**Prompt structure (6 prompts — all complete):**
-- INVENTORY.A ✓ — Read-only audit (no code).
-- INVENTORY.1 ✓ — Migration 034 + flag infrastructure + sidebar + user management toggle.
-- INVENTORY.2 ✓ — Settings page + item list page + creation modal + `lib/actions/inventory-settings.ts` + `lib/actions/inventory.ts`.
-- INVENTORY.3 ✓ — Item detail page + photo gallery (6th sanctioned XHR file) + private notes + deactivation flow.
-- INVENTORY.4 ✓ — Checkout system + `lib/actions/inventory-checkouts.ts`.
-- INVENTORY.5 ✓ — QR display + PDF tag export + HelpContent full section.
+*Prompt structure (6 build prompts, all ✓ complete): see
+§11 Phase INVENTORY.*
 
 **Key files (Phase INVENTORY — complete):**
 - `types/inventory.ts` — InventoryCategory, InventoryLocation, InventoryItem, InventoryItemWithStatus, InventoryPhoto, InventoryNote, InventoryCheckout, CheckoutItem, CreateCheckoutData types
@@ -1815,13 +1721,8 @@ Users manually subscribe to threads (no auto-subscribe on post). When subscribed
 
 **Soft deletes:** `forum_posts.is_deleted = true` hides the body (shows "[Post deleted]") but preserves the row. Thread reply counts remain accurate. Only moderators, SA, and OA can delete posts (own posts can also be deleted by the author — sets is_deleted).
 
-**Prompt structure (6 prompts — all complete):**
-- FORUMS.A ✓ — Read-only audit (no code): audit `lib/feature-flags.ts`, `proxy.ts` (matcher + Production exception needed — Production has forums access), `Sidebar.tsx` (5-part atomic edit, Production allowlist entry required), `lib/actions/setup.ts`, `setup/page.tsx`, `HelpContent.tsx` live section order. Also audit existing TipTap extension list in `BlastComposer.tsx` and `AuditionDetailTabs.tsx` to confirm installed extensions.
-- FORUMS.1 ✓ — Migration 035 (12 forum tables) + 5-file flag pattern (`feature_forums`) + proxy.ts (Production exception + flag block, no matcher change, no public block) + Sidebar 5-part atomic edit (MessageSquare icon + NAV_ITEMS + FLAG_GATED_HREFS + Production allowlist + TOOLTIP_ANCHOR_MAP) + User Groups settings page `/crew/settings/groups` (SA/OA only: create/rename/delete groups, add/remove members with name search) + Settings hub Groups card. `lib/actions/forum-groups.ts`. Commit dde841d.
-- FORUMS.2 ✓ — Forum management interface `/crew/forums/manage` (SA/OA only): category CRUD (add/rename/reorder/delete), forum CRUD within categories (add/rename/describe/reorder/archive), per-forum access grants UI (all three grant types), per-forum moderator assignment, per-forum thread prefix management. `lib/actions/forum-admin.ts`. 19 new AuditAction types. Commit c1c7328.
-- FORUMS.3 ✓ — Forum index `/crew/forums` (filtered by access at query time using TypeScript-join pattern for three-way OR across role/group/individual grants, unread indicators, per-forum last-post info) + thread list page `/crew/forums/[forumId]` (pinned first, then by last activity, unread per thread, mark-all-read action) + read tracking (batch upsert to `forum_post_reads` on thread open). `lib/actions/forums.ts` + `lib/data/forums.ts`. No 'use server' in `lib/data/forums.ts` (data module, not action file). Commit 5c95810.
-- FORUMS.4 ✓ — Thread view `/crew/forums/[forumId]/[threadId]` (posts chronological, rendered HTML, subscribe/unsubscribe toggle, mark-read on view) + post composer (TipTap `immediatelyRender: false`, 11-button full toolbar, file attachments via P-DC XHR). `lib/actions/forum-posts.ts`. `ForumPostComposer.tsx` is the 7th sanctioned XHR file. `FORUM_POST_SANITIZE_OPTIONS` exported constant from `forum-posts.ts` for reuse. Dual-client pattern: getServerClient() for DB, getAdminClient() for all storage (3 storage calls). Commit b21b3a4.
-- FORUMS.5 ✓ — Thread creation modal (prefix selector, title, opening post — no file attachments on thread creation) + moderation actions (lock/unlock, pin/unpin, move thread — move is SA/OA only) + post editing (inline TipTap editor, async setContent() pattern, shared editor instance) + soft delete + subscription email notification (`sendForumNotificationEmail()` in `lib/email.ts` — uses `sendBatchEmails()` per R8, `resolveEmailSettings()`, `escapeHtml()` on user strings, `logEmailSent()` after send, `sentBy: null`). `lib/actions/forum-moderation.ts`. Dead `forumId` prop removed from `ForumPostComposer.tsx`. Commit e41f66f.
+*Prompt structure (6 build prompts, all ✓ complete): see
+§11 Phase FORUMS.*
 
 **Key files (Phase FORUMS — complete):**
 - `lib/actions/forum-groups.ts` — user group CRUD + membership management (SA/OA only)
@@ -2011,35 +1912,10 @@ exception confirmed.
 - `lib/actions/consent.ts` — `revalidatePath('/crew', 'layout')`
   added to `confirmConsentSubmission()`
 
-**Prompt structure (6 prompts — all complete):**
-- NOTIFY.A ✓ — Read-only audit (no code). Key findings:
-  `reviewed_at` already present on `consent_form_submissions`;
-  TopBar is 'use client'; TOOLTIP_ANCHOR_MAP at lines 57–62;
-  HelpTooltip render block at lines 159–170; Platform Setup
-  card in settings/page.tsx lines 237–248; `confirmAudition
-  MaterialUpload()` missing `audition_id`; `approveBatch()`
-  not tracking approved event IDs.
-- NOTIFY.1 ✓ — Migration 036 + sidebar/settings cleanup +
-  `types/notifications.ts`. Commits 26b2add + c7e8000
-  (NOTIFY.1-FIX: HelpTooltip comment).
-- NOTIFY.2 ✓ — Notification infrastructure (lib/utils,
-  lib/data, lib/actions) + layout prop threading + Sidebar
-  forum badge. Commit 6e363d3.
-- NOTIFY.3 ✓ — Write-point wiring across 6 action files.
-  `getForumUnreadCount()` archived-forum filter fixed.
-  `sendForumNotificationEmail()` return type changed.
-  Commit 80c7021.
-- NOTIFY.4 ✓ — NotificationPanel.tsx + TopBar wiring +
-  NOTIFY.3-FIX (early-return path fix in lib/email.ts).
-  React 19.2.4 confirmed (async startTransition native).
-  Commit 7ea1f19.
-- NOTIFY.4-CLEANUP ✓ — Lint baseline restored:
-  TOOLTIP_ANCHOR_MAP const removed from Sidebar.tsx;
-  unused type imports removed from layout.tsx; dynamic
-  pluralization in NotificationPanel.tsx. npm run lint:
-  0 errors, 0 warnings. Commit 5e7656f.
+*Prompt structure (6 build prompts, all ✓ complete): see
+§11 Phase NOTIFY.*
 
-**Private Messaging (`/crew/messages`, Phase MESSAGES — in progress):**
+**Private Messaging (`/crew/messages`, Phase MESSAGES — ✓ Complete):**
 Internal mail system for one-on-one private communication between all admin
 roles. Backend-only — no volunteer access. Gated behind `feature_messages`
 flag (R34 compliant, first opt-in-default flag — seeds as `'false'`).
@@ -2227,46 +2103,8 @@ type (6 fields: `id`, `reply_id`, `file_name`, `file_size`, `content_type`,
 `signed_url`). `ThreadReplyWithDetails` extended with `attachments:
 ThreadReplyAttachmentWithUrl[]`.
 
-**Prompt structure (8 build prompts):**
-Note: Compose page and thread view were combined into MESSAGES.5 (originally
-planned as two prompts — compose only and thread view only). This collapsed
-the numbering from the original 9-prompt plan by one.
-- MESSAGES.A ✓ — Read-only audit (13 tasks: proxy.ts, layout, Sidebar,
-  feature-flags.ts, SetupPanel.tsx, setup/page.tsx, setup.ts, lib/email.ts,
-  notifications CHECK constraint, notifications data files, context placement
-  files). No code.
-- MESSAGES.1 ✓ — Migration 037 (4 new tables, `direct_message` added to
-  notifications CHECK, `feature_messages` seeded 'false'). Commit 8a86d10.
-- MESSAGES.2 ✓ — Types, data layer, server actions, email function. 3 new files,
-  4 modified. `direct_message` added to NotificationType union (self-caught,
-  required for TypeScript). `messageUnread` added to NotificationCounts. Commit 72deeae.
-- MESSAGES.3 ✓ — Feature flag 5-file pattern, proxy.ts guards, MessagesIcon.tsx,
-  Sidebar (two three-part atomic edits: Messages + Directory), layout prop threading.
-  1 new file, 8 modified. Commit 924f6e5.
-- MESSAGES.4 ✓ — User Directory page (`/crew/users`) + Messages Inbox page
-  (`/crew/messages`, three-tab). 2 new Server Component pages. Commit 4dea6cf.
-- MESSAGES.5 ✓ — `/crew/messages/compose` (ComposeForm.tsx with recipient
-  search/select, subject, TipTap body) + `/crew/messages/[threadId]` thread
-  view (ThreadView.tsx: two independent useEffects — mark-read on mount +
-  15s polling; read receipt logic; arbitrary CSS variant selectors for rich
-  text rendering — `@tailwindcss/typography` not installed).
-  Sanitize-at-write-time added (`DM_SANITIZE_OPTIONS`). 5 new files,
-  1 modified. Commit f99d8cc.
-- MESSAGES.6 ✓ — File attachments. `DirectMessageComposer.tsx` (8th
-  sanctioned XHR file; `forwardRef` + `useImperativeHandle`; exposes
-  `getBody/getAttachments/clear/isEmpty` via ref). `app/api/messages/upload/route.ts`
-  (GET handler, P-DC signed upload URL, 10MB guard). `ComposeForm.tsx` and
-  `ReplyComposer.tsx` both refactored off inline TipTap onto composerRef.
-  `types/messages.ts`: `AttachmentInput` + `ThreadReplyAttachmentWithUrl` added.
-  `getThreadData()` extended with signed download URLs. 2 new files, 6 modified.
-  Commit 178698f.
-- MESSAGES.7 ✓ — Context placements (forum posts with `!post.is_deleted` guard,
-  rehearsal RosterTab, audition SettingsTab, show editors SettingsTab via
-  `editor.admin_id`, SA/OA Users page via `!isSelf`). Fixed two pre-existing
-  latent bugs (`adminId` declared but not destructured in `AuditionDetailTabs`
-  and `ShowDetail`). Minor fixes: `feature_messages` in `logAction()` audit diff,
-  year-aware `formatCT` on thread list. 0 new files, 15 modified.
-  Commit b0ed62b. Phase MESSAGES complete.
+*Prompt structure (8 build prompts, all ✓ complete): see
+§11 Phase MESSAGES.*
 
 **Key files (MESSAGES.1–7 — complete):**
 - `types/messages.ts` — 9 types: MessageThread, ThreadReply,
@@ -4939,7 +4777,7 @@ toggle row for this flag. `saveFeatureFlags()` revalidates
 Total active SETUP keys: 19. Setup Panel fetches 20 keys
 total (19 SETUP keys + default_reply_to).
 
-**Migration 033 status:** Applied — `033_audition_schema_fixes.sql` (DB-VERIFY.5, commit 0ed3b5d). Captures the five inline schema fixes applied via Supabase MCP during Phase AUDITIONS that were missing from the committed `032_audition_management.sql` file: (1) `audition_signups.phone SET NOT NULL`; (2) `calendar_events.source_audition_id` column + partial unique index; (3) `calendar_events_source_check` updated to include `'audition'`; (4) `consent_form_submissions.audition_signup_id` column + partial index; (5) `email_log.recipient_type` CHECK updated to include `'audition'`. All five idempotent (IF EXISTS / IF NOT EXISTS guards). Pre- and post-migration verified via 12 queries (7 pre + 5 post).
+**Migration 033 status:** Applied — `033_audition_schema_fixes.sql` (DB-VERIFY.5, commit 0ed3b5d). Captures the five inline schema fixes applied via Supabase MCP during Phase AUDITIONS that were missing from the committed `032_audition_management.sql` file (described in detail under Migration 032 above). All five fixes applied with full idempotency guards (IF EXISTS / IF NOT EXISTS). Verified via 12 pre- and post-migration queries — all passed. A fresh environment seeded from the repo's migration files now produces an identical schema to production.
 
 **Migration 034 status:** Applied — `034_inventory_management.sql` (INVENTORY.1, commit c367288). Added `inventory_manager boolean NOT NULL DEFAULT false` to `admin_users` (DB CHECK: false on production/viewer). Created 8 inventory tables: `inventory_categories`, `inventory_locations`, `inventory_items`, `inventory_item_locations`, `inventory_photos`, `inventory_notes`, `inventory_checkouts`, `inventory_checkout_items`. Seeded `feature_inventory` in `app_settings`. RLS: authenticated SELECT on all tables; write operations gated on `is_super_admin_or_owner_admin()` OR `(is_editor() AND inventory_manager = true)`. Exception: `inventory_notes` — SELECT restricted to SA/OA/Editor only (Viewer excluded — private notes); append-only (no UPDATE/DELETE policy).
 
@@ -9346,7 +9184,7 @@ added to getRehearsalCheckInData() (Q1 — public page needed
 it; moved to shared RehearsalEventSummary base type).
 10 files modified + 2 created.
 
-### Phase INVENTORY — Inventory Management System (pre-launch)
+### Phase INVENTORY — Inventory Management System ✓ Complete
 
 Full forward spec in §8 (Inventory Management section) and §9 (admin_users + app_settings + schema tables). Prompt structure: INVENTORY.A (audit) → INVENTORY.1 (migration + flag + user management toggle + sidebar) → INVENTORY.2 (settings page + item list) → INVENTORY.3 (item detail + photos + notes) → INVENTORY.4 (checkout system) → INVENTORY.5 (QR tags + PDF export + HelpContent). Migration: 034. Feature flag: `feature_inventory`. New `inventory_manager` boolean on `admin_users`. 8 new tables (prompt miscount — Brief §11 said 9, migration created 8): `inventory_categories`, `inventory_locations`, `inventory_items`, `inventory_item_locations`, `inventory_photos`, `inventory_notes`, `inventory_checkouts`, `inventory_checkout_items`. 6th sanctioned XHR file: `InventoryPhotoUploader.tsx`. New route at `/api/inventory/tags` (PDF tag export).
 
