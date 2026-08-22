@@ -1,5 +1,5 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v6.2
+## 30BN_PROCESS_v1.md — v6.3
 ### Created: July 2026 | Last Updated: August 2026 — v5.3 (DOC.73: Phase NOTIFY complete — §7 sidebar atomic edit updated (four-part → three-part; TOOLTIP_ANCHOR_MAP removed) + 5 new NOTIFY patterns; §10 two new grep checks; §11 sidebar checklist item updated + 4 new checklist items; §13 Phase NOTIFY ✓ Complete block + prompt log; §14 three new pattern notes)
 ### Last Updated: August 2026 — v5.4 (DOC.74: Phase MESSAGES.A–4 documented
 — §7 feature flag list updated (7→8 flags, feature_messages first 'false'-
@@ -99,6 +99,17 @@ failure, @resvg/resvg-js silent font failure on Vercel,
 migration files at repo root, Beta Feedback SA sidebar
 exclusion); §11 eight new checklist items; §13 ADMIN.52–57
 build summaries + prompt log; §14 v6.2 version history)
+### Last Updated: August 2026 — v6.3 (DOC.92: ADMIN.58–60
+
+complete — §7 five new patterns (show deletion single-guard +
+cascade, updateShowStatus() archive side-effect, NavOrderSection
+self-healing mirror, TopBar icon sizing convention, orphaned
+component/action deletion pattern); §10 one new grep check
+(show deletion guard audit); §11 one stale checklist item
+replaced (three-guard → single-guard + cascade) + three new
+items (archive side-effect, NavOrderSection coverage, TopBar
+icon sizing); §13 ADMIN.58/59/60 build summaries + prompt log;
+§14 v6.3 version history; DOC.92 logged)
 
 This document governs how every build session is run. It exists alongside the Brief as a required read at the start of every Claude Code session. These rules are not suggestions — they are the standards that keep builds clean, efficient, and error-free.
 
@@ -2591,6 +2602,138 @@ structurally separate from the flag-gate system. For feature-
 flag-gated links, use the established `FLAG_GATED_HREFS`
 mechanism. Established ADMIN.55.
 
+### Show deletion single-guard + cascade design (ADMIN.58)
+`deleteShow()` in `lib/actions/shows.ts` now has ONE guard before the DELETE:
+
+Show must exist and have `status = 'archived'`. Returns error if not.
+
+Guards 2 (active `slot_claims`) and 3 (attendance records) were REMOVED in
+ADMIN.58. Their removal was enabled by Migration 045, which changed both
+`attendance.show_id` and `attendance.show_date_id` FKs from `ON DELETE NO ACTION` to `ON DELETE CASCADE`. Attendance rows now cascade automatically
+when a show is deleted.
+
+Cascade chain on show DELETE:
+- `show_dates` CASCADE from `shows` (already correct pre-ADMIN.58)
+- `volunteer_roles` CASCADE from `show_dates` (already correct)
+- `slot_claims` CASCADE via `volunteer_role_id` and `show_date_id` (already correct)
+- `attendance` CASCADE from both `shows.id` and `show_dates.id` (fixed ADMIN.58)
+- `show_editors` CASCADE (already correct)
+- `calendar_events` via `source_show_date_id` CASCADE (already correct)
+
+Volunteer hours are retained permanently: `volunteer_hours_log.source_id`
+is a bare UUID with no FK — orphaned `source_id`s after attendance deletion
+are acceptable; `volunteers.total_hours` is unaffected.
+
+Best-effort notifications cleanup via `getAdminClient()` (`.delete().like(
+'href', '/crew/shows/${showId}%')`) fires before the DELETE. Non-blocking —
+failure never prevents the delete.
+
+The §11 checklist item previously requiring THREE guards is stale and has
+been replaced. The live rule: one guard (archived status check) + cascade.
+Established ADMIN.58 (Migration 045, commit b075a66).
+
+### updateShowStatus() archive side-effect — calendar cleanup (ADMIN.59)
+When `updateShowStatus(showId, 'archived')` is called, after the status UPDATE
+succeeds, a two-step calendar cleanup fires:
+
+```typescript
+// Step 1: fetch show_date IDs (Supabase .in() cannot nest subqueries)
+const { data: showDates } = await supabase
+  .from('show_dates').select('id').eq('show_id', showId)
+
+// Step 2: cancel future approved calendar events
+if (showDates && showDates.length > 0) {
+  const showDateIds = showDates.map(d => d.id)
+  await supabase
+    .from('calendar_events')
+    .update({ status: 'cancelled' })
+    .in('source_show_date_id', showDateIds)
+    .eq('status', 'approved')
+    .gt('end_time', new Date().toISOString())
+}
+```
+
+This fires for ALL archive paths:
+- Archive quick-action button in `ShowList.tsx` (calls `updateShowStatus()`)
+- Settings tab status dropdown → Save Status (also calls `updateShowStatus()`)
+
+The hard-delete path does NOT need this cleanup — `calendar_events.source_show_date_id`
+CASCADEs from `show_dates`, which CASCADE from `shows`.
+
+`revalidatePath('/calendar')`, `revalidatePath('/crew/calendar')`, and
+`revalidatePath('/crew/calendar/pending')` added to `updateShowStatus()` for
+ALL status changes (not just archive). Established ADMIN.59 (commit a35f771).
+
+### NavOrderSection.tsx parseNavOrder() must mirror resolveGroupHrefs() self-healing (ADMIN.60)
+`resolveGroupHrefs(saved, defaults)` in `Sidebar.tsx` appends any hrefs
+present in `GROUP_HREF_DEFAULTS` but absent from a saved array — this makes
+the rendered sidebar self-healing for new nav additions. `NavOrderSection.tsx`
+had no equivalent logic in `parseNavOrder()` — newly added nav links would
+appear in the rendered sidebar but NOT in the Platform Setup reorder UI when
+an SA had a stale saved order.
+
+Fix (ADMIN.60): `parseNavOrder()` now applies the same merge after parsing
+the saved JSON. For each group key, hrefs present in `DEFAULT_LINK_ORDER[group]`
+but absent from the saved array are appended. Both the sidebar and the reorder
+UI are now self-healing in sync.
+
+Rule: whenever a new nav link is added to `DEFAULT_LINK_ORDER` in
+`types/sidebar.ts`, both surfaces self-heal automatically — no additional
+code change is needed. If this ever breaks (e.g., a future edit to
+`parseNavOrder()` removes the merge), the symptom is new links appearing
+in the sidebar but not in the NavOrder reorder UI for SAs with stale saved
+orders. Established ADMIN.60 (commit 73ef219).
+
+### TopBar primary vs. secondary icon sizing convention (ADMIN.60)
+The TopBar right side uses two distinct icon sizes:
+
+Primary action icons (visible to all users, always rendered):
+- `MessagesIcon.tsx` — Mail icon → `className="w-5 h-5"` (20px)
+- `NotificationPanel.tsx` — Bell icon → `className="w-5 h-5"` (20px)
+- `ThemeToggle.tsx` — Sun/Moon icons → `className="w-5 h-5"` (20px)
+
+Secondary action buttons (contextual admin controls):
+- Change Password — KeyRound → `className="w-4 h-4"` (16px)
+- Sign Out — icon → `className="w-4 h-4"` (16px)
+- Platform Setup — SlidersHorizontal → `className="w-4 h-4"` (16px)
+
+Never use the `size={N}` prop style for any of these icons — use
+`className="w-N h-N"` for consistency. The three primary icons were
+standardized from mixed sizes (`size={20}` for Mail/Bell, `w-4 h-4` for
+ThemeToggle) to uniform `className="w-5 h-5"` in ADMIN.60.
+
+When adding any new icon to the TopBar right side, determine which tier
+it belongs to and apply the corresponding size class. Established ADMIN.60
+(commit 73ef219).
+
+### Orphaned component/action deletion pattern (ADMIN.59/60)
+When a component and its primary server action are made dead by a feature
+change (e.g., `SeasonSelector.tsx` and `setPinnedSeason()` after the Season at
+a Glance overhaul), delete them via this procedure:
+
+1. Grep for all external references before deleting:
+   ```
+   grep -rn "SeasonSelector" app/ components/ lib/ --include="*.tsx" --include="*.ts"
+   grep -rn "setPinnedSeason" app/ components/ lib/ --include="*.tsx" --include="*.ts"
+   ```
+   Only proceed if zero external references exist outside the files being deleted.
+2. Delete the component file:
+   ```
+   rm components/crew/dashboard/SeasonSelector.tsx
+   ```
+3. If the server action is the only export in its file, delete the file.
+   If other exports exist, remove only the orphaned function — do not delete
+   the file. Confirm all imports used exclusively by the deleted function
+   are removed too (only if they are not used by any other function in the file).
+4. Document any orphaned `app_settings` key in §9 of the Brief as orphaned
+   (no code reads or writes it). Do NOT write a migration to delete it —
+   an inert row in `app_settings` is harmless. Optional manual cleanup via
+   Supabase dashboard if desired.
+
+Confirmed instance (ADMIN.59/60): `SeasonSelector.tsx` deleted, `setPinnedSeason()`
+removed from `lib/actions/settings.ts` (12 other exports preserved), `dashboard_season_id`
+key documented as orphaned. Established ADMIN.59/ADMIN.60.
+
 ---
 
 ## 8. Build Report Format
@@ -3242,6 +3385,20 @@ grep -rn "revalidatePath\|revalidateTag" \
 # form action are runtime errors waiting to happen.
 # Exception: imports at the top of the file are fine —
 # only actual call sites in render functions are errors.
+```
+
+```bash
+# Confirm show deletion has only ONE guard — the old three-guard rule
+# was replaced in ADMIN.58 (attendance FKs changed to CASCADE).
+# deleteShow() must NOT contain active slot_claims or attendance checks.
+grep -n "slot_claims\|attendance" lib/actions/shows.ts \
+  | grep -A2 -B2 "deleteShow\|guard\|check\|error"
+# Review hits — inside the deleteShow() function only, confirm:
+# - Guard 1 (archived status check) is present — correct
+# - Guard 2 (slot_claims active check) is ABSENT — correct post-ADMIN.58
+# - Guard 3 (attendance records check) is ABSENT — correct post-ADMIN.58
+# Any slot_claims or attendance check inside deleteShow() is stale
+# and must be removed. (ADMIN.58 — Migration 045 CASCADE fix)
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -3999,14 +4156,16 @@ lib/actions/forum-posts.ts)
   (parent) and is passed down as props. Never move mutation
   state into ShowCard. (SHOWDELETE.A / SHOWARCHIVE.A)
 
-□ Any show deletion server action: must include THREE
-  guards in order before executing DELETE — (1) show exists
-  and `status = 'archived'`, (2) no active slot_claims
-  (`claimed` or `waitlisted` — two-step query via
-  show_dates), (3) no attendance records (`attendance.show_id`
-  — direct NO ACTION FK that throws a Postgres FK violation
-  without this guard). The slot_claims check alone is NOT
-  sufficient. (SHOWDELETE.A F1)
+□ Any show deletion server action: requires only ONE guard
+  before DELETE — show must exist and `status = 'archived'`.
+  Guards 2 (active slot_claims) and 3 (attendance records)
+  were REMOVED in ADMIN.58. Migration 045 changed both
+  `attendance.show_id` and `attendance.show_date_id` FKs
+  to `ON DELETE CASCADE` — attendance rows cascade automatically
+  on show deletion. The former NO ACTION FK violation risk is
+  resolved at the DB level. The three-guard rule is stale —
+  do not reintroduce guards 2 or 3. Confirmed: single guard +
+  cascade is the correct design. (ADMIN.58 — Migration 045)
 
 □ Any new server action added to `lib/actions/shows.ts`:
   use `ShowEditorActionResult` as the return type — NOT
@@ -4015,6 +4174,32 @@ lib/actions/forum-posts.ts)
   Using `ActionResult` will cause a TypeScript error on
   call sites that use `ShowEditorActionResult`. Confirmed
   self-caught during SHOWDELETE.1 Task H (tsc). (SHOWDELETE.1)
+
+□ Any call to `updateShowStatus(showId, 'archived')`: confirm
+  the archive side-effect fires — cancels future approved
+  `calendar_events` linked to that show's dates via two-step
+  query (show_date IDs → `.update` cancelled `.in source_show_date_id`
+  `.gt end_time now()`). Confirm `revalidatePath('/calendar')`,
+  `revalidatePath('/crew/calendar')`, and `revalidatePath('/crew/
+  calendar/pending')` are present in `updateShowStatus()` for
+  ALL status changes. (ADMIN.59 archive side-effect pattern)
+
+□ Any new nav link added to `DEFAULT_LINK_ORDER` in
+  `types/sidebar.ts`: confirm both (1) `resolveGroupHrefs()`
+  in `Sidebar.tsx` and (2) `parseNavOrder()` in
+  `NavOrderSection.tsx` self-heal for the new link. The
+  rendered sidebar and the Platform Setup reorder UI must
+  both surface new links without additional code changes.
+  If `parseNavOrder()` is ever edited, verify it still
+  applies the merge logic. (ADMIN.60 — NavOrderSection
+  self-healing mirror pattern)
+
+□ Any new icon added to the TopBar right-side area: confirm
+  it uses `className="w-5 h-5"` for primary action icons
+  (Mail/Bell/ThemeToggle tier) or `className="w-4 h-4"` for
+  secondary action buttons (Change Password/Sign Out/Platform
+  Setup tier). Never use the `size={N}` prop for TopBar icons.
+  (ADMIN.60 — TopBar icon sizing convention)
 
 □ When adding a new feature flag to `saveFeatureFlags()` in
   `lib/actions/setup.ts`: confirm SIX wiring points — (1)
@@ -7171,6 +7356,95 @@ restoration:" label when non-empty. Zero `dark:` classes added
 
 5 files. Commit pushed.
 
+ADMIN.58 ✓ — Show deletion overhaul.
+
+Migration 045 applied: attendance.show_id FK changed from
+ON DELETE NO ACTION to ON DELETE CASCADE; attendance.show_date_id
+FK changed from ON DELETE NO ACTION to ON DELETE CASCADE. Verified
+via live query: both FKs confirmed confdeltype = 'c' after apply.
+
+deleteShow() in lib/actions/shows.ts rewritten: removed active-
+slot-claims guard and attendance-records guard; kept archived-status
+guard; added best-effort notifications cleanup via getAdminClient()
+(.delete().like('href', '/crew/shows/${showId}%')) before the DELETE
+— non-blocking, failure swallowed.
+
+ShowDetail.tsx SettingsTab AlertDialog confirmation text updated:
+accurately describes cascade deletion (dates, slot claims including
+active commitments, attendance records, calendar events) and states
+that credited volunteer hours are unaffected.
+
+3 files + 1 migration. Commit b075a66.
+
+ADMIN.59 ✓ — Dashboard 31-day overhaul + shows cleanup +
+archive calendar side-effect.
+
+SeasonAtAGlance.tsx: season selector removed entirely; component
+now receives only { timezone: string }; query rewritten to pure
+31-day rolling across ALL live shows regardless of season (includes
+unseasoned shows); auditions added as combined chronological list
+(flag-gated on feature_auditions): published auditions with
+date_start within 31 days, merged via discriminated union
+{ kind: 'show' | 'audition' }, sorted by earliest date; auditions
+render with "Audition" badge + link to /crew/auditions/[id] (no
+staffing dots); header permanently "Upcoming (Next 31 Days)"; empty
+state "Nothing scheduled in the next 31 days."
+
+QuickStats.tsx: "Upcoming Shows This Month" → "Upcoming Shows (31 Days)"
+(calendar-month → 31-day rolling); "Volunteers Needed" → "Volunteers
+Needed (31 Days)" (all live shows → shows with at least one date in
+next 31 days, two-step: qualifying show IDs → sum open slots).
+getVolunteersNeeded() now self-fetches timezone via getOrgTimezone
+(supabase) internally.
+
+ShowList.tsx: season groups and Unseasoned group filter out archived/
+past shows (only live/draft rendered in main groups); Archived Shows
+accordion unchanged; Standing Opportunities link removed from Shows
+page header.
+
+lib/actions/shows.ts — updateShowStatus(): archive side-effect
+added (cancel future approved calendar events via two-step query);
+revalidatePath('/calendar'), /crew/calendar, /crew/calendar/pending
+added for all status changes.
+
+dashboard/page.tsx: seasons fetch and all season-derived variables
+removed; SeasonSelector import removed; Promise.all 5→3 queries.
+
+Task A finding: SeasonAtAGlance.tsx was not truly self-contained
+before ADMIN.59 — it received seasonId, seasonName, selectorSlot
+as props from dashboard/page.tsx. The Brief's ADMIN.52 "self-contained"
+description was aspirationally correct but factually wrong about the
+live implementation. ADMIN.59 makes it accurate.
+
+5 files. Commit a35f771.
+
+ADMIN.60 ✓ — Beta Testing rename + NavOrderSection self-heal +
+TopBar icon sizing + orphan cleanup.
+
+"Beta Feedback" → "Beta Testing" across all 5 label locations
+(6 sub-edits): types/sidebar.ts HREF_LABELS, Sidebar.tsx NAV_ITEMS
+label, SetupPanel.tsx toggle label, settings/page.tsx hub card title,
+and both role-branched headings in settings/beta/page.tsx ("Beta Testing"
+/ "Beta Testing Queue").
+
+NavOrderSection.tsx: parseNavOrder() extended with self-healing merge
+logic identical to resolveGroupHrefs() in Sidebar.tsx — hrefs in
+DEFAULT_LINK_ORDER[group] missing from a saved array are appended after
+parsing. Closes the gap where the rendered sidebar self-healed but the
+Platform Setup reorder UI did not (root cause: stale saved sidebar_nav_order
+row missing /crew/settings/beta).
+
+MessagesIcon.tsx, NotificationPanel.tsx, ThemeToggle.tsx: all three
+primary action icons standardized to className="w-5 h-5". Mail and Bell
+switched from size={20} prop style to className; ThemeToggle bumped
+from className="w-4 h-4" (16px) to className="w-5 h-5" (20px).
+
+SeasonSelector.tsx: deleted (zero external references confirmed by grep).
+lib/actions/settings.ts: setPinnedSeason() removed (only caller was
+SeasonSelector.tsx); 12 other exports preserved.
+
+11 files modified/deleted. Commit 73ef219.
+
   30BN-ADMIN.47      ✓ Carry-forward cleanup — dead adminRole
                         prop removed from InventoryDetailTabs.tsx.
                         2 files. Commit 678d774.
@@ -7222,6 +7496,19 @@ restoration:" label when non-empty. Zero `dark:` classes added
   30BN-DOC.89        ✓ Brief v6.4 Part B (§11/§13).
   30BN-DOC.90        ✓ Process v6.1→v6.2 (ADMIN.52–57 —
                         this prompt).
+  30BN-ADMIN.58      ✓ Migration 045 + deleteShow() single-guard +
+                        cascade + AlertDialog text. 3 files + 1 migration.
+                        Commit b075a66.
+  30BN-ADMIN.59      ✓ SeasonAtAGlance overhaul (31-day, auditions,
+                        season removed) + QuickStats 31-day + ShowList
+                        filter + updateShowStatus() archive side-effect +
+                        dashboard cleanup. 5 files. Commit a35f771.
+  30BN-ADMIN.60      ✓ Beta Testing rename + NavOrderSection self-heal
+                        + TopBar icons + SeasonSelector deleted +
+                        setPinnedSeason() removed. 11 files. Commit 73ef219.
+  30BN-DOC.90        ✓ Brief v6.4→v6.5 Part A (§1/§8/§9).
+  30BN-DOC.91        ✓ Brief v6.5 Part B (§11/§13 — ADMIN.58/59/60).
+  30BN-DOC.92        ✓ Process v6.2→v6.3 (this prompt).
 ```
 
 ---
@@ -8924,3 +9211,23 @@ SetupPanel upsert loop generic pickup, sidebar role exclusion
 filter); §13 ADMIN.52–57 + ADMIN.56-FIX narrative build
 summaries + tabular log entries through DOC.90; §14 v6.2
 history; DOC.90 logged)*
+
+*v6.3 (August 2026 — DOC.92: ADMIN.58–60 complete — §2 header v6.2→v6.3
+
+Last Updated; §7 five new patterns (show deletion single-guard + cascade
+— one guard, attendance FKs CASCADE, volunteer hours retained, notifications
+best-effort cleanup (ADMIN.58); updateShowStatus() archive side-effect —
+two-step calendar event cancel, revalidate /calendar routes for all status
+changes (ADMIN.59); NavOrderSection parseNavOrder() must mirror
+resolveGroupHrefs() self-healing — both sidebar and reorder UI self-heal
+for new nav additions (ADMIN.60); TopBar primary vs secondary icon sizing
+— w-5 h-5 for Mail/Bell/ThemeToggle, w-4 h-4 for secondary buttons, never
+size prop (ADMIN.60); orphaned component/action deletion pattern — grep
+before delete, remove function not file when other exports exist, document
+orphaned app_settings key (ADMIN.59/60)); §10 one new grep check (show
+deletion guard audit — confirm deleteShow() has ONE guard post-ADMIN.58);
+§11 one stale checklist item replaced (three-guard → single-guard + cascade
+(ADMIN.58)) + three new items (updateShowStatus() archive side-effect,
+NavOrderSection self-healing coverage, TopBar icon sizing); §13 ADMIN.58/59/60
+narrative build summaries + ADMIN.58/59/60 + DOC.90/91/92 prompt log entries;
+§14 v6.3 history; DOC.92 logged)*
