@@ -1,6 +1,6 @@
 # 30 By Ninety Theatre — Volunteer Platform
 ## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.5
-*Created: July 2026 | Last session: DOC.95 (Aug 2026).
+*Created: July 2026 | Last session: DOC.99 (Aug 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
@@ -6117,7 +6117,11 @@ Complete. Phase QRANALYTICS ✓ Complete. Phase SIDEBAR
 SIDEBAR.2–6 production rollout, 6 prompts). Phase
 NAVORDER ✓ Complete (NAVORDER.A audit + NAVORDER.1).
 All planned Beta phases complete. Phase 17 (Launch)
-is next.*
+is next. Phase UPSTYLE (Style Upgrade Series) in progress
+— UPSTYLE.1–5 complete (Platform Setup, Media
+Library, Communication, Check-In all restyled to
+Option A; 6 mockups removed from Style Sandbox;
+11 mockups remain).*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -9249,6 +9253,136 @@ Grows from Phase 21 infrastructure. Not yet fully specced. Key planned features:
 - Cast check-in system (QR-based, parallel to Phase 14 volunteer check-in)
 - Production information hub for cast members
 
+### Phase UPSTYLE — Style Upgrade Series
+(In Progress)
+
+*UPSTYLE prompts apply the Option A design patterns from
+the Style Sandbox mockups to the live platform pages and
+remove each mockup from the Sandbox once incorporated.
+Introduced Build Pt 27.*
+
+**UPSTYLE.A** ✓ — Read-only audit of
+SetupPanel.tsx, setup/page.tsx, NavOrderSection
+.tsx, AnnouncementSection.tsx, StyleSandbox.tsx,
+SidebarMockup.tsx, TopNavMockup.tsx. Key findings:
+SetupPanel has no existing tab structure (all
+sections render unconditionally in one scroll);
+NavOrderSection lazy useState initializer requires
+CSS-hide (not conditional mount) to preserve
+reorder state across tab switches; AnnouncementSection
+TipTap useEffect([editor]) has same requirement;
+SidebarMockup and TopNavMockup have zero external
+refs — safe to delete. No code. No commit.
+
+**UPSTYLE.1** ✓ — Platform Setup four-tab layout
++ mockup removal. SetupPanel.tsx: `activeTab`
+state added; four-button tab bar inserted above
+content; eleven section items grouped into four
+CSS-hidden divs (`className={activeTab === 'X' ?
+'space-y-6' : 'hidden'}`). All content always
+mounted — no conditional rendering. Tab groupings:
+Identity (OrgIdentity, BrandColors, Logo, Favicon),
+Communication (EmailConfig, FeatureFlags), Platform
+(MaintenanceMode, InstanceLabel, NotFoundPage,
+NavOrder), Announcements (AnnouncementSection).
+MaintenanceModeSection moved in source order to
+be adjacent to other Platform items (DOM/source-
+order only — no visual or behavioral change).
+StyleSandbox.tsx: SidebarMockup + TopNavMockup
+imports, JSX, and surrounding dividers removed.
+SidebarMockup.tsx + TopNavMockup.tsx deleted.
+2 files modified, 2 deleted. Commit: 8f7d66d.
+
+**UPSTYLE.2** ✓ — Option A three-zone section
+card pattern applied to Platform Setup. All seven
+numbered SetupPanel sub-components, Logo + Favicon
+inline blocks, NavOrderSection (header zone only —
+body + footer zones left untouched), and
+AnnouncementSection restructured from flat `p-6
+space-y-4` card to three-zone layout: shaded
+header, white body, shaded footer. `cardClasses`
+outer wrapper updated to `border border-divider
+dark:border-dark-border rounded-lg overflow-hidden`
+(no bg or padding — both moved to body zone).
+SetupPanelMockup.tsx removed from StyleSandbox.tsx
+and deleted. Mid-build: self-caught missing closing
+`</div>` on 5 body zones; fixed via interim tsc
+check before commit. 4 files modified, 1 deleted.
+Commit: 7643e57.
+
+**UPSTYLE.2-FIX** ✓ — Footer alignment bug fix.
+Footer zone className changed from `flex items-center
+justify-between` to `flex items-center justify-end
+gap-3` across all 7 section footers in SetupPanel
+.tsx and 1 in AnnouncementSection.tsx. Two
+pre-existing `justify-between` uses (ToggleRow
+internal layout + AnnouncementSection role-selector
+row) correctly left untouched. 2 files modified.
+Commit: 714b2c7.
+
+**UPSTYLE.3** ✓ — Media Library two-panel layout
+rebuild. MediaLibrary.tsx rebuilt from single-panel
+(horizontal folder pills + `<table>`) to two-panel
+layout: `w-52` folder sidebar (vertical row
+buttons, active folder uses `bg-brand-primary-light`
+— R35-safe, no `dark:bg-*` pairing) + div-based
+document list panel (no `<table>/<tr>/<td>`
+anywhere — confirmed via grep). New `getBadge(
+entryType, mimeType)` helper: 4 type badge variants
+(PDF/Video/Image/Link) + neutral File fallback.
+`TIER_BADGE_CLASSES` updated: Public (green), Link
+Only (yellow), Backend (gray). DocumentEditForm
+wrapper converted from `<tr><td>` to `<div>`.
+HelpTooltip relocated from table `<th>` to
+document panel toolbar. `Upload File` and `Add Link`
+buttons moved from page header into document panel
+toolbar. `New Folder` button kept in page header.
+MediaLibraryMockup.tsx removed and deleted.
+page.tsx: `max-w-4xl` added to outer wrapper.
+3 files modified, 1 deleted. Commit: 21ec778.
+
+**UPSTYLE.4** ✓ — Communication page restyled.
+BlastComposer.tsx Compose step: recipient mode
+selector converted to pill-group (bg-neutral-surface
+container, sm:w-auto responsive classes preserved);
+TipTap toolbar restyled to `w-8 h-8` icon-button
+treatment (active-state conditional logic untouched);
+Preview button in `flex justify-end` footer.
+Confirm step: summary converted from vertical stack
+to `grid grid-cols-2`; summary card gained border;
+orange warning banner (`bg-orange-50 border-orange-200
+dark:bg-orange-900/20 dark:border-orange-800`) kept
+at bottom-of-card position matching mockup; Send
+button fixed to `bg-brand-accent hover:bg-brand-
+accent-dark` (pre-existing bug: was hovering to
+`bg-brand-primary-mid`); button row `flex justify-end`.
+page.tsx and globals.css left untouched (both already
+satisfied requirements). CommunicationMockup.tsx
+removed and deleted. 2 files modified, 1 deleted.
+Commit: 963ba1d.
+
+**UPSTYLE.5** ✓ — Check-In Dashboard restyled.
+page.tsx: `max-w-4xl` added. CheckInDashboard.tsx:
+StatusBadge all 4 branches updated to rounded-full
+pill badges matching mockup (null/'Awaiting' fallback
+converted from flat text to proper pill). RosterTable
+rebuilt from `<table>/<tr>/<td>` to div-based:
+role-group headers are `bg-neutral-surface` bars with
+role name + derived checked-in count (`entries.filter
+(e => e.attendance?.status === 'showed').length` —
+display-only derived value, no new state); volunteer
+rows are flat name+badge divs (Role column dropped).
+Existing grouped Map-building logic unchanged. Live
+indicator relocated from show-name header row to
+standalone row under show name; gained green
+`animate-pulse` dot + 'Auto-refreshing' text;
+existing RefreshCw icon, isRefreshing spin state,
+and onClick handler unchanged; visible 'Refresh'
+text label dropped (icon-only, `aria-label='Refresh
+now'` added for accessibility). CheckInMockup.tsx
+removed and deleted. 3 files modified, 1 deleted.
+Commit: af44b3d.
+
 ---
 
 ## 12. Open Decisions Log
@@ -10065,6 +10199,61 @@ orphaned by a feature change, delete both:
    by the deleted action is now orphaned and harmless.
    Document as orphaned in §9 rather than writing a migration
    to delete it. Established ADMIN.59/ADMIN.60.
+
+**UPSTYLE prompt series — style upgrade pattern
+(established Build Pt 27):**
+UPSTYLE prompts apply the Option A design from
+a Style Sandbox mockup to the corresponding live
+page, then remove the mockup from the Sandbox.
+Structure: UPSTYLE.X.A = read-only audit (stop
+and report); UPSTYLE.X = implementation + mockup
+removal in one prompt. The audit is embedded as
+Task A of the implementation prompt (not a
+separate prompt), with a mandatory stop after
+Task A before implementation proceeds.
+
+Key pattern established by UPSTYLE series:
+Always use CSS-hide (`className='hidden'`) rather
+than conditional rendering (`&&` or ternary mount)
+when grouping content into tabs or panels that
+contain components with lazy-initialized useState
+or TipTap useEffect([editor]) loading patterns.
+Conditional mounting resets all state on every
+tab switch; CSS-hide keeps all components mounted
+while hiding inactive ones visually.
+
+**Option A three-zone section card pattern
+(implemented UPSTYLE.2):**
+All Platform Setup section cards use this pattern:
+outer: border border-divider dark:border-dark-border
+       rounded-lg overflow-hidden
+header: bg-neutral-surface dark:bg-dark-nav
+        border-b border-neutral-border px-6 py-4
+body:   bg-white dark:bg-dark-surface
+        px-6 py-5 space-y-4
+footer: bg-neutral-surface dark:bg-dark-nav
+        border-t border-neutral-border
+        px-6 py-4 flex items-center justify-end gap-3
+`justify-end` on the footer (not `justify-between`)
+ensures the Save button stays right-aligned when
+SaveFeedback renders null at idle state.
+`overflow-hidden` on the outer wrapper is required
+so the header's bg-neutral-surface does not escape
+the rounded corners. Each sub-component defines
+its own local `cardClasses` constant — these are
+not importable from SetupPanel.tsx (module-private).
+
+**Media Library two-panel layout (UPSTYLE.3):**
+MediaLibrary.tsx is now a two-panel flex layout.
+Left panel: `w-52 flex-shrink-0` folder sidebar
+with full-width row buttons. Active folder:
+`bg-brand-primary-light text-brand-primary
+font-medium` — no `dark:bg-*` pairing (R35-safe).
+Right panel: flex-1 div-based document list (no
+`<table>` — zero `<table>/<tr>/<td>` in the
+file). Type badges via `getBadge(entryType,
+mimeType)` helper. Tier badges via updated
+`TIER_BADGE_CLASSES` map.
 
 ---
 
