@@ -50,7 +50,7 @@ const NAV_ITEMS = [
   { label: 'Check-In', href: '/crew/tools/checkin', icon: ScanLine },
   { label: 'Communication', href: '/crew/communication', icon: Mail },
   { label: 'Media', href: '/crew/media', icon: FolderOpen },
-  { label: 'Beta Feedback', href: '/crew/settings/beta', icon: MessageSquarePlus },
+  { label: 'Beta Testing', href: '/crew/settings/beta', icon: MessageSquarePlus },
   { label: 'Settings', href: '/crew/settings', icon: Settings },
   { label: 'Help', href: '/crew/help', icon: HelpCircle },
 ]

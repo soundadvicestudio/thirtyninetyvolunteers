@@ -54,7 +54,7 @@ export default async function BetaFeedbackPage() {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Beta Feedback</h1>
+          <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Beta Testing</h1>
           <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
             Help improve the platform. Submit feature requests, bug reports, or general feedback.
             All submissions go directly to the platform administrator.
@@ -88,7 +88,7 @@ export default async function BetaFeedbackPage() {
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Beta Feedback Queue</h1>
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">Beta Testing Queue</h1>
         <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
           Submitted items appear here oldest-first. Mark complete to remove from queue (items are
           archived, not deleted).

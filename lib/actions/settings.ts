@@ -33,50 +33,6 @@ async function upsertSetting(
   )
 }
 
-export async function setPinnedSeason(seasonId: string | null): Promise<ActionResult> {
-  const admin = await getAdminUser()
-  if (!admin || !['super_admin', 'owner_admin'].includes(admin.role)) {
-    return { error: 'Unauthorized' }
-  }
-
-  const supabase = await getServerClient()
-
-  const { data: previous } = await supabase
-    .from('app_settings')
-    .select('value')
-    .eq('key', 'dashboard_season_id')
-    .maybeSingle()
-
-  const value = seasonId ?? ''
-
-  const { error } = await supabase.from('app_settings').upsert(
-    {
-      key: 'dashboard_season_id',
-      value,
-      updated_by: admin.id,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'key' }
-  )
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  revalidatePath('/crew/dashboard')
-
-  await logAction(
-    admin.id,
-    'settings.update',
-    'app_settings',
-    'dashboard_season_id',
-    { value: previous?.value ?? null },
-    { value: seasonId }
-  )
-
-  return { success: true }
-}
-
 const bannerSchema = z.object({
   text: z.string().max(MAX_BANNER_TEXT_LENGTH, 'Banner text must be 280 characters or fewer.'),
   active: z.boolean(),

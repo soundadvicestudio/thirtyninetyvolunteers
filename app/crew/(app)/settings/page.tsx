@@ -175,7 +175,7 @@ export default async function SettingsPage() {
         {canAccessAdminSettings && (
           <LinkedCard
             href="/crew/settings/beta"
-            title="Beta Feedback"
+            title="Beta Testing"
             description="View and manage feedback submissions from crew members."
           />
         )}

@@ -111,7 +111,7 @@ export default function NotificationPanel({ notificationCounts, initialNotificat
         aria-label="Notifications"
         className="relative p-1 rounded text-dark hover:bg-gray-100 cursor-pointer dark:text-dark-text dark:hover:bg-dark-surface/50"
       >
-        <Bell size={20} />
+        <Bell className="w-5 h-5" />
         {totalBadge > 0 && (
           <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-brand-primary text-white text-xs font-semibold">
             {totalBadge > 99 ? '99+' : String(totalBadge)}

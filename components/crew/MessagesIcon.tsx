@@ -14,7 +14,7 @@ export default function MessagesIcon({ unreadCount }: { unreadCount: number }) {
           : 'Messages'
       }
     >
-      <Mail size={20} />
+      <Mail className="w-5 h-5" />
       {unreadCount > 0 && (
         <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-primary text-white text-[10px] font-semibold ring-1 ring-white dark:ring-dark-surface">
           {unreadCount > 99 ? '99+' : unreadCount}

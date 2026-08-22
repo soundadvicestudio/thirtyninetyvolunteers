@@ -28,7 +28,7 @@ export const HREF_LABELS: Record<string, string> = {
   '/crew/tools/checkin': 'Check-In',
   '/crew/communication': 'Communication',
   '/crew/media': 'Media',
-  '/crew/settings/beta': 'Beta Feedback',
+  '/crew/settings/beta': 'Beta Testing',
   '/crew/settings/inventory': 'Inventory Management',
   '/crew/settings': 'Settings',
   '/crew/help': 'Help',

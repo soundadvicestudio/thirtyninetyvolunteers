@@ -15,6 +15,23 @@ import type { SetupPanelInitialValues } from '@/components/crew/settings/SetupPa
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+const ALL_GROUP_KEYS: GroupKey[] = ['events', 'people', 'utilities', 'settings']
+
+// Self-healing merge — identical in behavior to resolveGroupHrefs() in
+// Sidebar.tsx. A saved linkOrder[group] array that predates a newly added
+// link (e.g. Beta Testing) would otherwise hide that link from the reorder
+// UI entirely. Any href present in DEFAULT_LINK_ORDER but missing from the
+// saved array is appended to the end.
+function mergeLinkOrder(saved: Partial<Record<GroupKey, string[]>> | undefined): Record<GroupKey, string[]> {
+  const merged = {} as Record<GroupKey, string[]>
+  for (const key of ALL_GROUP_KEYS) {
+    const savedArr = saved?.[key] ?? DEFAULT_LINK_ORDER[key]
+    const missing = DEFAULT_LINK_ORDER[key].filter((href) => !savedArr.includes(href))
+    merged[key] = [...savedArr, ...missing]
+  }
+  return merged
+}
+
 function parseNavOrder(raw: string): SidebarNavOrder {
   try {
     if (!raw) throw new Error('empty')
@@ -27,16 +44,15 @@ function parseNavOrder(raw: string): SidebarNavOrder {
     ) {
       throw new Error('invalid shape')
     }
-    return parsed as SidebarNavOrder
+    const result = parsed as SidebarNavOrder
+    return {
+      groupOrder: result.groupOrder,
+      linkOrder: mergeLinkOrder(result.linkOrder),
+    }
   } catch {
     return {
       groupOrder: [...DEFAULT_GROUP_ORDER],
-      linkOrder: {
-        events: [...DEFAULT_LINK_ORDER.events],
-        people: [...DEFAULT_LINK_ORDER.people],
-        utilities: [...DEFAULT_LINK_ORDER.utilities],
-        settings: [...DEFAULT_LINK_ORDER.settings],
-      },
+      linkOrder: mergeLinkOrder(undefined),
     }
   }
 }
