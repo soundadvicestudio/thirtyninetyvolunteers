@@ -166,7 +166,7 @@ function MaintenanceModeSection({
           </p>
         </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button
           type="button"
@@ -283,7 +283,7 @@ function OrgIdentitySection({ initialValues }: { initialValues: SetupPanelInitia
         </select>
       </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
@@ -350,7 +350,7 @@ function BrandColorsSection({ initialValues }: { initialValues: SetupPanelInitia
         </div>
       </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
@@ -422,7 +422,7 @@ function EmailConfigSection({ initialValues }: { initialValues: SetupPanelInitia
         </Link>
       </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}
@@ -589,7 +589,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
         onToggle={() => setAnnouncementsOaEnabled((v) => !v)}
       />
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={flagSaveStatus} errorMessage={flagErrorMessage} />
         <button
           type="button"
@@ -646,7 +646,7 @@ function InstanceLabelSection({ initialValues }: { initialValues: SetupPanelInit
         />
       </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save Identity Label'}
@@ -710,7 +710,7 @@ function NotFoundPageSection({ initialValues }: { initialValues: SetupPanelIniti
         />
       </div>
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Saving...' : 'Save'}

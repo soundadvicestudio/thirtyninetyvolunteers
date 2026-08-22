@@ -211,7 +211,7 @@ export default function AnnouncementSection() {
       </div>
 
       </div>
-      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-between">
+      <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border px-6 py-4 flex items-center justify-end gap-3">
         <SaveFeedback status={status} errorMessage={errorMessage} />
         <button type="button" onClick={handleSave} disabled={status === 'saving'} className={saveButtonClasses}>
           {status === 'saving' ? 'Publishing...' : 'Publish'}
