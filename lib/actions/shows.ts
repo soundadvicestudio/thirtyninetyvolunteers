@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getServerClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { showSubmitSchema, type ShowSubmitPayload } from '@/lib/validations/show'
@@ -964,39 +965,13 @@ export async function deleteShow(showId: string): Promise<ShowEditorActionResult
     return { error: 'Only archived shows can be deleted.' }
   }
 
-  // Guard 1 — block if active slot claims exist. Two-step query (same
-  // pattern as sendShowBulkEmail() above and updateShow()'s date/role
-  // removal guard) — Supabase JS has no literal IN-subquery. Checks both
-  // 'claimed' and 'waitlisted' (SHOWDELETE.A C4 — matches the exact filter
-  // updateShow() already uses to block removing a date/role with real
-  // volunteer commitments still attached).
-  const { data: showDateRows } = await supabase.from('show_dates').select('id').eq('show_id', showId)
-  const showDateIds = (showDateRows ?? []).map((d) => d.id as string)
-
-  if (showDateIds.length > 0) {
-    const { data: activeClaims } = await supabase
-      .from('slot_claims')
-      .select('id')
-      .in('show_date_id', showDateIds)
-      .in('status', ['claimed', 'waitlisted'])
-      .limit(1)
-
-    if (activeClaims && activeClaims.length > 0) {
-      return {
-        error:
-          'This show has active volunteer commitments and cannot be deleted. Cancel all claims and waitlist entries first.',
-      }
-    }
-  }
-
-  // Guard 2 — block if attendance records exist. attendance.show_id has a
-  // NO ACTION FK (confirmed SHOWDELETE.A Flag F1) — a delete would throw a
-  // raw Postgres FK violation without this guard.
-  const { data: attendanceRows } = await supabase.from('attendance').select('id').eq('show_id', showId).limit(1)
-
-  if (attendanceRows && attendanceRows.length > 0) {
-    return { error: 'This show has attendance records and cannot be deleted.' }
-  }
+  // Best-effort — do not check for error; notifications cleanup
+  // must never block the primary delete operation.
+  const adminSupabase = getAdminClient()
+  await adminSupabase
+    .from('notifications')
+    .delete()
+    .like('href', `/crew/shows/${showId}%`)
 
   // Log before delete — the show row will not exist after the DELETE executes
   await logAction(admin.id, 'show.delete', 'show', showId, { name: show.name, status: show.status }, {})

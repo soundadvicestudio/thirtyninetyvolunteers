@@ -995,7 +995,7 @@ function SettingsTab({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Show?</AlertDialogTitle>
             <AlertDialogDescription>
-              {`This will permanently delete "${show.name}" and all associated dates, slot assignments, and calendar events. This cannot be undone.`}
+              {`This will permanently delete "${show.name}" and all associated dates, volunteer slot claims (including active commitments), attendance records, and calendar events. Volunteer hours already credited to volunteers will not be affected. This cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
