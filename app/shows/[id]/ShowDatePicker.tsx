@@ -64,7 +64,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                         : 'rounded-full border border-brand-primary text-brand-primary text-sm font-semibold px-4 py-3 hover:bg-brand-primary-light transition-colors'
                   }
                 >
-                  {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy', tz)}
+                  {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy · h:mm a', tz)}
+                  {date.end_time && ` – ${formatWallClockCT(date.show_date, date.end_time, 'h:mm a', tz)}`}
                   {full ? ' — Full' : ''}
                 </button>
               )
@@ -76,7 +77,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
       {selectedDate && (
         <div className="space-y-4">
           <h2 className="text-brand-primary font-bold text-lg">
-            Roles for {formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy', tz)}
+            Roles for {formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'EEE, MMM d, yyyy · h:mm a', tz)}
+            {selectedDate.end_time && ` – ${formatWallClockCT(selectedDate.show_date, selectedDate.end_time, 'h:mm a', tz)}`}
           </h2>
 
           {selectedDate.roles.map((role) => {
