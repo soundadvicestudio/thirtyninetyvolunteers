@@ -175,6 +175,8 @@ export async function saveLogoUrl(data: { url: string }): Promise<ActionResult> 
   }
 
   revalidatePath('/')
+  revalidatePath('/', 'layout')
+  revalidatePath('/crew', 'layout')
   revalidatePath('/crew/settings/setup')
 
   await logAction(
@@ -210,6 +212,7 @@ export async function saveFaviconUrl(data: { url: string }): Promise<ActionResul
   }
 
   revalidatePath('/')
+  revalidatePath('/', 'layout')
   revalidatePath('/crew/settings/setup')
 
   await logAction(

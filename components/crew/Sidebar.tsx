@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -265,7 +264,12 @@ export default function Sidebar({
         </button>
 
         <Link href="/crew/dashboard" className="flex items-center justify-center py-3">
-          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} priority />
+          {/* eslint-disable-next-line @next/next/no-img-element -- org_logo_url
+              can be any external URL (Setup Panel URL-paste mode); next/image
+              would require every possible hostname in next.config.ts
+              remotePatterns, which is not viable across OpenCall OS client
+              deployments (ADMIN.65-FIX). */}
+          <img src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={120} height={80} />
         </Link>
 
         <nav className="flex-1 px-2 py-2 overflow-y-auto space-y-0.5">
