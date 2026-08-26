@@ -46,14 +46,18 @@ QRANALYTICS ✓, SIDEBAR ✓, NAVORDER ✓, Phase BETA ✓
 (Beta Feedback System). All planned Beta phases complete.
 Phase 17 (Launch) remains next, deferred pending continued
 pre-launch refinement.
-Post-Beta ADMIN prompts: ADMIN.47–60 ✓ (ADMIN.47–51:
+Post-Beta ADMIN prompts: ADMIN.47–64 ✓ (ADMIN.47–51:
 carry-forward cleanup, Settings access tightening, hide-not-lock
 rule, Inventory Manager sidebar link; ADMIN.52–57: pre-launch
 dashboard refinements, notification panel cleanup, QR banner
 fix + ribbon redesign, maintenance restoration field; ADMIN.58–60:
 show deletion single-guard + cascade, dashboard 31-day rolling
 view + auditions + shows cleanup, Beta Testing rename + NavOrder
-self-heal + TopBar icon sizing).
+self-heal + TopBar icon sizing; ADMIN.61–64: Email outage
+diagnosis + Resend error detection fix; lookup-first slot claim
+gate (three-state ClaimForm); Call Board Upcoming Slots with
+per-slot cancel; editor notification email replaced with in-app
+notification + volunteer cancellation confirmation email added).
 Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
@@ -95,7 +99,7 @@ feature_messages flag; browsable directory for composing messages to other users
 | **File Storage** | Supabase Storage | Active. Private bucket `media` stores all platform media files (consent form submissions, media library files — Phase 15.3 built the library). P-DC pattern (direct browser upload to Supabase Storage via signed upload URL — bypasses Vercel 4.5MB serverless limit). All file types supported: PDF, image, video, audio. Access controlled via signed URLs generated server-side. Viewable files (video, audio, image, PDF) and YouTube/Vimeo links redirect to `/documents/view/[token]` player page (Phase 15.4). |
 | **Styling** | Tailwind CSS v4 | CSS-first. See §4 Critical Constraint. |
 | **UI Components** | shadcn/ui | Accessible, non-technical-friendly. `cssVariables: false` set in `components.json` — required for Tailwind v4 compatibility. All shadcn components must have default semantic color classes (`bg-primary`, `border-input`, `text-foreground`, etc.) replaced with explicit brand Tailwind classes at the time of addition. See R15. |
-| **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. |
+| **Email** | Resend | Domain `30byninetyvolunteers.com` verified in Resend during Alpha. Sending address: `volunteers@30byninetyvolunteers.com`. Free tier: 5 req/s — see R8. ADMIN.61: All `lib/email.ts` send calls now go through private `sendEmail()` and `sendBatch()` wrapper functions that throw on Resend API errors ({error} field). Raw `resend.emails.send()` / `resend.batch.send()` are never called directly in application code — only inside the two wrappers. This makes Resend domain/auth failures immediately visible rather than silently logged as success. |
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
 | **QR Codes (PNG rasterization)** | `@resvg/resvg-js` | SVG-to-PNG rasterization (replaces QRCode.toBuffer() for all QR PNG generation; requires `serverExternalPackages: ["@resvg/resvg-js"]` in next.config.ts — napi-rs native binary pattern). |
 | **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
@@ -411,6 +415,72 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
   - Editor notification: all `show_editors` for the show receive a cancellation email (claimed cancellations only; skipped silently if no editors assigned)
   - 24hr reminder is handled by the Vercel Cron Job — promoted claims are picked up automatically on the next cron run
 
+**Lookup-first claim gate (ADMIN.62):**
+The slot claim page now requires volunteer
+identification before a slot can be claimed.
+`app/shows/[id]/ClaimForm.tsx` implements a
+three-state flow:
+
+- **State 1 — Lookup:** Volunteer enters email
+  and/or phone (at least one required). Calls
+  `lookupVolunteerForClaim(email, phone)` from
+  `lib/actions/claims.ts`. Sequential email-then-
+  phone exact match against `volunteers` table
+  (same established pattern as other identity
+  lookups in this codebase).
+- **State 2a — Found:** Volunteer is in the
+  database. Welcome banner shows their name.
+  Slot summary card shows role name, show name,
+  date, and time. Single 'Claim My Spot' button
+  calls `submitClaim()` with `knownVolunteerId`
+  threaded in, skipping the internal lookup.
+  'Not you?' link returns to State 1.
+- **State 2b — Not found:** Volunteer is not in
+  the database. Minimal inline signup: Full Name
+  (empty), Email (pre-filled from State 1),
+  Phone (pre-filled from State 1). 'Join & Claim
+  My Spot' calls `submitClaimWithLookup()` which
+  atomically creates the volunteer record then
+  submits the claim. Non-blocking update-link
+  email sent to new volunteer after claim so they
+  can complete their full profile.
+
+New actions in `lib/actions/claims.ts`:
+- `lookupVolunteerForClaim(email, phone)` —
+  returns `{ found: true, volunteerId, volunteerName
+  }` or `{ found: false }`. Normalizes phone via
+  `normalizePhone()`. Sequential query (not `.or()`)
+  per established identity-lookup pattern.
+- `submitClaimWithLookup(input)` — handles the
+  not-found path. Race-condition guard (unique
+  constraint 23505 caught and resolved). Sends
+  `sendUpdateLinkEmail()` non-blocking after new
+  volunteer creation.
+- `cancelClaimFromCallboard(claimToken, email)` —
+  thin wrapper around `cancelClaim()` for the Call
+  Board cancel path.
+
+`submitClaim()` extended with optional
+`knownVolunteerId?: string` — when provided, the
+internal volunteer lookup block is skipped entirely.
+This ensures `slot_claims.volunteer_id` is always
+populated — unlinked claims are no longer possible
+via the new flow.
+
+**Slot cancellation confirmation email (ADMIN.64):**
+`sendSlotCancellationEmail()` added to `lib/email.ts`.
+Called directly from `cancelClaim()` (non-blocking
+try/catch) so both cancellation paths receive it:
+Call Board cancel (via `cancelClaimFromCallboard()`)
+and email-link cancel (via `/cancel/[token]` page).
+Fires for both claimed and waitlisted cancellations.
+Email reuses `showDetailsBlockHtml()` for visual
+consistency with the claim-confirmation email.
+Trigger: `slot_cancellation` in `email_log`.
+Show editors no longer receive a cancellation
+notification email — replaced with in-app
+notification (ADMIN.64, see below).
+
 ### Public — Volunteer Call Board (`/callboard`)
 The Call Board is a single-page opportunities hub — the master view of everything a volunteer
 can act on. Opportunities are the hero content and load for everyone. Volunteer identity is
@@ -461,6 +531,36 @@ optional and additive: entering email or phone personalizes the view with a volu
 - Data: `manualHoursEntries` prop (full entries with
   hours, note, logged_date) replaced the prior
   `manualHoursTotal: number` prop.
+- **Upcoming Slots (ADMIN.63):** A new section
+  in `VolunteerCard.tsx` between the preferences
+  section and Call History. Shows all upcoming
+  claimed and waitlisted slot_claims for the
+  authenticated volunteer (show_dates.date >=
+  today). Each row shows role name, show name,
+  formatted date/time, status badge (green
+  'Claimed' or yellow 'Waitlist #N'), and a
+  Cancel button. Cancel flow: idle → confirming
+  ('Cancel this slot?' + 'Yes, cancel' / 'Keep it')
+  → cancelling → cancelled (row removed from list).
+  Per-row state is fully independent. Cancelled rows
+  disappear without a page reload. Empty state when
+  no upcoming slots.
+  - New component: `components/callboard/
+    UpcomingSlots.tsx` (Client Component)
+  - New data function: `getUpcomingClaimsForVolunteer
+    (supabase, volunteerId, volunteerEmail, timezone)`
+    in `lib/data/callboard.ts` — dual query by
+    volunteer_id and volunteer_email (covers both
+    linked and legacy unlinked claims), deduped,
+    filtered to today-forward, sorted by date/time
+    ascending. No 'use server' directive (lib/data/
+    pattern).
+  - Cancel: `cancelClaimFromCallboard(claimToken,
+    volunteerEmail)` in `lib/actions/claims.ts`
+    wraps `cancelClaim()` using the session
+    volunteer's email — no additional verification
+    needed since volunteer is already authenticated
+    via cookie session.
 
 **Session mechanics:**
 - Cookie name: `callboard_session` — stores volunteer id, expires 7 days
@@ -3232,8 +3332,29 @@ so it becomes orphaned but does not error.
 Verified via live query: both FKs confirmed `confdeltype = 'c'`
 (CASCADE) after apply.
 
-**Next migration:** 046 (none currently planned).
-Migration 045 is applied.
+**Migration 046 status:** Applied —
+`046_slot_cancellation_notification_type.sql`
+(ADMIN.64). Extends the `notifications_type_check`
+CHECK constraint on the `notifications` table to
+include the `'slot_cancellation'` value:
+  ALTER TABLE notifications
+    DROP CONSTRAINT notifications_type_check;
+  ALTER TABLE notifications
+    ADD CONSTRAINT notifications_type_check
+    CHECK (type = ANY (ARRAY[
+      'audition_signup', 'audition_material',
+      'calendar_approved', 'calendar_changed',
+      'calendar_cancelled', 'forum_reply',
+      'direct_message', 'slot_cancellation'
+    ]));
+Same technique as Migration 037 (direct_message
+addition). TypeScript NotificationType union in
+types/notifications.ts updated to match.
+NotificationPanel.tsx getTypeIcon() updated with
+XCircle case for 'slot_cancellation'.
+
+**Next migration:** 047 (none currently planned).
+Migration 046 is applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
