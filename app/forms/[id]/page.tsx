@@ -1,24 +1,23 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { getPublicForm } from '@/lib/data/forms'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import PublicForm from './PublicForm'
+import PublicHeader from '@/components/public/PublicHeader'
 
-function PublicHeader({ org }: { org: OrgIdentity }) {
+function BackLink() {
   return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
+    <div className="max-w-2xl mx-auto px-4 pt-3 pb-1">
+      <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+        ← Back to Main Page
+      </Link>
+    </div>
   )
 }
 
-function Unavailable({ org }: { org: OrgIdentity }) {
+function Unavailable() {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-brand-primary font-bold text-xl mb-3">This form is not available.</h1>
@@ -37,10 +36,11 @@ function Unavailable({ org }: { org: OrgIdentity }) {
   )
 }
 
-function Closed({ title, description, org }: { title: string; description: string | null; org: OrgIdentity }) {
+function Closed({ title, description }: { title: string; description: string | null }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-4">{title}</h1>
@@ -62,21 +62,21 @@ function Closed({ title, description, org }: { title: string; description: strin
 export default async function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const form = await getPublicForm(id)
-  const org = await resolveOrgIdentity()
 
   // Never reveal that a draft form exists — same "not available" state as
   // a missing form entirely.
   if (!form || form.status === 'draft') {
-    return <Unavailable org={org} />
+    return <Unavailable />
   }
 
   if (form.status === 'closed') {
-    return <Closed title={form.title} description={form.description} org={org} />
+    return <Closed title={form.title} description={form.description} />
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mb-4">{form.title}</h1>

@@ -1,10 +1,11 @@
-import Image from 'next/image'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveCheckInToken } from '@/lib/actions/checkin'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import CheckInClient from '@/components/checkin/CheckInClient'
+import PublicHeader from '@/components/public/PublicHeader'
 
 export async function generateMetadata() {
   const org = await resolveOrgIdentity()
@@ -14,33 +15,23 @@ export async function generateMetadata() {
   }
 }
 
-// Matches the established public-page header pattern (app/shows/[id]/page.tsx,
-// app/opportunities/[id]/page.tsx) — white header, centered logo, orange accent.
-function PublicHeader({ org }: { org: OrgIdentity }) {
-  return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
-  )
-}
-
 export default async function CheckInPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
 
   const flags = await getFeatureFlags(getAdminClient())
   if (!flags.checkin) redirect('/')
 
-  const org = await resolveOrgIdentity()
-
   const resolution = await resolveCheckInToken(token)
 
   if (resolution.type === 'invalid') {
     return (
       <div className="min-h-screen flex flex-col">
-        <PublicHeader org={org} />
+        <PublicHeader />
+        <div className="max-w-2xl mx-auto px-4 pt-3 pb-1">
+          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            ← Back to Main Page
+          </Link>
+        </div>
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
             <h1 className="text-brand-primary font-bold text-xl mb-3">This check-in link is not valid.</h1>
@@ -73,7 +64,12 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <div className="max-w-2xl mx-auto px-4 pt-3 pb-1">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          ← Back to Main Page
+        </Link>
+      </div>
       <main className="flex-1 bg-white py-10">
         <CheckInClient
           resolution={resolution}

@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { getCallboardSession } from '@/lib/callboard/session'
 import { getAdminClient } from '@/lib/supabase/admin'
@@ -10,6 +9,7 @@ import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
 import VolunteerCard from '@/components/callboard/VolunteerCard'
+import PublicHeader from '@/components/public/PublicHeader'
 import type { PublicShow } from '@/types/show-public'
 import type { UpcomingClaim } from '@/lib/data/callboard'
 import type {
@@ -320,13 +320,19 @@ export default async function CallboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="w-full bg-white border-b border-divider">
-        <div className="max-w-5xl mx-auto py-6 px-6 text-center">
-          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mt-4">Volunteer Call Board</h1>
+      <PublicHeader />
+
+      <div className="w-full bg-white border-b border-divider">
+        <div className="max-w-5xl mx-auto pb-6 px-6 text-center">
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl">Volunteer Call Board</h1>
         </div>
-      </header>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 pt-3 pb-1">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          ← Back to Main Page
+        </Link>
+      </div>
 
       <main className="flex-1 bg-brand-primary-light py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col-reverse gap-8 md:flex-row md:items-start">

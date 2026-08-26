@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
@@ -7,6 +6,7 @@ import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
+import PublicHeader from '@/components/public/PublicHeader'
 import type { PublicShow } from '@/types/show-public'
 import type { UpcomingAudition } from '@/lib/actions/auditions'
 
@@ -107,12 +107,13 @@ export default async function ShowsListingPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="w-full bg-white border-b border-divider">
-        <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-        </div>
-      </header>
+      <PublicHeader />
+
+      <div className="max-w-2xl mx-auto px-4 pt-3 pb-1">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          ← Back to Main Page
+        </Link>
+      </div>
 
       <section className="w-full bg-brand-primary-light py-10 px-6">
         <div className="max-w-2xl mx-auto text-center">

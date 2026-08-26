@@ -4,10 +4,10 @@ import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
-import Image from 'next/image'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
 import VolunteerForm from '@/components/VolunteerForm'
+import PublicHeader from '@/components/public/PublicHeader'
 
 export default async function HomePage() {
   // Public page — no Supabase Auth session exists, so the admin client is
@@ -69,19 +69,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="w-full bg-white border-b border-divider">
-        <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-          <Image
-            src={org.org_logo_url || '/logo.png'}
-            alt={org.org_name}
-            width={112}
-            height={64}
-            className="mx-auto"
-          />
-          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-        </div>
-      </header>
+      <PublicHeader />
 
       {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
 

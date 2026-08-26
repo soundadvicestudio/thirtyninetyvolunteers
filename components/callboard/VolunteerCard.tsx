@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { signOutCallboard, updateCallboardPreference } from '@/lib/actions/callboard'
 import { getNextMilestone } from '@/lib/milestones-shared'
@@ -150,7 +151,7 @@ export default function VolunteerCard({
   upcomingClaims: UpcomingClaim[]
 }) {
   const router = useRouter()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [preference, setPreference] = useState(volunteer.communication_preference)
   const [isSavingPreference, setIsSavingPreference] = useState(false)
@@ -282,15 +283,19 @@ export default function VolunteerCard({
         />
       )}
 
-      <div className="border-t border-divider mt-6 pt-4 flex items-center justify-between">
-        <a href={`/update?token=${volunteer.update_token}`} className="text-brand-primary text-sm font-semibold underline">
-          Edit my info
-        </a>
+      <div className="flex items-center gap-3 border-t border-divider mt-6 pt-4">
+        <Link
+          href={`/update?token=${volunteer.update_token}`}
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'var(--brand-primary)' }}
+        >
+          Edit My Info
+        </Link>
         <button
           type="button"
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className="text-mid-gray text-sm font-semibold hover:text-brand-primary transition-colors disabled:opacity-50"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           {isSigningOut ? 'Signing out…' : 'Sign out'}
         </button>

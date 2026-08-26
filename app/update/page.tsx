@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import UpdateLookupForm from '@/components/UpdateLookupForm'
 import VolunteerUpdateForm from '@/components/VolunteerUpdateForm'
 import Link from 'next/link'
+import PublicHeader from '@/components/public/PublicHeader'
 
 export default async function UpdatePage({
   searchParams,
@@ -13,7 +14,17 @@ export default async function UpdatePage({
 
   // ── No token: show lookup form ──
   if (!token) {
-    return <UpdateLookupForm />
+    return (
+      <>
+        <PublicHeader />
+        <div className="max-w-md mx-auto px-4 pt-3 pb-1">
+          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            ← Back to Main Page
+          </Link>
+        </div>
+        <UpdateLookupForm />
+      </>
+    )
   }
 
   // ── Token present: look up volunteer (admin client, bypasses RLS) ──
@@ -33,21 +44,29 @@ export default async function UpdatePage({
   // ── Invalid token: error state ──
   if (!volunteer) {
     return (
-      <div className="max-w-md mx-auto text-center px-4 py-16">
-        <h1 className="text-brand-primary font-bold text-2xl mb-3">
-          This link is no longer valid
-        </h1>
-        <p className="text-mid-gray text-sm leading-relaxed mb-6">
-          Update links expire after use. Request a new one below.
-        </p>
-        <Link
-          href="/update"
-          className="inline-block bg-brand-primary text-white font-bold
-                     px-6 py-3 rounded-lg hover:bg-opacity-90
-                     transition-colors">
-          Request a New Link
-        </Link>
-      </div>
+      <>
+        <PublicHeader />
+        <div className="max-w-md mx-auto px-4 pt-3 pb-1">
+          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            ← Back to Main Page
+          </Link>
+        </div>
+        <div className="max-w-md mx-auto text-center px-4 py-16">
+          <h1 className="text-brand-primary font-bold text-2xl mb-3">
+            This link is no longer valid
+          </h1>
+          <p className="text-mid-gray text-sm leading-relaxed mb-6">
+            Update links expire after use. Request a new one below.
+          </p>
+          <Link
+            href="/update"
+            className="inline-block bg-brand-primary text-white font-bold
+                       px-6 py-3 rounded-lg hover:bg-opacity-90
+                       transition-colors">
+            Request a New Link
+          </Link>
+        </div>
+      </>
     )
   }
 
@@ -113,6 +132,12 @@ export default async function UpdatePage({
 
   return (
     <div className="min-h-screen bg-white py-10">
+      <PublicHeader />
+      <div className="max-w-xl mx-auto px-4 pt-3 pb-1">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          ← Back to Main Page
+        </Link>
+      </div>
       <div className="max-w-xl mx-auto px-4">
         <h1 className="text-brand-primary font-bold text-2xl mb-1 text-center">
           Update Your Information

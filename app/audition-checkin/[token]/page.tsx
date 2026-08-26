@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
+import Link from 'next/link'
 import { getAuditionCheckInData } from '@/lib/actions/auditions'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import AuditionCheckInClient from '@/components/audition-checkin/AuditionCheckInClient'
+import PublicHeader from '@/components/public/PublicHeader'
 
 export async function generateMetadata(): Promise<Metadata> {
   const org = await resolveOrgIdentity()
@@ -12,30 +13,27 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-// Matches the established public-page header pattern (app/rehearsal-checkin,
-// app/auditions/[id], app/checkin/[token]) — white header, centered logo,
-// orange accent underline.
-function PublicHeader({ org }: { org: OrgIdentity }) {
+function BackLink() {
   return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
+    <div className="max-w-md mx-auto px-4 pt-3 pb-1">
+      <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+        ← Back to Main Page
+      </Link>
+    </div>
   )
 }
 
 export default async function AuditionCheckInPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
 
-  const [data, org] = await Promise.all([getAuditionCheckInData(token), resolveOrgIdentity()])
+  const data = await getAuditionCheckInData(token)
 
   // Invalid token — rendered server-side, never passed to the client.
   if (!data) {
     return (
       <div className="min-h-screen flex flex-col">
-        <PublicHeader org={org} />
+        <PublicHeader />
+        <BackLink />
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-md text-center">
             <p className="text-mid-gray text-sm leading-relaxed">
@@ -49,7 +47,8 @@ export default async function AuditionCheckInPage({ params }: { params: Promise<
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
       <main className="flex-1 bg-white py-8 px-6">
         <div className="max-w-md mx-auto">
           <AuditionCheckInClient data={data} checkInToken={token} />

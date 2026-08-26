@@ -1,25 +1,11 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import { cancelAuditionSignup } from '@/lib/actions/auditions'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import PublicHeader from '@/components/public/PublicHeader'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
-}
-
-// Matches the established public-page header pattern (app/auditions/[id],
-// app/auditions/upload/[token], app/audition-checkin/[token]) — white
-// header, centered logo, orange accent underline.
-function PublicHeader({ org }: { org: OrgIdentity }) {
-  return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
-  )
 }
 
 export default async function AuditionCancelPage({ params }: { params: Promise<{ token: string }> }) {
@@ -29,7 +15,13 @@ export default async function AuditionCancelPage({ params }: { params: Promise<{
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+
+      <div className="max-w-md mx-auto px-4 pt-3 pb-1">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          ← Back to Main Page
+        </Link>
+      </div>
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-md mx-auto px-6 py-12 text-center">

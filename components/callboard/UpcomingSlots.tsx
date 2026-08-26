@@ -76,14 +76,14 @@ export default function UpcomingSlots({ claims, volunteerEmail }: UpcomingSlotsP
                         <button
                           type="button"
                           onClick={() => handleConfirmCancel(claim.claimToken)}
-                          className="text-sm bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors cursor-pointer"
+                          className="px-3 py-1.5 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
                         >
                           Yes, cancel
                         </button>
                         <button
                           type="button"
                           onClick={() => setRowState(claim.claimToken, 'idle')}
-                          className="text-sm border border-neutral-border px-3 py-1.5 rounded-md text-mid-gray hover:bg-neutral-surface transition-colors cursor-pointer"
+                          className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
                         >
                           Keep it
                         </button>
@@ -92,7 +92,7 @@ export default function UpcomingSlots({ claims, volunteerEmail }: UpcomingSlotsP
                       <button
                         type="button"
                         onClick={() => setRowState(claim.claimToken, 'confirming')}
-                        className="text-sm border border-neutral-border px-3 py-1.5 rounded-md text-mid-gray hover:border-red-300 hover:text-red-600 transition-colors cursor-pointer"
+                        className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
                       >
                         Cancel
                       </button>

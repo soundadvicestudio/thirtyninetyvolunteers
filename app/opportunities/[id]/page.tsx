@@ -1,8 +1,7 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { getAdminClient } from '@/lib/supabase/admin'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
 import OpportunitySubmitForm from '@/components/opportunities/OpportunitySubmitForm'
+import PublicHeader from '@/components/public/PublicHeader'
 import type { StandingOpportunity } from '@/types/opportunity'
 
 const CLAIM_TYPE_LABEL: Record<'eoi' | 'slot_claim', string> = {
@@ -10,21 +9,21 @@ const CLAIM_TYPE_LABEL: Record<'eoi' | 'slot_claim', string> = {
   slot_claim: 'Volunteer Position',
 }
 
-function PublicHeader({ org }: { org: OrgIdentity }) {
+function BackLink() {
   return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
+    <div className="max-w-2xl mx-auto px-4 pt-3 pb-1">
+      <Link href="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+        ← Back to Main Page
+      </Link>
+    </div>
   )
 }
 
-function Unavailable({ org }: { org: OrgIdentity }) {
+function Unavailable() {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-brand-primary font-bold text-xl mb-3">This opportunity is no longer available</h1>
@@ -46,7 +45,6 @@ function Unavailable({ org }: { org: OrgIdentity }) {
 export default async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const client = getAdminClient()
-  const org = await resolveOrgIdentity()
 
   const { data: opportunity } = await client
     .from('standing_opportunities')
@@ -57,7 +55,7 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
     .maybeSingle()
 
   if (!opportunity || opportunity.status !== 'active') {
-    return <Unavailable org={org} />
+    return <Unavailable />
   }
 
   const opp = opportunity as StandingOpportunity
@@ -74,7 +72,8 @@ export default async function OpportunityPage({ params }: { params: Promise<{ id
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
+      <BackLink />
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-2xl mx-auto">
