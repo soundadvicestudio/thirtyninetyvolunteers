@@ -12,6 +12,7 @@ import {
   sendWaitlistConfirmationEmail,
   sendWaitlistPromotionEmail,
   sendCancellationEditorNotificationEmail,
+  sendUpdateLinkEmail,
 } from '@/lib/email'
 
 export type SubmitClaimInput = {
@@ -23,6 +24,7 @@ export type SubmitClaimInput = {
   isWaitlist: boolean
   force?: boolean
   honeypot?: string
+  knownVolunteerId?: string
 }
 
 export type SubmitClaimResult =
@@ -31,6 +33,199 @@ export type SubmitClaimResult =
   | { status: 'duplicate_same' }
   | { status: 'duplicate_show'; existingDates: string[] }
   | { status: 'error'; message: string }
+
+// ADMIN.62 — lookup-first slot claim gate. Public route, getAdminClient()
+// only. Sequential email-then-phone maybeSingle() lookup — matches the
+// pattern established in claims.ts/callboard.ts (avoids embedding raw user
+// input into a PostgREST .or() filter expression).
+export async function lookupVolunteerForClaim(
+  email: string,
+  phone: string
+): Promise<
+  | { found: true; volunteerId: string; volunteerName: string }
+  | { found: false }
+> {
+  const supabase = getAdminClient()
+
+  // Try email first (lowercased + trimmed)
+  if (email.trim()) {
+    const { data: byEmail } = await supabase
+      .from('volunteers')
+      .select('id, full_name')
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle()
+
+    if (byEmail) {
+      return {
+        found: true,
+        volunteerId: byEmail.id,
+        volunteerName: byEmail.full_name,
+      }
+    }
+  }
+
+  // Try normalized phone
+  if (phone.trim()) {
+    const normalizedPhone = normalizePhone(phone)
+    const { data: byPhone } = await supabase
+      .from('volunteers')
+      .select('id, full_name')
+      .eq('phone', normalizedPhone)
+      .maybeSingle()
+
+    if (byPhone) {
+      return {
+        found: true,
+        volunteerId: byPhone.id,
+        volunteerName: byPhone.full_name,
+      }
+    }
+  }
+
+  return { found: false }
+}
+
+// ADMIN.62 — atomic (best-effort sequential) lookup-or-create + claim for
+// the "not found" path. Volunteer is created first, then the claim is
+// submitted via submitClaim() with the resolved knownVolunteerId so its
+// internal lookup is skipped. Public route, getAdminClient() only.
+export async function submitClaimWithLookup(input: {
+  roleId: string
+  showDateId: string
+  volunteerName: string
+  volunteerEmail: string
+  volunteerPhone: string
+  isWaitlist: boolean
+  honeypot: string
+}): Promise<
+  | { status: 'claimed'; claimToken: string }
+  | { status: 'waitlisted'; position: number; claimToken: string }
+  | { status: 'error'; message: string }
+> {
+  if (input.honeypot) {
+    return { status: 'error', message: 'Invalid submission.' }
+  }
+
+  const supabase = getAdminClient()
+  const normalizedPhone = normalizePhone(input.volunteerPhone)
+  const normalizedEmail = input.volunteerEmail.toLowerCase().trim()
+  const trimmedName = input.volunteerName.trim()
+
+  try {
+    let volunteerId: string
+
+    // Step 1: Check for race-condition duplicate (volunteer may have been
+    // created between the client lookup and now). Sequential queries —
+    // consistent with codebase pattern.
+    const { data: existingByEmail } = await supabase
+      .from('volunteers')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle()
+
+    if (existingByEmail) {
+      volunteerId = existingByEmail.id
+    } else {
+      const { data: existingByPhone } = await supabase
+        .from('volunteers')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .maybeSingle()
+
+      if (existingByPhone) {
+        volunteerId = existingByPhone.id
+      } else {
+        // Step 2: Create new volunteer record. SELECT id AND update_token
+        // in the same INSERT response — no second round-trip.
+        const { data: newVolunteer, error: insertError } = await supabase
+          .from('volunteers')
+          .insert({
+            full_name: trimmedName,
+            email: normalizedEmail,
+            phone: normalizedPhone,
+          })
+          .select('id, update_token')
+          .single()
+
+        if (insertError?.code === '23505') {
+          // Unique constraint race — fetch existing
+          const { data: raceByEmail } = await supabase
+            .from('volunteers')
+            .select('id')
+            .eq('email', normalizedEmail)
+            .maybeSingle()
+          const { data: raceByPhone } = await supabase
+            .from('volunteers')
+            .select('id')
+            .eq('phone', normalizedPhone)
+            .maybeSingle()
+          const raceVolunteer = raceByEmail ?? raceByPhone
+          if (!raceVolunteer) {
+            return {
+              status: 'error',
+              message: 'Unable to create your volunteer record.',
+            }
+          }
+          volunteerId = raceVolunteer.id
+        } else if (insertError || !newVolunteer) {
+          return {
+            status: 'error',
+            message: 'Unable to create your volunteer record.',
+          }
+        } else {
+          volunteerId = newVolunteer.id
+
+          // Step 3: Send update-link email so the new volunteer can
+          // complete their profile. NON-BLOCKING — email failure must
+          // never fail the claim.
+          try {
+            await sendUpdateLinkEmail({
+              to: normalizedEmail,
+              name: trimmedName,
+              updateToken: newVolunteer.update_token,
+              volunteerId,
+            })
+          } catch {
+            // Non-fatal — swallow silently
+          }
+        }
+      }
+    }
+
+    // Step 4: Submit the claim with the resolved volunteerId. submitClaim()
+    // handles all duplicate checks, waitlist logic, confirmation email,
+    // and email_log write.
+    const claimResult = await submitClaim({
+      roleId: input.roleId,
+      showDateId: input.showDateId,
+      volunteerName: trimmedName,
+      volunteerEmail: normalizedEmail,
+      volunteerPhone: normalizedPhone,
+      isWaitlist: input.isWaitlist,
+      force: false,
+      honeypot: '',
+      knownVolunteerId: volunteerId,
+    })
+
+    if (claimResult.status === 'claimed' || claimResult.status === 'waitlisted' || claimResult.status === 'error') {
+      return claimResult
+    }
+
+    // duplicate_same / duplicate_show are not expected for a
+    // just-resolved volunteer, but degrade gracefully rather than
+    // returning a status outside this function's narrower result type.
+    return {
+      status: 'error',
+      message: 'You appear to already have a claim for this show. Please check your email for details.',
+    }
+  } catch (err) {
+    console.error('submitClaimWithLookup error:', err)
+    return {
+      status: 'error',
+      message: 'An unexpected error occurred.',
+    }
+  }
+}
 
 export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimResult> {
   try {
@@ -161,17 +356,21 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
     }
 
     // D. Volunteer record lookup — sequential email-then-phone (30BN-2.4 pattern).
-    let volunteerId: string | null = null
-    const { data: volByEmail } = await client
-      .from('volunteers')
-      .select('id')
-      .ilike('email', volunteerEmail)
-      .maybeSingle()
-    if (volByEmail) {
-      volunteerId = volByEmail.id
-    } else if (volunteerPhone) {
-      const { data: volByPhone } = await client.from('volunteers').select('id').eq('phone', volunteerPhone).maybeSingle()
-      if (volByPhone) volunteerId = volByPhone.id
+    // Skipped when knownVolunteerId is already resolved (ADMIN.62 lookup-first gate).
+    let volunteerId: string | null = data.knownVolunteerId ?? null
+
+    if (!volunteerId) {
+      const { data: volByEmail } = await client
+        .from('volunteers')
+        .select('id')
+        .ilike('email', volunteerEmail)
+        .maybeSingle()
+      if (volByEmail) {
+        volunteerId = volByEmail.id
+      } else if (volunteerPhone) {
+        const { data: volByPhone } = await client.from('volunteers').select('id').eq('phone', volunteerPhone).maybeSingle()
+        if (volByPhone) volunteerId = volByPhone.id
+      }
     }
 
     // E. Actual slot availability — server-computed, ignores client isWaitlist hint.

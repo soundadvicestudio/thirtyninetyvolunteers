@@ -1,28 +1,27 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { lookupVolunteer } from '@/lib/actions/volunteers'
-import { submitClaim, type SubmitClaimResult } from '@/lib/actions/claims'
-
-const schema = z.object({
-  name: z.string().min(1, 'Full name is required'),
-  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  phone: z.string().min(1, 'Phone is required'),
-})
-
-type FormValues = z.infer<typeof schema>
+import {
+  lookupVolunteerForClaim,
+  submitClaim,
+  submitClaimWithLookup,
+  type SubmitClaimResult,
+} from '@/lib/actions/claims'
 
 const inputClasses =
   'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
 const labelClasses = 'block text-sm font-semibold text-dark mb-1'
-const errorClasses = 'mt-1 text-sm text-brand-accent'
+const primaryButtonClasses =
+  'w-full sm:w-auto bg-brand-accent text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50'
+const errorBannerClasses = 'rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark'
+const slotSummaryCardClasses = 'rounded-lg bg-neutral-surface border border-neutral-border p-4 space-y-1'
+const linkButtonClasses = 'block text-sm text-mid-gray underline hover:text-brand-primary transition-colors'
+
+type FlowState = 'lookup' | 'found' | 'new'
 
 type ResultState =
   | { kind: 'idle' }
-  | { kind: 'claimed'; email: string }
+  | { kind: 'claimed'; email: string; isNewSignup: boolean }
   | { kind: 'waitlisted'; position: number }
   | { kind: 'duplicate_same' }
 
@@ -39,52 +38,48 @@ export default function ClaimForm({
   showName: string
   isWaitlist: boolean
 }) {
+  // ADMIN.62 — lookup-first gate state.
+  const [flowState, setFlowState] = useState<FlowState>('lookup')
+  const [lookupEmail, setLookupEmail] = useState('')
+  const [lookupPhone, setLookupPhone] = useState('')
+  const [foundName, setFoundName] = useState('')
+  const [foundVolunteerId, setFoundVolunteerId] = useState('')
+  const [newName, setNewName] = useState('')
+  const [isLooking, setIsLooking] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+
+  // Terminal/result state — unchanged shape from the pre-ADMIN.62 form.
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [duplicateShowDates, setDuplicateShowDates] = useState<string[] | null>(null)
-  const [force, setForce] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<ResultState>({ kind: 'idle' })
   const honeypotRef = useRef<HTMLInputElement>(null)
 
-  const {
-    register,
-    handleSubmit,
-    getValues,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: { name: '', email: '', phone: '' },
-  })
-
-  // Silent pre-fill: only fills fields the volunteer hasn't already typed
-  // into. Never overwrites a value the user entered themselves.
-  async function handleLookup(value: string) {
-    const trimmed = value.trim()
-    if (!trimmed) return
-
-    const match = await lookupVolunteer(trimmed)
-    if (!match) return
-
-    if (!getValues('name')) setValue('name', match.full_name)
-    if (!getValues('email')) setValue('email', match.email)
-    if (!getValues('phone')) setValue('phone', match.phone)
+  async function handleLookup() {
+    if (!lookupEmail.trim() && !lookupPhone.trim()) return
+    setIsLooking(true)
+    setLookupError('')
+    try {
+      const lookupResult = await lookupVolunteerForClaim(lookupEmail.trim(), lookupPhone.trim())
+      if (lookupResult.found) {
+        setFoundName(lookupResult.volunteerName)
+        setFoundVolunteerId(lookupResult.volunteerId)
+        setFlowState('found')
+      } else {
+        setFlowState('new')
+      }
+    } catch {
+      setLookupError('Something went wrong. Please try again.')
+    } finally {
+      setIsLooking(false)
+    }
   }
 
-  async function runSubmit(values: FormValues, forceFlag: boolean) {
-    setSubmitError(null)
-
-    const response: SubmitClaimResult = await submitClaim({
-      roleId,
-      showDateId,
-      volunteerName: values.name,
-      volunteerEmail: values.email,
-      volunteerPhone: values.phone,
-      isWaitlist,
-      force: forceFlag,
-      honeypot: honeypotRef.current?.value,
-    })
-
+  // Shared response handling for both submitClaim() call sites
+  // (handleFoundClaim and handleConfirmDuplicate) — submitClaim()'s full
+  // SubmitClaimResult union (including duplicate_show) applies to both.
+  function applyClaimResponse(response: SubmitClaimResult) {
     if (response.status === 'duplicate_show') {
       setDuplicateShowDates(response.existingDates)
       return
@@ -93,7 +88,7 @@ export default function ClaimForm({
     setDuplicateShowDates(null)
 
     if (response.status === 'claimed') {
-      setResult({ kind: 'claimed', email: values.email })
+      setResult({ kind: 'claimed', email: lookupEmail.trim(), isNewSignup: false })
     } else if (response.status === 'waitlisted') {
       setResult({ kind: 'waitlisted', position: response.position })
     } else if (response.status === 'duplicate_same') {
@@ -103,15 +98,42 @@ export default function ClaimForm({
     }
   }
 
-  async function onSubmit(values: FormValues) {
-    await runSubmit(values, force)
+  async function handleFoundClaim() {
+    setSubmitError(null)
+    setIsSubmitting(true)
+    try {
+      const response = await submitClaim({
+        roleId,
+        showDateId,
+        volunteerName: foundName,
+        volunteerEmail: lookupEmail.trim(),
+        volunteerPhone: lookupPhone.trim(),
+        isWaitlist,
+        force: false,
+        honeypot: honeypotRef.current?.value ?? '',
+        knownVolunteerId: foundVolunteerId,
+      })
+      applyClaimResponse(response)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function handleConfirmDuplicate() {
-    setForce(true)
     setIsConfirming(true)
     try {
-      await runSubmit(getValues(), true)
+      const response = await submitClaim({
+        roleId,
+        showDateId,
+        volunteerName: foundName,
+        volunteerEmail: lookupEmail.trim(),
+        volunteerPhone: lookupPhone.trim(),
+        isWaitlist,
+        force: true,
+        honeypot: honeypotRef.current?.value ?? '',
+        knownVolunteerId: foundVolunteerId,
+      })
+      applyClaimResponse(response)
     } finally {
       setIsConfirming(false)
     }
@@ -121,10 +143,37 @@ export default function ClaimForm({
     setDuplicateShowDates(null)
   }
 
+  async function handleNewClaim() {
+    setSubmitError(null)
+    setIsSubmitting(true)
+    try {
+      const response = await submitClaimWithLookup({
+        roleId,
+        showDateId,
+        volunteerName: newName.trim(),
+        volunteerEmail: lookupEmail.trim(),
+        volunteerPhone: lookupPhone.trim(),
+        isWaitlist,
+        honeypot: honeypotRef.current?.value ?? '',
+      })
+
+      if (response.status === 'claimed') {
+        setResult({ kind: 'claimed', email: lookupEmail.trim(), isNewSignup: true })
+      } else if (response.status === 'waitlisted') {
+        setResult({ kind: 'waitlisted', position: response.position })
+      } else {
+        setSubmitError(response.message)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   if (result.kind === 'claimed') {
     return (
       <div className="rounded-lg bg-brand-primary-light p-4 text-brand-primary text-sm leading-relaxed">
         You&apos;re all set! A confirmation email is on its way to {result.email}. See you at the show!
+        {result.isNewSignup && ' We’ve also sent you an email to complete your volunteer profile.'}
       </div>
     )
   }
@@ -146,10 +195,7 @@ export default function ClaimForm({
   }
 
   return (
-    // honeypotRef.current is only read inside onSubmit (via runSubmit), which
-    // handleSubmit() only invokes on an actual submit event — not during this render call.
-    // eslint-disable-next-line react-hooks/refs
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="space-y-4">
       {/* Honeypot — hidden from real users, bots tend to fill every input */}
       <input
         type="text"
@@ -160,10 +206,6 @@ export default function ClaimForm({
         autoComplete="off"
         style={{ position: 'absolute', left: '-9999px' }}
       />
-
-      <p className="text-mid-gray text-sm">
-        {roleName} — {showName}
-      </p>
 
       {duplicateShowDates && (
         <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-4 text-sm text-dark space-y-3">
@@ -192,49 +234,144 @@ export default function ClaimForm({
         </div>
       )}
 
-      <div>
-        <label className={labelClasses}>
-          Full Name<span className="text-brand-accent ml-0.5">*</span>
-        </label>
-        <input type="text" className={inputClasses} {...register('name')} />
-        {errors.name && <p className={errorClasses}>{errors.name.message}</p>}
-      </div>
+      {flowState === 'lookup' && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-brand-primary font-bold text-lg">Claim Your Spot</h2>
+            <p className="text-mid-gray text-sm">Enter your email or phone number to get started.</p>
+          </div>
 
-      <div>
-        <label className={labelClasses}>
-          Email<span className="text-brand-accent ml-0.5">*</span>
-        </label>
-        <input
-          type="email"
-          className={inputClasses}
-          {...register('email', { onBlur: (e) => handleLookup(e.target.value) })}
-        />
-        {errors.email && <p className={errorClasses}>{errors.email.message}</p>}
-      </div>
+          <div>
+            <label className={labelClasses}>Email Address</label>
+            <input
+              type="email"
+              className={inputClasses}
+              placeholder="your@email.com"
+              value={lookupEmail}
+              onChange={(e) => setLookupEmail(e.target.value)}
+            />
+          </div>
 
-      <div>
-        <label className={labelClasses}>
-          Phone<span className="text-brand-accent ml-0.5">*</span>
-        </label>
-        <input
-          type="tel"
-          className={inputClasses}
-          {...register('phone', { onBlur: (e) => handleLookup(e.target.value) })}
-        />
-        {errors.phone && <p className={errorClasses}>{errors.phone.message}</p>}
-      </div>
+          <div>
+            <label className={labelClasses}>Phone Number</label>
+            <input
+              type="tel"
+              className={inputClasses}
+              placeholder="(555) 555-5555"
+              value={lookupPhone}
+              onChange={(e) => setLookupPhone(e.target.value)}
+            />
+          </div>
 
-      {submitError && (
-        <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark">{submitError}</div>
+          <p className="text-mid-gray text-sm">Enter at least one to continue.</p>
+
+          {lookupError && <div className={errorBannerClasses}>{lookupError}</div>}
+
+          <button
+            type="button"
+            disabled={isLooking || (!lookupEmail.trim() && !lookupPhone.trim())}
+            onClick={handleLookup}
+            className={primaryButtonClasses}
+          >
+            {isLooking ? 'Searching…' : 'Find My Account'}
+          </button>
+        </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting || isConfirming}
-        className="w-full sm:w-auto bg-brand-accent text-white font-bold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50"
-      >
-        {isSubmitting ? 'Submitting…' : isWaitlist ? 'Join the Waitlist' : 'Claim My Spot'}
-      </button>
-    </form>
+      {flowState === 'found' && !isConfirming && (
+        <div className="space-y-4">
+          <div className="rounded-lg bg-brand-primary-light p-4 text-brand-primary text-sm leading-relaxed">
+            <p className="font-semibold">Welcome back, {foundName}!</p>
+            <p>You&apos;re all set to claim this slot.</p>
+          </div>
+
+          <div className={slotSummaryCardClasses}>
+            <p className="text-dark font-semibold">{roleName}</p>
+            <p className="text-mid-gray text-sm">{showName}</p>
+          </div>
+
+          {submitError && <div className={errorBannerClasses}>{submitError}</div>}
+
+          <button type="button" disabled={isSubmitting} onClick={handleFoundClaim} className={primaryButtonClasses}>
+            {isSubmitting ? 'Claiming…' : 'Claim My Spot'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFlowState('lookup')
+              setFoundName('')
+              setFoundVolunteerId('')
+            }}
+            className={linkButtonClasses}
+          >
+            Not you?
+          </button>
+        </div>
+      )}
+
+      {flowState === 'new' && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-brand-primary font-bold text-lg">We Don&apos;t Have You in Our System Yet</h2>
+            <p className="text-mid-gray text-sm">
+              Complete the fields below to join our volunteer roster and claim this slot.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClasses}>Full Name</label>
+            <input
+              type="text"
+              className={inputClasses}
+              placeholder="Your full name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className={labelClasses}>Email Address</label>
+            <input
+              type="email"
+              className={inputClasses}
+              placeholder="your@email.com"
+              value={lookupEmail}
+              onChange={(e) => setLookupEmail(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className={labelClasses}>Phone Number</label>
+            <input
+              type="tel"
+              className={inputClasses}
+              placeholder="(555) 555-5555"
+              value={lookupPhone}
+              onChange={(e) => setLookupPhone(e.target.value)}
+            />
+          </div>
+
+          <p className="text-mid-gray text-sm">
+            After claiming, we&apos;ll send you an email to complete your volunteer profile.
+          </p>
+
+          {submitError && <div className={errorBannerClasses}>{submitError}</div>}
+
+          <button
+            type="button"
+            disabled={isSubmitting || !newName.trim() || !lookupEmail.trim() || !lookupPhone.trim()}
+            onClick={handleNewClaim}
+            className={primaryButtonClasses}
+          >
+            {isSubmitting ? 'Submitting…' : 'Join & Claim My Spot'}
+          </button>
+
+          <button type="button" onClick={() => setFlowState('lookup')} className={linkButtonClasses}>
+            Go back
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
