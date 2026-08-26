@@ -8,6 +8,24 @@ import type { AuditionEmailStatusType } from '@/types/audition'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// ADMIN.61 — Resend's SDK returns { data, error } rather than throwing on
+// API-level failures (unverified domain, rate limit, validation). These
+// wrappers throw on error so existing upstream try/catch blocks fire on
+// real delivery failures instead of silently treating them as sent.
+async function sendEmail(
+  params: Parameters<typeof resend.emails.send>[0]
+): Promise<void> {
+  const { error } = await resend.emails.send(params)
+  if (error) throw new Error(`Resend send failed: ${error.message}`)
+}
+
+async function sendBatch(
+  params: Parameters<typeof resend.batch.send>[0]
+): Promise<void> {
+  const { error } = await resend.batch.send(params)
+  if (error) throw new Error(`Resend batch failed: ${error.message}`)
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -231,7 +249,7 @@ export async function sendVolunteerConfirmationEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -309,7 +327,7 @@ export async function sendConsentFormRequestEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -367,7 +385,7 @@ export async function sendUpdateLinkEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -423,7 +441,7 @@ export async function sendInfoUpdatedEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -509,7 +527,7 @@ export async function sendWelcomeEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to: toEmail,
@@ -555,7 +573,7 @@ export async function sendOpportunityEOIEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -594,7 +612,7 @@ export async function sendOpportunitySlotClaimEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -753,7 +771,7 @@ export async function sendSlotClaimEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -810,7 +828,7 @@ export async function sendWaitlistConfirmationEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -855,7 +873,7 @@ export async function sendWaitlistPromotionEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -910,7 +928,7 @@ export async function sendCancellationEditorNotificationEmail({
   )
 
   // R8 — multi-recipient send uses resend.batch.send(), one entry per editor.
-  await resend.batch.send(
+  await sendBatch(
     to.map((address) => ({
       from: emailSettings.from,
       replyTo: emailSettings.orgContactEmail,
@@ -1060,7 +1078,7 @@ const BATCH_CHUNK_SIZE = 100
 export async function sendBatchEmails(payloads: BatchEmailPayload[]): Promise<void> {
   for (let i = 0; i < payloads.length; i += BATCH_CHUNK_SIZE) {
     const chunk = payloads.slice(i, i + BATCH_CHUNK_SIZE)
-    await resend.batch.send(chunk)
+    await sendBatch(chunk)
   }
 }
 
@@ -1141,7 +1159,7 @@ export async function sendCategoryMatchNotificationEmail(
   params: CategoryMatchNotificationEmailParams
 ): Promise<void> {
   const emailSettings = await resolveEmailSettings()
-  await resend.emails.send(
+  await sendEmail(
     buildCategoryMatchNotificationPayload({
       ...params,
       from: emailSettings.from,
@@ -1270,7 +1288,7 @@ export async function sendPendingRegistrationEmail({
   })
 
   if (to.length === 1) {
-    await resend.emails.send({
+    await sendEmail({
       from: emailSettings.from,
       to: to[0],
       subject,
@@ -1280,7 +1298,7 @@ export async function sendPendingRegistrationEmail({
   }
 
   // R8 — multi-recipient send uses resend.batch.send(), one entry per Super Admin.
-  await resend.batch.send(
+  await sendBatch(
     to.map((address) => ({
       from: emailSettings.from,
       to: address,
@@ -1322,7 +1340,7 @@ export async function sendRegistrationApprovedEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -1370,7 +1388,7 @@ export async function sendGoogleApprovalEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -1421,7 +1439,7 @@ export async function sendRegistrationDeclinedEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -1609,7 +1627,7 @@ export async function sendMilestoneEmail(
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to: email,
@@ -1769,7 +1787,7 @@ export async function sendAuditionSignupConfirmation({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to,
@@ -1851,7 +1869,7 @@ export async function sendAuditionConsentFormRequestEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -1955,7 +1973,7 @@ export async function sendAuditionStatusEmail({ signupId, auditionId, status }: 
   })
 
   // R8 — single recipient uses resend.emails.send() directly, not batch.
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     replyTo: emailSettings.orgContactEmail,
     to: signup.email,
@@ -2011,7 +2029,7 @@ export async function sendAuditionCancellationEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject,
@@ -2166,7 +2184,7 @@ export async function sendDirectMessageEmail({
     brandPrimary: emailSettings.brandPrimary,
   })
 
-  await resend.emails.send({
+  await sendEmail({
     from: emailSettings.from,
     to,
     subject: emailSubject,
