@@ -95,6 +95,14 @@ export default async function HomePage() {
             )}
           </div>
 
+          <div className="mb-6">
+            <p className="text-mid-gray text-base leading-relaxed">
+              Our volunteers are the heart of every production — from backstage
+              to the box office. Whatever your talents or time, there&apos;s a
+              place for you here.
+            </p>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             <Link
               href="/update"
