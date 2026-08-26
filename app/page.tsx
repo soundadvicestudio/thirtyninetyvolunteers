@@ -85,7 +85,7 @@ export default async function HomePage() {
       {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
 
       <main className="flex-1 bg-white">
-        <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="pb-4 border-b border-neutral-border mb-6">
             <h1 className="text-3xl font-bold text-dark mb-2">
               Welcome to the {org.org_name} Volunteer Family
@@ -118,9 +118,14 @@ export default async function HomePage() {
             </Link>
           </div>
 
+          <h3 className="text-dark font-bold text-xl text-center mb-6">
+            Join the <span className="font-extrabold">{org.org_name}</span> Volunteer
+            Community
+          </h3>
+
           <div className="flex flex-col xl:flex-row gap-6">
             {flags.calendar && (
-              <div className="xl:w-[55%] min-w-0">
+              <div className="xl:w-[50%] min-w-0">
                 <HomeCalendarWidget
                   initialYear={currentYear}
                   initialMonth={currentMonth}
@@ -129,7 +134,7 @@ export default async function HomePage() {
               </div>
             )}
 
-            <div className={flags.calendar ? 'xl:w-[45%] min-w-0' : 'w-full max-w-2xl mx-auto'}>
+            <div className={flags.calendar ? 'xl:w-[50%] min-w-0' : 'w-full max-w-2xl mx-auto'}>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-neutral-surface border-b border-neutral-border px-5 py-3">
                   <span className="font-semibold text-sm text-gray-700">
