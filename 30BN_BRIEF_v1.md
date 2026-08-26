@@ -1,12 +1,13 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.5
-*Created: July 2026 | Last session: DOC.99 (Aug 2026).
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.7
+*Created: July 2026 | Last session: DOC.103 (Aug 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.7 | Aug 2026 | ADMIN.61–64 complete — Resend error detection, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email (DOC.102/103) |
 | v6.6 | Aug 2026 | UPSTYLE.1–5 complete — Platform Setup tabbed layout + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed from Style Sandbox (DOC.98/99) |
 | v6.5 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, dashboard 31-day overhaul (SeasonAtAGlance + QuickStats), Beta Testing rename, NavOrderSection self-heal (DOC.90/91) |
 | v6.4 | Aug 2026 | ADMIN.52–57 complete — Dashboard/Notification Panel refinements, QR Generator font fix + ribbon redesign, Maintenance Page restoration field (DOC.88) |
@@ -6242,7 +6243,15 @@ is next. Phase UPSTYLE (Style Upgrade Series) in progress
 — UPSTYLE.1–5 complete (Platform Setup, Media
 Library, Communication, Check-In all restyled to
 Option A; 6 mockups removed from Style Sandbox;
-11 mockups remain).*
+11 mockups remain). ADMIN.61–64 complete — email
+outage diagnosed (Resend domain unregistered) +
+Resend error detection wrappers added; lookup-first
+slot claim gate implemented (three-state ClaimForm);
+Call Board Upcoming Slots with per-slot cancel;
+editor cancellation email replaced with in-app
+notification; volunteer cancellation confirmation
+email added; Migration 046 (slot_cancellation
+notification type).*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -9536,6 +9545,132 @@ shell, not CheckInDashboard.tsx).
 CheckInDashboard.tsx not modified. 1 file
 modified. Commit: c60758d.
 
+**30BN-ADMIN.61-AUDIT** ✓ Diagnosed 8-day email
+  outage: Resend domain
+  30byninetyvolunteers.com was removed from the
+  Resend account (~Aug 19); all /emails POSTs
+  returned 403. Found: resend.emails.send() /
+  resend.batch.send() return {data, error} but
+  error was never checked — every rejected send
+  logged as success in email_log. Root cause
+  confirmed via Resend API (GET /domains → status
+  'failed'; GET /emails → last delivery Aug 19).
+  No code changes. No commit.
+
+**30BN-ADMIN.61** ✓ Resend error detection. Added
+  private sendEmail() and sendBatch() wrappers
+  to lib/email.ts immediately after the Resend
+  client init. Each wrapper calls the raw SDK
+  method, destructures {error}, and throws on
+  non-null error. All 24 raw resend.emails.send()
+  (21) and resend.batch.send() (3) call sites
+  replaced with the wrappers — arguments
+  unchanged, only function name changed. Wrappers
+  use Parameters<typeof resend.emails.send>[0]
+  type inference. Blast path confirmed: thrown
+  error propagates through sendBlastEmail()'s
+  existing try/catch → {success: false} → visible
+  BlastComposer UI error. 1 file modified.
+  Commit: e7b34ca.
+
+**30BN-ADMIN.62-AUDIT** ✓ Read-only audit of slot
+  claim flow + volunteer signup flow. Key findings:
+  ClaimForm.tsx uses real <form> + react-hook-form
+  (not R13.3a onClick pattern — rebuilt in ADMIN.62
+  to drop RHF); submitClaim() does sequential
+  email-then-phone volunteer lookup but proceeds
+  with volunteer_id = null on no match (unlinked
+  claims fully supported today); sendUpdateLinkEmail
+  takes {to, name, updateToken, volunteerId} —
+  not positional args; no .or() used for identity
+  lookups per explicit comment in claims.ts and
+  callboard.ts; notifications.type is a text column
+  with CHECK constraint (not pg_enum) — adding new
+  type requires migration. No code. No commit.
+
+**30BN-ADMIN.62** ✓ Lookup-first slot claim gate.
+  lib/actions/claims.ts: lookupVolunteerForClaim
+  (email, phone) added — sequential email-then-
+  phone, returns {found, volunteerId, volunteerName}.
+  submitClaimWithLookup(input) added — creates
+  volunteer record then calls submitClaim() with
+  knownVolunteerId; race-condition 23505 guard;
+  non-blocking sendUpdateLinkEmail() for new
+  volunteers. submitClaim() extended with optional
+  knownVolunteerId?: string (skips internal lookup
+  when provided). app/shows/[id]/ClaimForm.tsx
+  rebuilt: dropped react-hook-form entirely (→
+  plain useState + onClick, R13.3a); three-state
+  flowState ('lookup'|'found'|'new'); State 1
+  email+phone lookup via lookupVolunteerForClaim;
+  State 2a found-volunteer welcome + claim via
+  submitClaim(knownVolunteerId); State 2b not-found
+  inline signup via submitClaimWithLookup(); all
+  existing result states preserved; honeypot
+  preserved on both paths. 2 files modified.
+  Commit: 3927c71.
+
+**30BN-ADMIN.63** ✓ Call Board Upcoming Slots +
+  carry-forward fixes. Q3 fix: honeypot in
+  submitClaimWithLookup() now returns fake-success
+  (not visible error) matching submitClaim()
+  pattern. Q2 fix: showDate/showTime props added
+  to ClaimForm.tsx; threaded from ShowDatePicker
+  .tsx via formatWallClockCT(); displayed in State
+  2a slot summary card. Main feature: lib/data/
+  callboard.ts (new — no 'use server') with
+  getUpcomingClaimsForVolunteer(supabase,
+  volunteerId, volunteerEmail, timezone) + Upcoming
+  Claim type; dual volunteer_id/volunteer_email
+  query deduped in-memory; date filter via
+  formatCT(new Date(), 'yyyy-MM-dd', timezone) +
+  .gte('show_date', today). cancelClaimFromCallboard
+  (claimToken, email) added to claims.ts. components
+  /callboard/UpcomingSlots.tsx (new — Client
+  Component): per-row cancel state via Record<token,
+  state> + Set<cancelled>; idle → confirming →
+  cancelling → cancelled (row removed). VolunteerCard
+  .tsx: upcomingClaims prop added; UpcomingSlots
+  rendered between preferences and Call History.
+  app/callboard/page.tsx: fetches upcoming claims
+  + org timezone; passes to VolunteerCard. All dark:
+  variants stripped from public-route JSX (F1 —
+  confirmed correct per ADMIN.6 standing rule).
+  4 files modified, 3 new files. Commit: 77c301c.
+
+**30BN-ADMIN.64** ✓ Editor cancellation notification
+  + volunteer cancellation email. Migration 046
+  applied (slot_cancellation added to notifications
+  _type_check CHECK constraint — same DROP/ADD
+  technique as Migration 037). types/notifications
+  .ts: 'slot_cancellation' added to NotificationType
+  union. lib/email.ts: sendSlotCancellationEmail()
+  added — reuses showDetailsBlockHtml() for visual
+  consistency; fires via sendEmail() wrapper.
+  lib/actions/claims.ts: cancelClaim() restructured
+  — admin_users select changed from email → id;
+  sendCancellationEditorNotificationEmail() call
+  replaced with void IIFE calling createNotification
+  (editorId, 'slot_cancellation', ...) per editor;
+  sendSlotCancellationEmail() added for volunteer
+  (non-blocking try/catch; fires for both claimed
+  and waitlisted cancellations; email_log insert
+  follows). components/crew/NotificationPanel.tsx:
+  XCircle case added to getTypeIcon() for
+  slot_cancellation (required — exhaustive switch).
+  Q1: sendCancellationEditorNotificationEmail() in
+  lib/email.ts is now dead code — zero call sites;
+  candidate for future cleanup. 1 migration, 5
+  files modified. Commit: 5b24df6.
+
+**30BN-DOC.100** ✓ UPSTYLE.5-FIX and UPSTYLE.5-FIX2
+  added to §11 Phase UPSTYLE log. Commits 1f35e57
+  and c60758d recorded.
+**30BN-DOC.101** ✓ Process v6.3→v6.4: UPSTYLE.1–5
+  + fixes in §13; UPSTYLE patterns + CSS-hide +
+  three-zone card + heading zone in §14; header
+  updated to DOC.101.
+
 ---
 
 ## 12. Open Decisions Log
@@ -10407,6 +10542,83 @@ Right panel: flex-1 div-based document list (no
 file). Type badges via `getBadge(entryType,
 mimeType)` helper. Tier badges via updated
 `TIER_BADGE_CLASSES` map.
+
+**Resend send wrapper pattern (ADMIN.61):**
+All email sends in `lib/email.ts` go through two
+private wrapper functions:
+- `sendEmail(params)` — wraps `resend.emails.send()`
+- `sendBatch(params)` — wraps `resend.batch.send()`
+Each wrapper destructures `{error}` from the SDK
+response and throws `new Error(...)` when error is
+non-null. Raw SDK calls never appear outside these
+wrappers. This ensures Resend API failures (domain
+unverified, 403, rate limit) throw and are caught
+by upstream try/catch blocks, rather than being
+silently logged as successful sends. Any future
+email function added to `lib/email.ts` must use
+`sendEmail()` or `sendBatch()` — never the raw
+Resend SDK directly.
+
+**Lookup-first slot claim gate (ADMIN.62):**
+The public slot claim page (`/shows/[id]`) requires
+volunteer identification before a slot can be
+claimed. `ClaimForm.tsx` uses `flowState:
+'lookup'|'found'|'new'` with plain useState + onClick
+(no react-hook-form — R13.3a). Key patterns:
+- `lookupVolunteerForClaim()` uses sequential email-
+  then-phone queries (not `.or()`) — established
+  identity-lookup pattern per explicit comments in
+  claims.ts and callboard.ts.
+- `submitClaimWithLookup()` creates the volunteer
+  record first, then calls `submitClaim()` with
+  `knownVolunteerId`. Race-condition 23505 guard:
+  catch unique constraint violation, re-fetch the
+  existing record, proceed to claim.
+- `submitClaim()`'s `knownVolunteerId` optional
+  param skips the internal lookup when the id is
+  already known — one DB round-trip saved.
+- State 2b collects name/email/phone only (minimal).
+  Full profile completion deferred — `sendUpdateLink
+  Email()` sent non-blocking after new volunteer
+  creation.
+- Honeypot returns fake-success in both
+  `submitClaim()` and `submitClaimWithLookup()`.
+
+**NotificationType CHECK constraint — migration
+always required (ADMIN.64):**
+`notifications.type` is a `text` column governed
+by a CHECK constraint (`notifications_type_check`),
+not a Postgres ENUM. Adding a new NotificationType
+value requires:
+1. A migration that DROPs and re-ADDs the CHECK
+   constraint with the new value in the ARRAY.
+   (Same technique as Migration 037 for
+   'direct_message', Migration 046 for
+   'slot_cancellation'.)
+2. Adding the new string literal to the
+   `NotificationType` union in `types/notifications
+   .ts`.
+3. Adding a `case` to `getTypeIcon()` in
+   `NotificationPanel.tsx` — the switch is
+   exhaustive; missing a case causes a tsc error.
+TypeScript will compile without the migration but
+the DB insert will throw a CHECK constraint
+violation at runtime. Always apply the migration
+before shipping TypeScript that uses the new type.
+
+**Cancellation email from cancelClaim() directly
+(ADMIN.64):**
+`sendSlotCancellationEmail()` is called from inside
+`cancelClaim()` in a non-blocking try/catch. It
+fires for BOTH cancellation paths:
+- Call Board cancel (via `cancelClaimFromCallboard()`)
+- Email-link cancel (via `/cancel/[token]` page)
+Both paths call `cancelClaim()` under the hood. The
+email belongs in `cancelClaim()` itself (not in the
+higher-level wrappers) so it fires regardless of
+how cancellation is triggered. This is the correct
+pattern for any side-effect that must fire on every
+cancellation regardless of entry point.
 
 ---
 
