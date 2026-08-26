@@ -138,7 +138,7 @@ export default async function HomePage() {
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-neutral-surface border-b border-neutral-border px-5 py-3">
                   <span className="font-semibold text-sm text-gray-700">
-                    Join Our Volunteer Family
+                    Sign Up to Volunteer
                   </span>
                 </div>
                 <div className="bg-white px-5 py-4">
