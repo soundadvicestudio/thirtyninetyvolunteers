@@ -4,12 +4,14 @@ import { getCallboardSession } from '@/lib/callboard/session'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { getPublicShows } from '@/lib/data/shows'
+import { getUpcomingClaimsForVolunteer } from '@/lib/data/callboard'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
 import VolunteerCard from '@/components/callboard/VolunteerCard'
 import type { PublicShow } from '@/types/show-public'
+import type { UpcomingClaim } from '@/lib/data/callboard'
 import type {
   CallboardMilestone,
   CallboardCallHistoryRow,
@@ -268,12 +270,19 @@ export default async function CallboardPage() {
   let milestones: CallboardMilestone[] = []
   let callHistory: CallboardCallHistoryRow[] = []
   let manualHoursEntries: CallboardManualHoursEntry[] = []
+  let upcomingClaims: UpcomingClaim[] = []
   const signedUpMap = new Map<string, SignedUpEntry[]>()
 
   if (volunteer) {
     const client = getAdminClient()
-    const [{ data: categoryRows }, { data: milestoneRows }, { data: manualHoursRows }, activeClaims, history] =
-      await Promise.all([
+    const [
+      { data: categoryRows },
+      { data: milestoneRows },
+      { data: manualHoursRows },
+      activeClaims,
+      history,
+      upcoming,
+    ] = await Promise.all([
         client.from('volunteer_category_assignments').select('volunteer_categories(id, name)').eq('volunteer_id', volunteer.id),
         client
           .from('milestone_log')
@@ -288,6 +297,7 @@ export default async function CallboardPage() {
           .order('logged_date', { ascending: false }),
         getActiveClaims(volunteer.id, volunteer.email),
         getCallHistory(volunteer.id, volunteer.email),
+        getUpcomingClaimsForVolunteer(client, volunteer.id, volunteer.email, tz),
       ])
 
     categories = ((categoryRows ?? []) as unknown as { volunteer_categories: { id: string; name: string } | null }[])
@@ -297,6 +307,7 @@ export default async function CallboardPage() {
     milestones = (milestoneRows ?? []) as CallboardMilestone[]
     callHistory = history
     manualHoursEntries = manualHoursRows ?? []
+    upcomingClaims = upcoming
 
     for (const claim of activeClaims) {
       const list = signedUpMap.get(claim.show_id) ?? []
@@ -358,6 +369,7 @@ export default async function CallboardPage() {
                 callHistory={callHistory}
                 manualHoursEntries={manualHoursEntries}
                 calendarEnabled={flags.calendar}
+                upcomingClaims={upcomingClaims}
               />
             ) : (
               <CallboardLookupForm />

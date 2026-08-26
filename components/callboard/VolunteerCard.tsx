@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { signOutCallboard, updateCallboardPreference } from '@/lib/actions/callboard'
 import { getNextMilestone } from '@/lib/milestones-shared'
+import UpcomingSlots from '@/components/callboard/UpcomingSlots'
+import type { UpcomingClaim } from '@/lib/data/callboard'
 import type {
   CallboardVolunteer,
   CallboardMilestone,
@@ -137,6 +139,7 @@ export default function VolunteerCard({
   callHistory,
   manualHoursEntries,
   calendarEnabled,
+  upcomingClaims,
 }: {
   volunteer: CallboardVolunteer
   categories: string[]
@@ -144,6 +147,7 @@ export default function VolunteerCard({
   callHistory: CallboardCallHistoryRow[]
   manualHoursEntries: CallboardManualHoursEntry[]
   calendarEnabled: boolean
+  upcomingClaims: UpcomingClaim[]
 }) {
   const router = useRouter()
   const [expanded, setExpanded] = useState(false)
@@ -260,10 +264,12 @@ export default function VolunteerCard({
         {isSavingPreference && <span className="ml-2 text-xs text-mid-gray">Saving…</span>}
       </div>
 
+      <UpcomingSlots claims={upcomingClaims} volunteerEmail={volunteer.email} />
+
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="text-brand-primary text-sm font-semibold underline mb-2"
+        className="text-brand-primary text-sm font-semibold underline mb-2 mt-4"
       >
         Call History ({callHistory.length} calls) {expanded ? '▲' : '▼'}
       </button>

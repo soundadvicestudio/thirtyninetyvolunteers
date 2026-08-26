@@ -112,6 +112,8 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                       roleName={role.role_name}
                       showName={showName}
                       isWaitlist={role.is_full}
+                      showDate={formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'MMM d, yyyy', tz)}
+                      showTime={formatWallClockCT(selectedDate.show_date, selectedDate.show_time, 'h:mm a', tz)}
                     />
                   </div>
                 )}

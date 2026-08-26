@@ -31,12 +31,16 @@ export default function ClaimForm({
   roleName,
   showName,
   isWaitlist,
+  showDate = '',
+  showTime = null,
 }: {
   roleId: string
   showDateId: string
   roleName: string
   showName: string
   isWaitlist: boolean
+  showDate?: string
+  showTime?: string | null
 }) {
   // ADMIN.62 — lookup-first gate state.
   const [flowState, setFlowState] = useState<FlowState>('lookup')
@@ -288,6 +292,12 @@ export default function ClaimForm({
           <div className={slotSummaryCardClasses}>
             <p className="text-dark font-semibold">{roleName}</p>
             <p className="text-mid-gray text-sm">{showName}</p>
+            {showDate && (
+              <p className="text-sm text-mid-gray">
+                {showDate}
+                {showTime ? ` · ${showTime}` : ''}
+              </p>
+            )}
           </div>
 
           {submitError && <div className={errorBannerClasses}>{submitError}</div>}

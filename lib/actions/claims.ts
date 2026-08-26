@@ -103,7 +103,7 @@ export async function submitClaimWithLookup(input: {
   | { status: 'error'; message: string }
 > {
   if (input.honeypot) {
-    return { status: 'error', message: 'Invalid submission.' }
+    return { status: 'claimed', claimToken: crypto.randomUUID() }
   }
 
   const supabase = getAdminClient()
@@ -723,5 +723,25 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
   } catch (err) {
     console.error('cancelClaim error:', err)
     return { success: false, error: 'Something went wrong. Please try again.' }
+  }
+}
+
+// ADMIN.63 — Call Board cancel wrapper. The volunteer is already
+// authenticated via the callboard_session cookie, so cancelClaim()'s own
+// email-match re-check is redundant-but-harmless here (the caller always
+// passes the session's own email). CancelClaimResult has success/error
+// fields only — no status or message fields.
+export async function cancelClaimFromCallboard(
+  claimToken: string,
+  volunteerEmail: string
+): Promise<{ success: true } | { error: string }> {
+  try {
+    const result = await cancelClaim(claimToken, volunteerEmail)
+    if (result.success) {
+      return { success: true }
+    }
+    return { error: result.error ?? 'Could not cancel this slot.' }
+  } catch {
+    return { error: 'An unexpected error occurred.' }
   }
 }
