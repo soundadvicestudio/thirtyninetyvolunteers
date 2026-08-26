@@ -2,12 +2,14 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
-import { formatWallClockCT } from '@/lib/utils/date'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
 import VolunteerForm from '@/components/VolunteerForm'
 import PublicHeader from '@/components/public/PublicHeader'
+import { HomeCalendarWidget } from '@/components/calendar/HomeCalendarWidget'
+import { getPublicCalendarEvents, type PublicCalendarEvent } from '@/lib/data/publicCalendar'
 
 export default async function HomePage() {
   // Public page — no Supabase Auth session exists, so the admin client is
@@ -67,97 +69,107 @@ export default async function HomePage() {
   const showSchool = showSchoolSetting?.value !== 'false'
   const showAgeRange = showAgeRangeSetting?.value !== 'false'
 
+  const now = new Date()
+  const currentYear = parseInt(formatInTimeZone(now, tz, 'yyyy'), 10)
+  const currentMonth = parseInt(formatInTimeZone(now, tz, 'M'), 10)
+
+  let calendarEvents: PublicCalendarEvent[] = []
+  if (flags.calendar) {
+    calendarEvents = await getPublicCalendarEvents(supabase, currentYear, currentMonth, tz)
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <PublicHeader />
 
       {showBanner && <AnnouncementBanner text={bannerText!.value!} />}
 
-      {/* Hero */}
-      <section className="w-full bg-brand-primary-light py-12 px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-brand-primary font-bold text-2xl md:text-3xl">
-            Welcome to the {org.org_name} Volunteer Family
-          </h2>
-          <p className="text-dark text-base leading-relaxed max-w-xl mx-auto mt-4">
-            Our volunteers are the heart of every production — from backstage
-            to the box office. Whatever your talents or time, there&apos;s a
-            place for you here.
-          </p>
-        </div>
-      </section>
+      <main className="flex-1 bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="pb-4 border-b border-neutral-border mb-6">
+            <h1 className="text-3xl font-bold text-dark mb-2">
+              Welcome to the {org.org_name} Volunteer Family
+            </h1>
+            {org.org_tagline && (
+              <p className="text-mid-gray">{org.org_tagline}</p>
+            )}
+          </div>
 
-      {/* Sign-up section */}
-      <section className="w-full bg-white py-10 px-6 flex-1">
-        <div className="max-w-2xl mx-auto">
-          <h3 className={`text-brand-primary font-bold text-xl text-center ${org.org_tagline ? 'mb-2' : 'mb-6'}`}>
-            Join the <span className="font-extrabold">{org.org_name}</span> Volunteer
-            Community
-          </h3>
-          {org.org_tagline && (
-            <p className="text-mid-gray text-sm text-center mb-6">{org.org_tagline}</p>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <Link
+              href="/update"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Update My Info
+            </Link>
+            <Link
+              href="/callboard"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Upcoming Volunteer Opportunities
+            </Link>
+          </div>
+
+          <div className="flex flex-col xl:flex-row gap-6">
+            {flags.calendar && (
+              <div className="xl:w-[55%] min-w-0">
+                <HomeCalendarWidget
+                  initialYear={currentYear}
+                  initialMonth={currentMonth}
+                  initialEvents={calendarEvents}
+                />
+              </div>
+            )}
+
+            <div className={flags.calendar ? 'xl:w-[45%] min-w-0' : 'w-full max-w-2xl mx-auto'}>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-neutral-surface border-b border-neutral-border px-5 py-3">
+                  <span className="font-semibold text-sm text-gray-700">
+                    Join Our Volunteer Family
+                  </span>
+                </div>
+                <div className="bg-white px-5 py-4">
+                  <VolunteerForm
+                    categories={categories ?? []}
+                    hearingOptions={hearingOptions ?? []}
+                    showSchool={showSchool}
+                    showAgeRange={showAgeRange}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           {upcomingAuditions.length > 0 && (
-            <div className="mb-6 rounded-lg border border-divider bg-white p-5">
-              <h2 className="text-lg font-semibold text-dark mb-3">Upcoming Auditions</h2>
-              <ul className="space-y-3">
-                {upcomingAuditions.map((a) => (
-                  <li key={a.id} className="flex items-start justify-between gap-4">
+            <div className="mt-8 border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-neutral-surface border-b border-neutral-border px-5 py-3">
+                <h2 className="font-semibold text-sm text-gray-700">
+                  Upcoming Auditions
+                </h2>
+              </div>
+              <ul className="bg-white divide-y divide-gray-100">
+                {upcomingAuditions.map((audition) => (
+                  <li key={audition.id} className="px-5 py-3 flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-dark">{a.title}</p>
-                      {a.show_title && <p className="text-sm text-mid-gray">{a.show_title}</p>}
-                      <p className="text-sm text-mid-gray">
-                        {formatWallClockCT(a.date_start, null, 'MMMM d, yyyy', tz)}
-                        {a.date_end &&
-                          a.date_end !== a.date_start &&
-                          ` – ${formatWallClockCT(a.date_end, null, 'MMMM d, yyyy', tz)}`}
-                      </p>
+                      <p className="text-sm font-medium text-dark">{audition.title}</p>
+                      {audition.show_title && (
+                        <p className="text-xs text-mid-gray">{audition.show_title}</p>
+                      )}
                     </div>
-                    <Link href={`/auditions/${a.id}`} className="shrink-0 text-sm font-medium text-brand-accent hover:underline">
-                      {'Sign up →'}
+                    <Link
+                      href={`/auditions/${audition.id}`}
+                      className="text-sm font-medium hover:opacity-80 transition-opacity whitespace-nowrap ml-4"
+                      style={{ color: 'var(--brand-primary)' }}
+                    >
+                      Sign up →
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <Link
-              href="/update"
-              className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
-            >
-              Update My Info
-            </Link>
-            <Link
-              href="/callboard"
-              className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
-            >
-              View Opportunities
-            </Link>
-            {flags.calendar && (
-              <Link
-                href="/calendar"
-                className="flex-1 text-center bg-white border border-brand-primary text-brand-primary font-semibold py-3 px-6 rounded hover:bg-brand-primary-light transition-colors"
-              >
-                View Calendar
-              </Link>
-            )}
-          </div>
-
-          <h4 className="font-semibold text-brand-primary text-lg text-center mb-4">
-            Sign up to add your name to our volunteer list
-          </h4>
-
-          <VolunteerForm
-            categories={categories ?? []}
-            hearingOptions={hearingOptions ?? []}
-            showSchool={showSchool}
-            showAgeRange={showAgeRange}
-          />
         </div>
-      </section>
+      </main>
 
       {/* Footer */}
       <footer className="w-full bg-footer-gray border-t border-divider py-6 px-6">

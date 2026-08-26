@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { formatInTimeZone } from 'date-fns-tz'
@@ -8,6 +7,7 @@ import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { getPublicCalendarEvents } from '@/lib/data/publicCalendar'
 import PublicCalendarGrid from '@/components/calendar/PublicCalendarGrid'
+import PublicHeader from '@/components/public/PublicHeader'
 
 function addMonthsToMonthStr(monthStr: string, months: number): string {
   const [y, m] = monthStr.split('-').map(Number)
@@ -40,13 +40,13 @@ export default async function PublicCalendarPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="w-full bg-white border-b border-divider">
-        <div className="max-w-3xl mx-auto py-6 px-6 text-center">
-          <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-          <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl mt-4">Events Calendar</h1>
+      <PublicHeader />
+
+      <div className="w-full bg-white border-b border-divider">
+        <div className="max-w-3xl mx-auto pb-6 px-6 text-center">
+          <h1 className="text-brand-primary font-bold text-2xl md:text-3xl">Events Calendar</h1>
         </div>
-      </header>
+      </div>
 
       <main className="flex-1 bg-white py-8 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">

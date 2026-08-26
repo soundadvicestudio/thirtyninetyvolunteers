@@ -160,7 +160,7 @@ export default function VolunteerForm({
   if (formState === 'success') {
     return (
       <div className="rounded-xl bg-brand-primary-light border border-divider
-                      p-8 text-center max-w-xl mx-auto">
+                      p-8 text-center">
         <div className="w-12 h-12 rounded-full bg-brand-accent mx-auto
                         mb-4 flex items-center justify-center">
           <span className="text-white text-xl font-bold">✓</span>
@@ -181,7 +181,7 @@ export default function VolunteerForm({
   if (formState === 'duplicate' && duplicateInfo) {
     return (
       <div className="rounded-xl border border-divider
-                      bg-brand-accent-light p-8 max-w-xl mx-auto">
+                      bg-brand-accent-light p-8">
         <h2 className="text-brand-primary font-bold text-lg mb-2">
           We found an existing record
         </h2>
@@ -214,7 +214,7 @@ export default function VolunteerForm({
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="max-w-xl mx-auto px-4 space-y-5"
+      className="px-4 space-y-5"
     >
       {(formState === 'error' && errorMessage) && (
         <div className="mb-4 rounded-lg bg-brand-accent-light border
