@@ -7,11 +7,12 @@ import { formatWallClockCT } from '@/lib/utils/date'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
+import { createNotification } from '@/lib/utils/notifications'
 import {
   sendSlotClaimEmail,
   sendWaitlistConfirmationEmail,
   sendWaitlistPromotionEmail,
-  sendCancellationEditorNotificationEmail,
+  sendSlotCancellationEmail,
   sendUpdateLinkEmail,
 } from '@/lib/email'
 
@@ -500,7 +501,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
     // A. Look up claim by claim_token.
     const { data: claim, error: claimError } = await client
       .from('slot_claims')
-      .select('id, status, volunteer_email, volunteer_role_id, show_date_id, volunteer_name, waitlist_position')
+      .select('id, status, volunteer_email, volunteer_role_id, show_date_id, volunteer_name, waitlist_position, volunteer_id')
       .eq('claim_token', token)
       .maybeSingle()
 
@@ -595,119 +596,147 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
         }
       }
 
-      // E. Editor notification + promotion email (only if the cancelled claim was 'claimed').
-      if (wasClaimed) {
-        const { data: showDateRow } = await client
-          .from('show_dates')
-          .select('id, show_id, show_date, show_time')
-          .eq('id', claim.show_date_id)
-          .maybeSingle()
+      // E. Fetch show/date/role context — needed for the volunteer
+      // cancellation confirmation email (ADMIN.64, fires for both
+      // 'claimed' and 'waitlisted' cancellations) and, when the claim
+      // was 'claimed', for in-app editor notifications + the waitlist
+      // promotion email.
+      const { data: showDateRow } = await client
+        .from('show_dates')
+        .select('id, show_id, show_date, show_time')
+        .eq('id', claim.show_date_id)
+        .maybeSingle()
 
-        if (showDateRow) {
-          const [{ data: showRow }, { data: roleRow }, { data: editorLinks }] = await Promise.all([
-            client.from('shows').select('id, name, volunteer_instructions').eq('id', showDateRow.show_id).maybeSingle(),
-            client.from('volunteer_roles').select('role_name').eq('id', claim.volunteer_role_id).maybeSingle(),
-            client.from('show_editors').select('admin_id').eq('show_id', showDateRow.show_id),
-          ])
+      if (showDateRow) {
+        const [{ data: showRow }, { data: roleRow }] = await Promise.all([
+          client.from('shows').select('id, name, volunteer_instructions').eq('id', showDateRow.show_id).maybeSingle(),
+          client.from('volunteer_roles').select('role_name').eq('id', claim.volunteer_role_id).maybeSingle(),
+        ])
+
+        const formattedShowDate = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'MMMM d, yyyy', tz)
+        const formattedShowTime = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'h:mm a', tz)
+
+        if (promotedClaim && showRow && roleRow) {
+          try {
+            const promoCancelUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/cancel?token=${promotedClaim.claim_token}`
+            await sendWaitlistPromotionEmail({
+              to: promotedClaim.volunteer_email,
+              volunteerName: promotedClaim.volunteer_name,
+              showName: showRow.name,
+              showDate: formattedShowDate,
+              showTime: formattedShowTime,
+              roleName: roleRow.role_name,
+              volunteerInstructions: showRow.volunteer_instructions,
+              cancelUrl: promoCancelUrl,
+              claimToken: promotedClaim.claim_token,
+              calendarEnabled: flags.calendar,
+            })
+
+            const { data: logRow } = await client
+              .from('email_log')
+              .insert({
+                sent_by: null,
+                subject: `Good news — a spot opened up! — ${showRow.name}`,
+                body_preview: `Good news — a spot opened up for ${roleRow.role_name} at ${showRow.name}`.slice(
+                  0,
+                  150
+                ),
+                recipient_type: 'transactional',
+                recipient_filter: 'trigger:waitlist_promoted',
+                recipient_count: 1,
+              })
+              .select('id')
+              .single()
+
+            if (logRow) {
+              await client.from('email_log_recipients').insert({
+                email_log_id: logRow.id,
+                volunteer_id: promotedClaim.volunteer_id,
+                email_address: promotedClaim.volunteer_email,
+              })
+            }
+          } catch (err) {
+            console.error('[email] waitlist promotion failed:', err)
+          }
+        }
+
+        // ADMIN.64 — in-app notification to each show editor, replacing
+        // the former sendCancellationEditorNotificationEmail() call.
+        // Scope unchanged from the original code: claimed-slot
+        // cancellations only — waitlisted cancellations never notified
+        // editors before, and still don't.
+        if (wasClaimed && showRow && roleRow) {
+          const { data: editorLinks } = await client
+            .from('show_editors')
+            .select('admin_id')
+            .eq('show_id', showDateRow.show_id)
 
           const adminIds = (editorLinks ?? []).map((e) => e.admin_id)
-          let editorEmails: string[] = []
+          let editorAdminIds: string[] = []
           if (adminIds.length > 0) {
             const { data: editors } = await client
               .from('admin_users')
-              .select('email')
+              .select('id')
               .in('id', adminIds)
               .eq('is_active', true)
-            editorEmails = (editors ?? []).map((e) => e.email)
+            editorAdminIds = (editors ?? []).map((e) => e.id)
           }
 
-          const formattedShowDate = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'MMMM d, yyyy', tz)
-          const formattedShowTime = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'h:mm a', tz)
+          const notifTitle = `Volunteer cancellation — ${showRow.name}`
+          const notifHref = `/crew/shows/${showDateRow.show_id}`
+          const notifBody = `${claim.volunteer_name} (${claim.volunteer_email}) cancelled their ${roleRow.role_name} spot for ${showRow.name} on ${formattedShowDate}.`
 
-          if (promotedClaim && showRow && roleRow) {
+          void (async () => {
             try {
-              const promoCancelUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/cancel?token=${promotedClaim.claim_token}`
-              await sendWaitlistPromotionEmail({
-                to: promotedClaim.volunteer_email,
-                volunteerName: promotedClaim.volunteer_name,
-                showName: showRow.name,
-                showDate: formattedShowDate,
-                showTime: formattedShowTime,
-                roleName: roleRow.role_name,
-                volunteerInstructions: showRow.volunteer_instructions,
-                cancelUrl: promoCancelUrl,
-                claimToken: promotedClaim.claim_token,
-                calendarEnabled: flags.calendar,
-              })
-
-              const { data: logRow } = await client
-                .from('email_log')
-                .insert({
-                  sent_by: null,
-                  subject: `Good news — a spot opened up! — ${showRow.name}`,
-                  body_preview: `Good news — a spot opened up for ${roleRow.role_name} at ${showRow.name}`.slice(
-                    0,
-                    150
-                  ),
-                  recipient_type: 'transactional',
-                  recipient_filter: 'trigger:waitlist_promoted',
-                  recipient_count: 1,
-                })
-                .select('id')
-                .single()
-
-              if (logRow) {
-                await client.from('email_log_recipients').insert({
-                  email_log_id: logRow.id,
-                  volunteer_id: promotedClaim.volunteer_id,
-                  email_address: promotedClaim.volunteer_email,
-                })
+              for (const editorAdminId of editorAdminIds) {
+                await createNotification(editorAdminId, 'slot_cancellation', notifTitle, notifHref, notifBody, client)
               }
-            } catch (err) {
-              console.error('[email] waitlist promotion failed:', err)
+            } catch {
+              // Non-fatal — swallow silently
             }
-          }
+          })()
+        }
 
-          if (showRow && roleRow) {
-            try {
-              const adminShowUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/crew/shows/${showDateRow.show_id}`
-              await sendCancellationEditorNotificationEmail({
-                to: editorEmails,
-                volunteerName: claim.volunteer_name,
-                volunteerEmail: claim.volunteer_email,
-                showName: showRow.name,
-                showDate: formattedShowDate,
-                roleName: roleRow.role_name,
-                adminShowUrl,
+        // ADMIN.64 — cancellation confirmation to the volunteer. Fires
+        // from cancelClaim() directly so both cancellation paths (Call
+        // Board + email link) trigger it. Non-blocking — email failure
+        // must never fail the cancellation.
+        if (showRow && roleRow) {
+          try {
+            await sendSlotCancellationEmail({
+              to: claim.volunteer_email,
+              volunteerName: claim.volunteer_name,
+              showName: showRow.name,
+              showDate: formattedShowDate,
+              showTime: formattedShowTime,
+              roleName: roleRow.role_name,
+            })
+
+            const { data: logRow } = await client
+              .from('email_log')
+              .insert({
+                sent_by: null,
+                subject: `Your slot has been cancelled — ${showRow.name}`,
+                body_preview: `Your volunteer spot for ${roleRow.role_name} at ${showRow.name} has been cancelled`.slice(
+                  0,
+                  150
+                ),
+                recipient_type: 'transactional',
+                recipient_filter: 'trigger:slot_cancellation',
+                recipient_count: 1,
               })
+              .select('id')
+              .single()
 
-              if (editorEmails.length > 0) {
-                const { data: logRow } = await client
-                  .from('email_log')
-                  .insert({
-                    sent_by: null,
-                    subject: `Volunteer cancellation — ${showRow.name}`,
-                    body_preview:
-                      `Volunteer cancellation: ${claim.volunteer_name} cancelled their ${roleRow.role_name} spot for ${showRow.name}`.slice(
-                        0,
-                        150
-                      ),
-                    recipient_type: 'transactional',
-                    recipient_filter: 'trigger:cancellation_notify',
-                    recipient_count: editorEmails.length,
-                  })
-                  .select('id')
-                  .single()
-
-                if (logRow) {
-                  await client
-                    .from('email_log_recipients')
-                    .insert(editorEmails.map((email) => ({ email_log_id: logRow.id, email_address: email })))
-                }
-              }
-            } catch (err) {
-              console.error('[email] cancellation editor notification failed:', err)
+            if (logRow) {
+              await client.from('email_log_recipients').insert({
+                email_log_id: logRow.id,
+                volunteer_id: claim.volunteer_id,
+                email_address: claim.volunteer_email,
+              })
             }
+          } catch (err) {
+            console.error('[email] slot cancellation confirmation failed:', err)
           }
         }
       }

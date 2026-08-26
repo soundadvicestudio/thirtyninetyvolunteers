@@ -6,6 +6,7 @@ export type NotificationType =
   | 'calendar_cancelled'
   | 'forum_reply'
   | 'direct_message'
+  | 'slot_cancellation'
 
 export interface NotificationRow {
   id: string

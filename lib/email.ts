@@ -882,6 +882,62 @@ export async function sendWaitlistPromotionEmail({
   })
 }
 
+type SendSlotCancellationEmailParams = {
+  to: string
+  volunteerName: string
+  showName: string
+  showDate: string
+  showTime: string | null
+  roleName: string
+}
+
+// ADMIN.64 — cancellation confirmation to the volunteer. Fires from
+// cancelClaim() for both cancellation paths (Call Board + email link).
+// Mirrors sendSlotClaimEmail()'s structure exactly: resolveEmailSettings()
+// → showDetailsBlockHtml() + CTA → buildEmailHtml() → sendEmail(). Does
+// NOT call logEmailSent() — that helper is module-private and unused by
+// this entire email family; the caller (claims.ts) logs to email_log
+// directly, matching the established pattern for the sibling emails.
+export async function sendSlotCancellationEmail({
+  to,
+  volunteerName,
+  showName,
+  showDate,
+  showTime,
+  roleName,
+}: SendSlotCancellationEmailParams): Promise<void> {
+  const emailSettings = await resolveEmailSettings()
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${escapeHtml(volunteerName)},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      This confirms that your volunteer spot for <strong>${escapeHtml(showName)}</strong> has been cancelled.
+    </p>
+    ${showDetailsBlockHtml(showName, showDate, showTime ?? '—', roleName)}
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      If you cancelled by mistake or would like to sign up again, visit our volunteer page.
+    </p>
+    ${buildCtaButton('Visit Your Volunteer Hub', `${process.env.NEXT_PUBLIC_SITE_URL}/callboard`, emailSettings.brandPrimary)}
+  `
+
+  const subject = `Your slot has been cancelled — ${showName}`
+  const html = buildEmailHtml({
+    subject,
+    preheader: `Your volunteer spot for ${showName} has been cancelled.`,
+    body,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await sendEmail({
+    from: emailSettings.from,
+    replyTo: emailSettings.orgContactEmail,
+    to,
+    subject,
+    html,
+  })
+}
+
 type CancellationEditorNotificationEmailParams = {
   to: string[]
   volunteerName: string

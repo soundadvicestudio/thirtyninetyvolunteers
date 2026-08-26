@@ -53,6 +53,8 @@ function getTypeIcon(type: NotificationType): LucideIcon {
       return Edit
     case 'direct_message':
       return Mail
+    case 'slot_cancellation':
+      return XCircle
   }
 }
 
