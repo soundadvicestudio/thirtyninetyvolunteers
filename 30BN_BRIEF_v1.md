@@ -1,12 +1,13 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.7
-*Created: July 2026 | Last session: DOC.103 (Aug 2026).
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.8
+*Created: July 2026 | Last session: DOC.105 (Aug 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.8 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, home page two-column redesign (HomeCalendarWidget + VolunteerForm card), org logo next/image → img fix, show times on date picker, volunteer card UX polish (DOC.105) |
 | v6.7 | Aug 2026 | ADMIN.61–64 complete — Resend error detection, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email (DOC.102/103) |
 | v6.6 | Aug 2026 | UPSTYLE.1–5 complete — Platform Setup tabbed layout + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed from Style Sandbox (DOC.98/99) |
 | v6.5 | Aug 2026 | ADMIN.58–60 complete — show deletion single-guard + cascade, dashboard 31-day overhaul (SeasonAtAGlance + QuickStats), Beta Testing rename, NavOrderSection self-heal (DOC.90/91) |
@@ -344,15 +345,39 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 ### Public — Volunteer Signup Landing Page (`/`)
 - Branded, mobile-first landing page in 30 By Ninety visual identity
 - Accessible via QR code (in programs and print)
-- Heading reads "Welcome to the {org_name} Volunteer Family" above the fold and "Join the {org_name} Volunteer Community" above the form — both dynamic from `app_settings.org_name` via `resolveOrgIdentity()` (ADMIN.31/ADMIN.33). Footer displays `org_contact_email` (mailto link), `org_website_url` (link), and `org_location` (text) when set. Copyright line uses `{org_name}` dynamically (ADMIN.31b). `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session (corrected ADMIN.31).
-- OpenCall OS public page org identity sweep (ADMIN.33): All 13 public-facing pages and the admin Sidebar now use `resolveOrgIdentity()` for dynamic logo, alt text, and copyright. Affected pages: `app/not-found.tsx`, `app/cancel/page.tsx`, `app/calendar/page.tsx`, `app/opportunities/[id]/page.tsx`, `app/forms/[id]/page.tsx`, `app/crew/(auth)/login/page.tsx`, `app/consent/[token]/page.tsx`, `app/callboard/page.tsx`, `app/checkin/[token]/page.tsx`, `app/shows/page.tsx`, `app/shows/[id]/page.tsx`, `app/page.tsx` (second heading fixed), `components/crew/Sidebar.tsx` (logo — org fetched in layout, passed as prop). Dynamic logo pattern: `src={org.org_logo_url || '/logo.png'}`, alt text: `{org.org_name}`, copyright: `© {org.org_name}`.
-- Conditional announcement banner renders BELOW the logo/header area (not above). Full-width, bg-orange, prominent. Admin-controlled on/off.
+- Org identity (name, tagline, contact info, logo) resolved dynamically via `resolveOrgIdentity()` (ADMIN.31/ADMIN.33 — full 13-page sweep documented in §11 ADMIN.33). Logo rendering superseded by `PublicHeader` as of ADMIN.65 (below). `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session (corrected ADMIN.31).
+- Conditional announcement banner renders BELOW `PublicHeader` when active. Full-width, bg-orange, prominent. Admin-controlled on/off.
 - Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
-- Two equal-weight outlined CTA buttons above the signup form: "Update My Info" (→ `/update`) and "View Opportunities" (→ `/callboard`). Appear below the bridging text, above the form.
-- **Upcoming Auditions card (Phase AUDITIONS):** When `feature_auditions` is on, a card or section showing published upcoming auditions appears on the landing page. Each entry links to `/auditions/[id]`. Hidden entirely when no auditions are published or the flag is off.
-- "Sign up to add your name to our volunteer list" subheading appears immediately above the form.
-- Discreet "Production Crew" text link in page footer → `/crew/login` (intentionally subtle — small text, not a CTA button)
-- Volunteer registration form:
+
+**Layout and structure (post-UPSTYLE.6B):**
+- `PublicHeader` shared Server Component (`components/public/PublicHeader.tsx`) renders the org logo (linked to `/`) on all public pages — no per-page logo block. No orange underline. Calls `resolveOrgIdentity()`. Used on this and 10 other public-facing pages (ADMIN.65) — `app/cancel/page.tsx` not yet migrated (carry-forward, see §11 ADMIN.65 entry).
+- Content container: `max-w-6xl mx-auto px-4 py-8`
+- Page heading zone (`pb-4 border-b border-neutral-border mb-6`): h1 "Welcome to the {org_name} Volunteer Family" + conditional `org.org_tagline` paragraph
+- Introductory paragraph below heading zone: "Our volunteers are the heart of every production — from backstage to the box office. Whatever your talents or time, there's a place for you here." (restored ADMIN.67)
+- h3 subheading: "Join the {org_name} Volunteer Community" (restored ADMIN.68) — positioned above the two-column widget area, not above the form as in the pre-redesign layout
+- CTA buttons row (`flex flex-col sm:flex-row justify-center`): two filled brand-primary buttons — "Update My Info" (→ `/update`) and "Upcoming Volunteer Opportunities" (→ `/callboard`). Both use `style={{ backgroundColor: 'var(--brand-primary)' }}` inline style (R33 — CSS custom property, not a Tailwind brand utility class). "View Calendar" button removed (calendar is now inline on the page, ADMIN.70/UPSTYLE.6B)
+- Two-column widget area (`flex flex-col xl:flex-row gap-6`): left `xl:w-[50%]` `HomeCalendarWidget` (public events calendar, gated on `flags.calendar` — if off, form takes full width via `w-full max-w-2xl mx-auto`). Right `xl:w-[50%]` `VolunteerForm` wrapped in an Option A card with a "Sign Up to Volunteer" header zone label (ADMIN.69)
+- **Upcoming Auditions card:** below the widget area (moved from between the heading zone and CTA buttons — UPSTYLE.6B). Gated on `flags.auditions` + non-empty `getUpcomingAuditions()` result. Each entry links to `/auditions/[id]`. Note: audition date is not currently displayed on this card (carry-forward — see §11 UPSTYLE.6B entry)
+- Footer: unchanged — org contact info (`org_contact_email` mailto link, `org_website_url`, `org_location`, shown when set) + copyright (`© {org_name}`) + discreet "Production Crew" text link → `/crew/login` (intentionally subtle — small text, not a CTA button)
+
+**Calendar widget (`HomeCalendarWidget`):**
+- `'use client'` component at `components/calendar/HomeCalendarWidget.tsx`
+- Props: `initialYear: number`, `initialMonth: number`, `initialEvents: PublicCalendarEvent[]`
+- Manages `focusedMonth` via `useState` — NO URL params, NO `next/link` for month navigation
+- Month changes call `getHomeCalendarEvents(year, month)` from `lib/actions/home-calendar.ts` (server action, public route — `getAdminClient()` only)
+- Event data fetched from `lib/data/publicCalendar.ts` via `getPublicCalendarEvents(supabase, year, month, timezone)`
+- Initial events fetched server-side in `app/page.tsx` and passed as props — no loading state on first paint
+- Event pill className: `line-clamp-2` (not `truncate`) — event titles visible up to 2 lines without truncation
+- Timezone: SSR-guarded `document.body.dataset.timezone` read at component top, `'America/Chicago'` fallback
+- Renders its own Option A two-zone card (header with month navigation, body with 7-column grid)
+- Calendar events fetch in `app/page.tsx` is gated: `if (flags.calendar) { calendarEvents = await getPublicCalendarEvents(...) }` — no unnecessary DB query when the flag is off
+
+**Volunteer form widget:**
+- `VolunteerForm` component unchanged in logic
+- Wrapped in an Option A card in `app/page.tsx`: header zone "Sign Up to Volunteer", body zone `<VolunteerForm .../>`
+- `VolunteerForm.tsx` root states had `max-w-xl mx-auto` removed (all 3 states: form, success, duplicate/merge) — the card wrapper provides the container width
+
+**Volunteer registration form fields (unchanged):**
   - Full name (required)
   - Email (required)
   - Phone (required)
@@ -378,6 +403,17 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 - Success state: warm thank-you in-page (no redirect)
 - Confirmation email sent on signup includes a CTA button linking to `/callboard` (updated Phase 13.2 — was `/shows` in Alpha).
 - `age_range` field is required when `signup_show_age_range` setting is `true` (owner decision, 30BN-2.3-FIX).
+
+**Technical notes:**
+- `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session
+- Current month in org timezone computed via `formatInTimeZone(new Date(), tz, 'yyyy')` and `formatInTimeZone(new Date(), tz, 'M')` from `date-fns-tz`
+- `VolunteerHomeMockup.tsx` in Style Sandbox represents this redesign — its implementation is now complete; the mockup is a candidate for removal in a future cleanup step
+
+**Key files (new, UPSTYLE.6A/ADMIN.65):**
+- `components/public/PublicHeader.tsx` — shared Server Component, renders the org logo (plain `<img>` — not `next/image`) wrapped in `<Link href="/">`, calls `resolveOrgIdentity()`. Used by all 11 public-facing volunteer pages migrated in ADMIN.65.
+- `lib/data/publicCalendar.ts` — no `'use server'`; exports `PublicCalendarEvent` type (canonical home for this type — was previously a local unexported type in `PublicCalendarGrid.tsx`) and `getPublicCalendarEvents(supabase, year, month, timezone)`. Accepts `SupabaseClient` as a parameter (lib/data/ companion-module pattern).
+- `lib/actions/home-calendar.ts` — `'use server'`; PUBLIC ROUTE; exports `getHomeCalendarEvents(year, month)`; constructs `getAdminClient()`, calls `getOrgTimezone()`, delegates to `getPublicCalendarEvents()`.
+- `components/calendar/HomeCalendarWidget.tsx` — `'use client'`; home page public calendar widget; `useState` month navigation; calls `getHomeCalendarEvents()`; renders its own Option A card with month navigation and 7-column grid; `line-clamp-2` on event pills.
 
 ### Public — Volunteer Info Update (`/update`)
 - Token-based: each volunteer has a unique `update_token` (UUID)
@@ -467,6 +503,19 @@ internal volunteer lookup block is skipped entirely.
 This ensures `slot_claims.volunteer_id` is always
 populated — unlinked claims are no longer possible
 via the new flow.
+
+**Show times on date picker (ADMIN.71):** The date picker
+buttons on `/shows/[id]` now display the show time alongside
+the date. Format: "Sat, Oct 10, 2026 · 8:00 PM – 10:30 PM"
+(or "Sat, Oct 10, 2026 · 8:00 PM" when `end_time` is null).
+Applied using `formatWallClockCT(date.show_date, date.show_time,
+'EEE, MMM d, yyyy · h:mm a', tz)` with an optional end-time
+suffix. Same time information displayed in the "Roles for
+[date]" section heading after date selection. Timezone: SSR-
+guarded body attribute read (same established Client Component
+pattern). `show_time` and `end_time` were already included in
+the page's show_dates query — this was a display-only addition,
+no query changes needed.
 
 **Slot cancellation confirmation email (ADMIN.64):**
 `sendSlotCancellationEmail()` added to `lib/email.ts`.
@@ -562,6 +611,23 @@ optional and additive: entering email or phone personalizes the view with a volu
     volunteer's email — no additional verification
     needed since volunteer is already authenticated
     via cookie session.
+
+**ADMIN.65 button and UX polish:**
+- Call history now defaults to expanded (`useState(true)` —
+  was `useState(false)`). Toggle preserved for manual
+  collapse.
+- "Edit My Info" button restyled: filled primary Link button
+  `style={{ backgroundColor: 'var(--brand-primary)' }}`
+  `text-white hover:opacity-90 rounded-lg` (R33 — CSS custom
+  property, not Tailwind brand utility class)
+- "Sign Out" button restyled: bordered secondary button
+  `border border-gray-300 text-gray-600 bg-white
+  hover:bg-gray-50 rounded-lg`
+- UpcomingSlots.tsx cancel flow buttons restyled:
+  idle "Cancel": `text-red-600 hover:text-red-700 font-medium`
+  confirming "Yes, cancel": filled `bg-red-600 text-white`
+  confirming "Keep it": bordered `border-gray-300 text-gray-600`
+- No dark: classes on any of the above (public page — ADMIN.6)
 
 **Session mechanics:**
 - Cookie name: `callboard_session` — stores volunteer id, expires 7 days
@@ -1504,7 +1570,21 @@ Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent
 
 **Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Click pill → show name, time, "Sign up to volunteer →" link to `/shows/[id]`. Month navigation via `?month=YYYY-MM` URL param (org-timezone-safe
   default — `PublicCalendarGrid.tsx` reads `document.body.dataset.timezone`
-  with SSR guard, updated TZ.5b alongside the admin calendar components). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link added to `/` landing page and `/shows` page. Component: `components/calendar/PublicCalendarGrid.tsx`.
+  with SSR guard, updated TZ.5b alongside the admin calendar components). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link on `/shows` page (removed from `/` landing page in UPSTYLE.6B — the calendar now renders inline via `HomeCalendarWidget`, see landing page section above). Component: `components/calendar/PublicCalendarGrid.tsx`.
+
+**Header migration (ADMIN.65):** `app/calendar/page.tsx` now
+uses `<PublicHeader />` (shared component) instead of the
+previous per-page logo block. The page h1 ("Events Calendar")
+renders in its own white-bordered strip immediately below
+`<PublicHeader />`, following the same split-header pattern
+as `/callboard` established in ADMIN.65.
+
+**Query extraction (UPSTYLE.6A):** The three event-resolution
+queries previously inline in `app/calendar/page.tsx` are now
+extracted to `lib/data/publicCalendar.ts` via
+`getPublicCalendarEvents(supabase, year, month, timezone)`.
+The page calls this shared function. Rendered output is
+identical to pre-extraction.
 
 **Recurring Events (CAL.10a–c):**
 
@@ -2857,7 +2937,7 @@ patterns. All data is hardcoded representative values — no
 DB queries. Mockups live entirely within the sandbox; zero
 production files are touched. Added STYLE.2 through STYLE.8.
 
-Page mockup inventory (11 remaining — 6 removed as each was incorporated into the live platform via UPSTYLE prompts):
+Page mockup inventory (12 remaining — 6 removed as each was incorporated into the live platform via UPSTYLE prompts):
 1. Dashboard — stat tiles with border-t-brand-primary accent,
    activity feed with NEW badge using bg-brand-primary-subtle
 2. Calendar — Month view, location color chips inline style,
@@ -2884,6 +2964,11 @@ Page mockup inventory (11 remaining — 6 removed as each was incorporated into 
 11. QR Generator — generator card, 10×10 static QR grid
     (bg-white always — scanability rule, no dark: override),
     3-entry history panel
+12. Volunteer Home Page — two-column public landing page
+    redesign with static October 2025 calendar grid + static
+    signup form card; UPSTYLE.6B implementation is complete —
+    this mockup is a candidate for removal in a future cleanup
+    step
 
 **Option A design patterns (applied throughout mockups):**
 These are the intended targets for STYLE-ROLLOUT:
@@ -2912,11 +2997,11 @@ mockup prompts.
 - `lib/utils/color.ts` — `darkenHex()` added alongside `lightenHex()` (STYLE.A)
 - `app/globals.css` — `--color-neutral-surface` / `--color-neutral-border` in @theme block; new @layer utilities classes for brand-derived tokens
 - `app/layout.tsx` — `resolveBrandColors()` extended to inject 9 total custom properties
-- Mockup components (11 files):
+- Mockup components (12 files):
   `DashboardMockup.tsx`, `CalendarMockup.tsx`, `RehearsalsMockup.tsx`,
   `AuditionsMockup.tsx`, `InventoryMockup.tsx`, `VolunteersMockup.tsx`,
   `ForumsMockup.tsx`, `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`,
-  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`
+  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`, `VolunteerHomeMockup.tsx`
 
 ---
 
@@ -9671,6 +9756,185 @@ modified. Commit: c60758d.
   three-zone card + heading zone in §14; header
   updated to DOC.101.
 
+**30BN-ADMIN.65** ✓ Public-facing frontend polish.
+`components/public/PublicHeader.tsx` (new — Server Component,
+org logo as plain `<img>` linked to `/`, calls
+`resolveOrgIdentity()`, no orange border). 11 public pages
+updated: all replace per-page logo block with `<PublicHeader
+/>`, `resolveOrgIdentity()` removed where logo was its sole
+use. 10 pages (all except landing page `/`) gain "← Back to
+Main Page" `<Link href="/">` below header, max-width matched
+per page. `components/callboard/VolunteerCard.tsx`: call
+history `useState(false)` → `useState(true)` (default open);
+"Edit My Info" → filled primary Link button; "Sign Out" →
+bordered secondary button; pre-existing `<a>` tag for Edit
+My Info corrected to `next/link` `<Link>`. `components/callboard/
+UpcomingSlots.tsx`: idle Cancel → `text-red-600`; confirming
+"Yes, cancel" → filled `bg-red-600`; confirming "Keep it"
+→ bordered secondary. `app/calendar/page.tsx`: header migrated
+to `<PublicHeader />`. All 14 files: zero dark: classes, zero
+shadcn Button imports, zero raw `<a>` internal navigation.
+Commit pushed.
+
+**30BN-ADMIN.65-FIX** ✓ Logo and favicon save/revalidation
+fix. Root cause 1: org logo (`https://30byninety.com/...`)
+blocked by `next/image` remotePatterns (`*.supabase.co` only).
+Fix: `PublicHeader.tsx` and `Sidebar.tsx` switched from
+`<Image>` to plain `<img>` with `// eslint-disable-next-line
+@next/next/no-img-element` suppression (permanent solution:
+org logos can be any external URL in OpenCall OS deployments
+— per-client remotePatterns additions are not viable). Root
+cause 2: `saveLogoUrl()` and `saveFaviconUrl()` both called
+`revalidatePath('/')` (page scope) but NOT
+`revalidatePath('/', 'layout')` — required for `generateMetadata()`
+in root layout and crew layout Sidebar. Fix: `saveLogoUrl()`
+gains `revalidatePath('/', 'layout')` and `revalidatePath(
+'/crew', 'layout')`; `saveFaviconUrl()` gains `revalidatePath(
+'/', 'layout')`. Comparison: `saveOrgIdentity()` in same file
+already had the correct pattern — `saveLogoUrl`/`saveFaviconUrl`
+were built without it. 3 files. Commit pushed.
+
+**30BN-ADMIN.66** ✓ Volunteer home page redesign mockup.
+`components/crew/settings/VolunteerHomeMockup.tsx` (new —
+static mockup: heading zone, introductory paragraph, two
+filled CTA buttons, two-column widget area with static October
+2025 calendar card + static signup form card, Upcoming
+Auditions card, footer). Added to `StyleSandbox.tsx` as 12th
+mockup (after QRGeneratorMockup). Zero dark: classes, zero
+live data calls, named exports. 2 files. Commit pushed.
+
+**30BN-ADMIN.67** ✓ Restored introductory paragraph to home
+page. Text recovered from git history (commit 3602fe6,
+pre-UPSTYLE.6B): "Our volunteers are the heart of every
+production — from backstage to the box office. Whatever your
+talents or time, there's a place for you here." Placed between
+the heading zone closing div and the CTA buttons row in
+`app/page.tsx`. Styled `text-mid-gray text-base leading-relaxed
+mb-6`. Q1: pre-UPSTYLE.6B page also had "Join the {org}
+Volunteer Community" h3 in the sign-up section — not the hero
+— not yet restored (ADMIN.68). 1 file. Commit pushed.
+
+**30BN-ADMIN.68** ✓ Home page h3 restoration + form column
+width fix. `app/page.tsx`: "Join the {org.org_name} Volunteer
+Community" h3 restored from git history (h3, `font-bold
+text-xl text-center mb-6`; `text-brand-primary` adapted to
+`text-dark` to match all-neutral redesigned page — correct
+call, confirmed F1). Outer container: `max-w-5xl` → `max-w-6xl`.
+Column split: `xl:w-[55%]` / `xl:w-[45%]` → `xl:w-[50%]` /
+`xl:w-[50%]` (both columns including form ternary value).
+1 file. Commit pushed.
+
+**30BN-ADMIN.69** ✓ Form card header text update. `app/page.tsx`:
+card header zone span text changed from "Join Our Volunteer
+Family" to "Sign Up to Volunteer" — eliminated redundancy
+with the adjacent "Join the {org} Volunteer Community" h3.
+1 file, 1 line. Commit pushed.
+
+**30BN-ADMIN.70** ✓ CTA buttons centered + filled style.
+`app/page.tsx`: CTA buttons row container gains `justify-center`.
+Both Link buttons restyled from outlined (`border border-gray-300
+text-gray-700`) to filled brand primary (`text-white
+hover:opacity-90 rounded-lg` + `style={{ backgroundColor:
+'var(--brand-primary)' }}`). R33 compliant — CSS custom
+property inline style, no Tailwind brand utility class.
+1 file. Commit pushed.
+
+**30BN-ADMIN.71** ✓ Show times on per-show claiming page date
+picker. Date picker buttons and "Roles for [date]" heading in
+`app/shows/[id]/` now display formatted show time. Format:
+"Sat, Oct 10, 2026 · 8:00 PM – 10:30 PM" (end time appended
+when non-null). Uses `formatWallClockCT()` with org timezone
+from SSR-guarded body attribute. `show_time` and `end_time`
+were already in the page's query — display-only addition.
+Files modified: `app/shows/[id]/ShowDatePicker.tsx`. Commit
+pushed.
+
+**30BN-UPSTYLE.6-AUDIT** ✓ Read-only audit of `app/page.tsx`,
+`components/calendar/PublicCalendarGrid.tsx`, `components/
+public/PublicHeader.tsx`. Key findings: (1) `PublicCalendarGrid`
+cannot be reused directly on home page — all month navigation
+is prop-driven (`prevMonthUrl`/`nextMonthUrl` rendered as
+`<Link>` elements; clicking changes the page URL and triggers
+full reload). Wrapper component required. (2) `PublicCalendar
+Event` type was local and unexported inside `PublicCalendar
+Grid.tsx` — no importable source. Resolved in UPSTYLE.6A by
+declaring it as a canonical exported type in `lib/data/
+publicCalendar.ts`. (3) event pills use `truncate` class —
+must be removed and replaced with `line-clamp-2` per owner
+requirement. (4) `app/page.tsx` uses `tz` (not `timezone`)
+for the resolved timezone variable. (5) `resolveOrgIdentity()`
+takes zero arguments in live code (self-contained — spec
+assumption of a client argument was wrong). No code.
+
+**30BN-UPSTYLE.6A** ✓ Calendar widget infrastructure.
+`lib/data/publicCalendar.ts` (new — no 'use server'; exports
+`PublicCalendarEvent` type as canonical home; exports
+`getPublicCalendarEvents(supabase, year, month, timezone)` —
+exact 3-query + transform logic extracted verbatim from
+`app/calendar/page.tsx`; `timezone` param kept in signature
+for consistency though current date-range math is UTC-anchored —
+documented with comment). `lib/actions/home-calendar.ts`
+(new — 'use server'; // PUBLIC ROUTE; single export
+`getHomeCalendarEvents(year, month)` — constructs admin client,
+calls `getOrgTimezone()`, delegates to `getPublicCalendarEvents()`.
+`components/calendar/HomeCalendarWidget.tsx` (new — 'use client';
+`useState` month navigation, no URL params, no `next/link` for
+navigation; `getHomeCalendarEvents()` called on month change;
+Option A two-zone card wrapper; `line-clamp-2` on event pills
+replacing `truncate`; `line-clamp-2` confirmed via grep pre-
+commit; zero dark: classes). `app/calendar/page.tsx`: 3 inline
+event queries + transform replaced with single
+`getPublicCalendarEvents()` call; unused `getMonthGridDays`
+import and redundant `.filter()` removed. F1: `PublicCalendar
+Event` had no importable source — declared in `lib/data/
+publicCalendar.ts` as new canonical type; structural typing
+confirms compatibility with `PublicCalendarGrid.tsx`'s own
+local type (tsc clean). F2: `next/link` import in
+`HomeCalendarWidget.tsx` (for event pill links to `/shows/[id]`)
+produces one expected grep hit in the `useRouter/next/link/
+href.*month` quality gate — correct and intentional (month
+navigation itself uses plain `<button onClick>` only). 3 new
+files, 1 modified. Commit pushed.
+
+**30BN-UPSTYLE.6B** ✓ Home page two-column layout implementation
++ /calendar header migration. `app/page.tsx` fully restructured:
+imports `HomeCalendarWidget` + `getPublicCalendarEvents` +
+`PublicCalendarEvent` from new infrastructure. Current month
+computed via `formatInTimeZone(new Date(), tz, 'yyyy'/'M')`.
+Calendar events fetch gated on `flags.calendar`. Two-column
+widget area (`flex flex-col xl:flex-row gap-6`, `max-w-6xl`
+container): left `xl:w-[50%]` HomeCalendarWidget (calendar-
+gated), right `xl:w-[50%]` VolunteerForm Option A card ("Sign
+Up to Volunteer" header — ADMIN.69). Upcoming Auditions rebuilt
+as Option A card list below widget area. "View Calendar" button
+removed (calendar now inline). "View Opportunities" →
+"Upcoming Volunteer Opportunities". `formatWallClockCT` import
+removed (unused after audition date was not rendered in the
+card — Q3: audition date missing from home page card, carry-
+forward). `components/VolunteerForm.tsx`: `max-w-xl mx-auto`
+removed from all 3 root states (form, success, duplicate) —
+card wrapper provides container. `app/calendar/page.tsx`:
+header migrated to `<PublicHeader />` (UPSTYLE.6A changes
+fully preserved). Q3: audition date (previously displayed via
+`formatWallClockCT()`) is now absent from the home page
+Upcoming Auditions card — the card was rebuilt from the
+prompt's explicit JSX spec which did not include the date
+field; carry-forward for a future targeted fix. 3 files
+modified. Commit pushed.
+
+Carry-forward items (as of DOC.105):
+— `app/cancel/page.tsx` (slot claim cancel page): not yet
+  migrated to `<PublicHeader />`. Intentionally excluded from
+  ADMIN.65 scope (Q1 from ADMIN.65). Token-gated email-link
+  page; users arrive from email, not from navigation flow.
+  Assess whether header unification is wanted here.
+— Audition date missing from home page Upcoming Auditions
+  card: the card (rebuilt in UPSTYLE.6B) no longer shows
+  the formatted date range that the pre-UPSTYLE.6B card
+  displayed. Q3 from UPSTYLE.6B. Targeted fix: re-add
+  `formatWallClockCT()` import to `app/page.tsx` and render
+  `audition.date_start` in the card. Carry-forward.
+
 ---
 
 ## 12. Open Decisions Log
@@ -10619,6 +10883,106 @@ higher-level wrappers) so it fires regardless of
 how cancellation is triggered. This is the correct
 pattern for any side-effect that must fire on every
 cancellation regardless of entry point.
+
+**Org logo rendering: plain `<img>`, not `next/image`
+(ADMIN.65-FIX):**
+The org logo (`org_logo_url` from `app_settings`) must be
+rendered using a plain `<img>` tag, not Next.js `<Image>`.
+Reason: the Setup Panel's logo URL input accepts any publicly
+hosted URL (WordPress, CDN, any external domain). `next/image`
+requires all external hostnames to be listed in `next.config.ts`
+`remotePatterns` — adding every possible client hostname is
+not viable for OpenCall OS multi-client deployments.
+
+Pattern:
+
+```
+{/* eslint-disable-next-line @next/next/no-img-element --
+org_logo_url can be any external URL (Setup Panel
+URL-paste mode); next/image would require every possible
+hostname in next.config.ts remotePatterns, which is not
+viable across OpenCall OS client deployments. */}
+<img src={org.org_logo_url || '/logo.png'} alt={org.org_name}
+width={W} height={H} />
+```
+
+The `eslint-disable-next-line` suppression with explanation
+comment is required (plain `<img>` in Next.js projects
+triggers `@next/next/no-img-element` lint rule — without the
+suppression, the zero-lint-warnings baseline breaks).
+
+Applied in: `components/public/PublicHeader.tsx` and
+`components/crew/Sidebar.tsx`. Any future surface that
+renders `org.org_logo_url` must use the same pattern.
+
+**`saveLogoUrl()` and `saveFaviconUrl()` revalidation scope
+(ADMIN.65-FIX):**
+Both save actions in `lib/actions/setup.ts` must call
+`revalidatePath('/', 'layout')` to invalidate `generateMetadata()`
+in the root layout (favicon, page title, og metadata). The
+logo additionally requires `revalidatePath('/crew', 'layout')`
+to invalidate the admin Sidebar (which renders the org logo
+via the crew app layout fetch). Page-scope revalidation
+(`revalidatePath('/')` without the second argument) does NOT
+invalidate layout-level metadata or Server Components that
+fetch data in the layout rather than the page. Confirmed
+failure: 8-day period where favicon and sidebar logo were
+stale after saves, with no error thrown.
+
+Full required `revalidatePath()` call set after `saveLogoUrl()`:
+```
+revalidatePath('/')
+revalidatePath('/', 'layout')
+revalidatePath('/crew', 'layout')
+revalidatePath('/crew/settings/setup')
+```
+
+Full required call set after `saveFaviconUrl()`:
+```
+revalidatePath('/')
+revalidatePath('/', 'layout')
+revalidatePath('/crew/settings/setup')
+```
+
+**`PublicCalendarEvent` canonical type location
+(UPSTYLE.6A F1):**
+`PublicCalendarEvent` is defined and exported from
+`lib/data/publicCalendar.ts`. It was originally a local,
+unexported type inside `components/calendar/PublicCalendar
+Grid.tsx` — this made it impossible to import from any
+other file without modifying `PublicCalendarGrid.tsx`.
+The type was not modified; it was extracted to `lib/data/
+publicCalendar.ts` as the canonical home, and TypeScript's
+structural typing ensures compatibility at all call sites
+(tsc confirmed clean). Any future code that needs the
+`PublicCalendarEvent` type imports from
+`@/lib/data/publicCalendar`.
+
+**`HomeCalendarWidget` pattern — client-side calendar widget
+(UPSTYLE.6A/6B):**
+The home page public calendar widget (`components/calendar/
+HomeCalendarWidget.tsx`) manages month navigation via local
+`useState` — no URL params, no `next/link`, no router.
+Month changes call `getHomeCalendarEvents(year, month)` from
+`lib/actions/home-calendar.ts` (server action). Initial events
+are fetched in `app/page.tsx` (Server Component) and passed
+as `initialEvents` prop — no loading state on first paint.
+The calendar data fetch in `app/page.tsx` is gated on
+`flags.calendar`: if the flag is off, no query runs and the
+widget does not render.
+
+Key constraints:
+- `line-clamp-2` on event pills (not `truncate`) — owner
+  requirement that event titles be fully visible
+- SSR-guarded timezone read at top of component function:
+  `const tz = typeof document !== 'undefined'
+    ? (document.body.dataset.timezone || 'America/Chicago')
+    : 'America/Chicago'`
+- Month navigation via plain `<button onClick={handlePrev/Next}>`
+  — NOT `<Link href={...?month=...}>` which would navigate
+  the page and destroy VolunteerForm state
+- `getHomeCalendarEvents()` in `lib/actions/home-calendar.ts`
+  uses `getAdminClient()` — public route, no session
 
 ---
 
