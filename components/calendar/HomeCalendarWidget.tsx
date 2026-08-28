@@ -117,7 +117,7 @@ export function HomeCalendarWidget({
             return (
               <div
                 key={dayStr}
-                className={`bg-white p-1 sm:p-1.5 min-h-[50px] sm:min-h-[60px] ${!isCurrentMonth ? 'opacity-40' : ''}`}
+                className={`bg-white p-1 sm:p-1.5 min-h-[70px] sm:min-h-[80px] ${!isCurrentMonth ? 'opacity-40' : ''}`}
               >
                 <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : 'text-dark'}`}>
                   {d}

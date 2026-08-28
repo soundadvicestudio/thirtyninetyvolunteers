@@ -688,37 +688,6 @@ export async function sendOpportunitySlotClaimEmail({
 
 // ─── Slot claiming emails (30BN-5.2) ─────────────────────────────
 
-function emailShell(bodyHtml: string, orgName?: string, brandPrimary?: string): string {
-  const safeOrgName = escapeHtml(orgName || '30 By Ninety Theatre')
-  const resolvedBrandPrimary = brandPrimary || '#293994'
-  return `
-    <!DOCTYPE html>
-    <html>
-    <body style="margin:0;padding:0;background:#f5f5f5;
-                 font-family:'Open Sans',Arial,sans-serif;">
-      <div style="max-width:560px;margin:32px auto;
-                  background:#ffffff;border-radius:8px;
-                  overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        <div style="background:${resolvedBrandPrimary};padding:28px 32px;">
-          <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">
-            ${safeOrgName}
-          </p>
-        </div>
-        <div style="padding:32px;">
-          ${bodyHtml}
-        </div>
-        <div style="background:#f5f5f5;padding:16px 32px;
-                    border-top:1px solid #D0D5E8;">
-          <p style="margin:0;color:#aaa;font-size:12px;">
-            ${safeOrgName}
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `
-}
-
 function showDetailsBlockHtml(showName: string, showDate: string, showTime: string, roleName: string): string {
   return `
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
@@ -999,63 +968,6 @@ export async function sendSlotCancellationEmail({
     subject,
     html,
   })
-}
-
-type CancellationEditorNotificationEmailParams = {
-  to: string[]
-  volunteerName: string
-  volunteerEmail: string
-  showName: string
-  showDate: string
-  roleName: string
-  adminShowUrl: string
-}
-
-export async function sendCancellationEditorNotificationEmail({
-  to,
-  volunteerName,
-  volunteerEmail,
-  showName,
-  showDate,
-  roleName,
-  adminShowUrl,
-}: CancellationEditorNotificationEmailParams): Promise<void> {
-  if (to.length === 0) return
-
-  const emailSettings = await resolveEmailSettings()
-  const subject = `Volunteer cancellation — ${showName}`
-  const html = emailShell(
-    `
-    <h1 style="color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;margin:0 0 12px;">
-      Volunteer cancellation
-    </h1>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px;">
-      <strong>${escapeHtml(volunteerName)}</strong> (${escapeHtml(volunteerEmail)}) has cancelled
-      their volunteer spot for <strong>${escapeHtml(roleName)}</strong> on ${escapeHtml(showDate)}
-      (${escapeHtml(showName)}).
-    </p>
-    <a href="${adminShowUrl}"
-       style="display:inline-block;background:${emailSettings.brandAccent};
-              color:#ffffff;text-decoration:none;
-              padding:14px 28px;border-radius:8px;
-              font-weight:700;font-size:15px;">
-      View Show in Production Crew
-    </a>
-  `,
-    emailSettings.orgName,
-    emailSettings.brandPrimary
-  )
-
-  // R8 — multi-recipient send uses resend.batch.send(), one entry per editor.
-  await sendBatch(
-    to.map((address) => ({
-      from: emailSettings.from,
-      replyTo: emailSettings.orgContactEmail,
-      to: address,
-      subject,
-      html,
-    }))
-  )
 }
 
 type ReminderEmailParams = {

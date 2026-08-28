@@ -575,7 +575,7 @@ function FeatureFlagsSection({ initialValues }: { initialValues: SetupPanelIniti
       />
       <ToggleRow
         label="Beta Testing"
-        description="Enable the Beta Feedback page for crew members to submit feature requests and bug reports."
+        description="Enable the Beta Testing feedback form, visible to all crew members."
         enabled={betaEnabled}
         onToggle={() => setBetaEnabled((v) => !v)}
       />

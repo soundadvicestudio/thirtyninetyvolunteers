@@ -1,26 +1,15 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { formatWallClockCT } from '@/lib/utils/date'
-import { resolveOrgIdentity, type OrgIdentity } from '@/lib/utils/org-identity'
+import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import PublicHeader from '@/components/public/PublicHeader'
 import CancelForm from './CancelForm'
 
-function PublicHeader({ org }: { org: OrgIdentity }) {
-  return (
-    <header className="w-full bg-white border-b border-divider">
-      <div className="max-w-2xl mx-auto py-6 px-6 text-center">
-        <Image src={org.org_logo_url || '/logo.png'} alt={org.org_name} width={112} height={64} className="mx-auto" />
-        <span className="block w-16 h-0.5 bg-brand-accent mx-auto mt-2" />
-      </div>
-    </header>
-  )
-}
-
-function InfoPage({ title, org }: { title: string; org: OrgIdentity }) {
+function InfoPage({ title }: { title: string }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
       <main className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-md text-center">
           <h1 className="text-brand-primary font-bold text-xl mb-6">{title}</h1>
@@ -51,7 +40,7 @@ export default async function CancelPage({
   const org = await resolveOrgIdentity()
 
   if (!token) {
-    return <InfoPage title="No cancel link found" org={org} />
+    return <InfoPage title="No cancel link found" />
   }
 
   const client = getAdminClient()
@@ -63,11 +52,11 @@ export default async function CancelPage({
     .maybeSingle()
 
   if (!claim) {
-    return <InfoPage title="This cancel link is not valid or has already been used." org={org} />
+    return <InfoPage title="This cancel link is not valid or has already been used." />
   }
 
   if (claim.status === 'cancelled') {
-    return <InfoPage title="This spot has already been cancelled. We hope to see you at a future show!" org={org} />
+    return <InfoPage title="This spot has already been cancelled. We hope to see you at a future show!" />
   }
 
   const { data: showDate } = await client
@@ -84,7 +73,7 @@ export default async function CancelPage({
   ])
 
   if (!showDate || !show || !role) {
-    return <InfoPage title="This cancel link is not valid or has already been used." org={org} />
+    return <InfoPage title="This cancel link is not valid or has already been used." />
   }
 
   const tz = await getOrgTimezone(client)
@@ -97,10 +86,19 @@ export default async function CancelPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicHeader org={org} />
+      <PublicHeader />
 
       <main className="flex-1 bg-white py-10 px-6">
         <div className="max-w-md mx-auto">
+          <div className="mb-4">
+            <Link
+              href="/"
+              className="text-sm text-mid-gray hover:underline"
+            >
+              ← Back to Main Page
+            </Link>
+          </div>
+
           <h1 className="text-brand-primary font-bold text-2xl mb-6">Cancel Your Spot</h1>
 
           <div className="rounded-xl border border-divider p-4 mb-8">
