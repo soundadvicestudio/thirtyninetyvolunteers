@@ -1,12 +1,13 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.8
-*Created: July 2026 | Last session: DOC.105 (Aug 2026).
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.9
+*Created: July 2026 | Last session: DOC.107 (Aug 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.9 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims to volunteer records; QR Generator + Forums pages Option A restyled; VolunteerForm input tint; callboard chronological sort; public calendar UTC boundary fix; Q-item cleanup batch (DOC.107/108) |
 | v6.8 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, home page two-column redesign (HomeCalendarWidget + VolunteerForm card), org logo next/image → img fix, show times on date picker, volunteer card UX polish (DOC.105) |
 | v6.7 | Aug 2026 | ADMIN.61–64 complete — Resend error detection, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email (DOC.102/103) |
 | v6.6 | Aug 2026 | UPSTYLE.1–5 complete — Platform Setup tabbed layout + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed from Style Sandbox (DOC.98/99) |
@@ -350,14 +351,14 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 - Consent form link removed from the landing page. Under-18 volunteers receive a personalized consent form request email automatically during signup when `is_minor = true` (built Phase 15.2). The email contains a unique `/consent/[upload_token]` link for uploading the signed form. Adults never see a consent form prompt on the landing page.
 
 **Layout and structure (post-UPSTYLE.6B):**
-- `PublicHeader` shared Server Component (`components/public/PublicHeader.tsx`) renders the org logo (linked to `/`) on all public pages — no per-page logo block. No orange underline. Calls `resolveOrgIdentity()`. Used on this and 10 other public-facing pages (ADMIN.65) — `app/cancel/page.tsx` not yet migrated (carry-forward, see §11 ADMIN.65 entry).
+- `PublicHeader` shared Server Component (`components/public/PublicHeader.tsx`) renders the org logo (linked to `/`) on all public pages — no per-page logo block. No orange underline. Calls `resolveOrgIdentity()`. Used on this and 10 other public-facing pages (ADMIN.65) — `app/cancel/page.tsx` (slot claim cancel page): migrated to `<PublicHeader />` in ADMIN.75. Both render paths (InfoPage helper and main render) now use the shared component. Local Image-based header deleted. "← Back to Main Page" link added to main render.
 - Content container: `max-w-6xl mx-auto px-4 py-8`
 - Page heading zone (`pb-4 border-b border-neutral-border mb-6`): h1 "Welcome to the {org_name} Volunteer Family" + conditional `org.org_tagline` paragraph
 - Introductory paragraph below heading zone: "Our volunteers are the heart of every production — from backstage to the box office. Whatever your talents or time, there's a place for you here." (restored ADMIN.67)
 - h3 subheading: "Join the {org_name} Volunteer Community" (restored ADMIN.68) — positioned above the two-column widget area, not above the form as in the pre-redesign layout
 - CTA buttons row (`flex flex-col sm:flex-row justify-center`): two filled brand-primary buttons — "Update My Info" (→ `/update`) and "Upcoming Volunteer Opportunities" (→ `/callboard`). Both use `style={{ backgroundColor: 'var(--brand-primary)' }}` inline style (R33 — CSS custom property, not a Tailwind brand utility class). "View Calendar" button removed (calendar is now inline on the page, ADMIN.70/UPSTYLE.6B)
 - Two-column widget area (`flex flex-col xl:flex-row gap-6`): left `xl:w-[50%]` `HomeCalendarWidget` (public events calendar, gated on `flags.calendar` — if off, form takes full width via `w-full max-w-2xl mx-auto`). Right `xl:w-[50%]` `VolunteerForm` wrapped in an Option A card with a "Sign Up to Volunteer" header zone label (ADMIN.69)
-- **Upcoming Auditions card:** below the widget area (moved from between the heading zone and CTA buttons — UPSTYLE.6B). Gated on `flags.auditions` + non-empty `getUpcomingAuditions()` result. Each entry links to `/auditions/[id]`. Note: audition date is not currently displayed on this card (carry-forward — see §11 UPSTYLE.6B entry)
+- **Upcoming Auditions card:** below the widget area (moved from between the heading zone and CTA buttons — UPSTYLE.6B). Gated on `flags.auditions` + non-empty `getUpcomingAuditions()` result. Each entry shows the audition title, formatted date (`formatWallClockCT(audition.date_start, null, 'MMM d, yyyy', tz)` — restored ADMIN.74), and a link to `/auditions/[id]`.
 - Footer: unchanged — org contact info (`org_contact_email` mailto link, `org_website_url`, `org_location`, shown when set) + copyright (`© {org_name}`) + discreet "Production Crew" text link → `/crew/login` (intentionally subtle — small text, not a CTA button)
 
 **Calendar widget (`HomeCalendarWidget`):**
@@ -376,6 +377,7 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 - `VolunteerForm` component unchanged in logic
 - Wrapped in an Option A card in `app/page.tsx`: header zone "Sign Up to Volunteer", body zone `<VolunteerForm .../>`
 - `VolunteerForm.tsx` root states had `max-w-xl mx-auto` removed (all 3 states: form, success, duplicate/merge) — the card wrapper provides the container width
+- `VolunteerForm` input fields have a subtle `bg-neutral-surface` tint applied via the shared `inputClasses` constant (ADMIN.73) — distinguishes fields from the white card body. No dark: variant (public page — ADMIN.6).
 
 **Volunteer registration form fields (unchanged):**
   - Full name (required)
@@ -530,6 +532,12 @@ Trigger: `slot_cancellation` in `email_log`.
 Show editors no longer receive a cancellation
 notification email — replaced with in-app
 notification (ADMIN.64, see below).
+`sendCancellationEditorNotificationEmail()` — the
+now-dead editor notification function this replaced —
+was deleted in ADMIN.75 (zero call sites since ADMIN.64
+shipped). `emailShell()`, its sole remaining caller's
+helper, was also deleted as a cascade consequence
+(zero remaining call sites).
 
 ### Public — Volunteer Call Board (`/callboard`)
 The Call Board is a single-page opportunities hub — the master view of everything a volunteer
@@ -539,6 +547,11 @@ optional and additive: entering email or phone personalizes the view with a volu
 **Opportunities (always visible — no login required):**
 - All live shows with open slots: show name, type, dates, open roles with slot counts,
   "Volunteer" button → `/shows/[id]`
+- Shows listed in chronological order by earliest `show_date` ascending (ADMIN.77). Sort applied
+  in-memory via `.slice().sort()` on `show.dates` array immediately before the `.map()` in
+  `app/callboard/page.tsx`. The underlying `getPublicShows()` query orders by `created_at`;
+  the in-memory sort overrides this for display. Sort key: minimum `d.show_date` string (YYYY-MM-DD
+  — lexicographic order is safe for ISO dates).
 - All active standing opportunities: title, description, claim type, "Learn More" button
   → `/opportunities/[id]`
 - Mobile-first, QR-friendly. Designed as the primary destination for QR code scans from
@@ -1030,7 +1043,27 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
     Check-In" badge** (built Phase 14.2) on attendance rows where `source = 'checkin'`
     — visually distinguishes QR self-check-ins from admin-marked attendance. Rows
     where `source = 'manual'` show no badge. `attendance.source` added to the
-    data fetch in Phase 14.2.
+    data fetch in Phase 14.2. Rows where `slot_claim.volunteer_id` is null show a
+    warning indicator ("hours won't tally"). **Convert to Volunteer button
+    (ADMIN.72):** On rows where `volunteer_id IS NULL` (legacy unlinked claims from
+    before ADMIN.62), an "Add to volunteer database" button appears when `canEdit`
+    is true. Flow: idle → confirming ("Send invite and add?") → converting →
+    done/error. On success: creates a `volunteers` record using `volunteer_name`,
+    `volunteer_email`, `volunteer_phone` from the claim; links
+    `slot_claims.volunteer_id` to the new record; sends `sendClaimConversionEmail()`
+    non-blocking. Warning text remains visible to Viewers (no canEdit guard on the
+    warning itself — only the button is gated). Per-row state keyed on `claim.id`
+    via `Record<string, ConvertState>`. Server action: `convertUnlinkedClaim(claimId,
+    showId)` in `lib/actions/shows.ts`. New AuditAction type:
+    `slot_claim.convert_to_volunteer`.
+
+    **Claim conversion email (ADMIN.72):**
+    `sendClaimConversionEmail({ to, name, updateToken, volunteerId })` — sent when
+    an admin converts an unlinked slot claim to a volunteer record from the Show
+    Detail Volunteers tab. Subject: "Welcome to the {orgName} volunteer family —
+    complete your profile". CTA: "Complete My Volunteer Profile" →
+    `/update?token=[updateToken]`. Trigger: `volunteer_profile_invite`. Logged to
+    `email_log`. sentBy: null (system-triggered on behalf of admin).
   - Waitlist tab: ordered list per role, volunteer name + time added
   - Dates tab: read-only, all show dates in order. Past dates visually distinguished.
     **Check-in QRs (built Phase 14.2):** Whole-show QR at the top of the tab
@@ -2606,7 +2639,7 @@ flat `NAV_ITEMS.map()` to a grouped layout. Key changes:
 Global log of all emails sent by the platform. Three tabs via `?tab=` URL param:
 - All Emails — paginated reverse-chronological log of all `email_log` rows. 25/page, `?page=N`.
 - System Only — same log filtered to `sent_by IS NULL` (system-triggered emails only).
-- About System Emails — static trigger catalog listing all 16 automated email triggers, when each fires, who receives it, and spam protections in place. Phase AUDITIONS added 4 audition triggers: audition signup confirmation, audition consent form request, audition status notification, audition cancellation. Phase FORUMS added 1 forum trigger: forum notification (`sendForumNotificationEmail()` — fires when a new reply is posted to a thread a user has subscribed to; non-blocking, errors swallowed; uses `sendBatchEmails()` per R8; `sentBy: null` system-triggered).
+- About System Emails — static trigger catalog listing all 17 automated email triggers, when each fires, who receives it, and spam protections in place. Phase AUDITIONS added 4 audition triggers: audition signup confirmation, audition consent form request, audition status notification, audition cancellation. Phase FORUMS added 1 forum trigger: forum notification (`sendForumNotificationEmail()` — fires when a new reply is posted to a thread a user has subscribed to; non-blocking, errors swallowed; uses `sendBatchEmails()` per R8; `sentBy: null` system-triggered). `volunteer_profile_invite` (ADMIN.72) — fires when an admin converts an unlinked slot claim to a volunteer record from the Show Detail Volunteers tab. One-time per conversion.
 
 Log columns: Date (`formatCT(sent_at)`), Subject, Type (human-readable label), Sent By (admin name or "System"), Recipients (`recipient_count`), Trigger/Filter (`recipient_filter` in monospace badge).
 
@@ -2937,7 +2970,7 @@ patterns. All data is hardcoded representative values — no
 DB queries. Mockups live entirely within the sandbox; zero
 production files are touched. Added STYLE.2 through STYLE.8.
 
-Page mockup inventory (12 remaining — 6 removed as each was incorporated into the live platform via UPSTYLE prompts):
+Page mockup inventory (9 remaining — 9 removed as each was incorporated into the live platform via UPSTYLE prompts):
 1. Dashboard — stat tiles with border-t-brand-primary accent,
    activity feed with NEW badge using bg-brand-primary-subtle
 2. Calendar — Month view, location color chips inline style,
@@ -2951,24 +2984,17 @@ Page mockup inventory (12 remaining — 6 removed as each was incorporated into 
    Active Checkouts strip using bg-brand-primary-light
 6. Volunteers — 8-column dense table with Name cell inline
    badges (SH badge, communication preference badge)
-7. Forums — two sections: Forum Index (category headers +
-   forum rows with border-l-4 left accent) + Thread List
-   (prefix badges, pin/lock indicators, unread state)
-8. Shows — season accordion (expanded with brand-primary
+7. Shows — season accordion (expanded with brand-primary
    left accent + "Current" badge; collapsed with neutral
    left accent); per-show staffing mini progress bars
-9. Opportunities — list with claim-type badges (Interest
+8. Opportunities — list with claim-type badges (Interest
    Form/Slot Claim), submission counts in brand-primary
-10. Forms — list with status badges (Live/Draft/Closed),
-    response counts in brand-primary
-11. QR Generator — generator card, 10×10 static QR grid
-    (bg-white always — scanability rule, no dark: override),
-    3-entry history panel
-12. Volunteer Home Page — two-column public landing page
-    redesign with static October 2025 calendar grid + static
-    signup form card; UPSTYLE.6B implementation is complete —
-    this mockup is a candidate for removal in a future cleanup
-    step
+9. Forms — list with status badges (Live/Draft/Closed),
+   response counts in brand-primary
+
+(Removed from list: QR Generator — UPSTYLE.7;
+Volunteer Home Page — ADMIN.74;
+Forums — UPSTYLE.8)
 
 **Option A design patterns (applied throughout mockups):**
 These are the intended targets for STYLE-ROLLOUT:
@@ -2997,11 +3023,10 @@ mockup prompts.
 - `lib/utils/color.ts` — `darkenHex()` added alongside `lightenHex()` (STYLE.A)
 - `app/globals.css` — `--color-neutral-surface` / `--color-neutral-border` in @theme block; new @layer utilities classes for brand-derived tokens
 - `app/layout.tsx` — `resolveBrandColors()` extended to inject 9 total custom properties
-- Mockup components (12 files):
+- Mockup components (9 files):
   `DashboardMockup.tsx`, `CalendarMockup.tsx`, `RehearsalsMockup.tsx`,
   `AuditionsMockup.tsx`, `InventoryMockup.tsx`, `VolunteersMockup.tsx`,
-  `ForumsMockup.tsx`, `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`,
-  `FormsMockup.tsx`, `QRGeneratorMockup.tsx`, `VolunteerHomeMockup.tsx`
+  `ShowsMockup.tsx`, `OpportunitiesMockup.tsx`, `FormsMockup.tsx`
 
 ---
 
@@ -9922,18 +9947,202 @@ prompt's explicit JSX spec which did not include the date
 field; carry-forward for a future targeted fix. 3 files
 modified. Commit pushed.
 
-Carry-forward items (as of DOC.105):
-— `app/cancel/page.tsx` (slot claim cancel page): not yet
-  migrated to `<PublicHeader />`. Intentionally excluded from
-  ADMIN.65 scope (Q1 from ADMIN.65). Token-gated email-link
-  page; users arrive from email, not from navigation flow.
-  Assess whether header unification is wanted here.
-— Audition date missing from home page Upcoming Auditions
-  card: the card (rebuilt in UPSTYLE.6B) no longer shows
-  the formatted date range that the pre-UPSTYLE.6B card
-  displayed. Q3 from UPSTYLE.6B. Targeted fix: re-add
-  `formatWallClockCT()` import to `app/page.tsx` and render
-  `audition.date_start` in the card. Carry-forward.
+Carry-forward items (resolved as of Build Pt 29):
+— `app/cancel/page.tsx`: migrated to `<PublicHeader
+/>`  in ADMIN.75. Both render paths updated, local
+Image-based header deleted, back link added. ✓
+— Audition date restored to home page Upcoming
+Auditions card in ADMIN.74 via `formatWallClockCT(
+audition.date_start, null, 'MMM d, yyyy', tz)`. ✓
+
+**30BN-UPSTYLE.7** ✓ — QR Generator page Option A
+restyling. `app/crew/(app)/tools/qr-generator/page.tsx`:
+container → `max-w-4xl mx-auto px-4 py-8`; Option A
+heading zone. `QRGeneratorForm.tsx`: generator fields
+wrapped in Option A three-zone card (header "Generate
+a QR Code" / white body / shaded footer); Generate
+button restyled to accent-colored inline-style button
+(R33); QR preview restructured as its own white-bg
+bordered card below the generator card (`bg-white` —
+no dark: override, scanability rule); PNG/SVG downloads
+restyled as plain underlined brand-primary text links.
+`QRHistoryPanel.tsx`: Option A heading zone ("QR Code
+History"); each row gets left-accent border (border-l-4 +
+inline borderLeftColor), hover state, vertically-stacked
+download links. `StyleSandbox.tsx`: QRGeneratorMockup
+import + JSX removed. `QRGeneratorMockup.tsx`: deleted.
+Two structural inferences: QRHistoryPanel parent wrapper
+`divide-y` removed + `overflow-hidden` added; left content
+block gained `flex-1` (push-right pattern in flex row with
+flex-shrink-0 right block). 4 files modified, 1 deleted.
+Commit: 27beaff.
+
+**30BN-ADMIN.72-AUDIT** ✓ — Read-only audit for convert-
+unlinked-claim feature. 7 files audited: `lib/email.ts`
+(sendUpdateLinkEmail copy confirmed NOT reusable — claims
+"you requested" which is false for admin-triggered creation;
+new email function needed); `lib/actions/shows.ts`
+(getServerClient() + exclusion-style role guard confirmed;
+no normalizePhone import present — must add);
+`lib/actions/claims.ts` (submitClaimWithLookup reference
+— confirmed it does a fresh INSERT, not an UPDATE on an
+existing claim; duplicate-check pattern reusable verbatim);
+`ShowDetail.tsx` (`volunteer_phone` NOT in slot_claims query
+— page query extension required; canEdit confirmed in scope;
+claim field name is `id` not `claim_id`); `types/show.ts`
+(SlotClaim type confirmed — volunteer_phone absent);
+`show/[id]/page.tsx` (query confirmed — volunteer_phone
+absent); `AboutSystemEmails.tsx` (trigger row pattern
+confirmed). Key flag: `volunteer_phone` not in query —
+required the page query extension (B2 finding). No code.
+
+**30BN-ADMIN.72** ✓ — Convert unlinked slot claims to
+volunteer records. `types/show.ts`: `volunteer_phone:
+string | null` added to `SlotClaim` type. `app/crew/(app)/
+shows/[id]/page.tsx`: `volunteer_phone` added to slot_claims
+`.select()`. `lib/audit.ts`: `'slot_claim.convert_to_volunteer'`
+added. `lib/email.ts`: `sendClaimConversionEmail()` added
+(new branded invite email with org-friendly copy that explains
+why they're receiving it — not the reused sendUpdateLinkEmail
+copy which claims user "requested" a link). `lib/actions/
+shows.ts`: `normalizePhone` import added; `convertUnlinkedClaim
+(claimId, showId)` added — idempotent (volunteer_id IS NOT NULL
+guard), sequential email→phone duplicate check per established
+pattern, 23505 race-condition handling, UPDATE slot_claims.
+volunteer_id, non-blocking sendClaimConversionEmail() void
+IIFE, logAction(), revalidatePath. `ShowDetail.tsx`:
+`convertUnlinkedClaim` imported; `ConvertState` per-row
+state (`Record<string, 'idle'|'confirming'|'converting'|
+'done'|'error'>`); `handleConvert()` handler; button/confirm/
+error/done UI replacing static warning with canEdit-gated
+action; warning text still visible to Viewers. `AboutSystem
+Emails.tsx`: `volunteer_profile_invite` trigger row added.
+Zero lint errors, zero tsc. 7 files modified. Commit: d8526c1.
+
+**30BN-ADMIN.73** ✓ — VolunteerForm input field background
+tint. `components/VolunteerForm.tsx`: `bg-neutral-surface`
+added to the shared `inputClasses` constant — single edit
+covers all `<input>` and `<select>` elements in the form
+state. No dark: variant (public page — ADMIN.6). Category
+chip buttons, submit button, success state, and duplicate
+state untouched. 1 file. Commit: 934da96.
+
+**30BN-ADMIN.74** ✓ — Audition date restored + VolunteerHome
+Mockup removed. `app/page.tsx`: `import { formatWallClockCT }
+from '@/lib/utils/date'` added (new import — no existing
+date utility import from this path); audition date line
+`<p className="text-xs text-mid-gray mt-0.5">{formatWallClock
+CT(audition.date_start, null, 'MMM d, yyyy', tz)}</p>` added
+below show-title line in Upcoming Auditions card map.
+`components/crew/settings/StyleSandbox.tsx`: VolunteerHome
+Mockup import + JSX (plus leading divider) removed.
+`components/crew/settings/VolunteerHomeMockup.tsx`: deleted.
+Zero lint errors, zero tsc. 2 files modified, 1 deleted.
+Commit: 7775959.
+
+**30BN-ADMIN.75** ✓ — Q-item cleanup batch (Q2/Q3/Q5/Q6).
+Q2: `sendCancellationEditorNotificationEmail()` + its
+dedicated `CancellationEditorNotificationEmailParams` type +
+the now-orphaned `emailShell()` helper all deleted from
+`lib/email.ts` (zero call sites — confirmed via grep; emailShell
+cascade discovered at lint time). Q3: `app/cancel/page.tsx`
+fully migrated to shared `<PublicHeader />`; local Image-based
+`PublicHeader` function deleted; `InfoPage` helper org param
+removed from signature + all 4 call sites; `Image` and
+`OrgIdentity` imports removed; `resolveOrgIdentity()` import
+kept (org.org_name used in footer copyright); "← Back to Main
+Page" link added. Q5: `feature_beta` toggle description in
+`SetupPanel.tsx` corrected to "Enable the Beta Testing feedback
+form, visible to all crew members." Q6: `HomeCalendarWidget.tsx`
+day-cell min-h values increased from `min-h-[50px] sm:min-h-[60px]`
+to `min-h-[70px] sm:min-h-[80px]` (trial increase — may be
+reverted after browser verification). Zero lint errors, zero tsc.
+4 files modified. Commit: d8526c1.
+
+Note: The Q6 min-h change is explicitly a trial — the owner
+may revert after browser verification of the calendar widget
+at the xl column split.
+
+**30BN-ADMIN.76-AUDIT** ✓ — Read-only audit of public calendar
+query boundary bug. Root cause identified: `lib/data/publicCalendar.ts`
+correctly uses `getMonthGridDays()` to compute the full grid
+range (confirmed `rangeStartStr = '2026-07-26'` and
+`rangeEndStr = '2026-09-05'` for August 2026 — grid expansion
+already correct). The bug is in boundary construction: the query
+uses `T00:00:00Z` and `T23:59:59Z` appended to YYYY-MM-DD strings,
+treating them as literal UTC instants. Events stored with correct
+UTC timestamps derived from org-local time via `fromZonedTime()`
+are excluded when they fall late enough in local time to cross the
+naive UTC day boundary on the grid's last visible day (e.g., a Sep 5
+7:00 PM CT performance has `start_time = 2026-09-06T00:00:00Z` —
+past the `2026-09-05T23:59:59Z` cutoff). Admin calendar already
+solves this correctly: converts grid boundary date strings via
+`fromZonedTime('${dateStr} 23:59:59', tz)` before querying.
+Fix: use `fromZonedTime()` on both boundaries in `lib/data/
+publicCalendar.ts`. The `timezone` parameter is already received
+but currently discarded (`void timezone`). No code.
+
+**30BN-ADMIN.76** ✓ — Public calendar UTC boundary fix.
+`lib/data/publicCalendar.ts`: `import { fromZonedTime } from
+'date-fns-tz'` added (new import — no prior date-fns-tz import
+in this file). `void timezone` line removed. `rangeStart` and
+`rangeEnd` now computed via:
+`const rangeStart = fromZonedTime('${rangeStartStr} 00:00:00',
+timezone)`
+`const rangeEnd = fromZonedTime('${rangeEndStr} 23:59:59',
+timezone)`
+`.gte()` and `.lte()` filters now use `.toISOString()` instead
+of naive UTC string literals. For August 2026 (CT = UTC-5):
+lower bound shifts from `2026-07-26T00:00:00Z` to
+`2026-07-26T05:00:00.000Z`; upper bound shifts from
+`2026-09-05T23:59:59Z` to `2026-09-06T04:59:59.000Z` — a Sep 5
+7:00 PM CT performance (`2026-09-06T00:00:00Z`) is now correctly
+included. Fix is symmetric: both grid-start and grid-end
+boundaries are correctly bounded. Also removed the stale comment
+claiming the function is "UTC-anchored and timezone-agnostic"
+(no longer true). Affects both `HomeCalendarWidget` and
+public `/calendar` page (both call `getPublicCalendarEvents()`).
+Zero lint errors, zero tsc. 1 file. Commit: 5bce12b.
+
+**30BN-ADMIN.77** ✓ — Callboard chronological sort + stale
+comment cleanup. `app/callboard/page.tsx`: `sortedShows` added
+via `.slice().sort()` on `shows` array immediately before the
+`.map()` call. Sort comparator uses `show.dates` (confirmed live
+field name — not `show.show_dates`) and `d.show_date` (confirmed
+live field name — not `d.date`). Sort key: minimum date string
+across `show.dates` array; empty dates array gets `''` fallback.
+`sortedShows.map()` replaces `shows.map()`. No layout or display
+changes. `lib/data/publicCalendar.ts`: stale comment remnant
+("// app/calendar/page.tsx implementation this was extracted from")
+removed — it was a grammatical continuation of the already-removed
+"UTC-anchored" claim from ADMIN.76. Zero lint errors, zero tsc.
+2 files modified. Commit: ebbc6bf.
+
+**30BN-UPSTYLE.8** ✓ — Forums pages Option A restyling.
+`app/crew/(app)/forums/page.tsx`: container → `max-w-4xl mx-auto
+px-4 py-8`; Option A heading zone ("Discussion Forums" + subtitle).
+`ForumIndexClient.tsx`: category headers rebuilt as shaded bands
+(bg-neutral-surface); forum rows get left-accent border (border-l-4
++ inline borderLeftColor) + hover state; forum name fixed
+font-semibold with new inline unread-count pill (replaces prior
+right-side "X unread" pill — removed entirely to avoid duplication);
+description text-sm → text-xs, line-clamp-2 removed (wraps fully).
+`app/crew/(app)/forums/[forumId]/page.tsx`: NOW OWNS container,
+breadcrumb Link, and Option A heading zone (using `result.forum.name`
+/ `result.forum.description`) — relocated from `ThreadListClient.tsx`
+(Server Component shell ownership per established convention).
+`ThreadListClient.tsx`: container/breadcrumb/heading removed;
+action-buttons row restructured to `flex items-center justify-end`
+(heading-side sibling gone); pinned section label restyled (E1);
+thread rows get left-accent border + hover state; prefix badge
+neutral style; thread title font-semibold (unread) / font-medium
+(read) conditional; Pin + Lock icons neutral `w-3 h-3 text-mid-gray`
+(was brand-primary, size prop). `StyleSandbox.tsx`: ForumsMockup
+import + JSX removed. `ForumsMockup.tsx`: deleted.
+Two structural inferences: `flex-1` on left content blocks in both
+`ForumIndexClient` rows and `ThreadListClient` thread rows (push-right
+pattern in flex row with flex-shrink-0 right block). 5 files modified,
+1 deleted. Commit: committed + pushed.
 
 ---
 
@@ -10983,6 +11192,93 @@ Key constraints:
   the page and destroy VolunteerForm state
 - `getHomeCalendarEvents()` in `lib/actions/home-calendar.ts`
   uses `getAdminClient()` — public route, no session
+
+**Public calendar query boundary — `fromZonedTime()`
+required (ADMIN.76):**
+`lib/data/publicCalendar.ts` uses `fromZonedTime()` from
+`date-fns-tz` to construct the `.gte()` and `.lte()`
+query boundaries for the public calendar event fetch.
+The boundary date strings (YYYY-MM-DD) from
+`getMonthGridDays()` are converted to true UTC instants
+via:
+```typescript
+const rangeStart = fromZonedTime(`${rangeStartStr} 00:00:00`,
+  timezone)
+const rangeEnd = fromZonedTime(`${rangeEndStr} 23:59:59`,
+  timezone)
+```
+Then `.gte('start_time', rangeStart.toISOString())` and
+`.lte('start_time', rangeEnd.toISOString())` are used.
+Naive UTC string construction (`T00:00:00Z`, `T23:59:59Z`)
+silently excludes events that span the UTC midnight boundary
+on the grid's first or last visible day (e.g., a 7:00 PM CT
+event on the last grid day has a UTC timestamp the following
+UTC calendar day, past the naive boundary). The `timezone`
+parameter was previously discarded (`void timezone`) — it
+must be used. The admin calendar has always done this
+correctly (same `fromZonedTime()` pattern in
+`app/crew/(app)/calendar/page.tsx`). Established ADMIN.76.
+
+**Callboard shows sort — in-memory chronological order
+(ADMIN.77):**
+`app/callboard/page.tsx` applies an in-memory sort on
+the `shows` array returned by `getPublicShows()` before
+rendering. `getPublicShows()` orders by `created_at`
+(insertion order) — not suitable for public display.
+Sort pattern:
+```typescript
+const sortedShows = shows.slice().sort((a, b) => {
+  const aMin = a.dates.length > 0
+    ? a.dates.reduce((min, d) =>
+        d.show_date < min ? d.show_date : min,
+        a.dates[0].show_date)
+    : ''
+  const bMin = b.dates.length > 0
+    ? b.dates.reduce((min, d) =>
+        d.show_date < min ? d.show_date : min,
+        b.dates[0].show_date)
+    : ''
+  return aMin < bMin ? -1 : aMin > bMin ? 1 : 0
+})
+```
+Field names confirmed from live `PublicShow` type:
+`show.dates` (not `show.show_dates`) and `d.show_date`
+(not `d.date`). String comparison on YYYY-MM-DD is safe
+for chronological sort (ISO date lexicographic order
+matches chronological). `.slice()` before `.sort()` —
+never mutate the props array. Established ADMIN.77.
+
+**`convertUnlinkedClaim()` — admin-triggered volunteer
+creation from legacy slot claims (ADMIN.72):**
+`convertUnlinkedClaim(claimId, showId)` in
+`lib/actions/shows.ts` handles the case where an admin
+wants to add a volunteer to the database from a legacy
+unlinked slot claim (`volunteer_id IS NULL`). Key
+implementation patterns:
+- Idempotency guard first: if `claim.volunteer_id IS NOT
+  NULL`, return `{ success: true }` silently
+- Sequential email→phone duplicate check (verbatim from
+  `submitClaimWithLookup()` in `lib/actions/claims.ts`)
+- If existing volunteer found: UPDATE slot_claims only
+  (no INSERT); still send the profile invite email
+- If no existing volunteer: INSERT `volunteers` with
+  `{ full_name, email, phone }` (three fields only —
+  all other columns DB-defaulted); 23505 race-condition
+  guard per established pattern
+- Non-blocking: `sendClaimConversionEmail()` fired in
+  void IIFE try/catch after both branches
+- AuditAction type: `slot_claim.convert_to_volunteer`
+  (in `lib/audit.ts` Slot Claims group)
+- Phone normalization: `normalizePhone(claim.volunteer_phone
+  || '')` — empty string fallback for legacy null/empty phone
+- `volunteer_phone` must be in the show detail page's
+  slot_claims query (added ADMIN.72) for this to work
+Email: `sendClaimConversionEmail()` (new function in
+`lib/email.ts`) — distinct from `sendUpdateLinkEmail()`
+because the copy must explain why they're receiving it
+(admin added them; they did NOT "request" a link).
+Trigger: `volunteer_profile_invite`.
+Established ADMIN.72.
 
 ---
 
