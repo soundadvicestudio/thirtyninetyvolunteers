@@ -10,7 +10,6 @@ import { VolunteersMockup } from './VolunteersMockup'
 import { ShowsMockup } from './ShowsMockup'
 import { OpportunitiesMockup } from './OpportunitiesMockup'
 import { FormsMockup } from './FormsMockup'
-import { VolunteerHomeMockup } from './VolunteerHomeMockup'
 
 const TOKEN_SWATCHES = [
   { name: '--brand-primary', style: { background: 'var(--brand-primary)' } },
@@ -262,8 +261,6 @@ export default function StyleSandbox() {
         <OpportunitiesMockup />
         <div className="border-t border-neutral-border my-8" />
         <FormsMockup />
-        <div className="border-t border-neutral-border my-8" />
-        <VolunteerHomeMockup />
       </div>
     </div>
   )

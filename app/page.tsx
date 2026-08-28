@@ -3,6 +3,7 @@ import { getFeatureFlags } from '@/lib/feature-flags'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getUpcomingAuditions } from '@/lib/actions/auditions'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import { formatWallClockCT } from '@/lib/utils/date'
 import { formatInTimeZone } from 'date-fns-tz'
 import Link from 'next/link'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
@@ -170,6 +171,9 @@ export default async function HomePage() {
                       {audition.show_title && (
                         <p className="text-xs text-mid-gray">{audition.show_title}</p>
                       )}
+                      <p className="text-xs text-mid-gray mt-0.5">
+                        {formatWallClockCT(audition.date_start, null, 'MMM d, yyyy', tz)}
+                      </p>
                     </div>
                     <Link
                       href={`/auditions/${audition.id}`}
