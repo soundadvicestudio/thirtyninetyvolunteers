@@ -1,11 +1,12 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v6.6
-*Created: July 2026 | Last session: DOC.106 (Aug 2026). Version history table
+## 30BN_PROCESS_v1.md — v6.7
+*Created: July 2026 | Last session: DOC.108 (Aug 2026). Version history table
 below. Full build history by phase and prompt: §13. Doc-maintenance notes
 (ordering corrections, sync failures): end of §14.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.7 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims, public calendar UTC boundary fix, callboard chronological sort, VolunteerForm input tint, Q-item cleanup batch, QR Generator + Forums Option A restyling (DOC.107/108) |
 | v6.6 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, HomeCalendarWidget infrastructure, home page two-column redesign, org logo img fix, show times on claiming page date picker (DOC.106) |
 | v6.5 | Aug 2026 | ADMIN.61–64 complete — Resend error detection wrappers, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email; Migration 046 (DOC.104) |
 | v6.4 | Aug 2026 | UPSTYLE.1–5 + fixes complete — Platform Setup tabs + Option A section cards, Media Library two-panel rebuild, Communication + Check-In restyled; 6 mockups removed (DOC.101) |
@@ -2645,6 +2646,98 @@ a Glance overhaul), delete them via this procedure:
 Confirmed instance (ADMIN.59/60): `SeasonSelector.tsx` deleted, `setPinnedSeason()`
 removed from `lib/actions/settings.ts` (12 other exports preserved), `dashboard_season_id`
 key documented as orphaned. Established ADMIN.59/ADMIN.60.
+
+**`fromZonedTime()` required for public calendar query
+boundaries (ADMIN.76):**
+`lib/data/publicCalendar.ts` must use `fromZonedTime()`
+from `date-fns-tz` to convert grid boundary date strings
+to true UTC instants before using them as `.gte()` and
+`.lte()` query values:
+
+```typescript
+const rangeStart = fromZonedTime(`${rangeStartStr} 00:00:00`, timezone)
+const rangeEnd   = fromZonedTime(`${rangeEndStr} 23:59:59`, timezone)
+```
+
+Then: `.gte('start_time', rangeStart.toISOString())` and
+`.lte('start_time', rangeEnd.toISOString())`.
+
+Naive UTC string construction (`T00:00:00Z`, `T23:59:59Z`)
+appended to YYYY-MM-DD strings treats those as UTC instants.
+Events with org-local start times late in the day are stored
+in the DB with UTC timestamps from the *next* UTC calendar day
+(e.g., a 7:00 PM CT event on the last grid day is stored as
+`next-day 00:00:00Z`). The naive `.lte()` cutoff excludes these
+events silently. The `timezone` parameter of
+`getPublicCalendarEvents()` must not be discarded — it is
+required for correct boundary computation. The admin calendar
+(`app/crew/(app)/calendar/page.tsx` lines 89–90) has always
+used this pattern correctly; `lib/data/publicCalendar.ts` did
+not until ADMIN.76. Confirmed failure mode: August 2026 CT grid
+was excluding late-evening Sep 5 events because
+`2026-09-05T23:59:59Z` < `2026-09-06T00:00:00Z` (UTC
+timestamp of 7 PM CT on Sep 5). Established ADMIN.76.
+
+**Callboard shows in-memory chronological sort (ADMIN.77):**
+`getPublicShows()` in `lib/data/callboard.ts` (or equivalent)
+orders by `created_at` — insertion order, not show date order.
+`app/callboard/page.tsx` applies an in-memory sort immediately
+before the `.map()` rendering call:
+
+```typescript
+const sortedShows = shows.slice().sort((a, b) => {
+  const aMin = a.dates.length > 0
+    ? a.dates.reduce((min, d) =>
+        d.show_date < min ? d.show_date : min,
+        a.dates[0].show_date)
+    : ''
+  const bMin = b.dates.length > 0
+    ? b.dates.reduce((min, d) =>
+        d.show_date < min ? d.show_date : min,
+        b.dates[0].show_date)
+    : ''
+  return aMin < bMin ? -1 : aMin > bMin ? 1 : 0
+})
+```
+
+Key field names confirmed from live `PublicShow` type:
+`show.dates` (NOT `show.show_dates`) and `d.show_date`
+(NOT `d.date`). String comparison on YYYY-MM-DD is safe
+(lexicographic = chronological for ISO dates). `.slice()`
+before `.sort()` — never mutate the source array. Established
+ADMIN.77.
+
+**`convertUnlinkedClaim()` — admin-triggered volunteer
+creation from legacy unlinked claims (ADMIN.72):**
+`convertUnlinkedClaim(claimId, showId)` in
+`lib/actions/shows.ts` converts a legacy `volunteer_id IS
+NULL` slot claim into a linked volunteer record. Key
+implementation invariants:
+- **Idempotency guard first:** if `claim.volunteer_id IS NOT NULL`,
+  return `{ success: true }` immediately — already converted.
+- **Sequential email→phone duplicate check:** exact same pattern as
+  `submitClaimWithLookup()` in `lib/actions/claims.ts` (two
+  separate `.maybeSingle()` queries, not `.or()`).
+- If existing volunteer found: UPDATE `slot_claims.volunteer_id`
+  only (no INSERT). Still send the conversion invite email.
+- If no volunteer exists: INSERT with `{ full_name, email, phone }`
+  (three fields only — all other columns DB-defaulted); 23505
+  race-condition guard via try/catch.
+- **Non-blocking email:** `sendClaimConversionEmail()` fired in a
+  void IIFE try/catch — never awaited in the primary flow.
+- **AuditAction:** `slot_claim.convert_to_volunteer` (in `lib/audit.ts`
+  Slot Claims group — NOT `audition.convert_to_volunteer` which
+  is a different action type in the Auditions group).
+- **`volunteer_phone` prerequisite:** the show detail page's
+  slot_claims `.select()` must include `volunteer_phone` for
+  the conversion action to have a phone value to insert.
+  Added as part of ADMIN.72 (was absent from the query).
+Email: `sendClaimConversionEmail()` (new function — NOT a reuse
+of `sendUpdateLinkEmail()`). The update-link email says "you
+requested a link" — false for admin-triggered conversion. The
+conversion email explains that an admin added them to the
+volunteer database and invites them to complete their profile.
+Trigger: `volunteer_profile_invite`. Established ADMIN.72.
 
 ---
 
@@ -7890,6 +7983,109 @@ SeasonSelector.tsx); 12 other exports preserved.
                      app/calendar/page.tsx: header migrated to
                      <PublicHeader /> (UPSTYLE.6A changes
                      preserved). 3 files modified. Commit pushed.
+  30BN-ADMIN.72-AUDIT ✓ Read-only audit for convert-unlinked-
+                         claim feature (7 files). Key findings:
+                         sendUpdateLinkEmail() copy not reusable
+                         (says "you requested" — false for admin-
+                         triggered creation); volunteer_phone NOT
+                         in slot_claims query (page query extension
+                         required); claim field is id not claim_id;
+                         canEdit confirmed in scope; sequential
+                         duplicate-check pattern reusable from
+                         submitClaimWithLookup(). No code. No commit.
+  30BN-ADMIN.72       ✓ Convert unlinked slot claims to volunteer
+                         records. types/show.ts: volunteer_phone
+                         added to SlotClaim. show/[id]/page.tsx:
+                         volunteer_phone added to query. lib/audit.ts:
+                         slot_claim.convert_to_volunteer added.
+                         lib/email.ts: sendClaimConversionEmail()
+                         added (branded invite; trigger: volunteer_
+                         profile_invite). lib/actions/shows.ts:
+                         convertUnlinkedClaim() — idempotency guard,
+                         sequential duplicate check, 23505 handling,
+                         UPDATE slot_claims.volunteer_id, void IIFE
+                         email, logAction, revalidatePath. ShowDetail
+                         .tsx: ConvertState per-row Record; canEdit-
+                         gated button + confirm/done/error UI;
+                         warning still visible to Viewers. About
+                         SystemEmails.tsx: volunteer_profile_invite
+                         trigger row. 7 files. Commit: d8526c1.
+  30BN-ADMIN.73       ✓ VolunteerForm input background tint.
+                         components/VolunteerForm.tsx: bg-neutral-
+                         surface added to shared inputClasses constant
+                         — single edit covers all input + select
+                         elements in all form states. No dark: variant
+                         (public page — ADMIN.6). 1 file. Commit:
+                         934da96.
+  30BN-ADMIN.74       ✓ Audition date restored to home page Upcoming
+                         Auditions card (formatWallClockCT(audition.
+                         date_start, null, 'MMM d, yyyy', tz) — Q1
+                         resolved). VolunteerHomeMockup.tsx deleted —
+                         Q4 resolved. 2 files modified, 1 deleted.
+                         Commit: 7775959.
+  30BN-ADMIN.75       ✓ Q-item cleanup batch (Q2/Q3/Q5/Q6). Q2:
+                         sendCancellationEditorNotificationEmail() +
+                         CancellationEditorNotificationEmailParams type
+                         + emailShell() helper all deleted (zero call
+                         sites confirmed). Q3: app/cancel/page.tsx
+                         migrated to PublicHeader; local Image-based
+                         header deleted; OrgIdentity removed; back link
+                         added. Q5: feature_beta toggle description
+                         corrected in SetupPanel.tsx. Q6: HomeCalendar
+                         Widget day-cell min-h increased (trial —
+                         may revert after browser verification).
+                         4 files. Commit: d8526c1.
+  30BN-ADMIN.76-AUDIT ✓ Public calendar UTC boundary bug root cause
+                         confirmed (read-only). lib/data/publicCalendar
+                         .ts used naive UTC strings (T00:00:00Z,
+                         T23:59:59Z) on grid edge dates; timezone param
+                         was discarded (void timezone). Admin calendar
+                         already solved this with fromZonedTime().
+                         No code. No commit.
+  30BN-ADMIN.76       ✓ Public calendar UTC boundary fix. lib/data/
+                         publicCalendar.ts: import fromZonedTime from
+                         date-fns-tz; void timezone removed; rangeStart
+                         + rangeEnd computed via fromZonedTime('${dateStr}
+                         00:00:00' / '23:59:59', timezone); .gte()/.lte()
+                         use .toISOString(). Stale "UTC-anchored" comment
+                         removed. Affects HomeCalendarWidget and public
+                         /calendar page (both call getPublicCalendarEvents).
+                         1 file. Commit: 5bce12b.
+  30BN-ADMIN.77       ✓ Callboard shows chronological sort. app/callboard/
+                         page.tsx: sortedShows via .slice().sort() by
+                         minimum show.dates[].show_date string (ascending).
+                         Field names confirmed: show.dates (not show.show_
+                         dates), d.show_date (not d.date). sortedShows.map()
+                         replaces shows.map(). lib/data/publicCalendar.ts:
+                         stale comment remnant removed. 2 files. Commit:
+                         ebbc6bf.
+  30BN-UPSTYLE.7      ✓ QR Generator page Option A. page.tsx: max-w-4xl
+                         container + heading zone. QRGeneratorForm.tsx:
+                         three-zone generator card; accent Generate button
+                         (R33); white-bg QR preview card below (no dark:
+                         override — scanability rule); text download links.
+                         QRHistoryPanel.tsx: heading zone; left-accent rows
+                         (border-l-4 + inline borderLeftColor); vertical
+                         download links. Structural inferences: divide-y
+                         removed + overflow-hidden on parent; flex-1 on
+                         left content blocks. QRGeneratorMockup.tsx
+                         deleted. 4 files modified, 1 deleted.
+                         Commit: 27beaff.
+  30BN-UPSTYLE.8      ✓ Forums pages Option A. forums/page.tsx: heading
+                         zone. ForumIndexClient.tsx: shaded category headers;
+                         left-accent forum rows; inline unread pill (replaced
+                         right-side pill); description text-xs, no line-clamp.
+                         forums/[forumId]/page.tsx: NOW OWNS container +
+                         breadcrumb + heading zone (relocated from
+                         ThreadListClient.tsx — Server Component shell
+                         ownership). ThreadListClient.tsx: container/heading
+                         removed; action row justify-end; left-accent thread
+                         rows; neutral Pin/Lock icons w-3 h-3; flex-1 on
+                         left content blocks. ForumsMockup.tsx deleted.
+                         5 files modified, 1 deleted. Committed + pushed.
+  30BN-DOC.107        ✓ Brief v6.8→v6.9 (ADMIN.72–77 + UPSTYLE.7–8 —
+                         Build Pt 29 complete).
+  30BN-DOC.108        ✓ Process v6.6→v6.7 (this prompt).
 ```
 
 ---
@@ -9678,6 +9874,105 @@ similar widget:
    + body zone (7-column calendar grid). The parent page
    (`app/page.tsx`) wraps the form in a separate Option A
    card; the widget provides its own card wrapper.
+
+### `fromZonedTime()` required for public calendar query
+boundaries — no naive UTC string construction (ADMIN.76)
+
+`lib/data/publicCalendar.ts` must use `fromZonedTime()` from
+`date-fns-tz` to convert boundary date strings to UTC instants
+before querying. This is a process rule because the failure
+mode is silent and hard to diagnose — the query runs without
+error, returns a result, but silently excludes events from the
+grid edges.
+
+Failure mode: a 7:00 PM CT performance event on the last visible
+grid day is stored in the database as `next-day 00:00:00Z` (UTC
++5). Naive `.lte('start_time', '${date}T23:59:59Z')` excludes it
+because `next-day 00:00:00Z > ${date}T23:59:59Z`. The event
+appears to have been omitted from the database when it was simply
+missed by the UTC boundary. The bug is grid-edge-specific:
+events in the middle of the grid are unaffected.
+
+The admin calendar already solves this correctly. Any new public
+calendar data module that accepts a `timezone` parameter must
+use it — never discard it with `void timezone`. Established
+ADMIN.76.
+
+### Server Component shell ownership for page-level heading
+zones (UPSTYLE.8)
+
+When a Client Component owns a page's outer container,
+breadcrumb navigation, and heading zone, and those elements
+do not require any client-side state or interactivity, relocate
+them to the Server Component page shell (`page.tsx`) instead.
+
+Pattern before UPSTYLE.8 (wrong):
+
+```tsx
+// forums/[forumId]/page.tsx (Server Component)
+return <ThreadListClient result={result} adminId={admin.id} />
+
+// ThreadListClient.tsx (Client Component)
+<div className="max-w-4xl mx-auto px-4 py-8">
+  <Link href="/crew/forums">← Forums</Link>
+  <div className="pb-4 border-b ..."><h1>{result.forum.name}</h1></div>
+  {/* ... */}
+</div>
+```
+
+Pattern after UPSTYLE.8 (correct):
+
+```tsx
+// forums/[forumId]/page.tsx (Server Component)
+return (
+  <div className="max-w-4xl mx-auto px-4 py-8">
+    <Link href="/crew/forums">← Forums</Link>
+    <div className="pb-4 border-b ..."><h1>{result.forum.name}</h1></div>
+    <ThreadListClient result={result} adminId={admin.id} />
+  </div>
+)
+
+// ThreadListClient.tsx (Client Component)
+// starts directly with interactive content — no outer container
+```
+
+Benefits: the Server Component fetches the data needed for the
+heading and renders it without sending JavaScript to the client;
+the Client Component is narrower and only handles the interactive
+thread list. Any page where a large Client Component owns
+container/heading elements that come from server-fetched props
+should apply this pattern. Established UPSTYLE.8.
+
+### `flex-1` on left content block when right block is
+`flex-shrink-0` (UPSTYLE.7/8)
+
+In any flex row structured as:
+
+```tsx
+<div className="flex items-start gap-N">
+  <div>  {/* left: main content */}
+    ...
+  </div>
+  <div className="flex-shrink-0">  {/* right: action buttons / badges */}
+    ...
+  </div>
+</div>
+```
+
+the left content block requires `flex-1` to push the right block
+to the far edge. Without `flex-1`, both blocks size to their
+natural content width and the layout collapses; with it, the left
+block fills all available space and the right block sits flush
+right. This is a structural inference that must be pre-planned —
+it is invisible in static mockups where both blocks have explicit
+content, but breaks at runtime when content is dynamic.
+
+Established as a recurring pattern in UPSTYLE.7 (QRHistoryPanel
+left content blocks) and UPSTYLE.8 (ForumIndexClient forum rows,
+ThreadListClient thread rows). Apply to any new flex row that
+has a shrink-locked right element (download links, action buttons,
+count badges). The right block uses `flex-shrink-0`; the left
+block uses `flex-1`. Established UPSTYLE.7/8.
 
 ---
 
