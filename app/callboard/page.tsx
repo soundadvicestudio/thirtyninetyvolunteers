@@ -318,6 +318,20 @@ export default async function CallboardPage() {
 
   const hasOpportunities = shows.length > 0 || opportunities.length > 0
 
+  const sortedShows = shows.slice().sort((a, b) => {
+    const aMin = a.dates.length > 0
+      ? a.dates.reduce((min, d) =>
+          d.show_date < min ? d.show_date : min,
+          a.dates[0].show_date)
+      : ''
+    const bMin = b.dates.length > 0
+      ? b.dates.reduce((min, d) =>
+          d.show_date < min ? d.show_date : min,
+          b.dates[0].show_date)
+      : ''
+    return aMin < bMin ? -1 : aMin > bMin ? 1 : 0
+  })
+
   return (
     <div className="min-h-screen flex flex-col">
       <PublicHeader />
@@ -347,7 +361,7 @@ export default async function CallboardPage() {
               <div>
                 <h2 className="text-brand-primary font-bold text-xl mb-4">Upcoming Shows</h2>
                 <div className="space-y-4">
-                  {shows.map((show) => (
+                  {sortedShows.map((show) => (
                     <ShowCard key={show.id} show={show} signedUpMap={signedUpMap} timezone={tz} />
                   ))}
                 </div>

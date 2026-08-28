@@ -29,9 +29,7 @@ export async function getPublicCalendarEvents(
 ): Promise<PublicCalendarEvent[]> {
   // timezone is accepted for signature consistency with other lib/data/
   // functions that resolve org timezone (e.g. getUpcomingClaimsForVolunteer)
-  // — this function's own date-range math is UTC-anchored and
-  // timezone-agnostic via getMonthGridDays(), same as the original
-  // app/calendar/page.tsx implementation this was extracted from.
+  // Date range uses org timezone via fromZonedTime() to correctly bound grid-edge events.
 
   const monthStr = `${year}-${String(month).padStart(2, '0')}`
   const gridDays = getMonthGridDays(`${monthStr}-01`)
