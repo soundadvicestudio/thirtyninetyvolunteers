@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { fromZonedTime } from 'date-fns-tz'
 import { getMonthGridDays } from '@/lib/utils/calendar-availability'
 
 export type PublicCalendarEvent = {
@@ -31,12 +32,13 @@ export async function getPublicCalendarEvents(
   // — this function's own date-range math is UTC-anchored and
   // timezone-agnostic via getMonthGridDays(), same as the original
   // app/calendar/page.tsx implementation this was extracted from.
-  void timezone
 
   const monthStr = `${year}-${String(month).padStart(2, '0')}`
   const gridDays = getMonthGridDays(`${monthStr}-01`)
   const rangeStartStr = gridDays[0]
   const rangeEndStr = gridDays[gridDays.length - 1]
+  const rangeStart = fromZonedTime(`${rangeStartStr} 00:00:00`, timezone)
+  const rangeEnd = fromZonedTime(`${rangeEndStr} 23:59:59`, timezone)
 
   const { data: eventRows } = await supabase
     .from('calendar_events')
@@ -48,8 +50,8 @@ export async function getPublicCalendarEvents(
     )
     .eq('event_type', 'performance')
     .eq('status', 'approved')
-    .gte('start_time', `${rangeStartStr}T00:00:00Z`)
-    .lte('start_time', `${rangeEndStr}T23:59:59Z`)
+    .gte('start_time', rangeStart.toISOString())
+    .lte('start_time', rangeEnd.toISOString())
     .order('start_time', { ascending: true })
 
   const events = (eventRows ?? []) as unknown as RawEventRow[]
