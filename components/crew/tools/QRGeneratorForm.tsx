@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { generateQRCode } from '@/lib/actions/qr'
 
 const inputClasses =
-  'w-full rounded-lg border border-divider dark:border-dark-border px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
+  'w-full border border-neutral-border dark:border-dark-border rounded-md px-3 py-2 text-sm text-dark dark:text-dark-text bg-white dark:bg-dark-surface focus:outline-none focus:ring-2 focus:ring-brand-primary'
 const labelClasses = 'block text-sm font-semibold text-dark dark:text-dark-text mb-1'
 
 function sanitizeLabel(label: string): string {
@@ -54,98 +54,111 @@ export default function QRGeneratorForm() {
 
   return (
     <div>
-      <div className="space-y-4">
-        <div>
-          <label className={labelClasses}>
-            URL<span className="text-brand-accent ml-0.5">*</span>
-          </label>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            placeholder="https://example.com"
-            className={inputClasses}
-          />
+      <div className="border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden mb-6">
+        <div className="bg-neutral-surface dark:bg-dark-nav border-b border-neutral-border dark:border-dark-border px-6 py-4">
+          <h2 className="font-semibold text-dark dark:text-dark-text">Generate a QR Code</h2>
         </div>
 
-        <div>
-          <label className={labelClasses}>Label (optional)</label>
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Volunteer Signup, Spring Show 2026"
-            className={inputClasses}
-          />
-          <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
-            Used for the downloaded file name and saved history — it does not affect the QR code content.
-          </p>
-        </div>
-
-        <div>
-          <label className={labelClasses}>Banner Text</label>
-          <label className="flex items-center gap-2 text-sm text-dark dark:text-dark-text">
-            <input
-              type="checkbox"
-              checked={bannerEnabled}
-              onChange={(e) => handleBannerToggle(e.target.checked)}
-              className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
-            />
-            Add banner below QR code
-          </label>
-          {bannerEnabled && (
+        <div className="bg-white dark:bg-dark-surface px-6 py-5 space-y-4">
+          <div>
+            <label className={labelClasses}>
+              URL<span className="text-brand-accent ml-0.5">*</span>
+            </label>
             <input
               type="text"
-              value={bannerText}
-              onChange={(e) => {
-                setBannerText(e.target.value)
-                setQrResult(null)
-              }}
-              placeholder="e.g. Scan to Register"
-              maxLength={50}
-              className={`${inputClasses} mt-2`}
+              value={url}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              placeholder="https://example.com"
+              className={inputClasses}
             />
+          </div>
+
+          <div>
+            <label className={labelClasses}>Label (optional)</label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. Volunteer Signup, Spring Show 2026"
+              className={inputClasses}
+            />
+            <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
+              Used for the downloaded file name and saved history — it does not affect the QR code content.
+            </p>
+          </div>
+
+          <div>
+            <label className={labelClasses}>Banner Text</label>
+            <label className="flex items-center gap-2 text-sm text-dark dark:text-dark-text">
+              <input
+                type="checkbox"
+                checked={bannerEnabled}
+                onChange={(e) => handleBannerToggle(e.target.checked)}
+                className="rounded border-divider dark:border-dark-border text-brand-primary focus:ring-brand-primary"
+              />
+              Add banner below QR code
+            </label>
+            {bannerEnabled && (
+              <input
+                type="text"
+                value={bannerText}
+                onChange={(e) => {
+                  setBannerText(e.target.value)
+                  setQrResult(null)
+                }}
+                placeholder="e.g. Scan to Register"
+                maxLength={50}
+                className={`${inputClasses} mt-2`}
+              />
+            )}
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
+              {error}
+            </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating}
-          className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
-        >
-          {generating ? 'Generating…' : 'Generate QR Code'}
-        </button>
-
-        {error && (
-          <div className="rounded-lg bg-brand-accent-light border border-brand-accent p-3 text-sm text-dark dark:text-dark-text">
-            {error}
-          </div>
-        )}
+        <div className="bg-neutral-surface dark:bg-dark-nav border-t border-neutral-border dark:border-dark-border px-6 py-4 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            className="text-white rounded-lg px-6 py-2 font-medium text-sm hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: 'var(--brand-accent)' }}
+          >
+            {generating ? 'Generating…' : 'Generate QR Code'}
+          </button>
+        </div>
       </div>
 
       {qrResult && (
-        <div className="mt-8">
-          <div
-            className="w-64 h-64 [&>svg]:w-full [&>svg]:h-full bg-white p-3 rounded-lg border border-divider dark:border-dark-border"
-            dangerouslySetInnerHTML={{ __html: qrResult.svg }}
-          />
-          <div className="flex gap-4 mt-4">
-            {/* PNG is 2000×2000px — suitable for print use. */}
-            <a
-              href={`data:image/png;base64,${qrResult.pngBase64}`}
-              download={`${sanitizedLabel}.png`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
-            >
-              Download PNG
-            </a>
-            <a
-              href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrResult.svg)}`}
-              download={`${sanitizedLabel}.svg`}
-              className="inline-flex items-center justify-center bg-white dark:bg-dark-surface border border-brand-primary dark:border-brand-primary-mid text-brand-primary dark:text-brand-primary-mid font-semibold px-4 py-2 rounded-md text-sm hover:bg-gray-100 dark:hover:bg-dark-surface/50 transition-colors"
-            >
-              Download SVG
-            </a>
+        <div className="border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden mb-6">
+          <div className="bg-white p-6 flex flex-col items-center gap-4">
+            <div
+              className="w-64 h-64 [&>svg]:w-full [&>svg]:h-full"
+              dangerouslySetInnerHTML={{ __html: qrResult.svg }}
+            />
+            <div className="flex gap-4">
+              {/* PNG is 2000×2000px — suitable for print use. */}
+              <a
+                href={`data:image/png;base64,${qrResult.pngBase64}`}
+                download={`${sanitizedLabel}.png`}
+                className="text-sm font-medium hover:underline"
+                style={{ color: 'var(--brand-primary)' }}
+              >
+                Download PNG
+              </a>
+              <a
+                href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrResult.svg)}`}
+                download={`${sanitizedLabel}.svg`}
+                className="text-sm font-medium hover:underline"
+                style={{ color: 'var(--brand-primary)' }}
+              >
+                Download SVG
+              </a>
+            </div>
           </div>
         </div>
       )}

@@ -13,12 +13,13 @@ export default async function QRGeneratorPage() {
   const scanStats = await getQRScanStats(supabase, qrCodeIds)
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-2xl font-bold text-dark dark:text-dark-text mb-1">QR Code Generator</h1>
-      <p className="text-sm text-mid-gray dark:text-dark-muted mb-6">
-        Generate a scannable QR code for any URL. Level H error correction — scannable even with up
-        to 30% damage or obstruction.
-      </p>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="pb-4 border-b border-neutral-border dark:border-dark-border mb-6">
+        <h1 className="text-2xl font-bold text-dark dark:text-dark-text">QR Code Generator</h1>
+        <p className="text-mid-gray dark:text-dark-muted mt-1">
+          Generate and track QR codes for shows, forms, and external links.
+        </p>
+      </div>
 
       <QRGeneratorForm />
 
