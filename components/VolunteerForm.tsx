@@ -153,7 +153,7 @@ export default function VolunteerForm({
   }
 
   const inputClasses =
-    'w-full rounded-lg border border-divider px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
+    'w-full rounded-lg border border-divider bg-neutral-surface px-4 py-3 text-base text-dark focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-colors'
   const labelClasses = 'block text-sm font-semibold text-dark mb-1'
   const errorClasses = 'mt-1 text-sm text-brand-accent'
 
