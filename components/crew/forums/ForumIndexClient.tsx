@@ -36,20 +36,31 @@ export default function ForumIndexClient({
     <div className="space-y-8">
       {categories.map((category) => (
         <div key={category.id}>
-          <h2 className="text-lg font-bold text-dark dark:text-dark-text mb-3">{category.name}</h2>
-          <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-hidden">
+          <div className="bg-neutral-surface dark:bg-dark-nav border-y border-neutral-border dark:border-dark-border px-4 py-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted">
+              {category.name}
+            </span>
+          </div>
+          <div className="bg-white dark:bg-dark-surface border border-neutral-border dark:border-dark-border rounded-lg overflow-hidden mb-6">
             {category.forums.map((forum) => (
               <Link
                 key={forum.id}
                 href={`/crew/forums/${forum.id}`}
-                className="flex items-start justify-between gap-4 px-4 py-3 border-b border-divider dark:border-dark-border last:border-b-0 hover:bg-gray-50 dark:hover:bg-dark-surface/50 transition-colors"
+                className="flex items-start gap-4 px-4 py-3.5 border-b border-neutral-border dark:border-dark-border last:border-b-0 hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors border-l-4"
+                style={{ borderLeftColor: 'var(--brand-primary)' }}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`text-dark dark:text-dark-text ${forum.unread_count > 0 ? 'font-bold' : 'font-medium'}`}
-                    >
+                    <span className="font-semibold text-sm text-dark dark:text-dark-text">
                       {forum.name}
+                      {forum.unread_count > 0 && (
+                        <span
+                          className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium text-white"
+                          style={{ backgroundColor: 'var(--brand-primary)' }}
+                        >
+                          {forum.unread_count}
+                        </span>
+                      )}
                     </span>
                     {forum.is_archived && (
                       <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-mid-gray/20 text-mid-gray">
@@ -58,24 +69,17 @@ export default function ForumIndexClient({
                     )}
                   </div>
                   {forum.description && (
-                    <p className="text-sm text-mid-gray dark:text-dark-muted line-clamp-2 mt-0.5">
+                    <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
                       {forum.description}
                     </p>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0 text-right">
-                  <div className="flex items-center gap-2">
-                    {forum.unread_count > 0 && (
-                      <span className="text-xs font-semibold rounded-full px-2 py-0.5 bg-brand-primary text-white">
-                        {forum.unread_count} unread
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1 text-xs text-mid-gray dark:text-dark-muted">
-                      <MessageSquare size={12} />
-                      {forum.thread_count}
-                    </span>
-                  </div>
-                  <p className="text-xs text-mid-gray dark:text-dark-muted">
+                  <span className="flex items-center gap-1 text-xs text-mid-gray dark:text-dark-muted">
+                    <MessageSquare size={12} />
+                    {forum.thread_count}
+                  </span>
+                  <p className="text-xs text-mid-gray dark:text-dark-muted mt-1">
                     {forum.last_post_at
                       ? `Last post ${formatCT(forum.last_post_at, 'MMM d, yyyy h:mm a', tz)} by ${forum.last_post_author ?? 'Unknown'}`
                       : 'No posts yet'}

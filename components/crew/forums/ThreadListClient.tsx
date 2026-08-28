@@ -26,20 +26,25 @@ function ThreadRow({
   return (
     <Link
       href={`/crew/forums/${forumId}/${thread.id}`}
-      className="flex items-start justify-between gap-4 px-4 py-3 border-b border-divider dark:border-dark-border last:border-b-0 hover:bg-gray-50 dark:hover:bg-dark-surface/50 transition-colors"
+      className="flex items-start gap-3 px-4 py-3.5 border-b border-neutral-border dark:border-dark-border last:border-b-0 hover:bg-neutral-surface dark:hover:bg-dark-nav transition-colors border-l-4"
+      style={{ borderLeftColor: 'var(--brand-primary)' }}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           {thread.prefix_label && (
-            <span className="text-xs font-semibold rounded px-1.5 py-0.5 bg-brand-primary-light text-brand-primary dark:bg-dark-border dark:text-dark-text">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium mr-2 bg-neutral-surface dark:bg-dark-nav border border-neutral-border dark:border-dark-border text-mid-gray dark:text-dark-muted">
               [{thread.prefix_label}]
             </span>
           )}
-          <span className={`text-dark dark:text-dark-text ${thread.has_unread ? 'font-bold' : 'font-medium'}`}>
+          <span className={`text-sm ${thread.has_unread ? 'font-semibold' : 'font-medium'} text-dark dark:text-dark-text`}>
             {thread.title}
           </span>
-          {thread.is_pinned && <Pin size={13} className="text-brand-primary" aria-label="Pinned" />}
-          {thread.is_locked && <Lock size={13} className="text-mid-gray" aria-label="Locked" />}
+          {thread.is_pinned && (
+            <Pin className="w-3 h-3 text-mid-gray dark:text-dark-muted flex-shrink-0" aria-label="Pinned" />
+          )}
+          {thread.is_locked && (
+            <Lock className="w-3 h-3 text-mid-gray dark:text-dark-muted flex-shrink-0" aria-label="Locked" />
+          )}
         </div>
         <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
           {`Created by ${thread.created_by_name} on ${formatCT(thread.created_at, 'MMM d, yyyy h:mm a', timezone)}`}
@@ -53,7 +58,7 @@ function ThreadRow({
             {thread.reply_count}
           </span>
         </div>
-        <p className="text-xs text-mid-gray dark:text-dark-muted">
+        <p className="text-xs text-mid-gray dark:text-dark-muted mt-0.5">
           {thread.last_post_at
             ? `${formatCT(thread.last_post_at, 'MMM d, yyyy h:mm a', timezone)} by ${thread.last_post_author ?? 'Unknown'}`
             : 'No replies yet'}
@@ -320,50 +325,35 @@ export default function ThreadListClient({
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <Link
-        href="/crew/forums"
-        className="text-sm text-mid-gray dark:text-dark-muted hover:text-brand-primary flex items-center gap-1"
-      >
-        ← Forums
-      </Link>
-
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-dark dark:text-dark-text">{forum.name}</h1>
-          {forum.description && (
-            <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">{forum.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          {threads.length > 0 && (
-            <button
-              type="button"
-              onClick={handleMarkAllRead}
-              disabled={isMarkingAllRead}
-              className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50"
-            >
-              {isMarkingAllRead ? 'Marking…' : 'Mark all as read'}
-            </button>
-          )}
-          {(isSaOa || isModerator) && (
-            <Link
-              href="/crew/forums/manage"
-              className="text-sm text-brand-primary dark:text-brand-primary-mid hover:underline"
-            >
-              Manage Forums
-            </Link>
-          )}
-          {!forum.is_archived && (
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
-            >
-              New Thread
-            </button>
-          )}
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-end gap-4 flex-wrap">
+        {threads.length > 0 && (
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            disabled={isMarkingAllRead}
+            className="text-sm font-semibold text-brand-primary dark:text-brand-primary-mid hover:underline cursor-pointer disabled:opacity-50"
+          >
+            {isMarkingAllRead ? 'Marking…' : 'Mark all as read'}
+          </button>
+        )}
+        {(isSaOa || isModerator) && (
+          <Link
+            href="/crew/forums/manage"
+            className="text-sm text-brand-primary dark:text-brand-primary-mid hover:underline"
+          >
+            Manage Forums
+          </Link>
+        )}
+        {!forum.is_archived && (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="bg-brand-primary text-white hover:bg-brand-primary-mid transition-colors px-4 py-2 rounded-md text-sm font-medium cursor-pointer"
+          >
+            New Thread
+          </button>
+        )}
       </div>
       {markAllError && <p className="text-sm text-brand-accent">{markAllError}</p>}
 
@@ -379,7 +369,7 @@ export default function ThreadListClient({
         <div className="space-y-4">
           {pinnedThreads.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-mid-gray dark:text-dark-muted mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-mid-gray dark:text-dark-muted px-1 mb-2">
                 Pinned
               </p>
               <div className="bg-white dark:bg-dark-surface border border-divider dark:border-dark-border rounded-lg overflow-hidden">

@@ -22,15 +22,15 @@ export default async function ForumsPage() {
   const categories = await getForumIndex()
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="pb-4 border-b border-neutral-border dark:border-dark-border mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-dark dark:text-dark-text flex items-center gap-1.5">
-            Forums
+            Discussion Forums
             <HelpTooltip anchor="forums" label="Forums" />
           </h1>
-          <p className="text-sm text-mid-gray dark:text-dark-muted mt-1">
-            Internal discussion forums, organized by category.
+          <p className="text-mid-gray dark:text-dark-muted mt-1">
+            Browse forums and join the conversation.
           </p>
         </div>
         {(admin.role === 'super_admin' || admin.role === 'owner_admin') && (
