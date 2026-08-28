@@ -43,6 +43,12 @@ const TRIGGERS: TriggerEntry[] = [
     spam: 'Waitlisted cancellations do not trigger this; silently skipped if no editors are assigned.',
   },
   {
+    name: 'Volunteer Profile Invite',
+    fires: 'Fires when an admin converts an unlinked slot claim to a volunteer record from the Show Detail Volunteers tab.',
+    recipient: 'The volunteer, at the email address stored on the slot claim.',
+    spam: 'Fires once per conversion action. Only fires for slot claims where volunteer_id is null.',
+  },
+  {
     name: '24-Hour Reminder (automated cron)',
     fires: 'Fires nightly at midnight CT via Vercel Cron.',
     recipient: 'All volunteers with a claimed slot for the following calendar day.',

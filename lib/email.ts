@@ -402,6 +402,69 @@ export async function sendUpdateLinkEmail({
   })
 }
 
+// ─── Claim conversion — volunteer profile invite email (ADMIN.72) ──
+
+type ClaimConversionEmailParams = {
+  to: string
+  name: string
+  updateToken: string
+  volunteerId: string
+}
+
+export async function sendClaimConversionEmail({
+  to,
+  name,
+  updateToken,
+  volunteerId,
+}: ClaimConversionEmailParams): Promise<void> {
+  const updateUrl =
+    `${process.env.NEXT_PUBLIC_SITE_URL}/update?token=${updateToken}`
+  const safeName = escapeHtml(name)
+  const emailSettings = await resolveEmailSettings()
+  const safeOrgName = escapeHtml(emailSettings.orgName)
+
+  const body = `
+    <h1 style="margin:0 0 16px;color:${emailSettings.brandPrimary};font-size:22px;font-weight:700;">Hi ${safeName},</h1>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      You recently signed up to volunteer with ${safeOrgName}, and we've added you to our volunteer database.
+    </p>
+    <p style="margin:0 0 16px;color:#1A1A1A;font-size:15px;line-height:1.6;">
+      Click the button below to complete your volunteer profile. It only takes a minute, and it helps us make sure your hours are tracked and you get the right communications from us.
+    </p>
+    ${buildCtaButton('Complete My Volunteer Profile', updateUrl, emailSettings.brandPrimary)}
+    <p style="margin:24px 0 0;color:#555555;font-size:13px;line-height:1.6;">
+      If you have any questions, just reply to this email — we're happy to help.
+    </p>
+  `
+
+  const subject = `Welcome to the ${emailSettings.orgName} volunteer family — complete your profile`
+  const html = buildEmailHtml({
+    subject,
+    preheader: "You've been added to our volunteer roster. Click here to complete your profile.",
+    body,
+    footerNote: `You're receiving this email because you signed up to volunteer with ${safeOrgName}.`,
+    logoUrl: emailSettings.logoUrl,
+    orgName: emailSettings.orgName,
+    brandPrimary: emailSettings.brandPrimary,
+  })
+
+  await sendEmail({
+    from: emailSettings.from,
+    to,
+    subject,
+    html,
+  })
+
+  await logEmailSent({
+    subject,
+    bodyPreview: 'Complete your volunteer profile with us.',
+    recipientType: 'transactional',
+    recipientFilter: 'trigger:volunteer_profile_invite',
+    sentBy: null,
+    recipients: [{ email: to, volunteerId }],
+  })
+}
+
 // ─── Info updated confirmation email ─────────────────────────────
 
 type InfoUpdatedEmailParams = {

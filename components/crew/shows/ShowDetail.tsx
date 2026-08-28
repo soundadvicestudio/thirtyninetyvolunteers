@@ -21,6 +21,7 @@ import {
   updateShowStatus,
   sendShowNotifications,
   deleteShow,
+  convertUnlinkedClaim,
 } from '@/lib/actions/shows'
 import { SHOW_STATUS_LABEL, SHOW_STATUS_BADGE, getLocationHoursBucket } from '@/lib/utils/showDisplay'
 import PostShowReport from '@/components/crew/shows/PostShowReport'
@@ -324,6 +325,10 @@ function VolunteersTab({
   const [bulkMarkingRoleId, setBulkMarkingRoleId] = useState<string | null>(null)
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
 
+  type ConvertState = 'idle' | 'confirming' | 'converting' | 'done' | 'error'
+  const [convertStates, setConvertStates] = useState<Record<string, ConvertState>>({})
+  const getConvertState = (id: string): ConvertState => convertStates[id] ?? 'idle'
+
   if (showDates.length === 0) {
     return <p className="text-sm text-mid-gray dark:text-dark-muted">No show dates scheduled.</p>
   }
@@ -363,6 +368,17 @@ function VolunteersTab({
     })
     setBulkMarkingRoleId(null)
     router.refresh()
+  }
+
+  async function handleConvert(claim: SlotClaim) {
+    setConvertStates((s) => ({ ...s, [claim.id]: 'converting' }))
+    const result = await convertUnlinkedClaim(claim.id, showId)
+    if ('error' in result) {
+      setConvertStates((s) => ({ ...s, [claim.id]: 'error' }))
+    } else {
+      setConvertStates((s) => ({ ...s, [claim.id]: 'done' }))
+      router.refresh()
+    }
   }
 
   return (
@@ -432,10 +448,71 @@ function VolunteersTab({
                           >
                             <td className="px-4 py-2 text-dark dark:text-dark-text align-top">
                               {claim.volunteer_name}
-                              {!claim.volunteer_id && (
-                                <span className="flex items-center gap-1 text-xs text-brand-accent">
-                                  ⚠ No linked volunteer — hours won&apos;t tally
-                                  <HelpTooltip anchor="hours" label="Hours Tallying" />
+                              {!claim.volunteer_id && getConvertState(claim.id) !== 'done' && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  <span className="flex items-center gap-1 text-xs text-brand-accent">
+                                    ⚠ No linked volunteer — hours won&apos;t tally
+                                    <HelpTooltip anchor="hours" label="Hours Tallying" />
+                                  </span>
+                                  {canEdit && (
+                                    <>
+                                      {getConvertState(claim.id) === 'idle' && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setConvertStates((s) => ({ ...s, [claim.id]: 'confirming' }))
+                                          }
+                                          className="text-xs text-brand-primary hover:underline text-left w-fit"
+                                        >
+                                          Add to volunteer database
+                                        </button>
+                                      )}
+                                      {getConvertState(claim.id) === 'confirming' && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-mid-gray">Send invite and add?</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleConvert(claim)}
+                                            className="text-xs text-white rounded px-2 py-0.5"
+                                            style={{ backgroundColor: 'var(--brand-primary)' }}
+                                          >
+                                            Yes
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setConvertStates((s) => ({ ...s, [claim.id]: 'idle' }))
+                                            }
+                                            className="text-xs text-mid-gray hover:underline"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      )}
+                                      {getConvertState(claim.id) === 'converting' && (
+                                        <span className="text-xs text-mid-gray">Adding...</span>
+                                      )}
+                                      {getConvertState(claim.id) === 'error' && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-red-600">Something went wrong — try again.</span>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setConvertStates((s) => ({ ...s, [claim.id]: 'idle' }))
+                                            }
+                                            className="text-xs text-mid-gray hover:underline"
+                                          >
+                                            Retry
+                                          </button>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {!claim.volunteer_id && getConvertState(claim.id) === 'done' && (
+                                <span className="text-xs text-green-600 mt-1 block">
+                                  ✓ Added to volunteer database
                                 </span>
                               )}
                             </td>

@@ -134,7 +134,7 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       ? supabase
           .from('slot_claims')
           .select(
-            'id, volunteer_role_id, show_date_id, volunteer_id, volunteer_name, volunteer_email, status, waitlist_position, claimed_at'
+            'id, volunteer_role_id, show_date_id, volunteer_id, volunteer_name, volunteer_email, volunteer_phone, status, waitlist_position, claimed_at'
           )
           .in('volunteer_role_id', roleIds)
       : Promise.resolve({ data: [] as SlotClaim[] }),

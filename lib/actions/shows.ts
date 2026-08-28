@@ -7,8 +7,14 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { getAdminUser } from '@/lib/auth'
 import { logAction } from '@/lib/audit'
 import { showSubmitSchema, type ShowSubmitPayload } from '@/lib/validations/show'
-import { buildCategoryMatchNotificationPayload, buildShowBulkEmailPayload, sendBatchEmails } from '@/lib/email'
+import {
+  buildCategoryMatchNotificationPayload,
+  buildShowBulkEmailPayload,
+  sendBatchEmails,
+  sendClaimConversionEmail,
+} from '@/lib/email'
 import { syncShowDateToCalendar } from '@/lib/actions/calendar-sync'
+import { normalizePhone } from '@/lib/utils/phone'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Buffer upsert shared by createShow() and updateShow(). Skips the write
@@ -1003,6 +1009,124 @@ export async function deleteShow(showId: string): Promise<ShowEditorActionResult
 
   revalidatePath('/crew/shows')
   revalidatePath('/shows')
+
+  return { success: true }
+}
+
+// ─── Convert unlinked slot claim to volunteer record (ADMIN.72) ────
+
+type ConvertClaimResult =
+  | { success: true }
+  | { error: string }
+
+export async function convertUnlinkedClaim(claimId: string, showId: string): Promise<ConvertClaimResult> {
+  const admin = await getAdminUser()
+  if (!admin || admin.role === 'viewer' || admin.role === 'production') {
+    return { error: 'Unauthorized' }
+  }
+
+  const supabase = await getServerClient()
+
+  const { data: claim } = await supabase
+    .from('slot_claims')
+    .select('id, volunteer_id, volunteer_name, volunteer_email, volunteer_phone')
+    .eq('id', claimId)
+    .maybeSingle()
+
+  if (!claim) {
+    return { error: 'Slot claim not found' }
+  }
+
+  // Idempotency guard — handles double-click and retry gracefully.
+  if (claim.volunteer_id) {
+    return { success: true }
+  }
+
+  const trimmedName = (claim.volunteer_name || '').trim()
+  const normalizedEmail = (claim.volunteer_email || '').toLowerCase().trim()
+  const normalizedPhone = normalizePhone(claim.volunteer_phone || '')
+
+  // Sequential duplicate check (email first, then phone) — established
+  // pattern from submitClaimWithLookup() in lib/actions/claims.ts.
+  const { data: existingByEmail } = await supabase
+    .from('volunteers')
+    .select('id, update_token')
+    .eq('email', normalizedEmail)
+    .maybeSingle()
+  const { data: existingByPhone } = normalizedPhone
+    ? await supabase.from('volunteers').select('id, update_token').eq('phone', normalizedPhone).maybeSingle()
+    : { data: null }
+  const existingVolunteer = existingByEmail ?? existingByPhone
+
+  let resolvedVolunteer: { id: string; update_token: string }
+  let logDetail: Record<string, string>
+
+  if (existingVolunteer) {
+    resolvedVolunteer = existingVolunteer
+    logDetail = { linked_to_existing_volunteer: existingVolunteer.id }
+  } else {
+    const { data: newVolunteer, error: insertError } = await supabase
+      .from('volunteers')
+      .insert({
+        full_name: trimmedName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+      })
+      .select('id, update_token')
+      .single()
+
+    if (insertError?.code === '23505') {
+      // Unique constraint race — fetch existing.
+      const { data: raceByEmail } = await supabase
+        .from('volunteers')
+        .select('id, update_token')
+        .eq('email', normalizedEmail)
+        .maybeSingle()
+      const { data: raceByPhone } = await supabase
+        .from('volunteers')
+        .select('id, update_token')
+        .eq('phone', normalizedPhone)
+        .maybeSingle()
+      const raceVolunteer = raceByEmail ?? raceByPhone
+      if (!raceVolunteer) {
+        return { error: 'Unable to create volunteer record.' }
+      }
+      resolvedVolunteer = raceVolunteer
+    } else if (insertError || !newVolunteer) {
+      return { error: 'Unable to create volunteer record.' }
+    } else {
+      resolvedVolunteer = newVolunteer
+    }
+
+    logDetail = { new_volunteer_id: resolvedVolunteer.id }
+  }
+
+  const { error: updateError } = await supabase
+    .from('slot_claims')
+    .update({ volunteer_id: resolvedVolunteer.id })
+    .eq('id', claimId)
+
+  if (updateError) {
+    return { error: 'Unable to link this claim to the volunteer record.' }
+  }
+
+  // Non-blocking — email failure must never fail the conversion.
+  void (async () => {
+    try {
+      await sendClaimConversionEmail({
+        to: normalizedEmail,
+        name: trimmedName,
+        updateToken: resolvedVolunteer.update_token,
+        volunteerId: resolvedVolunteer.id,
+      })
+    } catch {
+      // Swallow silently
+    }
+  })()
+
+  await logAction(admin.id, 'slot_claim.convert_to_volunteer', 'slot_claim', claimId, undefined, logDetail)
+
+  revalidatePath(`/crew/shows/${showId}`)
 
   return { success: true }
 }

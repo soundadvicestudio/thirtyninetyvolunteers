@@ -84,6 +84,7 @@ export type SlotClaim = {
   volunteer_id: string | null
   volunteer_name: string
   volunteer_email: string
+  volunteer_phone: string | null
   status: 'claimed' | 'cancelled' | 'waitlisted'
   waitlist_position: number | null
   claimed_at: string

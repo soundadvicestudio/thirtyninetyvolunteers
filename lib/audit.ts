@@ -55,6 +55,7 @@ export type AuditAction =
 
   // Slot Claims
   | 'slot_claim.cancel'
+  | 'slot_claim.convert_to_volunteer'
 
   // Milestones
   | 'milestone.acknowledge'
