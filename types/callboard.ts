@@ -32,6 +32,7 @@ export type CallboardActiveClaim = {
   show_date_id: string
   role_name: string
   show_date: string
+  show_time: string
   show_id: string
 }
 

@@ -7,6 +7,7 @@ import { getUpcomingClaimsForVolunteer } from '@/lib/data/callboard'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import { hasShowStarted } from '@/lib/utils/show-timing'
 import CallboardLookupForm from '@/components/callboard/CallboardLookupForm'
 import VolunteerCard from '@/components/callboard/VolunteerCard'
 import PublicHeader from '@/components/public/PublicHeader'
@@ -49,19 +50,23 @@ type RawActiveClaimRow = {
   show_date_id: string
   volunteer_role: {
     role_name: string
-    show_date: { show_date: string; show_id: string } | null
+    show_date: { show_date: string; show_time: string; show_id: string } | null
   } | null
 }
 
 // Two parameterized queries (volunteer_id, email) merged in JS rather than a
 // raw .or() filter string — same convention as lib/actions/claims.ts.
-async function getActiveClaims(volunteerId: string, email: string): Promise<CallboardActiveClaim[]> {
+// ADMIN.83 — claims on show dates that have already started are excluded so
+// the "You're signed up" indicator never references a date that no longer
+// appears in the show's (ADMIN.82) upcoming-only dates list.
+async function getActiveClaims(volunteerId: string, email: string, timezone: string): Promise<CallboardActiveClaim[]> {
   const client = getAdminClient()
+  const now = new Date()
   const selectCols = `
     id, volunteer_role_id, show_date_id,
     volunteer_role:volunteer_roles(
       role_name,
-      show_date:show_dates(show_date, show_id)
+      show_date:show_dates(show_date, show_time, show_id)
     )
   `
 
@@ -75,14 +80,17 @@ async function getActiveClaims(volunteerId: string, email: string): Promise<Call
   const claims: CallboardActiveClaim[] = []
   for (const row of rows) {
     if (seen.has(row.id) || !row.volunteer_role?.show_date) continue
+    const { show_date, show_time, show_id } = row.volunteer_role.show_date
+    if (hasShowStarted(show_date, show_time, timezone, now)) continue
     seen.add(row.id)
     claims.push({
       id: row.id,
       volunteer_role_id: row.volunteer_role_id,
       show_date_id: row.show_date_id,
       role_name: row.volunteer_role.role_name,
-      show_date: row.volunteer_role.show_date.show_date,
-      show_id: row.volunteer_role.show_date.show_id,
+      show_date,
+      show_time,
+      show_id,
     })
   }
   return claims
@@ -296,7 +304,7 @@ export default async function CallboardPage() {
           .eq('volunteer_id', volunteer.id)
           .eq('source_type', 'manual')
           .order('logged_date', { ascending: false }),
-        getActiveClaims(volunteer.id, volunteer.email),
+        getActiveClaims(volunteer.id, volunteer.email, tz),
         getCallHistory(volunteer.id, volunteer.email),
         getUpcomingClaimsForVolunteer(client, volunteer.id, volunteer.email, tz),
       ])
