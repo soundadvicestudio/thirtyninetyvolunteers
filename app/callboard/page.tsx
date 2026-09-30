@@ -260,11 +260,12 @@ function OpportunityCard({ opportunity }: { opportunity: StandingOpportunityRow 
 export default async function CallboardPage() {
   const volunteer = await getCallboardSession()
 
-  const flags = await getFeatureFlags(getAdminClient())
+  const client = getAdminClient()
+  const flags = await getFeatureFlags(client)
   const org = await resolveOrgIdentity()
-  const tz = await getOrgTimezone(getAdminClient())
+  const tz = await getOrgTimezone(client)
 
-  const [shows, opportunities] = await Promise.all([getPublicShows(), getActiveOpportunities()])
+  const [shows, opportunities] = await Promise.all([getPublicShows(client, tz), getActiveOpportunities()])
 
   let categories: string[] = []
   let milestones: CallboardMilestone[] = []

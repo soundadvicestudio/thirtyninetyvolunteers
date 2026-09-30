@@ -1,5 +1,7 @@
 import 'server-only'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getAdminClient } from '@/lib/supabase/admin'
+import { hasShowStarted } from '@/lib/utils/show-timing'
 import type { PublicShow, PublicShowDate, PublicShowRole } from '@/types/show-public'
 import type { Location, ShowStatus } from '@/types/show'
 
@@ -119,10 +121,10 @@ function hasOpenSlot(show: PublicShow): boolean {
 
 const SHOW_COLUMNS = 'id, name, location_id, location:locations(id, name, color), status, description, volunteer_instructions'
 
-export async function getPublicShows(): Promise<PublicShow[]> {
-  const client = getAdminClient()
+export async function getPublicShows(supabase: SupabaseClient, timezone: string): Promise<PublicShow[]> {
+  const now = new Date()
 
-  const { data: showRows } = await client
+  const { data: showRows } = await supabase
     .from('shows')
     .select(SHOW_COLUMNS)
     .eq('status', 'live')
@@ -130,8 +132,18 @@ export async function getPublicShows(): Promise<PublicShow[]> {
 
   const shows = await attachDatesAndRoles((showRows ?? []) as unknown as RawShowRow[])
 
-  // Shows where every role across every date is full are excluded entirely.
-  return shows.filter(hasOpenSlot)
+  // ADMIN.82 — drop started dates before any open-slot logic runs, so slot
+  // counts and the "at least one open role" test below consider only
+  // upcoming dates. A show with zero remaining dates is excluded by
+  // hasOpenSlot() below exactly like a show with no open roles.
+  const upcomingShows = shows.map((show) => ({
+    ...show,
+    dates: show.dates.filter((d) => !hasShowStarted(d.show_date, d.show_time, timezone, now)),
+  }))
+
+  // Shows where every role across every remaining date is full (or that
+  // have no remaining dates at all) are excluded entirely.
+  return upcomingShows.filter(hasOpenSlot)
 }
 
 export async function getPublicShow(id: string): Promise<PublicShow | null> {

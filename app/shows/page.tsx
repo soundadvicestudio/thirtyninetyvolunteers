@@ -98,11 +98,16 @@ function UpcomingAuditionsCard({ auditions, timezone }: { auditions: UpcomingAud
   )
 }
 
+// Must render per request: which shows are listed depends
+// on whether their dates have started (ADMIN.82).
+export const dynamic = 'force-dynamic'
+
 export default async function ShowsListingPage() {
-  const shows = await getPublicShows()
-  const flags = await getFeatureFlags(getAdminClient())
+  const client = getAdminClient()
+  const tz = await getOrgTimezone(client)
+  const shows = await getPublicShows(client, tz)
+  const flags = await getFeatureFlags(client)
   const org = await resolveOrgIdentity()
-  const tz = await getOrgTimezone(getAdminClient())
   const upcomingAuditions = await getUpcomingAuditions()
 
   return (
