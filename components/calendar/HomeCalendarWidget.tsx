@@ -17,17 +17,20 @@ interface HomeCalendarWidgetProps {
   initialYear: number
   initialMonth: number
   initialEvents: PublicCalendarEvent[]
+  initialToday: string
 }
 
 export function HomeCalendarWidget({
   initialYear,
   initialMonth,
   initialEvents,
+  initialToday,
 }: HomeCalendarWidgetProps) {
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
   const [events, setEvents] = useState<PublicCalendarEvent[]>(initialEvents)
   const [isLoading, setIsLoading] = useState(false)
+  const [today, setToday] = useState(initialToday)
 
   const tz = typeof document !== 'undefined'
     ? (document.body.dataset.timezone || 'America/Chicago')
@@ -40,6 +43,7 @@ export function HomeCalendarWidget({
       setEvents(newEvents)
       setYear(newYear)
       setMonth(newMonth)
+      setToday(formatInTimeZone(new Date(), tz, 'yyyy-MM-dd'))
     } finally {
       setIsLoading(false)
     }
@@ -57,7 +61,6 @@ export function HomeCalendarWidget({
 
   const monthDateStr = `${year}-${String(month).padStart(2, '0')}-01`
   const gridDays = getMonthGridDays(monthDateStr)
-  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
 
   const eventsByDay = new Map<string, PublicCalendarEvent[]>()
   for (const event of events) {
@@ -110,31 +113,42 @@ export function HomeCalendarWidget({
         <div className="grid grid-cols-7 gap-px bg-gray-100 border border-gray-100 rounded overflow-hidden">
           {gridDays.map((dayStr) => {
             const [, m, d] = dayStr.split('-').map(Number)
-            const isToday = dayStr === todayCT
+            const isToday = dayStr === today
             const isCurrentMonth = m === month
+            const isPast = dayStr < today
             const dayEvents = eventsByDay.get(dayStr) ?? []
 
             return (
               <div
                 key={dayStr}
-                className={`bg-white p-1 sm:p-1.5 min-h-[70px] sm:min-h-[80px] ${!isCurrentMonth ? 'opacity-40' : ''}`}
+                className={`p-1 sm:p-1.5 min-h-[70px] sm:min-h-[80px] ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}`}
               >
-                <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : 'text-dark'}`}>
+                <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : isCurrentMonth ? 'text-dark' : 'text-gray-400'}`}>
                   {d}
                 </p>
                 <div className="space-y-1">
-                  {dayEvents.map((event) => (
-                    <Link
-                      key={event.id}
-                      href={`/shows/${event.show_id}`}
-                      className="block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2 hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: event.location?.color ?? '#555555' }}
-                      title={event.title}
-                    >
-                      {event.needsVolunteers && <span className="mr-1">●</span>}
-                      {event.title}
-                    </Link>
-                  ))}
+                  {dayEvents.map((event) =>
+                    isPast ? (
+                      <div
+                        key={event.id}
+                        className="block rounded px-1.5 py-1 text-[11px] leading-tight line-clamp-2 bg-gray-200 text-gray-500 cursor-default"
+                        title={event.title}
+                      >
+                        {event.title}
+                      </div>
+                    ) : (
+                      <Link
+                        key={event.id}
+                        href={`/shows/${event.show_id}`}
+                        className="block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2 hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: event.location?.color ?? '#555555' }}
+                        title={event.title}
+                      >
+                        {event.needsVolunteers && <span className="mr-1">●</span>}
+                        {event.title}
+                      </Link>
+                    )
+                  )}
                 </div>
               </div>
             )

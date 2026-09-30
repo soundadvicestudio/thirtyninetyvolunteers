@@ -139,6 +139,7 @@ export default async function HomePage() {
                   initialYear={currentYear}
                   initialMonth={currentMonth}
                   initialEvents={calendarEvents}
+                  initialToday={formatInTimeZone(now, tz, 'yyyy-MM-dd')}
                 />
               </div>
             )}
