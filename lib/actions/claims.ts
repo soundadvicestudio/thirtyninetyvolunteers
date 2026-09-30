@@ -1,10 +1,12 @@
 'use server'
 
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { getFeatureFlags } from '@/lib/feature-flags'
 import { formatWallClockCT } from '@/lib/utils/date'
 import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import { hasShowStarted } from '@/lib/utils/show-timing'
 import { normalizePhone } from '@/lib/utils/phone'
 import { logAction } from '@/lib/audit'
 import { createNotification } from '@/lib/utils/notifications'
@@ -15,6 +17,29 @@ import {
   sendSlotCancellationEmail,
   sendUpdateLinkEmail,
 } from '@/lib/email'
+
+const CLAIM_CLOSED_MESSAGE =
+  'Sign-ups for this date have closed — the performance has already started.'
+
+// Returns true when the show date behind this role has started.
+// Fails open (false) when rows are missing or a query errors, so
+// the existing validation reports those cases as before.
+async function isClaimDateClosed(supabase: SupabaseClient, roleId: string): Promise<boolean> {
+  const tz = await getOrgTimezone(supabase)
+  const { data: role } = await supabase
+    .from('volunteer_roles')
+    .select('show_date_id')
+    .eq('id', roleId)
+    .maybeSingle()
+  if (!role?.show_date_id) return false
+  const { data: sd } = await supabase
+    .from('show_dates')
+    .select('show_date, show_time')
+    .eq('id', role.show_date_id)
+    .maybeSingle()
+  if (!sd) return false
+  return hasShowStarted(sd.show_date, sd.show_time, tz)
+}
 
 export type SubmitClaimInput = {
   roleId: string
@@ -113,6 +138,10 @@ export async function submitClaimWithLookup(input: {
   const trimmedName = input.volunteerName.trim()
 
   try {
+    if (await isClaimDateClosed(supabase, input.roleId)) {
+      return { status: 'error', message: CLAIM_CLOSED_MESSAGE }
+    }
+
     let volunteerId: string
 
     // Step 1: Check for race-condition duplicate (volunteer may have been
@@ -253,6 +282,10 @@ export async function submitClaim(data: SubmitClaimInput): Promise<SubmitClaimRe
     const client = getAdminClient()
     const flags = await getFeatureFlags(client)
     const tz = await getOrgTimezone(client)
+
+    if (await isClaimDateClosed(client, roleId)) {
+      return { status: 'error', message: CLAIM_CLOSED_MESSAGE }
+    }
 
     // A. Fetch role and show context
     const { data: role, error: roleError } = await client

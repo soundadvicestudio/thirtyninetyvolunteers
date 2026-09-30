@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { getPublicShow } from '@/lib/data/shows'
 import { resolveOrgIdentity } from '@/lib/utils/org-identity'
+import { getAdminClient } from '@/lib/supabase/admin'
+import { getOrgTimezone } from '@/lib/utils/org-timezone'
+import { hasShowStarted } from '@/lib/utils/show-timing'
 import ShowDatePicker from './ShowDatePicker'
 import PublicHeader from '@/components/public/PublicHeader'
 
@@ -40,6 +43,11 @@ export default async function ShowClaimPage({ params }: { params: Promise<{ id: 
     return <Unavailable />
   }
 
+  const tz = await getOrgTimezone(getAdminClient())
+  const closedDateIds = show.dates
+    .filter((d) => hasShowStarted(d.show_date, d.show_time, tz))
+    .map((d) => d.id)
+
   return (
     <div className="min-h-screen flex flex-col">
       <PublicHeader />
@@ -70,7 +78,7 @@ export default async function ShowClaimPage({ params }: { params: Promise<{ id: 
             </div>
           )}
 
-          <ShowDatePicker dates={show.dates} showName={show.name} />
+          <ShowDatePicker dates={show.dates} showName={show.name} closedDateIds={closedDateIds} />
         </div>
       </main>
 

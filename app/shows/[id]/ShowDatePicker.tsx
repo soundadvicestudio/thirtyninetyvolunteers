@@ -9,13 +9,23 @@ function isDateFull(date: PublicShowDate): boolean {
   return date.roles.length > 0 && date.roles.every((r) => r.is_full)
 }
 
-export default function ShowDatePicker({ dates, showName }: { dates: PublicShowDate[]; showName: string }) {
+export default function ShowDatePicker({
+  dates,
+  showName,
+  closedDateIds,
+}: {
+  dates: PublicShowDate[]
+  showName: string
+  closedDateIds: string[]
+}) {
   const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const singleDate = dates.length === 1
+  const allClosed = dates.length > 0 && dates.every((d) => closedDateIds.includes(d.id))
 
-  const firstOpenDate = dates.find((d) => !isDateFull(d)) ?? dates[0]
+  const openDates = dates.filter((d) => !closedDateIds.includes(d.id))
+  const firstOpenDate = openDates.find((d) => !isDateFull(d)) ?? openDates[0] ?? null
   const [selectedDateId, setSelectedDateId] = useState<string | null>(
-    dates.length === 1 ? dates[0].id : (firstOpenDate?.id ?? null)
+    singleDate ? (closedDateIds.includes(dates[0].id) ? null : dates[0].id) : (firstOpenDate?.id ?? null)
   )
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null)
 
@@ -41,12 +51,14 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'EEEE, MMMM d, yyyy', tz)} at{' '}
           {formatWallClockCT(dates[0].show_date, dates[0].show_time, 'h:mm a', tz)}
           {dates[0].end_time && ` – ${formatWallClockCT(dates[0].show_date, dates[0].end_time, 'h:mm a', tz)}`}
+          {closedDateIds.includes(dates[0].id) ? ' · Closed' : ''}
         </p>
       ) : (
         <div>
           <h2 className="text-brand-primary font-bold text-lg mb-3">Choose a Date</h2>
           <div className="flex flex-wrap gap-2">
             {dates.map((date) => {
+              const closed = closedDateIds.includes(date.id)
               const full = isDateFull(date)
               const isSelected = date.id === selectedDateId
 
@@ -54,24 +66,33 @@ export default function ShowDatePicker({ dates, showName }: { dates: PublicShowD
                 <button
                   key={date.id}
                   type="button"
-                  disabled={full}
+                  disabled={closed || full}
+                  aria-disabled={closed ? 'true' : undefined}
                   onClick={() => handleSelectDate(date.id)}
                   className={
-                    full
-                      ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-3 cursor-not-allowed'
-                      : isSelected
-                        ? 'rounded-full bg-brand-primary text-white text-sm font-semibold px-4 py-3 transition-colors'
-                        : 'rounded-full border border-brand-primary text-brand-primary text-sm font-semibold px-4 py-3 hover:bg-brand-primary-light transition-colors'
+                    closed
+                      ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-3 opacity-40 cursor-not-allowed'
+                      : full
+                        ? 'rounded-full border border-divider bg-footer-gray text-mid-gray text-sm font-semibold px-4 py-3 cursor-not-allowed'
+                        : isSelected
+                          ? 'rounded-full bg-brand-primary text-white text-sm font-semibold px-4 py-3 transition-colors'
+                          : 'rounded-full border border-brand-primary text-brand-primary text-sm font-semibold px-4 py-3 hover:bg-brand-primary-light transition-colors'
                   }
                 >
                   {formatWallClockCT(date.show_date, date.show_time, 'EEE, MMM d, yyyy · h:mm a', tz)}
                   {date.end_time && ` – ${formatWallClockCT(date.show_date, date.end_time, 'h:mm a', tz)}`}
-                  {full ? ' — Full' : ''}
+                  {closed ? ' · Closed' : full ? ' — Full' : ''}
                 </button>
               )
             })}
           </div>
         </div>
+      )}
+
+      {!selectedDate && allClosed && (
+        <p className="text-mid-gray text-sm">
+          Sign-ups for this show are closed — all performance dates have started or passed.
+        </p>
       )}
 
       {selectedDate && (
