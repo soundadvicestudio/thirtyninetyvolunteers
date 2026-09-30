@@ -12,6 +12,12 @@ import PublicHeader from '@/components/public/PublicHeader'
 import { HomeCalendarWidget } from '@/components/calendar/HomeCalendarWidget'
 import { getPublicCalendarEvents, type PublicCalendarEvent } from '@/lib/data/publicCalendar'
 
+// Must render per request: this page computes the current
+// month in the org timezone and fetches live calendar/
+// audition data. A static prerender freezes both at build
+// time (ADMIN.78).
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   // Public page — no Supabase Auth session exists, so the admin client is
   // required here (never the cookie-based session client). One client
