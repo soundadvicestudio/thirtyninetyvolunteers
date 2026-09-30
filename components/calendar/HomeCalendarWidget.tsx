@@ -131,9 +131,11 @@ export function HomeCalendarWidget({
                     isPast ? (
                       <div
                         key={event.id}
-                        className="block rounded px-1.5 py-1 text-[11px] leading-tight line-clamp-2 bg-gray-200 text-gray-500 cursor-default"
+                        className="block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2 opacity-40 cursor-default"
+                        style={{ backgroundColor: event.location?.color ?? '#555555' }}
                         title={event.title}
                       >
+                        {event.needsVolunteers && <span className="mr-1">●</span>}
                         {event.title}
                       </div>
                     ) : (
