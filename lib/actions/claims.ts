@@ -587,7 +587,12 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
         volunteer_id: string | null
       } | null = null
 
-      if (wasClaimed) {
+      // ADMIN.82 — a show date that has already started never promotes a
+      // waitlisted volunteer onto it. The cancellation itself still
+      // completes normally either way.
+      const dateClosed = await isClaimDateClosed(client, claim.volunteer_role_id)
+
+      if (wasClaimed && !dateClosed) {
         // D. Promote the next waitlisted volunteer, if any.
         const { data: nextWaitlisted } = await client
           .from('slot_claims')
@@ -649,7 +654,7 @@ export async function cancelClaim(token: string, confirmedEmail: string): Promis
         const formattedShowDate = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'MMMM d, yyyy', tz)
         const formattedShowTime = formatWallClockCT(showDateRow.show_date, showDateRow.show_time, 'h:mm a', tz)
 
-        if (promotedClaim && showRow && roleRow) {
+        if (promotedClaim && !dateClosed && showRow && roleRow) {
           try {
             const promoCancelUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/cancel?token=${promotedClaim.claim_token}`
             await sendWaitlistPromotionEmail({
