@@ -26,16 +26,18 @@ export default function PublicCalendarGrid({
   focusedMonth,
   prevMonthUrl,
   nextMonthUrl,
+  initialToday,
 }: {
   events: PublicCalendarEvent[]
   focusedMonth: { year: number; month: number }
   prevMonthUrl: string
   nextMonthUrl: string
+  initialToday: string
 }) {
   const tz = typeof document !== 'undefined' ? (document.body.dataset.timezone || 'America/Chicago') : 'America/Chicago'
   const monthDateStr = `${focusedMonth.year}-${String(focusedMonth.month).padStart(2, '0')}-01`
   const gridDays = getMonthGridDays(monthDateStr)
-  const todayCT = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd')
+  const today = initialToday
 
   const eventsByDay = new Map<string, PublicCalendarEvent[]>()
   for (const event of events) {
@@ -82,34 +84,50 @@ export default function PublicCalendarGrid({
       <div className="grid grid-cols-7 gap-px bg-divider border border-t-0 border-divider rounded-b-lg overflow-hidden">
         {gridDays.map((dayStr) => {
           const [, m, d] = dayStr.split('-').map(Number)
-          const isToday = dayStr === todayCT
+          const isToday = dayStr === today
           const isCurrentMonth = m === focusedMonth.month
+          const isPast = dayStr < today
           const dayEvents = eventsByDay.get(dayStr) ?? []
 
           return (
             <div
               key={dayStr}
-              className={`bg-white p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] ${!isCurrentMonth ? 'opacity-40' : ''}`}
+              className={`p-1 sm:p-2 min-h-[80px] sm:min-h-[100px] ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}`}
             >
-              <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : 'text-dark'}`}>
+              <p className={`text-xs font-semibold mb-1 ${isToday ? 'inline-block bg-brand-primary text-white rounded-full w-5 h-5 text-center leading-5' : isCurrentMonth ? 'text-dark' : 'text-gray-400'}`}>
                 {d}
               </p>
               <div className="space-y-1">
-                {dayEvents.map((event) => (
-                  <Link
-                    key={event.id}
-                    href={`/shows/${event.show_id}`}
-                    className="block rounded px-1.5 py-1 text-white text-xs leading-tight truncate hover:opacity-90 transition-opacity text-center sm:text-left"
-                    style={{ backgroundColor: event.location?.color ?? '#555555' }}
-                    title={event.title}
-                  >
-                    <span className="hidden sm:inline">
-                      {event.needsVolunteers && <span className="mr-1">●</span>}
-                      {event.title}
-                    </span>
-                    <span className="sm:hidden">{event.needsVolunteers ? '●' : '•'}</span>
-                  </Link>
-                ))}
+                {dayEvents.map((event) =>
+                  isPast ? (
+                    <div
+                      key={event.id}
+                      className="block rounded px-1.5 py-1 text-white text-xs leading-tight truncate text-center sm:text-left opacity-40 cursor-default"
+                      style={{ backgroundColor: event.location?.color ?? '#555555' }}
+                      title={event.title}
+                    >
+                      <span className="hidden sm:inline">
+                        {event.needsVolunteers && <span className="mr-1">●</span>}
+                        {event.title}
+                      </span>
+                      <span className="sm:hidden">{event.needsVolunteers ? '●' : '•'}</span>
+                    </div>
+                  ) : (
+                    <Link
+                      key={event.id}
+                      href={`/shows/${event.show_id}`}
+                      className="block rounded px-1.5 py-1 text-white text-xs leading-tight truncate hover:opacity-90 transition-opacity text-center sm:text-left"
+                      style={{ backgroundColor: event.location?.color ?? '#555555' }}
+                      title={event.title}
+                    >
+                      <span className="hidden sm:inline">
+                        {event.needsVolunteers && <span className="mr-1">●</span>}
+                        {event.title}
+                      </span>
+                      <span className="sm:hidden">{event.needsVolunteers ? '●' : '•'}</span>
+                    </Link>
+                  )
+                )}
               </div>
             </div>
           )

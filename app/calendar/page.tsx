@@ -24,7 +24,8 @@ export default async function PublicCalendarPage({
   const supabase = getAdminClient()
   const tz = await getOrgTimezone(supabase)
 
-  const todayMonthCT = formatInTimeZone(new Date(), tz, 'yyyy-MM')
+  const now = new Date()
+  const todayMonthCT = formatInTimeZone(now, tz, 'yyyy-MM')
   const monthStr = params.month && /^\d{4}-\d{2}$/.test(params.month) ? params.month : todayMonthCT
   const [year, month] = monthStr.split('-').map(Number)
 
@@ -55,6 +56,7 @@ export default async function PublicCalendarPage({
             focusedMonth={{ year, month }}
             prevMonthUrl={prevMonthUrl}
             nextMonthUrl={nextMonthUrl}
+            initialToday={formatInTimeZone(now, tz, 'yyyy-MM-dd')}
           />
         </div>
       </main>
