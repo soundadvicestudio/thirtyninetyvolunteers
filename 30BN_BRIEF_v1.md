@@ -1,12 +1,13 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.9
-*Created: July 2026 | Last session: DOC.107 (Aug 2026).
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.10
+*Created: July 2026 | Last session: DOC.109 (Oct 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.10 | Oct 2026 | ADMIN.78–83 (Build Pt 30) — public-page time-correctness: home page no longer statically prerendered (calendar had frozen on August 2026), past/upcoming treatment on `/` and `/calendar`, slot claims close at show start (server guard + closed-date UI), `/shows` + `/callboard` hide started dates, waitlist promotion skipped on started dates, Call Board "signed up" indicator ignores started dates; new standing rules R41/R42; §11 hash correction (DOC.109) |
 | v6.9 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims to volunteer records; QR Generator + Forums pages Option A restyled; VolunteerForm input tint; callboard chronological sort; public calendar UTC boundary fix; Q-item cleanup batch (DOC.107/108) |
 | v6.8 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, home page two-column redesign (HomeCalendarWidget + VolunteerForm card), org logo next/image → img fix, show times on date picker, volunteer card UX polish (DOC.105) |
 | v6.7 | Aug 2026 | ADMIN.61–64 complete — Resend error detection, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email (DOC.102/103) |
@@ -49,7 +50,7 @@ QRANALYTICS ✓, SIDEBAR ✓, NAVORDER ✓, Phase BETA ✓
 (Beta Feedback System). All planned Beta phases complete.
 Phase 17 (Launch) remains next, deferred pending continued
 pre-launch refinement.
-Post-Beta ADMIN prompts: ADMIN.47–64 ✓ (ADMIN.47–51:
+Post-Beta ADMIN prompts: ADMIN.47–83 ✓ (ADMIN.47–51:
 carry-forward cleanup, Settings access tightening, hide-not-lock
 rule, Inventory Manager sidebar link; ADMIN.52–57: pre-launch
 dashboard refinements, notification panel cleanup, QR banner
@@ -60,7 +61,21 @@ self-heal + TopBar icon sizing; ADMIN.61–64: Email outage
 diagnosis + Resend error detection fix; lookup-first slot claim
 gate (three-state ClaimForm); Call Board Upcoming Slots with
 per-slot cancel; editor notification email replaced with in-app
-notification + volunteer cancellation confirmation email added).
+notification + volunteer cancellation confirmation email added;
+ADMIN.65–77: PublicHeader unification, home page two-column
+redesign, org logo plain-img fix, show times on the claim date
+picker, convert unlinked slot claims to volunteer records, public
+calendar UTC boundary fix, Call Board chronological sort;
+ADMIN.78–83: public-page time-correctness — home page no longer
+statically prerendered (the calendar had frozen on August 2026)
+and always shows the current month, past/upcoming treatment on
+the home and /calendar calendars, slot claims close at show start
+(server guard + closed-date UI), /shows and /callboard hide
+started dates, waitlist promotion skipped on started dates, Call
+Board "You're signed up" indicator ignores started dates; new
+standing rules R41/R42). UPSTYLE.6A–8 also complete (home page,
+QR Generator, Forums); 9 Style Sandbox mockups remain (next:
+UPSTYLE.9 Dashboard).
 Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
@@ -106,7 +121,7 @@ feature_messages flag; browsable directory for composing messages to other users
 | **QR Codes** | `qrcode` npm package | Level H error correction. SVG + PNG export. NOT `react-qr-code`. |
 | **QR Codes (PNG rasterization)** | `@resvg/resvg-js` | SVG-to-PNG rasterization (replaces QRCode.toBuffer() for all QR PNG generation; requires `serverExternalPackages: ["@resvg/resvg-js"]` in next.config.ts — napi-rs native binary pattern). |
 | **Forms** | react-hook-form + zod + @hookform/resolvers | All form validation. `@hookform/resolvers` is a required peer package for `zodResolver` — install alongside react-hook-form. |
-| **Dates** | date-fns + date-fns-tz | Two utility functions in `lib/utils/date.ts`. `formatCT()` — for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info. `formatWallClockCT()` — for bare `date` column values (`'YYYY-MM-DD'`) and manually constructed date+time strings; these parse as UTC on Vercel without this function, shifting displayed dates by hours. Never use raw date-fns `format()`. See R23. |
+| **Dates** | date-fns + date-fns-tz | Two utility functions in `lib/utils/date.ts`. `formatCT()` — for full `timestamptz` values (created_at, updated_at, claimed_at, etc.) which include timezone info. `formatWallClockCT()` — for bare `date` column values (`'YYYY-MM-DD'`) and manually constructed date+time strings; these parse as UTC on Vercel without this function, shifting displayed dates by hours. Never use raw date-fns `format()`. See R23. Show-start cutoff logic lives in `lib/utils/show-timing.ts` (`hasShowStarted()` — the single definition of "started"; see R42). |
 | **Icons** | lucide-react | Icon system. |
 | **Deployment** | Vercel (Hobby plan) | Auto-deploy on GitHub push. |
 | **Image Config** | next.config.ts images.remotePatterns | Must include *.supabase.co hostname pattern (added ADMIN.33). Required for dynamic logo rendering when org_logo_url points to Supabase Storage. Without this entry, next/image will throw a runtime error on any deployment with a custom uploaded logo. |
@@ -363,8 +378,8 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 
 **Calendar widget (`HomeCalendarWidget`):**
 - `'use client'` component at `components/calendar/HomeCalendarWidget.tsx`
-- Props: `initialYear: number`, `initialMonth: number`, `initialEvents: PublicCalendarEvent[]`
-- Manages `focusedMonth` via `useState` — NO URL params, NO `next/link` for month navigation
+- Props: `initialYear: number`, `initialMonth: number`, `initialEvents: PublicCalendarEvent[]`, `initialToday: string` (`YYYY-MM-DD` in the org timezone, computed server-side in `app/page.tsx` — ADMIN.79)
+- Manages the visible month via `useState` — NO URL params, NO `next/link` for month navigation. Also holds `today` in `useState(initialToday)` — the single source of truth for the past/upcoming rule below
 - Month changes call `getHomeCalendarEvents(year, month)` from `lib/actions/home-calendar.ts` (server action, public route — `getAdminClient()` only)
 - Event data fetched from `lib/data/publicCalendar.ts` via `getPublicCalendarEvents(supabase, year, month, timezone)`
 - Initial events fetched server-side in `app/page.tsx` and passed as props — no loading state on first paint
@@ -372,6 +387,10 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 - Timezone: SSR-guarded `document.body.dataset.timezone` read at component top, `'America/Chicago'` fallback
 - Renders its own Option A two-zone card (header with month navigation, body with 7-column grid)
 - Calendar events fetch in `app/page.tsx` is gated: `if (flags.calendar) { calendarEvents = await getPublicCalendarEvents(...) }` — no unnecessary DB query when the flag is off
+- **Rendered per request, never prerendered (ADMIN.78):** `app/page.tsx` exports `const dynamic = 'force-dynamic'`. Before ADMIN.78 the route was statically prerendered at build time and served frozen from the Vercel edge cache, so the calendar stayed on the month of the last deploy (August 2026) until the next build. Required for any page whose output depends on the current time (R41).
+- **Past vs. upcoming (ADMIN.79):** a day cell is "past" when its `YYYY-MM-DD` key is less than `today` (string comparison, org timezone), regardless of which month is displayed or whether the cell is inside the displayed month. Upcoming pills are unchanged full-color `<Link>`s to `/shows/[id]`. Past pills are non-interactive: a plain `<div>` that keeps the location color at `opacity-40 cursor-default`, with the same layout classes (including `line-clamp-2`) and no `href`, hover, transition, or handlers, so past events cannot be opened. The owner rejected a gray treatment in favor of the faded location color (ADMIN.79-FIX). See "Past-event pill pattern" in §13.
+- **Out-of-month cells (ADMIN.79):** muted with `bg-gray-50` on the cell and `text-gray-400` on the day number — never with `opacity` on the cell container, because a child cannot escape its parent's opacity and upcoming events in an overflow cell must stay full color. The today ring keeps priority over both.
+- **`today` stays correct in long-lived tabs (ADMIN.79):** `today` is seeded from the server-computed `initialToday` (hydration-safe — no client clock read during render) and refreshed from `new Date()` only inside the month-navigation handler, never in render.
 
 **Volunteer form widget:**
 - `VolunteerForm` component unchanged in logic
@@ -408,14 +427,14 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 
 **Technical notes:**
 - `app/page.tsx` uses `getAdminClient()` — correct for public page with no admin session
-- Current month in org timezone computed via `formatInTimeZone(new Date(), tz, 'yyyy')` and `formatInTimeZone(new Date(), tz, 'M')` from `date-fns-tz`
-- `VolunteerHomeMockup.tsx` in Style Sandbox represents this redesign — its implementation is now complete; the mockup is a candidate for removal in a future cleanup step
+- Current month in org timezone computed per request via `formatInTimeZone(now, tz, 'yyyy')` and `formatInTimeZone(now, tz, 'M')` from `date-fns-tz` (the route is `force-dynamic` — ADMIN.78); `initialToday = formatInTimeZone(now, tz, 'yyyy-MM-dd')` is computed from the same `now` and passed to `HomeCalendarWidget` (ADMIN.79)
+- `VolunteerHomeMockup.tsx` was removed from the Style Sandbox in ADMIN.74 (the redesign it represented shipped in UPSTYLE.6B)
 
 **Key files (new, UPSTYLE.6A/ADMIN.65):**
 - `components/public/PublicHeader.tsx` — shared Server Component, renders the org logo (plain `<img>` — not `next/image`) wrapped in `<Link href="/">`, calls `resolveOrgIdentity()`. Used by all 11 public-facing volunteer pages migrated in ADMIN.65.
 - `lib/data/publicCalendar.ts` — no `'use server'`; exports `PublicCalendarEvent` type (canonical home for this type — was previously a local unexported type in `PublicCalendarGrid.tsx`) and `getPublicCalendarEvents(supabase, year, month, timezone)`. Accepts `SupabaseClient` as a parameter (lib/data/ companion-module pattern).
 - `lib/actions/home-calendar.ts` — `'use server'`; PUBLIC ROUTE; exports `getHomeCalendarEvents(year, month)`; constructs `getAdminClient()`, calls `getOrgTimezone()`, delegates to `getPublicCalendarEvents()`.
-- `components/calendar/HomeCalendarWidget.tsx` — `'use client'`; home page public calendar widget; `useState` month navigation; calls `getHomeCalendarEvents()`; renders its own Option A card with month navigation and 7-column grid; `line-clamp-2` on event pills.
+- `components/calendar/HomeCalendarWidget.tsx` — `'use client'`; home page public calendar widget; `useState` month navigation; calls `getHomeCalendarEvents()`; renders its own Option A card with month navigation and 7-column grid; `line-clamp-2` on event pills; takes a server-seeded `initialToday` and renders past pills as non-interactive faded `<div>`s (ADMIN.79).
 
 ### Public — Volunteer Info Update (`/update`)
 - Token-based: each volunteer has a unique `update_token` (UUID)
@@ -426,9 +445,11 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
 - On submit: update record, send "Your info has been updated" email
 
 ### Public — Show Listing (`/shows`)
-- Lists all shows with status = 'live' that have at least one open slot in any role
+- Lists all shows with status = 'live' that have at least one open slot in any role on a date that has not yet started (ADMIN.82a)
+- Started dates are dropped from each show's date list BEFORE open-slot evaluation: a date has started once `show_date` + `show_time` has passed in the org timezone (`hasShowStarted()` — R42). A multi-date show lists only its un-started dates; a show with no un-started date that has an open slot is hidden entirely (including a show whose every date has started)
 - Shows with no open slots hidden entirely
 - Per-show card: name, type, dates, open roles with slot counts, "Volunteer" button
+- Data: `getPublicShows(supabase, timezone)` in `lib/data/shows.ts` (timezone is a required parameter; one shared `now` per call). Two call sites only: `app/shows/page.tsx` and `app/callboard/page.tsx` (opportunities list). `app/shows/page.tsx` resolves the org timezone via `getOrgTimezone()` and exports `dynamic = 'force-dynamic'` — the route had been statically prerendered, so a started-date filter could never have applied between builds (R41)
 - Mobile-first, QR-friendly
 - **Upcoming Auditions card (Phase AUDITIONS):** When `feature_auditions` is on, a card or section appears on this page showing all published upcoming auditions. Each entry links to `/auditions/[id]`. Hidden entirely when no auditions are published or the flag is off.
 
@@ -451,6 +472,7 @@ In FORUMS-FIX, `app/crew/(app)/forums/[forumId]/[threadId]/page.tsx` called `awa
   - On confirm: set `slot_claims.status = 'cancelled'`, `cancelled_at = now()`
   - Waitlist promotion (claimed cancellations only): promotes next waitlisted volunteer, renumbers remaining positions, sends promotion email
   - Waitlisted cancellations: renumbers remaining positions only; no editor notification, no promotion
+  - Started dates (ADMIN.82b): when the cancelled claim's date has already started, no waitlisted volunteer is promoted and no promotion email is sent — promoting someone onto a performance that has begun is meaningless. `cancelClaim()` computes `dateClosed = await isClaimDateClosed(client, claim.volunteer_role_id)` before the promotion block and gates both the promotion and its email on `!dateClosed`. The whole promotion block (find next waitlisted, promote, `renumber_waitlist`) is skipped, so remaining waitlist rows on that date keep their positions. Cancelling itself is never blocked by show start; the volunteer cancellation email, editor in-app notifications, audit log, and revalidation are unchanged
   - Editor notification: all `show_editors` for the show receive a cancellation email (claimed cancellations only; skipped silently if no editors assigned)
   - 24hr reminder is handled by the Vercel Cron Job — promoted claims are picked up automatically on the next cron run
 
@@ -519,6 +541,11 @@ pattern). `show_time` and `end_time` were already included in
 the page's show_dates query — this was a display-only addition,
 no query changes needed.
 
+**Claims close at show start (ADMIN.80):** A date can be claimed up until its performance begins — not just until the day of — and never afterward. "Started" has a single definition, `hasShowStarted(showDate, showTime, timezone, now = new Date())` in `lib/utils/show-timing.ts` (R42): true when now ≥ `show_date` + `show_time` interpreted in the org timezone (DST-correct via `date-fns-tz`; `getShowStartInstant()` exposes the instant). Pure and client-safe; it **fails open** — a null time, malformed value, or invalid date returns false, so bad data never blocks a legitimate claim.
+- **Server guard (authoritative):** `isClaimDateClosed(supabase, roleId)` — module-private (unexported) in `lib/actions/claims.ts`, since a `'use server'` file may export only async functions — resolves role → show date (R26) → org timezone and calls `hasShowStarted()`. Both claim entry points call it: `submitClaimWithLookup()` (inside its `try`, immediately after the honeypot check and before any volunteer lookup or creation) and `submitClaim()` (after the honeypot, before the role/show fetch and before any insert). The honeypot returns its fake-success first so bots learn nothing. The guard must stay ahead of volunteer creation — a rejected claim must never leave an orphan `volunteers` row. A closed date returns the module-private `CLAIM_CLOSED_MESSAGE`: "Sign-ups for this date have closed — the performance has already started." `ClaimForm.tsx` already renders `response.message` for both flows and was not changed.
+- **UI (convenience only):** `app/shows/[id]/page.tsx` resolves the org timezone and computes `closedDateIds` (it had no Supabase client before; it now builds one via `getAdminClient()` / `getOrgTimezone()`; the route was already dynamic). `ShowDatePicker.tsx` takes `closedDateIds`: a closed date button is `disabled` + `aria-disabled="true"` with `opacity-40 cursor-not-allowed` and a "· Closed" label; single-date shows get the same treatment; the default selected date skips closed dates; when every date is closed the roles/claim area is replaced by the notice "Sign-ups for this show are closed — all performance dates have started or passed." A page rendered before a show starts can still submit after it starts — the server guard is what enforces the rule.
+- Cancelling is deliberately not subject to this cutoff, and waitlist promotion onto a started date is skipped (see Self-cancel above).
+
 **Slot cancellation confirmation email (ADMIN.64):**
 `sendSlotCancellationEmail()` added to `lib/email.ts`.
 Called directly from `cancelClaim()` (non-blocking
@@ -545,7 +572,7 @@ can act on. Opportunities are the hero content and load for everyone. Volunteer 
 optional and additive: entering email or phone personalizes the view with a volunteer card.
 
 **Opportunities (always visible — no login required):**
-- All live shows with open slots: show name, type, dates, open roles with slot counts,
+- All live shows with open slots on dates that have not yet started (same rule and the same `getPublicShows(supabase, timezone)` as `/shows` — ADMIN.82a): show name, type, dates, open roles with slot counts,
   "Volunteer" button → `/shows/[id]`
 - Shows listed in chronological order by earliest `show_date` ascending (ADMIN.77). Sort applied
   in-memory via `.slice().sort()` on `show.dates` array immediately before the `.map()` in
@@ -587,7 +614,7 @@ optional and additive: entering email or phone personalizes the view with a volu
 - "Sign out" → calls `signOutCallboard()` then
   `router.refresh()`
 - Active claims flagged inline on opportunity cards
-  ("You're signed up" indicator)
+  ("You're signed up" indicator). Claims on dates that have already started are excluded (ADMIN.83): `getActiveClaims(volunteerId, email, timezone)` in `app/callboard/page.tsx` selects `show_time` alongside the show date (via the `volunteer_roles → show_dates` path, R26) and skips any row where `hasShowStarted()` is true (one shared `now` per call), so the indicator never shows a started date. `CallboardActiveClaim` (`types/callboard.ts`) gained `show_time: string`.
 - Key types: `CallboardCallHistoryRow` (includes
   `show_id` added in 12.3), `CallboardManualHoursEntry`
   — both in `types/callboard.ts`.
@@ -608,6 +635,7 @@ optional and additive: entering email or phone personalizes the view with a volu
   Per-row state is fully independent. Cancelled rows
   disappear without a page reload. Empty state when
   no upcoming slots.
+  - **Day-level by design (ADMIN.83):** Upcoming Slots filters at whole-day granularity (`show_date >= today` in the org timezone), unlike the "You're signed up" indicator. A show that started earlier today therefore still appears here with its Cancel button, because cancelling must remain possible after show start. Do not switch this list to `hasShowStarted()`.
   - New component: `components/callboard/
     UpcomingSlots.tsx` (Client Component)
   - New data function: `getUpcomingClaimsForVolunteer
@@ -1601,9 +1629,11 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
 Location selector onChange triggers live `checkEventConflict()` re-check. Approve button disabled when conflict confirmed. `approveCalendarEvent(eventId, locationId)` runs a final server-side conflict check before approving.
 Server actions: `approveCalendarEvent()`, `approveBatch()`, `cancelCalendarEvent()` in `lib/actions/calendar.ts`.
 
-**Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Click pill → show name, time, "Sign up to volunteer →" link to `/shows/[id]`. Month navigation via `?month=YYYY-MM` URL param (org-timezone-safe
+**Public Events Calendar (`/calendar`, CAL.7 — built):** Read-only public page (`app/calendar/page.tsx`, `getAdminClient()`, no auth). Month view only. Shows `event_type = 'performance'` and `status = 'approved'` events. Colored event pills (location color) per day. "Needs volunteers" indicator (orange) on show dates with at least one open slot. Each upcoming pill is a direct link to `/shows/[id]` (no popover). Month navigation via `?month=YYYY-MM` URL param (org-timezone-safe
   default — `PublicCalendarGrid.tsx` reads `document.body.dataset.timezone`
   with SSR guard, updated TZ.5b alongside the admin calendar components). Light mode only (no dark: classes — public page per ADMIN.6). "View Calendar" link on `/shows` page (removed from `/` landing page in UPSTYLE.6B — the calendar now renders inline via `HomeCalendarWidget`, see landing page section above). Component: `components/calendar/PublicCalendarGrid.tsx`.
+
+**Past/upcoming treatment (ADMIN.81):** `app/calendar/page.tsx` computes one `const now = new Date()` and passes `initialToday={formatInTimeZone(now, tz, 'yyyy-MM-dd')}` to `PublicCalendarGrid` (no `useState` here — month navigation is URL-based, so every navigation re-renders the server page with a fresh prop). A day is past when its `YYYY-MM-DD` key is less than `initialToday`. Upcoming pills are unchanged `<Link>`s; past pills render as non-interactive `<div>`s that keep the location color at `opacity-40 cursor-default` (same text, responsive title spans, and needs-volunteers dot; no `href`, hover, or transition). Out-of-month cells use `bg-gray-50` / `text-gray-400` instead of cell-level opacity — the same rules as `HomeCalendarWidget` (see Landing Page, ADMIN.79). The page was already dynamic. See "Past-event pill pattern" in §13.
 
 **Header migration (ADMIN.65):** `app/calendar/page.tsx` now
 uses `<PublicHeader />` (shared component) instead of the
@@ -6353,7 +6383,7 @@ is next. Phase UPSTYLE (Style Upgrade Series) in progress
 — UPSTYLE.1–5 complete (Platform Setup, Media
 Library, Communication, Check-In all restyled to
 Option A; 6 mockups removed from Style Sandbox;
-11 mockups remain). ADMIN.61–64 complete — email
+9 mockups remain as of v6.10 — UPSTYLE.6A/6B, 7 and 8 also complete). ADMIN.61–64 complete — email
 outage diagnosed (Resend domain unregistered) +
 Resend error detection wrappers added; lookup-first
 slot claim gate implemented (three-state ClaimForm);
@@ -6361,7 +6391,7 @@ Call Board Upcoming Slots with per-slot cancel;
 editor cancellation email replaced with in-app
 notification; volunteer cancellation confirmation
 email added; Migration 046 (slot_cancellation
-notification type).*
+notification type). ADMIN.65–83 complete — see the ADMIN.65–83 entries under Phase UPSTYLE below (ADMIN.78–83, Build Pt 30: public pages made time-correct).*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -10017,7 +10047,7 @@ state (`Record<string, 'idle'|'confirming'|'converting'|
 error/done UI replacing static warning with canEdit-gated
 action; warning text still visible to Viewers. `AboutSystem
 Emails.tsx`: `volunteer_profile_invite` trigger row added.
-Zero lint errors, zero tsc. 7 files modified. Commit: d8526c1.
+Zero lint errors, zero tsc. 7 files modified. Commit: 70ccd86.
 
 **30BN-ADMIN.73** ✓ — VolunteerForm input field background
 tint. `components/VolunteerForm.tsx`: `bg-neutral-surface`
@@ -10142,7 +10172,27 @@ import + JSX removed. `ForumsMockup.tsx`: deleted.
 Two structural inferences: `flex-1` on left content blocks in both
 `ForumIndexClient` rows and `ThreadListClient` thread rows (push-right
 pattern in flex row with flex-shrink-0 right block). 5 files modified,
-1 deleted. Commit: committed + pushed.
+1 deleted. Commit: 8cbd8e7.
+
+**30BN-ADMIN.78** ✓ — Home page static-prerender fix (Build Pt 30). Task A (read-only) found why the home calendar showed August 2026 in late September: `app/page.tsx` had no `dynamic`/`revalidate` export and calls no request-time API, so Next.js prerendered it at build time and Vercel served that one frozen response from its edge cache (route marker `○`; headers `x-nextjs-prerender: 1` + `x-vercel-cache: HIT`; the `age` header is edge-cache age, not build age). `new Date()` ran exactly once, at the last build (Aug 28). Nothing refreshed it: no calendar/show/audition/claim mutation calls `revalidatePath('/')` (only `setup.ts` and `settings.ts` do). The month arithmetic was confirmed correct end to end (1-based month through `app/page.tsx` → `HomeCalendarWidget` → `getHomeCalendarEvents` → `getPublicCalendarEvents` → `getMonthGridDays`). Fix: `export const dynamic = 'force-dynamic'` plus a four-line explanatory comment in `app/page.tsx`; the build route table now shows `/` as `ƒ`. 1 file. Commit 208faf3. See R41.
+
+**30BN-ADMIN.79** ✓ — Past/upcoming treatment on the home calendar. `app/page.tsx` passes `initialToday` (org-timezone `yyyy-MM-dd` from the existing `now`/`tz`). `HomeCalendarWidget.tsx`: `today` state seeded from the prop and refreshed inside `goToMonth()`; per-cell `isPast = dayStr < today`; two pill branches (upcoming `<Link>` unchanged; past non-interactive `<div>`); the cell-container `opacity-40` was removed (a parent's opacity cannot be escaped by a child, which would have faded upcoming events in overflow-month cells) and replaced by `bg-gray-50` + `text-gray-400` for out-of-month cells, with the today ring keeping priority. Boundary tests: 12 cases including UTC-vs-CT day crossings and a year boundary, all pass. Lint, tsc, build clean; `/` remains `ƒ`. 2 files. Commit 0127cd6. Owner verification pending (R16).
+
+**30BN-ADMIN.79-FIX** ✓ — Past-pill look changed to the faded location color. The first ADMIN.79 past pill used `bg-gray-200 text-gray-500` with no location color; the owner preferred the earlier faded look. The past pill is now a `<div>` with `block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2 opacity-40 cursor-default`, `style={{ backgroundColor: event.location?.color ?? '#555555' }}`, `title={event.title}`, needs-volunteers dot and title preserved, still no `href`/hover/handlers. 1 file. Commit a892b4d.
+
+**30BN-ADMIN.80** ✓ — Claims close at show start (server guard + UI). New `lib/utils/show-timing.ts` (`getShowStartInstant()`, `hasShowStarted()` — pure, client-safe, fail-open). `lib/actions/claims.ts` gains module-private `CLAIM_CLOSED_MESSAGE` + `isClaimDateClosed(supabase, roleId)` and guards both `submitClaimWithLookup()` (inside the `try`, after the honeypot) and `submitClaim()` (after the honeypot), each before any volunteer lookup/creation/insert. `app/shows/[id]/page.tsx` computes `closedDateIds`; `ShowDatePicker.tsx` disables closed dates, skips them for the default selection, and shows an all-closed notice; `ClaimForm.tsx` untouched. Boundary tests: 16 cases against the compiled helper, including both DST transitions, all pass. A read-only follow-up check confirmed the honeypot precedes the guard in both functions. 4 files (1 new). Commit 1c9870a. Spec: §8 `/shows/[id]`. See R42.
+
+**30BN-ADMIN.81** ✓ — Same past/upcoming treatment on public `/calendar` (shipped together with ADMIN.80, separate commit). `app/calendar/page.tsx` takes one `now` and passes `initialToday`; `PublicCalendarGrid.tsx` replaces its local `todayCT` with the prop (no `useState` — URL navigation re-renders the server page), uses the two-branch pill with the ADMIN.79-FIX past style, and swaps cell-level `opacity-40` for `bg-gray-50` / `text-gray-400`. 8 boundary cases pass. 2 files. Commit a3cd40d.
+
+**30BN-ADMIN.82a** ✓ — Ended shows no longer listed. `getPublicShows(supabase, timezone)` in `lib/data/shows.ts` filters started dates (`hasShowStarted()`, one shared `now`) before the open-slot check. `app/shows/page.tsx` resolves the org timezone and exports `dynamic = 'force-dynamic'` (it had been statically prerendered); `app/callboard/page.tsx` passes its existing `tz`. Only two call sites exist. Baseline-vs-final trace against live data: Broadway Singing Competition now lists only Oct 3; Zombie Prom still listed; Lee Hardin Comedy stays hidden (its one upcoming date is full — pre-existing rule). 3 files. Commit 797974a.
+
+**30BN-ADMIN.82b** ✓ — No waitlist promotion onto a started date. `cancelClaim()` computes `dateClosed = await isClaimDateClosed(client, claim.volunteer_role_id)` before the promotion block, gates promotion on `wasClaimed && !dateClosed`, and adds `&& !dateClosed` to the promotion-email condition. Cancelling is unchanged and never blocked by show start. 1 file. Commit df19fb9.
+
+**30BN-ADMIN.83** ✓ — Call Board "You're signed up" indicator ignores started dates. `getActiveClaims(volunteerId, email, timezone)` in `app/callboard/page.tsx` selects `show_time` through the existing `volunteer_roles → show_dates` path (R26) and skips rows where `hasShowStarted()` is true (one shared `now`); `CallboardActiveClaim` gained `show_time: string`. A predicted-vs-traced check across the 13 live claims matched exactly. `getUpcomingClaimsForVolunteer()` (Upcoming Slots) is intentionally left day-level so Cancel still works for a show that started earlier today. 2 files. Commit 5392d10.
+
+Build Pt 30 summary: ADMIN.78–83 made every public surface that depends on "now" time-correct. No migrations (next remains 047), no new env vars; feature flags (9) and SETUP_KEYS (31) unchanged. Owner browser verification is pending for ADMIN.79–83 (R16/R22). Documented in Brief v6.10: R41, R42; §8 landing page, `/shows`, `/shows/[id]`, `/callboard`, `/calendar`; §12 decisions 8–10.
+
+**30BN-DOC.109** ✓ — Brief v6.9→v6.10 (ADMIN.78–83, Build Pt 30; this prompt).
 
 ---
 
@@ -10157,6 +10207,9 @@ pattern in flex row with flex-shrink-0 right block). 5 files modified,
 | 5 | Under-18 consent form PDF | 🔄 Partially resolved | Consent form infrastructure fully built (Phase 15.2): upload trigger on signup, submission storage, admin review queue, `/consent/[token]` upload page. The actual PDF document content has not yet been created or uploaded. When a PDF is uploaded and set as the active `volunteer_consent_form` document, it will appear as a download link in the consent request email automatically. |
 | 6 | Multiple Super Admins | ✅ Resolved | Multiple Super Admins are expected and supported. Deactivate disabled for all Super Admin rows. Role change blocked for Super Admin rows. |
 | 7 | Mobile PWA sidebar | ✅ Resolved | Built in 30BN-12.1. Hamburger button + slide-in drawer at <768px. MobileSidebarContext pattern. Fixed-column sidebar unchanged at 768px+. |
+| 8 | Claim cutoff time | ✅ Resolved | Slots are claimable up until show time and never after: claims close at `show_date` + `show_time` in the org timezone (not at day start, not at show end). Enforced server-side; the UI mirrors it. ADMIN.80. |
+| 9 | Past-event visual treatment | ✅ Resolved | Past calendar events keep their location color at `opacity-40` and are non-selectable (home widget and `/calendar`). A gray treatment was tried and rejected by the owner. ADMIN.79 / 79-FIX / 81. |
+| 10 | Started-date handling for cancel, waitlist, and listings | ✅ Resolved | Cancelling stays allowed after show start; waitlist promotion onto a started date is skipped; `/shows` and `/callboard` omit started dates; the Call Board indicator ignores started dates; Upcoming Slots stays whole-day so Cancel keeps working. ADMIN.82a / 82b / 83. |
 
 ---
 
@@ -11280,6 +11333,35 @@ because the copy must explain why they're receiving it
 Trigger: `volunteer_profile_invite`.
 Established ADMIN.72.
 
+### R41 — Time-Dependent Public Pages Must Opt Out of Static Prerender and Seed "Now" on the Server
+
+Any route whose rendered output depends on the current time — the current month, a past/upcoming split, a started/closed state, a countdown — must export `const dynamic = 'force-dynamic'`. Without it Next.js prerenders the route at build time and Vercel serves that one frozen HTML response from its edge cache until the next deploy; `new Date()` inside the page runs once, at build. Confirmed failures: the home page calendar showed August 2026 for over a month (ADMIN.78); `/shows` had the same latent flaw (ADMIN.82a). `revalidatePath()` (R29) is not a substitute — it fires on mutations, and time passes without any.
+
+Rules:
+1. Add `export const dynamic = 'force-dynamic'` plus a short comment saying why. The build route table must show `ƒ` (Dynamic), not `○` (Static), for the route.
+2. Compute "now" once per request on the server and derive today in the org timezone: `formatInTimeZone(now, tz, 'yyyy-MM-dd')`. Pass it to Client Components as `initialToday`. Compare days as `YYYY-MM-DD` strings (R23).
+3. Client Components never read the clock during render (hydration mismatch). A component with in-place navigation holds `today` in `useState(initialToday)` and refreshes it from `new Date()` only inside the navigation handler.
+4. Diagnosing a "stale page" report: check `x-nextjs-prerender` and `x-vercel-cache` first. The `age` header is edge-cache age, not build age — do not read it as the deploy time.
+
+Established ADMIN.78 / 79 / 81 / 82a.
+
+### R42 — "Show Started" Has One Definition: hasShowStarted()
+
+`lib/utils/show-timing.ts` exports `getShowStartInstant(showDate, showTime, timezone)` and `hasShowStarted(showDate, showTime, timezone, now = new Date())` — true when now ≥ `show_date` + `show_time` in the org timezone. Pure, client-safe, DST-correct, and fail-open (null or malformed input returns false so bad data never blocks a legitimate claim). Never re-implement a date+time comparison inline.
+
+Rules:
+1. Claims close at show start. Every code path that can create a `slot_claims` row must call `isClaimDateClosed()` (module-private in `lib/actions/claims.ts`) AFTER the honeypot check and BEFORE any volunteer lookup, creation, or insert — otherwise a rejected claim can leave an orphan `volunteers` row. Resolve role → show date through `volunteer_roles → show_dates` (R26).
+2. UI that hides or disables started dates is convenience only; the server guard is the authority.
+3. Public listings drop started dates BEFORE evaluating open slots (`getPublicShows(supabase, timezone)` — timezone is a required parameter; one shared `now` per call).
+4. Cancelling is never blocked by show start. Waitlist promotion onto a started date is skipped (`cancelClaim()`).
+5. Whole-day surfaces are deliberate and stay whole-day: Call Board Upcoming Slots (so Cancel works for a show that started earlier today), check-in date gating, attendance marking (R13), and the crew dashboard. Do not convert them to `hasShowStarted()` without an owner decision.
+6. `isClaimDateClosed()` and `CLAIM_CLOSED_MESSAGE` are unexported because `'use server'` files may export only async functions (FORUMS.5-FIX).
+
+Established ADMIN.80 / 82a / 82b / 83.
+
+**Past-event pill pattern (ADMIN.79 / 79-FIX / 81):**
+A past calendar event renders as a plain `<div>` — never a `<Link>`, `<button>`, or any element with `href`, `onClick`, `tabIndex`, or `role` — keeping the event's location color (`style={{ backgroundColor: event.location?.color ?? '#555555' }}`) with `opacity-40 cursor-default` and exactly the layout classes of the upcoming pill (`block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2` on the home widget; the responsive truncate / dual-span title on `/calendar`). No hover or transition classes; the needs-volunteers dot is preserved. Fade the pill, never the day cell: a child cannot escape its parent's `opacity`, so cell-level opacity would also fade upcoming events in out-of-month cells. Out-of-month cells use `bg-gray-50` on the cell and `text-gray-400` on the day number; the today ring takes priority. Owner decision: faded location color, not gray (ADMIN.79-FIX). Applied in `HomeCalendarWidget.tsx` and `PublicCalendarGrid.tsx`.
+
 ---
 
 *This document is updated at the completion of each
@@ -11316,5 +11398,6 @@ corrected here.*
 *- v5.0: The tail's own version ordering had an error
 (v4.9 was inserted before v4.8/v4.7 in DOC.63);
 corrected to chronological order here.*
+*- v6.10: The v6.9 §11 log recorded the same commit hash (`d8526c1`) for both ADMIN.72 and ADMIN.75; `d8526c1` is ADMIN.75 (confirmed from git history) and ADMIN.72's hash was corrected from git log. The §1 post-Beta ADMIN list had stopped at ADMIN.47–64 since v6.7 and was brought current to ADMIN.83; the §8 landing-page note calling `VolunteerHomeMockup.tsx` a removal candidate was stale (deleted in ADMIN.74) and was replaced; the §11 overview status paragraph's mockup count (11) was stale (9 as of v6.10). DOC.102–108 have no individual §11 entries — see the version table here and Process §13 for their scope.*
 
 *Full build history by phase and prompt: see §11.*
