@@ -1,11 +1,12 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v6.7
-*Created: July 2026 | Last session: DOC.108 (Aug 2026). Version history table
+## 30BN_PROCESS_v1.md — v6.8
+*Created: July 2026 | Last session: DOC.110 (Oct 2026). Version history table
 below. Full build history by phase and prompt: §13. Doc-maintenance notes
 (ordering corrections, sync failures): end of §14.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.8 | Oct 2026 | ADMIN.78–83 — force-dynamic time-dependent public pages + server-seeded "now" (R41), show-timing.ts single definition of "started" + claims close at show start (R42), past-event pill pattern, branch-scoped verification greps, DOC Task A/PROCEED correction loop, §13 commit-hash corrections (DOC.109/110) |
 | v6.7 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims, public calendar UTC boundary fix, callboard chronological sort, VolunteerForm input tint, Q-item cleanup batch, QR Generator + Forums Option A restyling (DOC.107/108) |
 | v6.6 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, HomeCalendarWidget infrastructure, home page two-column redesign, org logo img fix, show times on claiming page date picker (DOC.106) |
 | v6.5 | Aug 2026 | ADMIN.61–64 complete — Resend error detection wrappers, lookup-first slot claim gate, Call Board Upcoming Slots + cancel, editor notification → in-app + volunteer cancellation email; Migration 046 (DOC.104) |
@@ -3396,6 +3397,42 @@ grep -n "slot_claims\|attendance" lib/actions/shows.ts \
 # and must be removed. (ADMIN.58 — Migration 045 CASCADE fix)
 ```
 
+```bash
+# Confirm time-dependent public pages opt out of static
+# prerender (R41 — ADMIN.78 / ADMIN.82a)
+grep -n "force-dynamic" app/page.tsx app/shows/page.tsx
+# Must show exactly one hit per file. A page without it can be
+# statically prerendered at build time and will serve a frozen
+# "today" (stale month, stale past/upcoming state) until the
+# next deploy. Stale-page diagnosis: read the x-nextjs-prerender
+# and x-vercel-cache response headers FIRST (curl -sI <url>).
+# The `age` header is edge-cache age, not build age.
+```
+
+```bash
+# Confirm "started" is defined in one place (R42 — ADMIN.80)
+grep -rn "getShowStartInstant\|hasShowStarted" \
+  app/ components/ lib/ types/ \
+  --include="*.ts" --include="*.tsx"
+# Review every hit: the only definitions live in
+# lib/utils/show-timing.ts; every other hit must be an import
+# or a call. Any ad-hoc comparison of a show date/time against
+# the current time elsewhere is a defect — route it through
+# hasShowStarted().
+
+# Confirm the claim guard sits after the honeypot return and
+# before any lookup or insert, and is not exported
+grep -n "isClaimDateClosed\|CLAIM_CLOSED_MESSAGE" \
+  lib/actions/claims.ts
+grep -n "export .*isClaimDateClosed\|export .*CLAIM_CLOSED_MESSAGE" \
+  lib/actions/claims.ts
+# First command: review line order — honeypot fake-success,
+# then the guard, then volunteer/claim lookups and inserts (a
+# guard placed after volunteer creation orphans volunteers on
+# closed dates). Second command: must return zero — a
+# 'use server' file may export only async functions.
+```
+
 Add project-specific checks as new standing rules emerge.
 
 ---
@@ -4488,6 +4525,35 @@ lib/actions/forum-posts.ts)
   before ellipsis. The day cell must not have `overflow-hidden`
   or a constraining `max-height` — cells should grow to fit
   wrapped content. (UPSTYLE.6A/6B — `HomeCalendarWidget`)
+
+□ Any new or modified public page whose output depends on the
+  current date or time: set `export const dynamic =
+  'force-dynamic'` (with a why-comment), compute "now" on the
+  server per request in the org timezone, and pass it to
+  client components as a prop (e.g. `initialToday`). Client
+  components never read the clock in render for first paint.
+  Verify with the §10 grep. (R41 — ADMIN.78/79)
+
+□ Any new surface that offers, lists, claims, or promotes a
+  show date: use `hasShowStarted()` from
+  `lib/utils/show-timing.ts` — never re-derive "started". The
+  claim guard goes after the honeypot return and before any
+  lookup or insert. Cancelling is never blocked; waitlist
+  promotion is skipped on started dates. Whole-day surfaces
+  (Call Board Upcoming Slots, check-in, attendance, crew
+  dashboard) stay whole-day. (R42 — ADMIN.80–83)
+
+□ Any past-state styling in a public calendar or list: use the
+  past-event pill pattern — plain <div>, location color kept,
+  `opacity-40 cursor-default`, no href/hover/handlers; never
+  cell-level opacity; out-of-month cells use `bg-gray-50` /
+  `text-gray-400`; no `dark:` classes. (ADMIN.79-FIX/81)
+
+□ Any "must return zero" grep or class-presence check written
+  into a prompt: scope it to the changed branch/function or
+  carry an explicit allow-list of legitimate hits, and have
+  Task A dry-run it against the live file first.
+  (ADMIN.79-FIX)
 ```
 
 ---
@@ -8009,7 +8075,7 @@ SeasonSelector.tsx); 12 other exports preserved.
                          gated button + confirm/done/error UI;
                          warning still visible to Viewers. About
                          SystemEmails.tsx: volunteer_profile_invite
-                         trigger row. 7 files. Commit: d8526c1.
+                         trigger row. 7 files. Commit: 70ccd86.
   30BN-ADMIN.73       ✓ VolunteerForm input background tint.
                          components/VolunteerForm.tsx: bg-neutral-
                          surface added to shared inputClasses constant
@@ -8082,10 +8148,92 @@ SeasonSelector.tsx); 12 other exports preserved.
                          removed; action row justify-end; left-accent thread
                          rows; neutral Pin/Lock icons w-3 h-3; flex-1 on
                          left content blocks. ForumsMockup.tsx deleted.
-                         5 files modified, 1 deleted. Committed + pushed.
+                         5 files modified, 1 deleted. Commit: 8cbd8e7.
   30BN-DOC.107        ✓ Brief v6.8→v6.9 (ADMIN.72–77 + UPSTYLE.7–8 —
                          Build Pt 29 complete).
   30BN-DOC.108        ✓ Process v6.6→v6.7 (this prompt).
+  30BN-ADMIN.78       ✓ Home page opts out of static prerender.
+                         app/page.tsx: export const dynamic =
+                         'force-dynamic' with a four-line why-
+                         comment. Root cause of the calendar
+                         frozen on August 2026: the page was
+                         statically prerendered at build time, so
+                         the server-computed current month was
+                         baked in until the next deploy.
+                         Diagnosed via x-nextjs-prerender /
+                         x-vercel-cache headers (the age header
+                         is edge-cache age, not build age).
+                         1 file. Commit: 208faf3.
+  30BN-ADMIN.79       ✓ Home calendar past/upcoming treatment.
+                         Past dates non-selectable, past event
+                         pills de-emphasized; initialToday (org-
+                         timezone YYYY-MM-DD, computed per request
+                         on the server) is passed as a prop and
+                         the widget keeps `today` in state, never
+                         reading the clock in render. Files
+                         (0127cd6 + a892b4d together):
+                         HomeCalendarWidget.tsx, app/page.tsx.
+                         Commit: 0127cd6.
+  30BN-ADMIN.79-FIX   ✓ Owner rejected the first grey past-pill
+                         treatment ("I liked the former opacity
+                         40 overflow fade look"). Replaced with
+                         the past-event pill pattern: plain div,
+                         location color kept, opacity-40
+                         cursor-default, same layout classes, no
+                         href/hover/handlers. Out-of-month cells
+                         bg-gray-50 / text-gray-400 — never
+                         cell-level opacity (a child cannot
+                         escape a parent's opacity). Commit:
+                         a892b4d.
+  30BN-ADMIN.80       ✓ Slots claimable until show start. NEW
+                         lib/utils/show-timing.ts:
+                         getShowStartInstant(showDate, showTime,
+                         timezone) and hasShowStarted(showDate,
+                         showTime, timezone, now = new Date()) —
+                         pure, client-safe, DST-correct via
+                         date-fns-tz, fail-open on null/malformed
+                         input. lib/actions/claims.ts: unexported
+                         isClaimDateClosed(supabase, roleId) +
+                         CLAIM_CLOSED_MESSAGE; guard runs after
+                         the honeypot fake-success and before any
+                         lookup/insert (no orphan volunteers).
+                         app/shows/[id]/page.tsx +
+                         ShowDatePicker.tsx: closed-date UI.
+                         4 files (1 new). Commit: 1c9870a.
+  30BN-ADMIN.81       ✓ /calendar public grid. PublicCalendarGrid
+                         .tsx + app/calendar/page.tsx: past pills
+                         inert (past-event pill pattern); each
+                         upcoming pill is a direct link to
+                         /shows/[id] (popover removed).
+                         2 files. Commit: a3cd40d.
+  30BN-ADMIN.82a      ✓ Started dates hidden from public
+                         listings. lib/data/shows.ts:
+                         getPublicShows(supabase, timezone) drops
+                         started dates before the open-slot check
+                         (explicit timezone parameter). app/shows/
+                         page.tsx: force-dynamic + timezone
+                         threaded. app/callboard/page.tsx:
+                         opportunities skip started dates.
+                         3 files. Commit: 797974a.
+  30BN-ADMIN.82b      ✓ cancelClaim() on a started date:
+                         dateClosed computed once; the
+                         `wasClaimed && !dateClosed` gate skips
+                         the whole promotion block (find next
+                         waitlisted, promote, renumber_waitlist
+                         RPC, promotion email) — waitlist rows
+                         keep their positions. Cancelling is
+                         never blocked; the waitlisted-cancel
+                         renumber branch is not gated.
+                         1 file. Commit: df19fb9.
+  30BN-ADMIN.83       ✓ Call Board new-opportunities indicator
+                         ignores started dates. app/callboard/
+                         page.tsx, types/callboard.ts.
+                         2 files. Commit: 5392d10.
+  30BN-DOC.109        ✓ Brief v6.9→v6.10 (ADMIN.78–83 — Build Pt
+                         30 complete; R41, R42; §11/§12/§13
+                         updates; ADMIN.72 + UPSTYLE.8 hash
+                         corrections). 26 edits. Commit: 3a7dfb3.
+  30BN-DOC.110        ✓ Process v6.7→v6.8 (this prompt).
 ```
 
 ---
@@ -8595,6 +8743,12 @@ Confirmed failure mode (21.1 F1): Migration 031 draft used `auth_user_id = auth.
 
 ### R38 — TipTap Merge Tag Extension Pattern (cross-reference)
 Documented in Brief §13 R38. Referenced here for R-number continuity. Core rule: merge tag tokens (`{{tag_name}}`) in TipTap email template editors use a custom `Node` extension (`MergeTagExtension.ts`) with `inline: true`, `atom: true`, `data-merge-tag` attribute round-trip, and an `insertMergeTag(tag)` command registered via TypeScript module augmentation (`declare module '@tiptap/core'`). Substitution at send time via `substituteMergeTags()` from `lib/utils/merge-tags.ts`. Preview via `previewAuditionEmailTemplate()` server action. `escapeHtml()` applied inside `substituteMergeTags()` to all substituted values — TipTap HTML body itself is NOT escaped (same exception as blast body, R31). All TipTap editor instances in App Router require `immediatelyRender: false` (see §7 and §11). Established AUDITIONS.4a.
+
+### R41 — Time-Dependent Public Pages Must Be force-dynamic (cross-reference)
+Documented in Brief §13 R41. Referenced here for R-number continuity. Core rule: any public page whose output depends on the current date or time must set `export const dynamic = 'force-dynamic'` and compute "now" on the server per request, seeding it into client components as a prop (e.g. `initialToday`); client components never read the clock in render for first paint. Confirmed failure mode: the home calendar froze on August 2026 because `app/page.tsx` was statically prerendered (ADMIN.78). See §10 grep check, §11 checklist, and the §14 section "Time-dependent public pages".
+
+### R42 — hasShowStarted() Is the Single Definition of "Started" (cross-reference)
+Documented in Brief §13 R42. Referenced here for R-number continuity. Core rule: `hasShowStarted()` in `lib/utils/show-timing.ts` is the only definition of "a show date has started". Claims close at show start; the server guard sits after the honeypot return and before any lookup or insert; UI state is convenience only. Public listings drop started dates before the open-slot check; cancelling is never blocked and waitlist promotion is skipped on started dates; whole-day surfaces stay whole-day. Helpers inside `'use server'` files stay unexported. See §10 grep checks, §11 checklist, and the §14 sections on show-timing and started-date handling.
 
 ### Migration / Live DB Drift — Follow-Up Migration Required
 When inline schema fixes are applied via Supabase MCP during a build (bypassing a named .sql migration file), they create drift between committed migration files and the live database. This is documented as a confirmed failure mode from Phase AUDITIONS (5 inline fixes applied without a follow-up file). Full pattern in §7. Quick rule: every inline fix must be flagged in the build report, Q-itemmed for follow-up, and captured in a named migration file before the next phase launch. The Brief §9 migration status block must be updated to reflect inline fixes. Established Phase AUDITIONS.
@@ -9974,6 +10128,207 @@ has a shrink-locked right element (download links, action buttons,
 count badges). The right block uses `flex-shrink-0`; the left
 block uses `flex-1`. Established UPSTYLE.7/8.
 
+### Time-dependent public pages — `force-dynamic` and a server-seeded "now" (R41)
+
+Next.js statically prerenders any Server Component page that
+uses no request-time API. A public page that computes "the
+current month" or "today" in its server component therefore
+bakes that value into the build output and serves it unchanged
+until the next deploy. Confirmed failure: the home page
+calendar kept showing August 2026 because `app/page.tsx` was
+prerendered at build time (ADMIN.78). The same trap applies to
+any page that filters by whether a show date has started
+(`/shows`, ADMIN.82a).
+
+Rules:
+1. Add `export const dynamic = 'force-dynamic'` with a short
+   why-comment to every public page whose output depends on the
+   current date or time. Currently: `app/page.tsx` (ADMIN.78)
+   and `app/shows/page.tsx` (ADMIN.82a). `revalidatePath()`
+   (R29) is not a substitute — it invalidates after mutations;
+   it does not keep a time-dependent page fresh when no
+   mutation occurs.
+2. Compute "now" on the server per request in the org timezone
+   (`formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd')`) and
+   pass it to client components as a prop (`initialToday` on
+   `HomeCalendarWidget`). The client component holds it in
+   state and does not read the clock in render for first paint.
+3. Compare dates as `YYYY-MM-DD` strings in the org timezone
+   (lexicographic = chronological); convert timestamps with
+   `date-fns-tz`.
+4. Diagnosing a "stale page": read the `x-nextjs-prerender` and
+   `x-vercel-cache` response headers before theorizing. The
+   `age` header is edge-cache age, not build age — a large
+   `age` does not tell you when the page was built.
+
+Established ADMIN.78/79 (R41).
+
+### `lib/utils/show-timing.ts` — single definition of "started" (R42)
+
+"Has this show date started?" has exactly one implementation:
+
+- `getShowStartInstant(showDate, showTime, timezone)` — the
+  start instant for a show date's wall-clock date + time in the
+  org timezone.
+- `hasShowStarted(showDate, showTime, timezone, now = new
+  Date())` — boolean; `now` defaults to the current time and is
+  injectable for testing.
+
+Properties: pure and client-safe (no `'use server'` /
+`'use client'`, no Supabase, no env access); DST-correct
+(wall-clock → instant via `fromZonedTime` from `date-fns-tz`);
+fail-open — null, empty, or malformed date/time returns false,
+so bad data never locks a slot. No other file may re-derive
+"started"; route every such check through `hasShowStarted()`
+(§10 grep).
+
+Claim guard (`lib/actions/claims.ts`):
+- The guard runs in both claim entry points —
+  `submitClaimWithLookup()` and `submitClaim()` — and
+  `cancelClaim()` reuses `isClaimDateClosed()` to compute
+  `dateClosed` once.
+- Order is fixed: honeypot fake-success → `isClaimDateClosed(
+  supabase, roleId)` → volunteer/claim lookups and inserts. The
+  guard must precede volunteer creation — a guard placed after
+  it leaves an orphan volunteer record on a closed date. The
+  ordering was confirmed with a read-only check before ADMIN.80
+  was built.
+- The guard resolves the date through `volunteer_roles →
+  show_dates` (R26).
+- `isClaimDateClosed` and `CLAIM_CLOSED_MESSAGE` stay
+  unexported: a `'use server'` file may export only async
+  functions, and exporting a constant or sync helper breaks it.
+- UI (`ShowDatePicker.tsx`, `/shows/[id]`) shows closed dates as
+  closed for convenience only; the server guard is
+  authoritative.
+
+Established ADMIN.80 (R42).
+
+### Started-date handling by surface (R42)
+
+- **Claim submission:** server guard rejects with
+  `CLAIM_CLOSED_MESSAGE`; the show-detail date picker renders
+  closed dates as non-selectable.
+- **Public listings** (`/shows`, `/callboard` opportunities):
+  started dates are dropped BEFORE the open-slot check, so a
+  show whose only open slots are on started dates disappears.
+  `getPublicShows(supabase, timezone)` takes the org timezone as
+  an explicit parameter — `lib/data/` modules never read the
+  body dataset or fetch the timezone themselves; callers pass
+  it in.
+- **Call Board new-opportunities indicator:** excludes started
+  dates (same rule as the listing).
+- **`cancelClaim()`:** cancelling is never blocked. `dateClosed`
+  is computed once; the `wasClaimed && !dateClosed` gate skips
+  the WHOLE promotion block — find next waitlisted, promote,
+  `renumber_waitlist` RPC, promotion email — so waitlist rows
+  keep their positions on a started date. The waitlisted-claim
+  cancel renumber branch is not gated.
+- **Whole-day surfaces stay whole-day:** Call Board Upcoming
+  Slots, check-in, attendance (R13), and the crew dashboard keep
+  a date live through its day, because volunteers must still be
+  able to cancel, check in, and have attendance recorded after
+  start.
+- **Public calendars** (home widget, `/calendar`) are date-level
+  (date < `initialToday` / today) and use the past-event pill
+  pattern below.
+
+Established ADMIN.80/82a/82b/83 (R42).
+
+### Past-event pill pattern (public calendar grids)
+
+A past event pill is a plain `<div>` that keeps the location
+color and adds `opacity-40 cursor-default`, with the same layout
+classes as an upcoming pill (including `line-clamp-2`) and no
+`href`, no hover classes, and no handlers. It is inert — never
+wrap it in a Link or anchor, no popover. Upcoming pills on
+`/calendar` are direct links to `/shows/[id]`.
+
+Rules:
+1. Fade the pill, never the cell. A child cannot escape a
+   parent's opacity, so cell-level opacity would also fade
+   anything in the cell that must stay full strength. Out-of-
+   month cells use `bg-gray-50` / `text-gray-400`.
+2. Keep the location color. The owner rejected a solid-grey
+   past-pill treatment ("I liked the former opacity 40 overflow
+   fade look") — the faded pill keeps the show recognizable.
+3. No `dark:` classes on public pages (ADMIN.6); brand tokens
+   per R33.
+
+Established ADMIN.79-FIX / ADMIN.81.
+
+### Verification greps must be scoped to the changed branch
+
+The ADMIN.79-FIX checklist asserted that no `bg-gray-200` /
+`text-gray-500` classes remained in `HomeCalendarWidget.tsx`.
+The grep also matched the month-navigation buttons, which
+legitimately use those classes — a false failure in a correct
+build.
+
+Rule: any "must return zero" grep or class-presence check in a
+prompt must be scoped to the branch, function, or line range
+being changed (view that range and grep it, or grep for a
+unique co-occurring token), or must carry an explicit
+allow-list of known legitimate hits ("expected hits: month-nav
+buttons"). Task A dry-runs the draft grep against the live file
+and reports the hit list, so false positives are caught at the
+audit and not in the build report.
+
+Established ADMIN.79-FIX (DOC.110).
+
+### DOC prompt Task A / PROCEED correction loop
+
+Task A of a DOC prompt is a read-only audit that ends in a hard
+stop. It (a) locates every edit anchor and reports the match
+count and exact line text, (b) checks every claim the new text
+makes against live code and git — hashes, file lists,
+signatures, comment lengths, behavior — and (c) dry-runs every
+verification regex the prompt will use and reports baseline
+counts.
+
+The prompt author reviews the Task A report and replies with a
+PROCEED message that lists corrections (anchor fixes, wording
+fixes, expected-count changes). Corrections in the PROCEED
+message supersede the original prompt, and the build report
+lists each applied correction.
+
+DOC.109 examples: a version-table integrity check used
+`^| v6\.` where the intent was every row (`^| v[0-9]`,
+expected 16); an edit described an ADMIN.78 comment as six
+lines when the live comment was four; the cancelClaim
+promotion-skip was found to skip renumbering as well; and the
+Brief carried an ADMIN.72 commit hash duplicated from ADMIN.75.
+Expected counts must name the exact regex, and hash-bearing
+entries must be checked against `git log`, not copied from
+neighboring entries.
+
+Oversized governance docs: the Brief (>11,000 lines) and Process
+(~10,000 lines) exceed a single-read cap, so Claude Code reads
+them in chunks or by grep plus targeted views. This is accepted
+(observed practice, DOC.109) provided that Task A states the
+method used, every edit anchor is an exact string, and any
+anchor that does not match exactly once is reported as a
+deviation — never guessed or improvised.
+
+Established DOC.109 (DOC.110).
+
+### Combining adjacent small prompts
+
+Two small prompts may be issued as one when: (1) the changes
+express one product rule; (2) their file sets are disjoint
+apart from a shared helper; (3) Task A audits both before any
+code; and (4) each ID gets its own commit, its own checklist,
+and its own build-report section. ADMIN.80 and ADMIN.81 were
+combined this way (commits 1c9870a and a3cd40d).
+
+Do not combine when either prompt includes a schema or
+migration change, or when the second prompt's design depends on
+the owner seeing the first one's result — a visual treatment
+the owner has not yet seen ships alone (ADMIN.79 → ADMIN.79-FIX
+was a rejected first treatment).
+
+Established ADMIN.80+81 (DOC.110).
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -10000,5 +10355,12 @@ removal and sidebar three-part edit change, no
 pre-existing §11 checklist item for the four-part
 pattern was found in the live file to update —
 flagged in the build report rather than fabricated.*
+*- v6.8: §13 carried the same duplicated ADMIN.72 commit hash
+(d8526c1, copied from ADMIN.75) that Brief v6.9 carried;
+corrected to 70ccd86 alongside Brief v6.10 (DOC.109). The
+UPSTYLE.8 entry's placeholder was replaced with 8cbd8e7.
+Hash-bearing entries are now verified against `git log` in
+Task A (see §14, DOC prompt Task A / PROCEED correction
+loop).*
 
 *Full build history by phase and prompt: see §13.*
