@@ -1,11 +1,12 @@
 # 30 By Ninety Theatre — Build Governance
-## 30BN_PROCESS_v1.md — v6.8
-*Created: July 2026 | Last session: DOC.110 (Oct 2026). Version history table
+## 30BN_PROCESS_v1.md — v6.9
+*Created: July 2026 | Last session: DOC.112 (Oct 2026). Version history table
 below. Full build history by phase and prompt: §13. Doc-maintenance notes
 (ordering corrections, sync failures): end of §14.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.9 | Oct 2026 | SEC.1 + SEC.2 Tasks A–C + ACCOUNT.A (Build Pt 31) — migration security checklist (R45) in §4, SEC test harness (rolled-back persona tests, R44) and R43–R45 stubs in §14, §6 "RLS Policy Always True" advisory corrected (the anon insert policies are not used by the application and are slated for removal in SEC.3a), table-grant and anon-key facts in §6–§7, repaired §10 R28 check plus new anon-client and capability checks, §11 checklist items, §12 protocol additions, §14 lessons (DOC.112) |
 | v6.8 | Oct 2026 | ADMIN.78–83 — force-dynamic time-dependent public pages + server-seeded "now" (R41), show-timing.ts single definition of "started" + claims close at show start (R42), past-event pill pattern, branch-scoped verification greps, DOC Task A/PROCEED correction loop, §13 commit-hash corrections (DOC.109/110) |
 | v6.7 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims, public calendar UTC boundary fix, callboard chronological sort, VolunteerForm input tint, Q-item cleanup batch, QR Generator + Forums Option A restyling (DOC.107/108) |
 | v6.6 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, HomeCalendarWidget infrastructure, home page two-column redesign, org logo img fix, show times on claiming page date picker (DOC.106) |
@@ -72,6 +73,8 @@ Run this for every table a prompt will touch. Confirm results match the 30BN_BRI
 
 **This rule is non-negotiable.** Inherited from confirmed TWH and Wizard Mansion failures caused by schema assumptions.
 
+**Security and RLS tests extend this rule (R44 — SEC.1 / SEC.2):** Before inserting synthetic rows or writing probe statements, read the real column names, NOT NULL constraints and defaults of every table involved from `information_schema.columns`, and its CHECK constraints from `pg_constraint`. SEC.2's anonymous-insert probes first failed on guessed column names, and SEC.1's test T20 failed on an unrelated CHECK constraint (`admin_users_inventory_manager_check`). Neither failure was a policy result, and either would have been misread as one. The full method is the SEC test-harness section in §14.
+
 ---
 
 ## 3. Scope Lock
@@ -111,6 +114,20 @@ Examples: `001_core_schema.sql`, `002_volunteer_notes_role_rls.sql`
 - PostgreSQL does NOT automatically index FK columns
 - Composite index column order: most selective / most-filtered column first
 - Every migration is recorded in the Brief when it ships (add to schema section or note under relevant prompt)
+
+### Migration security checklist (R45 — established SEC.1 / SEC.2)
+
+Every migration that creates a table, function or policy follows the R45 checklist (Brief §13) before it is applied:
+
+- **RLS and policies.** `ENABLE ROW LEVEL SECURITY` on every new table. Policies are `TO authenticated`, never `anon` or `public`, and are scoped by role or ownership — not bare `is_admin()` — wherever Viewer or Production must not write.
+- **Table grants are separate from RLS.** Until SEC.3a ships (Brief §11 Phase SEC shows its status), Supabase's default privileges grant `anon` and `authenticated` broad rights on every new `public` table, so the migration itself runs `REVOKE ALL ON <table> FROM anon;` and `REVOKE TRUNCATE, REFERENCES, TRIGGER ON <table> FROM authenticated;`. After SEC.3a ships, default privileges no longer grant `anon`, and every migration must GRANT explicitly to `authenticated` and `service_role` whatever it needs — a forgotten grant then fails loudly ("permission denied") in testing instead of exposing silently.
+- **Functions.** SECURITY DEFINER only when needed; always `SET search_path = public, pg_temp`; `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon`; then GRANT EXECUTE to the roles that need it (R28).
+- **Verify by capability, not by eye.** Use `has_table_privilege()`, `has_function_privilege()` and `has_sequence_privilege()` for `anon`, `authenticated` and `service_role`. A REVOKE from `anon` does nothing when the privilege was granted to PUBLIC.
+- **Rollback is generated, not written.** The trailing rollback comment is built from a snapshot of live state taken before the change (grants, policies, default ACLs, function and trigger definitions). A hand-written blanket `GRANT ALL ... TO anon` would re-grant TRUNCATE, REFERENCES and TRIGGER on `admin_users` and silently undo SEC.1.
+- **Comments state what was tested** (R44), never an untested prediction presented as fact.
+- **Who applies it.** The Supabase MCP connects as `postgres` (a superuser; `transaction_read_only` is off). Migrations therefore apply as `postgres`, and `ALTER DEFAULT PRIVILEGES FOR ROLE postgres` is the form that governs the objects they create.
+- **Numbering and applied-equals-committed.** The repo file carries the next free number (`047_...`, then `048_...`); `apply_migration` records its own timestamp version (SEC.1: `20261001190155`, name `admin_users_rls_hardening`) — compare by name. Before the commit, the live definition (`pg_get_functiondef()`) of every function the migration created must match the committed file character for character.
+- **Dry run first** (SEC.3a design) for any migration that changes grants or policies on more than one table: run it inside a wrapper DO block that always ends in RAISE EXCEPTION, read the result, and only then apply.
 
 ---
 
@@ -175,13 +192,22 @@ Supabase Auth session in this context. RLS verification is not applicable to Cal
 fetches; the admin client bypasses RLS by design. This is intentional and correct: volunteer
 data is fetched server-side using the service role key, which is never exposed to the client.
 
-**"RLS Policy Always True" Supabase advisory (known, accepted):**
+**"RLS Policy Always True" Supabase advisory (corrected SEC.2 — DOC.112):**
 Public INSERT policies with `WITH CHECK (true)` on `volunteers`, `slot_claims`,
 `opportunity_submissions`, `form_responses`, `form_response_values`, and
-`pending_registrations` are flagged by Supabase security advisors as "RLS Policy Always True."
-This is a known and accepted pattern in this project — these tables intentionally allow
-anonymous inserts from public-facing forms. The advisory is not actionable and should not
-trigger alarm. All other access on these tables is restricted.
+`pending_registrations` (SEC.2 found two more: `audition_materials` and `audition_signups`)
+are flagged by Supabase security advisors as "RLS Policy Always True." Before Build Pt 31 this
+section called that pattern "known and accepted" on the grounds that public forms need anonymous
+inserts. That reasoning was wrong in practice. Every public flow runs through a server action
+using `getAdminClient()` (service role, which bypasses RLS), and SEC.2's review of about 24 hours
+of API logs found zero anonymous requests against any public table. The anon insert policies are
+dead weight for the application and an open door for everyone else: the anon key ships in the
+browser bundle, so anyone can insert straight through the API, skipping the honeypot and the R42
+closed-date claim guard (SEC.2 confirmed a rolled-back anonymous `slot_claims` insert for a show
+date that had started six days earlier). The advisory is actionable. SEC.3a removes every anon
+policy and grant from the public schema (Brief §11 Phase SEC shows its status). Until it ships,
+treat these policies as an open gap, not an accepted pattern, and never add another anon policy
+(R45).
 
 **SECURITY DEFINER function privilege verification (R28):**
 Before shipping any migration that creates a SECURITY DEFINER function, verify execute privileges after creation:
@@ -191,6 +217,15 @@ FROM pg_proc
 WHERE proname = 'your_function_name';
 ```
 The `proacl` result must NOT contain `=X/` (PUBLIC execute) or `anon=X/`. If either is present, immediately add REVOKE statements to the migration before committing. See R28 in Brief §13 for the required REVOKE/GRANT pattern. This check is mandatory — confirmed failure mode discovered in 30BN-5.3 (get_show_notification_targets) and retroactively fixed in ADMIN.13 (get_activity_feed).
+
+**Table grants and the anon role (SEC.1 / SEC.2 — DOC.112):**
+RLS decides which rows a role may touch; table GRANTs decide whether the role may touch the table at all. Supabase's default privileges give `anon` and `authenticated` full table-level rights on every new `public` table — including TRUNCATE, REFERENCES, TRIGGER and MAINTAIN — and RLS does not govern TRUNCATE. SEC.1 revoked TRUNCATE, REFERENCES and TRIGGER on `admin_users`; SEC.3a removes `anon` from the whole public schema and from the default privileges. Verify privileges by capability, never by reading ACLs by eye (a REVOKE from `anon` is a no-op when the privilege came through PUBLIC):
+```sql
+SELECT has_table_privilege('anon', 'public.admin_users', 'SELECT')          AS anon_select,
+       has_table_privilege('authenticated', 'public.admin_users', 'TRUNCATE') AS auth_truncate,
+       has_function_privilege('anon', 'public.is_admin()', 'EXECUTE')       AS anon_exec_is_admin;
+```
+Report the result as a table of capability by role and compare it with the intended access model. Facts as of 2026-10-02 (SEC.2 — they date quickly; re-derive them read-only before relying on them): 73 public tables, all with RLS enabled, and `anon` holding full table-level grants on every one of them.
 
 ---
 
@@ -348,6 +383,9 @@ Auth session, `getAdminClient()` only) added as the fifth sanctioned public rout
 `lib/actions/auditions.ts`. Route handlers at `app/api/*/route.ts` or `app/*/route.ts` that handle
 public token-gated or redirect paths follow the same invariant: `// PUBLIC ROUTE` header comment,
 `getAdminClient()` only, never `getServerClient()`. See `/go/[token]` pattern note below.
+
+**Anon is unused by the application (established SEC.2 — DOC.112):**
+The Supabase anon key ships in the browser bundle (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), so everything the `anon` role can read or write is open to the whole internet. The application does not use that role for table access: `lib/supabase/client.ts` — the only browser/anon client factory — has exactly one importer, `googleSignIn.ts`, which only calls `supabase.auth.signInWithOAuth()`, and every public flow uses `getAdminClient()`. Consequences: (1) importing `lib/supabase/client.ts` anywhere else is a defect unless the owner approves it, because it silently reintroduces anon table access; (2) for a signed-out visitor a session client IS the anon role, so `getServerClient()` in a public route runs as `anon` — today it reads whatever the anon policies allow, and after SEC.3a it would get "permission denied" — public routes keep using `getAdminClient()`; (3) never add an anon policy to make a public page work (R45). Brief §11 Phase SEC shows the status of the anon cleanup.
 
 **`createUser()` auth.admin exception (confirmed ADMIN.26):**
 `lib/actions/users.ts` `createUser()` must keep `getAdminClient()` for the two Supabase Auth Admin
@@ -2972,24 +3010,24 @@ grep -rn "volunteer_roles" app/ components/ lib/ \
 # Must return zero results
 ```
 
-```bash
-# Confirm SECURITY DEFINER functions have no PUBLIC/anon
-# execute privilege (R28) — run after any migration that
-# creates a SECURITY DEFINER function
-# Replace function_name with the actual function name
-# Must NOT show =X/ (PUBLIC) or anon=X/ in proacl
-```
 ```sql
+-- Confirm SECURITY DEFINER functions have no PUBLIC/anon
+-- execute privilege (R28) — run after any migration that
+-- creates a SECURITY DEFINER function.
+-- Replace the names below with the function(s) just created.
+-- Must NOT show =X/ (PUBLIC) or anon=X/ in proacl.
 SELECT proname, proacl
 FROM pg_proc
 WHERE proname IN (
   'get_activity_feed',
   'get_show_notification_targets'
 );
-```
 -- Both must show only postgres, authenticated,
 -- service_role in proacl. If =X/ or anon=X/ appears,
 -- apply REVOKE immediately per R28.
+```
+
+The ACL check above is necessary but not sufficient: also confirm by capability that `has_function_privilege('anon', '<function>()', 'EXECUTE')` is false (R45). Repair note (DOC.112): before this edit the closing comment lines sat outside the code fence and the header comments were a separate comment-only bash block; they are now one SQL block. SEC.2 also found that `get_activity_feed()` and `get_show_notification_targets()` are executable by every authenticated role, not only by the roles that need them — a role check or an EXECUTE revoke is planned in SEC.3f.
 
 ```bash
 # Confirm revalidatePath only in server-side files (R29)
@@ -3431,6 +3469,45 @@ grep -n "export .*isClaimDateClosed\|export .*CLAIM_CLOSED_MESSAGE" \
 # guard placed after volunteer creation orphans volunteers on
 # closed dates). Second command: must return zero — a
 # 'use server' file may export only async functions.
+```
+
+```bash
+# Confirm the browser/anon Supabase client has one importer
+# (SEC.2 — Brief §11 Phase SEC, R45)
+grep -rn "supabase/client" app/ components/ lib/ types/ \
+  --include="*.ts" --include="*.tsx"
+# Expected: the single importer googleSignIn.ts (it only calls
+# auth.signInWithOAuth()). Any other file that imports from
+# lib/supabase/client is a defect — it reintroduces anon table
+# access. Review every hit; comment-only mentions are not defects.
+```
+
+```bash
+# Review every direct write path to admin_users (R43 — SEC.1)
+grep -rn "from('admin_users')\|from(\"admin_users\")" \
+  app/ components/ lib/ --include="*.ts" --include="*.tsx"
+# No zero-hit expectation. For every .update(...) hit confirm: an
+# explicit column allowlist; identity taken from getAdminUser(),
+# never an id supplied by the client; and, for a session client,
+# that every written column is on the trigger's self_cols list.
+# A column that is not on self_cols fails at runtime with
+# "Cannot modify restricted columns on your own row" and no build
+# error.
+```
+
+```sql
+-- After SEC.3a ships: anon must hold no table privilege in public.
+-- Before SEC.3a ships this query lists every table (SEC.2: 73).
+-- Run it read-only via the Supabase MCP. Must return zero rows
+-- once SEC.3a has shipped and been verified.
+SELECT c.relname
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relkind IN ('r', 'p')
+  AND has_table_privilege('anon', c.oid,
+        'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+ORDER BY c.relname;
 ```
 
 Add project-specific checks as new standing rules emerge.
@@ -4554,6 +4631,37 @@ lib/actions/forum-posts.ts)
   carry an explicit allow-list of legitimate hits, and have
   Task A dry-run it against the live file first.
   (ADMIN.79-FIX)
+
+□ Any migration (R45): RLS enabled on every new table; policies
+  TO authenticated only (never anon or public); until SEC.3a ships,
+  an explicit REVOKE of anon (and of TRUNCATE/REFERENCES/TRIGGER
+  from authenticated), after it explicit GRANTs; new functions
+  SECURITY DEFINER only when needed, SET search_path = public,
+  pg_temp, REVOKE FROM PUBLIC, anon. Verified by has_table_privilege
+  / has_function_privilege, not by eye. Rollback block generated
+  from a pre-change snapshot, never hand-written. (SEC.1/SEC.2)
+
+□ Any new admin_users column that a non-SA/OA user must edit on
+  their own row: the migration adds it to self_cols in
+  admin_users_guard_update() (CREATE OR REPLACE). Without it the
+  write fails at runtime. A column that is not on self_cols is
+  SA/OA-only — use that deliberately. (R43 — SEC.1)
+
+□ Any statement about database behavior written into a prompt,
+  report or migration comment came from a query or test, or is
+  labelled an untested prediction. Security tests run as
+  rolled-back personas (RAISE EXCEPTION at the end), with before
+  and after fingerprints and zero @example.invalid leftovers.
+  (R44 — SEC.1/SEC.2)
+
+□ No new import of lib/supabase/client.ts; public routes use
+  getAdminClient() only; no anon policy added anywhere.
+  (R45 — SEC.2)
+
+□ Any DOC prompt whose new text contains code fences: fence lines
+  built with a placeholder token or chr(96)*3, never typed; exact
+  anchor matches asserted; no line with four or more backticks; an
+  even fence count before and after. (DOC.111 Edit 8)
 ```
 
 ---
@@ -4568,6 +4676,8 @@ The Brief (30BN_BRIEF_v1.md) and Process (30BN_PROCESS_v1.md) are living documen
 - When a new standing rule is agreed upon, it goes in Brief §13 AND is noted here
 - Document version increments (v1 → v1.1 → v1.2) happen at the end of each build phase
 - Never edit a document mid-build-session without owner approval
+- A DOC prompt edits exactly one governance file (Brief first, then Process: DOC.111 → DOC.112). After a DOC prompt commits and pushes, the owner refreshes the project copy of that file. A planning session verifies the version header and line count of any attached or project copy before designing edits against it (after DOC.111 the Brief project copy was still v6.10).
+- Reference companion documents version-independently ("the Deferred Verifications document"), never by version or item count — the Brief's "v15, 774 items" line went stale and was replaced in DOC.111.
 
 **What triggers an update:**
 - A new standing rule (R-number)
@@ -8233,7 +8343,36 @@ SeasonSelector.tsx); 12 other exports preserved.
                          30 complete; R41, R42; §11/§12/§13
                          updates; ADMIN.72 + UPSTYLE.8 hash
                          corrections). 26 edits. Commit: 3a7dfb3.
-  30BN-DOC.110        ✓ Process v6.7→v6.8 (this prompt).
+  30BN-DOC.110        ✓ Process v6.7→v6.8. Commit: 9594071.
+  30BN-V1-CHECK       ✓ Read-only R41 confirmation; closed with no code
+                         change and no commit.
+  30BN-ACCOUNT.A      ✓ Read-only audit for the planned My Account / crew
+                         away dates / standalone Crew Directory work (no
+                         commit). Its findings led to SEC.1: admin_users had
+                         a single ALL policy gated only on is_admin().
+  30BN-SEC.1          ✓ Migration 047 — admin_users RLS hardening: scoped
+                         policies, BEFORE UPDATE column-guard trigger
+                         admin_users_guard_update() with the self_cols
+                         allowlist, admin_users_is_sa_or_oa() helper,
+                         REVOKE TRUNCATE/REFERENCES/TRIGGER from anon and
+                         authenticated. Attack proof against the unfixed
+                         system, then a T1–T28 rolled-back persona matrix
+                         against the live result; fingerprint unchanged
+                         (n=16). Established R43, R44. Commit: d9f12e5.
+  30BN-SEC.2 A–C      ✓ Read-only anonymous-exposure audit of the public
+                         schema (73 tables, RLS on all); no commit. Anon is
+                         unused by the application; about two dozen anon
+                         policies and full anon table grants exist; no
+                         personal data or token was readable today (the
+                         audition and consent tables are empty, so that
+                         exposure is latent but armed). Remaining SEC work
+                         is specified in Brief §11 Phase SEC. Established
+                         R44, R45.
+  30BN-DOC.111        ✓ Brief v6.10→v6.11 (Build Pt 31: SEC.1, SEC.2 A–C,
+                         ACCOUNT.A recorded; Phase SEC and Phase ACCOUNT
+                         specified in full; R43–R45; §12 decisions 11–24).
+                         16 edits. Commit: 730cb29.
+  30BN-DOC.112        ✓ Process v6.8→v6.9 (this prompt).
 ```
 
 ---
@@ -8749,6 +8888,15 @@ Documented in Brief §13 R41. Referenced here for R-number continuity. Core rule
 
 ### R42 — hasShowStarted() Is the Single Definition of "Started" (cross-reference)
 Documented in Brief §13 R42. Referenced here for R-number continuity. Core rule: `hasShowStarted()` in `lib/utils/show-timing.ts` is the only definition of "a show date has started". Claims close at show start; the server guard sits after the honeypot return and before any lookup or insert; UI state is convenience only. Public listings drop started dates before the open-slot check; cancelling is never blocked and waitlist promotion is skipped on started dates; whole-day surfaces stay whole-day. Helpers inside `'use server'` files stay unexported. See §10 grep checks, §11 checklist, and the §14 sections on show-timing and started-date handling.
+
+### R43 — admin_users Writes Are Column-Guarded (cross-reference)
+Documented in Brief §13 R43 (added v6.11). Referenced here for R-number continuity. Core rule: `admin_users` writes are protected by scoped RLS policies plus the BEFORE UPDATE trigger `admin_users_guard_update()` (Migration 047, SEC.1), which fails closed for every non-SA/OA caller — only the columns in `self_cols` (`name`, `phone`, `last_login`, `activity_cleared_at`, `announcement_dismissed_at`, `calendar_subscription_token`, `show_absences_on_calendar`) may change, and only on the caller's own row. A new self-editable column requires a migration that `CREATE OR REPLACE`s the function with the column added; without it the write fails at runtime ("Cannot modify restricted columns on your own row") with no build error. The service role and migrations pass the trigger (`auth.uid() IS NULL`), so a session-client test and a service-role test prove different things. Confirmed failure mode (SEC.1): before Migration 047 an Editor could promote themselves to Super Admin directly through the API. See the §10 `admin_users` write-review grep and the §11 checklist.
+
+### R44 — Database Behaviour Claims Must Be Tested, Not Asserted; Security Tests Roll Back (cross-reference)
+Documented in Brief §13 R44 (added v6.11). Referenced here for R-number continuity. Core rule: any statement about how the database behaves must come from a query or test against the live catalog, or be labelled an untested prediction; security and RLS tests run inside a transaction that always ends in `RAISE EXCEPTION`; rollbacks are generated from a snapshot, never hand-written; an interrupted build is resumed only after a read-only state check and the owner's go-ahead. Confirmed failure mode (SEC.1 Task A): "infinite recursion" was stated as fact; experiment C3 showed none. The full method is the SEC test-harness section later in this §14.
+
+### R45 — Migration Security Checklist (cross-reference)
+Documented in Brief §13 R45 (added v6.11). Referenced here for R-number continuity. Core rule: RLS on every new table, policies `TO authenticated` only, explicit grants, hardened SECURITY DEFINER helpers (pinned `search_path`, no PUBLIC/anon execute), verification by capability (`has_table_privilege`, `has_function_privilege`), a rollback block generated from live state, and never an anon policy. The full checklist is in §4 (Migration security checklist). Confirmed (SEC.2): `anon` held full table-level grants on all 73 public tables plus about two dozen anon policies, none of them used by the application.
 
 ### Migration / Live DB Drift — Follow-Up Migration Required
 When inline schema fixes are applied via Supabase MCP during a build (bypassing a named .sql migration file), they create drift between committed migration files and the live database. This is documented as a confirmed failure mode from Phase AUDITIONS (5 inline fixes applied without a follow-up file). Full pattern in §7. Quick rule: every inline fix must be flagged in the build report, Q-itemmed for follow-up, and captured in a named migration file before the next phase launch. The Brief §9 migration status block must be updated to reflect inline fixes. Established Phase AUDITIONS.
@@ -10329,6 +10477,100 @@ was a rejected first treatment).
 
 Established ADMIN.80+81 (DOC.110).
 
+### SEC test harness — rolled-back persona tests (established SEC.1 / SEC.2)
+
+How database security tests are run in this project (R44). The technique was used for SEC.1's T1–T28 matrix and for SEC.2's anonymous-role probes; SEC.2-resume extends it to every role. The SQL skeleton below was assembled from that technique and is NOT a tested script: adapt the column list from `information_schema` and `pg_constraint` first (§2), and let the first prompt that uses it re-validate it.
+
+Rules:
+1. **Everything rolls back.** Each test block is one `DO` block that always ends in `RAISE EXCEPTION`, so nothing persists. The report travels in the exception text; copy it into scratch notes under `/tmp` after every block. Use few, large blocks (one per persona group) — SEC.1 hit a rate limit.
+2. **Synthetic personas.** Emails end in `@example.invalid`. `admin_users` has no foreign key to `auth.users` (R37: `admin_users.id` equals `auth.uid()`), so a persona is a row inserted inside the block as `postgres` before the role switch, with a `gen_random_uuid()` id. Existing real users may be impersonated for read checks; any write by a real persona is also inside a rolled-back block.
+3. **Identity.** `SET LOCAL ROLE authenticated` (or `anon`, or `service_role`), then `set_config('request.jwt.claim.sub', <uuid>, true)`, `set_config('request.jwt.claim.role', <role>, true)` AND `set_config('request.jwt.claims', <json>, true)`. In this project `auth.uid()` and `auth.role()` read the flat GUCs first and fall back to the JSON (confirmed SEC.1 Task C). Check `auth.uid()` and `auth.role()` at the head of EVERY block and abort on a mismatch. Run `RESET ROLE` before switching persona and set the GUCs again.
+4. **One scenario, one nested block.** Wrap each probe in `BEGIN ... EXCEPTION WHEN OTHERS THEN ... END` and record either `GET DIAGNOSTICS ... = ROW_COUNT` or `SQLERRM` verbatim. An RLS denial on UPDATE or DELETE is zero rows with no error; on INSERT it is an error ("new row violates row-level security policy"). A BEFORE trigger runs before the RLS WITH CHECK, so a trigger error can hide the policy result (SEC.1 T15).
+5. **Clean attack personas.** A CHECK constraint can mask a vulnerability: an Owner Admin promoting themselves to Super Admin was stopped only by `admin_users_calendar_editor_check` until the test used a persona that did not trip it (T15 versus T15-clean). Attack tests use personas that satisfy every unrelated constraint.
+6. **Isolate unrelated failures.** A probe that fails for an unrelated reason (a guessed column name, a CHECK collision caused by earlier steps in the same transaction, as in SEC.1 T20) is isolated and re-run on a clean row; it is not a verdict.
+7. **A failing legitimate path stops the build.** Roll back with the stored rollback SQL and report. Never patch forward without the owner's approval.
+8. **Fingerprints.** Before and after every block, record `count(*)` and `md5(string_agg(id::text, ',' ORDER BY id))` for the tables at risk, plus the count of `@example.invalid` leftovers (must be zero).
+9. **Do not attempt high-blast-radius statements, even rolled back.** `TRUNCATE ... CASCADE` on a table with dozens of referencing tables is not tested; a bare TRUNCATE on `admin_users` failed on the foreign-key dependency guard (49 referencing tables), not on permissions, so the TRUNCATE privilege is verified with `has_table_privilege()` and the table ACL instead (SEC.1).
+10. **Side-effect check first.** Probe only tables whose triggers cannot reach outside the database. SEC.2 confirmed that every non-internal trigger is `handle_updated_at()` or SEC.1's guard, and that no `pg_net`, `http` or `pg_cron` extension exists.
+11. **Anon over REST** (SEC.3a design, not yet run): GET only; load the anon key into a shell variable and NEVER print it; record only the HTTP status and error code; use invalid tokens only for public pages, because a real `/go/` or `/checkin` token could write a scan or attendance row.
+
+Skeleton (one persona; repeat step 2 onward for each persona):
+
+```sql
+DO $h$
+DECLARE
+  v_editor uuid := gen_random_uuid();
+  v_rows   int;
+  v_out    text := '';
+BEGIN
+  -- 1. Persona row, created as postgres BEFORE the role switch.
+  INSERT INTO public.admin_users (id, email, name, role, is_active)
+  VALUES (v_editor, 'persona-editor@example.invalid', 'Persona Editor', 'editor', true);
+
+  -- 2. Impersonate: role first, then BOTH flat GUCs and the claims JSON.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', v_editor::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+
+  -- 3. Identity check: abort on any mismatch.
+  IF auth.uid() IS DISTINCT FROM v_editor
+     OR auth.role() IS DISTINCT FROM 'authenticated' THEN
+    RAISE EXCEPTION 'IDENTITY CHECK FAILED: uid=% role=%', auth.uid(), auth.role();
+  END IF;
+  v_out := v_out || format('identity ok uid=%s role=%s%s', auth.uid(), auth.role(), E'\n');
+
+  -- 4. One scenario = one nested block; record rows or the error verbatim.
+  BEGIN
+    UPDATE public.admin_users SET role = 'super_admin' WHERE id = v_editor;
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+    v_out := v_out || format('T1 own role -> super_admin: rows=%s%s', v_rows, E'\n');
+  EXCEPTION WHEN OTHERS THEN
+    v_out := v_out || format('T1 own role -> super_admin: error=%s%s', SQLERRM, E'\n');
+  END;
+
+  -- 5. Always roll back; the report travels in the exception text.
+  RESET ROLE;
+  RAISE EXCEPTION E'SEC-TEST REPORT\n%', v_out;
+END
+$h$;
+```
+
+Personas used so far: Super Admin, Owner Admin, Editor, Viewer, Production, an inactive user, `anon` and `service_role` (SEC.2-resume adds Production unassigned versus assigned to a show).
+
+### Security audit prompt pattern — evidence before fixes (established SEC.2)
+
+Security work is split into read-only audits and small fix migrations, one batch at a time.
+- An audit prompt changes nothing: no repo file, no migration, no commit, no persistent DML. Allowed: catalog queries, and rolled-back test blocks.
+- Order of evidence: catalog inventory, then the empirical exposure sweep (row counts per role), then the application access inventory (which client, which callers, which columns), then a verdict per table. Do not skip the empirical sweep because the catalog already looks bad: SEC.2's catalog showed about two dozen anon policies, and the sweep showed that no personal data or token was actually readable today.
+- Classify exposure as ARMED (rows are readable now) or LATENT (the policy is wrong but the table is empty — the first real signup arms it). Both get fixed; latent exposure sets the deadline.
+- A CRITICAL gate stops the run for the owner, but only after the empirical sweep has run. SEC.2's first run stopped on a catalog finding and skipped the sweep; it was told to run the sweep, finish the task and stop at a checkpoint.
+- Each task ends with its findings printed and written to scratch notes, so an interruption loses nothing.
+- A fix prompt: one migration per batch; a rollback generated from a snapshot; the migration dry-run inside a rolled-back wrapper; apply; capability checks (`has_table_privilege` and friends); per-role persona tests identical before and after; fingerprints proving no data changed; an automatic rollback gate; owner smoke tests with cleanup SQL templates; hard stop after the design task.
+- Holds and interim conditions (for example "no Production accounts for other people before SEC.3d", "no audition published before SEC.3a") live in the Brief and are restated in the Task A of every dependent prompt.
+
+### Interrupted build — resume protocol (established SEC.1)
+
+When a build is cut off mid-task (rate limit, crash, lost session), never continue from memory. First run a read-only state check: `git status` and `git log`, the Supabase migration list, the live catalog (policies, triggers, functions, grants), the fingerprints, and any `@example.invalid` leftovers. Report one of NOT APPLIED / FULLY APPLIED / PARTIAL / UNKNOWN with the evidence, and WAIT for the owner. Then: NOT APPLIED restarts at the apply step; FULLY APPLIED with verification unfinished resumes verification without a rollback (what SEC.1 did); PARTIAL or UNKNOWN is the owner's decision between rollback and completion.
+
+### DOC prompt fence-line discipline (established DOC.111 Edit 8)
+
+A DOC prompt is itself delivered inside a fenced block, and code fences inside its new text can arrive as four- or five-backtick lines after copy and paste; the anchor then matches zero times. Rules: write fence lines in the prompt as a placeholder token, or tell Claude Code to build them with `chr(96)*3`, and never type them; Task A applies the substitution before counting anchors; every edit asserts that its anchor matches exactly once and that the new text contains the expected number of fence lines, none with four or more backticks; the integrity checks compare the file's `^` + three-backtick line count before and after (even, and equal to the baseline plus the expected net change). DOC.111 Edit 8 failed at Task A for this reason and was corrected by the owner's PROCEED message.
+
+### Lessons from Build Pt 31 (SEC.1 / SEC.2 / DOC.111)
+
+1. **A prediction stated as fact is a hypothesis.** SEC.1's Task A said a design "would cause infinite recursion"; experiment C3 showed none. Label predictions, and test them before they shape a design (R44).
+2. **A constraint can mask a hole.** An Owner Admin promotion was blocked only by a CHECK constraint. Use clean personas for attack tests.
+3. **Never hand-write a rollback.** A blanket re-grant in a draft rollback would have undone SEC.1's revokes; the rollback is generated from a snapshot.
+4. **Verify privileges by capability.** A REVOKE from `anon` is a no-op if the privilege came through PUBLIC; table privileges (TRUNCATE, REFERENCES, TRIGGER, MAINTAIN) are not governed by RLS at all.
+5. **An "accepted" warning needs evidence like any other claim.** The Supabase "RLS Policy Always True" advisory had been explained away in §6 for the wrong reason; SEC.2's code and log evidence showed the policies were unused and exploitable.
+6. **Report every requested item.** SEC.1's build report omitted one requested item (admin emails and calendar tokens are readable by every active admin through the API); the omission was caught from the request list and carried into SEC.2's inventory. Build reports map back to the prompt's items one by one.
+7. **A side finding is flagged, not fixed in place.** SEC.1 T20 showed that changing the role of an Editor whose `inventory_manager` flag is true can fail on a CHECK constraint; it is an application-level issue to verify in ACCOUNT.4, not a Migration 047 defect.
+8. **Owner re-ordering happens.** The SEC and ACCOUNT order changed several times in Build Pt 31. Record the final order, the holds and the interim conditions in the Brief so that a fresh session cannot act on a stale plan.
+9. **Name the required reading.** Governance documents exceed a single read. Prompts list the sections that must be read (§14 DOC prompt Task A / PROCEED correction loop) instead of "read both in full"; the Session Starter Block stays verbatim.
+10. **Date live counts.** Facts such as "73 public tables" and "about two dozen anon policies" are true on the day they were measured; record the date and say how to re-derive them read-only.
+
 ---
 
 *This document must be updated whenever a new standing rule is agreed upon.*
@@ -10362,5 +10604,18 @@ UPSTYLE.8 entry's placeholder was replaced with 8cbd8e7.
 Hash-bearing entries are now verified against `git log` in
 Task A (see §14, DOC prompt Task A / PROCEED correction
 loop).*
+*- v6.9: DOC.111 updated `30BN_BRIEF_v1.md` only (Brief v6.11);
+the Process stayed at v6.8 through it. Build Pt 31 content is
+documented in §2 (R44 test prerequisites), §4 (migration
+security checklist), §6 (advisory corrected; table grants),
+§7 (anon is unused), §10 (R28 check repaired; new checks),
+§11 (checklist items), §12 (protocol additions), §13 (log
+entries) and §14 (R43–R45 stubs, SEC test harness, security
+audit pattern, resume protocol, DOC fence-line discipline,
+lessons). The §10 R28 proacl check had its closing comment
+lines outside the code fence and its header comments in a
+separate comment-only bash block; both were repaired in
+DOC.112. The §6 "accepted" advisory wording was a doc error,
+not a build defect, and is corrected there.*
 
 *Full build history by phase and prompt: see §13.*
