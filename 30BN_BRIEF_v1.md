@@ -1,12 +1,13 @@
 # 30 By Ninety Theatre — Volunteer Platform
-## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.10
-*Created: July 2026 | Last session: DOC.109 (Oct 2026).
+## 30BN_BRIEF_v1.md — Complete & Authoritative — v6.11
+*Created: July 2026 | Last session: DOC.111 (Oct 2026).
 Version history table: top of this document. Full build
 history by phase and prompt: §11. Doc-maintenance notes
 (ordering corrections, sync failures): end of §13.*
 
 | Version | Date | Summary |
 |---|---|---|
+| v6.11 | Oct 2026 | SEC.1 + SEC.2 Tasks A–C + ACCOUNT.A (Build Pt 31) — Migration 047 hardens `admin_users` RLS (scoped policies + column-guard trigger + `self_cols` allowlist); table-level anon/authenticated exposure audit recorded; Phase SEC (remaining security work) and Phase ACCOUNT (My Account, crew away dates, standalone Crew Directory) specified in full for fresh-session execution; new standing rules R43–R45; §12 decisions 11–24; stale Deferred Verifications line fixed (DOC.111) |
 | v6.10 | Oct 2026 | ADMIN.78–83 (Build Pt 30) — public-page time-correctness: home page no longer statically prerendered (calendar had frozen on August 2026), past/upcoming treatment on `/` and `/calendar`, slot claims close at show start (server guard + closed-date UI), `/shows` + `/callboard` hide started dates, waitlist promotion skipped on started dates, Call Board "signed up" indicator ignores started dates; new standing rules R41/R42; §11 hash correction (DOC.109) |
 | v6.9 | Aug 2026 | ADMIN.72–77 + UPSTYLE.7–8 — convert unlinked slot claims to volunteer records; QR Generator + Forums pages Option A restyled; VolunteerForm input tint; callboard chronological sort; public calendar UTC boundary fix; Q-item cleanup batch (DOC.107/108) |
 | v6.8 | Aug 2026 | ADMIN.65–71 + UPSTYLE.6A/6B — PublicHeader unification, home page two-column redesign (HomeCalendarWidget + VolunteerForm card), org logo next/image → img fix, show times on date picker, volunteer card UX polish (DOC.105) |
@@ -76,6 +77,20 @@ Board "You're signed up" indicator ignores started dates; new
 standing rules R41/R42). UPSTYLE.6A–8 also complete (home page,
 QR Generator, Forums); 9 Style Sandbox mockups remain (next:
 UPSTYLE.9 Dashboard).
+Build Pt 31 (in progress): Phase SEC (database security
+hardening) and Phase ACCOUNT (My Account page, crew away dates,
+standalone Crew Directory) are specified in full in §11 — read
+both blocks before writing any SEC or ACCOUNT prompt. Shipped so
+far: V1-CHECK (read-only R41 confirmation), ACCOUNT.A (read-only
+audit), SEC.1 (Migration 047 — admin_users RLS hardening, commit
+d9f12e5), and SEC.2 Tasks A–C (read-only anonymous-exposure audit;
+no commit). Owner-approved order: ACCOUNT.1–ACCOUNT.7 and
+DIRECTORY.1 first; the remaining security work (SEC.3a onward)
+follows the ACCOUNT phase. Interim conditions until the security
+phase ships: no Production or Viewer accounts for other people (one
+owner-controlled test Production account is allowed); no audition
+may be published; the anonymous-role insert and read gaps recorded
+in §11 Phase SEC stay open. Next migration: 048.
 Phase CAST planned post-launch.
 
 OpenCall OS: This platform is the master reference implementation for OpenCall OS (opencallos.com) — a bespoke volunteer and venue management platform for arts organizations and nonprofits. Each client deployment is a self-contained installation (own GitHub repo, Supabase project, Vercel deployment, domain). Jonathan (Super Admin) configures each deployment via the Setup Panel and transfers ownership at delivery. The 30BN deployment is the live proving ground — every feature built and validated here ships into the OpenCall OS template. See Phase SETUP and Phase THEME in §11.
@@ -323,6 +338,8 @@ change — `/crew/:path*` already covers both routes.
 `proxy.ts` also received `+messagesEnabled` prop
 threading through layout to Sidebar and TopBar (see §8
 Private Messaging and §11 MESSAGES.3).
+
+**Known gap — Production allowlist omits `/crew/messages` and `/crew/users` (found ACCOUNT.A, Build Pt 31; fix scheduled in DIRECTORY.1):** The proxy's Production allowlist (see Proxy/Middleware above and the per-phase additions) does not include `/crew/messages` or `/crew/users`, although the roles table above lists both for Production and the sidebar shows both links when `feature_messages` is on. A Production user who follows either link is redirected to `/crew/calendar`. It has not surfaced because no Production accounts exist in live data. DIRECTORY.1 (Phase ACCOUNT, §11) fixes it while making the Crew Directory a standalone, always-on page; verifying it needs an owner-controlled test Production account.
 
 **Phase MM proxy.ts additions (MM.1):** One new block added to `proxy.ts` — the maintenance mode gate. It fires before all other checks (before `needsFlagCheck`, before flag fetches, before role-based route guards). Logic: if `pathname.startsWith('/crew/')` AND pathname is not `/crew/login` AND pathname does not start with `/crew/maintenance`, fetch `maintenance_mode` from `app_settings` via `getAdminClient()`. If value is `'true'`: query `admin_users` for the current user's role. If role is `super_admin`, pass through transparently. If role is any other role, redirect to `/crew/maintenance`. If no Supabase Auth session exists, redirect to `/crew/login` (standard auth flow handles this). No matcher change needed — `/crew/:path*` already covers all crew routes. No feature flag — Maintenance Mode is an operational control, not a feature. Documented as MM.1 build, commit 4196623.
 
@@ -1056,6 +1073,7 @@ Tokens are permanent until submission. Light mode only, mobile-first, max-w-[480
   Deactivate: Owner Admin can deactivate other Owner Admin accounts (OA-on-OA lock removed ADMIN.33). Super Admin accounts cannot be deactivated by any caller.
   Volunteer notes: Owner Admin can edit and delete volunteer notes (app-layer guards updated ADMIN.33; RLS updated Migration 028).
   Server action guards are authoritative; UI selectors match. `UsersTable.tsx`, `CreateUserModal.tsx`, `PendingRegistrations.tsx`, `lib/actions/users.ts`, `lib/actions/admin-registration.ts`, and `lib/actions/volunteers.ts` all updated.
+- **Role guards are database-enforced (SEC.1, Migration 047)** — writes to `admin_users` are no longer limited only by the application's role checks. Scoped RLS policies and a BEFORE UPDATE trigger enforce them in the database (§9 "admin_users — access control (Migration 047)", R43). Super Admin may change anything; Owner Admin may manage non-Super-Admin users only and can never assign `super_admin`, change anyone's email, or rotate another user's calendar token; every other role may change only its own row and only the allow-listed columns. A database error such as "Cannot modify restricted columns on your own row" or "Owner Admin cannot modify a Super Admin role" is the trigger refusing a write. Known interaction (observed SEC.1 T15/T20): the CHECK constraints on `admin_users` (`calendar_editor` must be false on super_admin and production; `inventory_manager` must be false on production and viewer — §9) can reject a role change for a user whose flags conflict with the new role, so `changeRole()` may need to clear the flag first; ACCOUNT.4 verifies this and fixes it if needed.
 - **Change Password** — `/crew/settings/password` page accessible to all logged-in admins via "Change Password" link in the top bar. New Password + Confirm New Password fields (min 8 chars). Uses Supabase Auth `updateUser({ password })`. No current password field required (relies on valid session). Logged to `audit_log` as `user.password_change`. Built in ADMIN.15.
 
 **Show Management (`/crew/shows`):**
@@ -3494,8 +3512,14 @@ types/notifications.ts updated to match.
 NotificationPanel.tsx getTypeIcon() updated with
 XCircle case for 'slot_cancellation'.
 
-**Next migration:** 047 (none currently planned).
-Migration 046 is applied.
+**Migration 047 status:** Applied — `047_admin_users_rls_hardening.sql` (SEC.1, Build Pt 31, commit d9f12e5, 215 lines; Supabase migration name `admin_users_rls_hardening`, version `20261001190155`). Closes a privilege-escalation hole found by ACCOUNT.A: the table's only write-capable policy, `authenticated_all_admin` (cmd ALL, USING and WITH CHECK `is_admin()`), let any active admin of any role change any column of any `admin_users` row — including `role` — or insert and delete rows, directly through the Supabase API, bypassing every application role guard. The migration:
+- creates `public.admin_users_is_sa_or_oa()` — LANGUAGE sql, STABLE, SECURITY DEFINER, `SET search_path = public, pg_temp`; EXECUTE revoked from PUBLIC and anon and granted to authenticated and service_role (R28);
+- drops `authenticated_all_admin`; creates `admin_users_select_admins`, `admin_users_insert_sa_oa`, `admin_users_update_sa_oa` and `admin_users_update_own` (R39 naming, all TO authenticated); `authenticated_select_own` is unchanged; no DELETE policy exists for authenticated;
+- creates `public.admin_users_guard_update()` (plpgsql, SECURITY INVOKER, pinned search_path) and trigger `admin_users_guard_update` (BEFORE UPDATE, FOR EACH ROW, WHEN (OLD IS DISTINCT FROM NEW));
+- revokes TRUNCATE, REFERENCES and TRIGGER on `public.admin_users` from anon and authenticated.
+No application code changed. Verified (per the SEC.1 build report): the attack matrix against the unfixed table proved the hole was real; the post-apply matrix T1–T28 passed (T28 — TRUNCATE after the revoke — was confirmed through `relacl`, not re-executed, because a TRUNCATE attempt on a table referenced by 49 others is high-blast-radius); a before/after data fingerprint of the table was unchanged; the live function and policy definitions matched the committed file; owner browser checks V1–V4 passed (V5–V9 — registration approval, Google sign-in, name rendering across crew pages, Change Password, calendar-token rotation per role — were not part of the owner's check; they are service-role or read paths and remain to be verified when they next occur). Recursion experiment: the earlier prediction that calling the non-SECURITY-DEFINER `is_super_admin_or_owner_admin()` from a policy on `admin_users` would cause infinite recursion was TESTED (SEC.1 Task C3) and NOT reproduced; the new function was adopted for robustness (the policies stay independent of how the SELECT policy is written) and to pin `search_path`. The four older helpers (`is_admin`, `is_editor`, `is_super_admin`, `is_super_admin_or_owner_admin`) were deliberately not modified.
+
+**Next migration:** 048 (ACCOUNT.1, planned — see §11 Phase ACCOUNT). Migration numbers are assigned in the order migrations are written: the security migration SEC.3a, which was drafted as 048, takes the next free number after ACCOUNT.1 (expected 049). Migrations 046 and 047 are applied.
 
 **Migration 032 status:** Applied — `032_audition_management.sql` (Phase AUDITIONS).
 Created eight new tables (auditions, audition_roles, audition_slots, audition_signups,
@@ -4274,7 +4298,44 @@ created_at timestamptz NOT NULL DEFAULT now()
 -- Used by /api/calendar/feed.ics to authenticate
 -- calendar app subscriptions without a session cookie.
 -- Rotate via rotateCalendarToken() server action.
+-- RLS and trigger (Migration 047, SEC.1): see "admin_users —
+-- access control (Migration 047)" below.
+-- The CHECK constraints described above can reject a role
+-- change for a user whose flags conflict with the new role
+-- (observed SEC.1 T15/T20).
+-- Columns planned for Migration 048 (ACCOUNT.1): phone text,
+-- position_title text, show_absences_on_calendar boolean —
+-- see §11 Phase ACCOUNT. admin_users has no updated_at column
+-- (deliberately not added).
 ```
+
+### admin_users — access control (Migration 047)
+
+Policies on `public.admin_users` (RLS enabled; all TO authenticated; R39 naming):
+
+| Policy | Command | Rule |
+|---|---|---|
+| `admin_users_select_admins` | SELECT | `is_admin()` — every active admin of any role can read all rows (many pages show other users' names) |
+| `authenticated_select_own` | SELECT | `id = auth.uid()` — pre-existing, untouched; an inactive user sees only their own row |
+| `admin_users_insert_sa_oa` | INSERT | `is_super_admin()` OR (`admin_users_is_sa_or_oa()` AND `role <> 'super_admin'`) |
+| `admin_users_update_sa_oa` | UPDATE | the same condition for USING and WITH CHECK |
+| `admin_users_update_own` | UPDATE | `id = auth.uid() AND is_admin()` — own row only; the columns are limited by the trigger |
+| (none) | DELETE | no policy for authenticated — nobody deletes through the API; the service role still can (no application code deletes `admin_users` rows) |
+
+Trigger `admin_users_guard_update()` (BEFORE UPDATE — it runs before the RLS WITH CHECK, so its error text is what the user sees):
+1. `auth.uid() IS NULL` → allowed. This is the trusted-caller test: the service role (`getAdminClient()`), migrations and the postgres role carry no end-user identity. The anon role cannot reach an UPDATE at all (no policy).
+2. Super Admin → allowed.
+3. `id` is immutable for everyone else.
+4. Owner Admin → may not touch a row whose old or new role is `super_admin`; may not change `email` or `created_at`; may not change another user's `calendar_subscription_token`. Otherwise it may update non-Super-Admin rows (role, `is_active`, `calendar_editor`, `inventory_manager`, and `position_title` once it exists).
+5. Everyone else (Editor, Viewer, Production, inactive) → own row only, and only the `self_cols` allowlist. The comparison is `to_jsonb(NEW) - self_cols` against `to_jsonb(OLD) - self_cols`, so the guard fails CLOSED for every column not on the list, including columns added in future.
+
+`self_cols` = `name`, `phone`, `last_login`, `activity_cleared_at`, `announcement_dismissed_at`, `calendar_subscription_token`, `show_absences_on_calendar`. `phone` and `show_absences_on_calendar` were listed before those columns existed (list entries that are not real columns are ignored), so ACCOUNT.1 adds them without touching the trigger. `position_title` is deliberately NOT on the list, so it is SA/OA-only by default and Super-Admin-only on Super Admin rows. See R43.
+
+Write-path inventory (SEC.1 Task A; every path passes): session client — `dismissAnnouncement()` (`announcement_dismissed_at`), `clearActivityFeed()` (`activity_cleared_at`), `rotateCalendarToken()` (`calendar_subscription_token`), and the six User Management actions in `lib/actions/users.ts` (`createUser`, `deactivateUser`, `reactivateUser`, `changeRole`, `toggleCalendarEditor`, `toggleInventoryManager` — SA/OA only); service role — the Google OAuth callback and `emailLogin()` (`last_login`) and `approveRegistration()` (INSERT). No code anywhere deletes or upserts `admin_users` rows.
+
+Accepted remaining exposure: every active admin can read every admin's email and calendar subscription token through the API (row-level security cannot hide columns). The token only opens the read-only calendar feed. Hiding emails in the Crew Directory is therefore a display decision, not a security boundary.
+
+Rollback (also in the migration file as a trailing comment): re-create `authenticated_all_admin` as FOR ALL TO authenticated with USING and WITH CHECK `is_admin()`; drop the four new policies, the trigger and both functions; GRANT TRUNCATE, REFERENCES, TRIGGER on `public.admin_users` back to anon and authenticated. A blanket re-grant must never be used instead (see §11 Phase SEC, SEC.3a rollback rule).
 
 ### forms
 ```sql
@@ -6391,7 +6452,7 @@ Call Board Upcoming Slots with per-slot cancel;
 editor cancellation email replaced with in-app
 notification; volunteer cancellation confirmation
 email added; Migration 046 (slot_cancellation
-notification type). ADMIN.65–83 complete — see the ADMIN.65–83 entries under Phase UPSTYLE below (ADMIN.78–83, Build Pt 30: public pages made time-correct).*
+notification type). ADMIN.65–83 complete — see the ADMIN.65–83 entries under Phase UPSTYLE below (ADMIN.78–83, Build Pt 30: public pages made time-correct). Build Pt 31 (in progress): V1-CHECK, ACCOUNT.A, SEC.1 (Migration 047) and SEC.2 Tasks A–C are recorded in the tail entries below; Phase SEC and Phase ACCOUNT are specified in full in the two phase blocks that precede Phase CAST.*
 
 ### Phase CAL — Master Calendar System ✓ Complete
 
@@ -9290,7 +9351,7 @@ a future cleanup pass (non-user-visible in normal use).
   `feature_beta` (Beta Feedback — added Phase BETA, defaults to
   `'false'` — enable separately when ready to roll out Beta
   Feedback to crew).
-- Work through Deferred Verifications document (v15, 774 items)
+- Work through the Deferred Verifications document (current file `30BN_DEFERRED_VERIFICATIONS_v2.md`; its version and item count change with every pass — see that file)
 
 **17.2 — Domain & DNS**
 - Confirm `30byninetyvolunteers.com` CNAME/A record points to Vercel
@@ -9513,6 +9574,176 @@ Full forward spec in §8 (Internal Forums section) and §9 (Migration 035, 12 fo
 **30BN-FORUMS.4 ✓** `types/forums.ts` 3 new types (ForumPostAttachment + signed_url field, ForumPostWithDetails, ThreadViewData — 185 lines, 17 types total). `lib/audit.ts` forum_post.create + forum_post_attachment.upload. `lib/actions/forum-posts.ts` (`FORUM_POST_SANITIZE_OPTIONS` exported constant; `getThreadWithPosts()` — parallel fetch, single-batch signed URL generation, no client-in-loop; `getPostAttachmentUploadUrl()` with mimeType input validation; `createForumPost()` — temp-key move pattern; `toggleThreadSubscription()`). Thread view page (forumId URL mismatch check → notFound(); `markThreadRead()` called on load). `ThreadViewClient.tsx` (breadcrumbs, subscribe toggle, sanitized HTML, attachments, locked notice, composer slot). `ForumPostComposer.tsx` (7th sanctioned XHR file — sequential upload mirroring InventoryPhotoUploader.tsx `uploadWithProgress()` pattern; 11-button toolbar adding H3+Blockquote to BlastComposer's 9). Two real lint warnings caught and fixed pre-commit. Q1: mimeType param given real job (input validation); Q2: forumId prop unused in ForumPostComposer (cleanup candidate — removed FORUMS.5). 6 files. Commit b21b3a4.
 
 **30BN-FORUMS.5 ✓** `lib/audit.ts` 8 new AuditAction types (forum_thread.create/lock/unlock/pin/unpin/move, forum_post.edit/delete). `lib/actions/forum-moderation.ts` (new — 8 actions: createThread, lock/unlock, pin/unpin, moveThread (SA/OA only), editPost, deletePost idempotent soft delete; private `isModeratableBy()` helper). `lib/email.ts` `sendForumNotificationEmail()` added (uses `sendBatchEmails()` per R8 — Q2 fix; `resolveEmailSettings()` required — no hardcoded hex; `escapeHtml()` on posterName + threadTitle; `logEmailSent()` after send; `sentBy: null`; `getAdminClient()` internal; poster excluded from subscriber fetch via `.neq('admin_user_id', post.author_id)`). Non-blocking void IIFE call site added to `createForumPost()` in forum-posts.ts. `getForumsForMove()` added to forum-admin.ts. `ThreadListClient.tsx` — New Thread button + shadcn Dialog modal with prefix selector, title, 11-button TipTap editor (no file attachments on thread creation — Brief spec confirmed). `ThreadViewClient.tsx` — per-post edit (shared editor, async `setContent()` in click handler per AUDITIONS.2c F7 pattern) + delete controls + moderation bar (lock/pin/move). `ForumPostComposer.tsx` — dead `forumId` prop removed (Q2 FORUMS.4 cleanup). `HelpContent.tsx` — full 4-subsection Forums section replacing stub (forums-overview/threads visible to all roles including production; forums-access/moderation SA/OA only). All 17 sections now have full content. Key fixes before commit: Q1 — `buildEmailHtml()` and `logEmailSent()` real signatures read before writing (pseudocode signature was wrong); Q2 — per-subscriber loop replaced with `sendBatchEmails()` per R8; Q3 — `Editor | null` explicit typing required (ReturnType<typeof useEditor> picks wrong overload when immediatelyRender: false). 9 files (1 new, 8 modified). Commit e41f66f. Phase FORUMS complete. Post-build fix: FORUMS.5-FIX (commit 02f4569) — FORUM_POST_SANITIZE_OPTIONS was exported as a plain object from lib/actions/forum-posts.ts, a 'use server' file. Next.js/Turbopack enforces that 'use server' files may only export async functions — plain object exports cause a Vercel build failure that does not surface in npm run lint or npx tsc --noEmit (local tooling does not catch this class of error). Fixed by extracting the constant to lib/actions/forum-post-sanitize.ts (no 'use server') and updating both import sites (forum-posts.ts, forum-moderation.ts). Full audit of all 'use server' files confirmed zero other violations. 3 files.
+
+### Phase SEC — Database Security Hardening (In Progress)
+
+*Introduced Build Pt 31. Origin: the ACCOUNT.A audit found that `admin_users` had a single ALL policy gated only on `is_admin()`. SEC.1 fixed that table; the SEC.2 audit then characterised exposure across the whole public schema. This block is the execution record and the specification for the remaining SEC prompts. Status words are literal: "designed" and "planned" mean NOT shipped.*
+
+**Status**
+
+| Prompt | Type | Status |
+|---|---|---|
+| SEC.1 | Fix — Migration 047 (`admin_users`) | ✓ Applied, verified, committed (d9f12e5) |
+| SEC.2 Tasks A–C | Read-only audit: baseline, catalog, anonymous exposure | ✓ Complete (no commit); findings below |
+| SEC.3a | Fix — remove all anon access from the public schema | Designed, NOT applied (migration number assigned at write time; expected 049) |
+| SEC.2-resume (Tasks D–H) | Read-only audit: authenticated tier | Pending |
+| SEC.3b–3f | Fixes by batch | Planned |
+| SEC.4 | Final verification + consolidated DOC | Planned |
+
+**Owner-approved order and holds**
+- ACCOUNT phase first (ACCOUNT.1–7 and DIRECTORY.1 — see Phase ACCOUNT), then: SEC.3a, SEC.2-resume, SEC.3b, SEC.3c, SEC.3d, SEC.3e, SEC.3f, SEC.4, then one consolidated DOC prompt. The owner changed this order more than once; the final decision is ACCOUNT first. Nothing in SEC blocks ACCOUNT — SEC.1 was the only prerequisite, and it is done.
+- Interim conditions until the named SEC prompt ships (the first Task A of every ACCOUNT prompt must restate them):
+  1. Do NOT create Production or Viewer accounts for other people before SEC.3d. One owner-controlled test Production account is allowed and is required to verify ACCOUNT.3, DIRECTORY.1 and ACCOUNT.5.
+  2. Do NOT publish any audition before SEC.3a is applied and verified. The owner states all four existing auditions are drafts; SEC.3a Task A verifies the actual statuses. The first real signup would put name, email, phone, minor status, guardian details and the cancel/upload tokens in a table readable with the public anon key.
+  3. The anonymous-role insert and read gaps listed below stay open until SEC.3a.
+  Every active admin account today is a trusted committee member, which is why the authenticated-tier gaps are tolerable until Production and Viewer accounts exist for other people.
+- If auditions are needed before SEC.3a, a minimal "SEC.3a-lite" (drop only the audition and consent anon policies and the matching grants) can be done first — an owner decision.
+
+**SEC.1 (✓)** — see §9 (Migration 047; "admin_users — access control") and R43. Lessons recorded as rules in R44: a prediction stated as fact ("infinite recursion") was tested and NOT reproduced; a CHECK constraint was masking part of the vulnerability (an Owner Admin promoting themselves to Super Admin was stopped only by `admin_users_calendar_editor_check` until the test used a clean persona); a hand-written blanket re-grant in a draft rollback would have undone SEC.1's revokes; and a rate limit interrupted the build, so the resume protocol (read-only state check, report NOT APPLIED / FULLY APPLIED / PARTIAL / UNKNOWN, wait for the owner) was used — SEC.1 resumed from "fully applied, verification unfinished" with no rollback. The Supabase MCP connects as `postgres` (a superuser; `transaction_read_only` is off), so migrations apply as `postgres` and `ALTER DEFAULT PRIVILEGES FOR ROLE postgres` covers the objects they create.
+
+**SEC.2 Tasks A–C — findings (read-only; per the SEC.2 checkpoint report; live database facts as of 2026-10-02)**
+- Scope: 73 public tables, all with RLS enabled; no views or materialized views; no table published to Realtime; extensions are only pg_stat_statements, pgcrypto, plpgsql, supabase_vault and uuid-ossp (no pg_net, http or pg_cron); every non-internal trigger is `handle_updated_at()` or SEC.1's guard, so none can reach outside the database; `storage.objects` has RLS enabled with zero policies (all storage access goes through the service role or signed URLs; the `brand` bucket is public by design, `media` is private); only 10 functions exist in `public`.
+- Anon is unused by the application (two independent proofs): `lib/supabase/client.ts` — the only browser/anon client factory — has one importer, `googleSignIn.ts`, which only calls `supabase.auth.signInWithOAuth()`; every public flow runs through a server action using `getAdminClient()` (claims.ts, consent.ts, auditions.ts, rehearsals.ts, checkin.ts, admin-registration.ts, home-calendar.ts, app/update/actions.ts); and about 24 hours of API logs (2026-10-01 16:46 → 2026-10-02 16:11 UTC, 6,014 edge_logs rows — the full retention window) showed zero genuinely anonymous requests against any public table; the only anon-role traffic was the Auth login endpoint. Caveat: 24 hours says nothing about earlier activity.
+- Anon policies live today (about two dozen; the SEC.3a snapshot captures the exact live list). The anon key is public: it ships in the browser bundle. SELECT — `app_settings` (true), `audition_signups` (true), `audition_slots`, `auditions` (status published), `consent_form_submissions` (status pending), `form_fields`, `forms`, `hearing_options`, `locations` (policy `public_select_locations`, roles anon and authenticated), `seasons`, `show_dates`, `shows` (every status), `standing_opportunities` (status active), `volunteer_categories`, `volunteer_roles`. INSERT with WITH CHECK (true) — `audition_materials`, `audition_signups`, `form_response_values`, `form_responses`, `opportunity_submissions`, `pending_registrations`, `slot_claims`, `volunteers`. `locations.super_admin_all` has roles {public} (cosmetic: its function check is false for anon). anon also holds full table-level grants on every public table (the Supabase default).
+- Verdicts. (a) LATENT, ARMED: `audition_signups` (name, email, phone, minor status, guardian name and phone, casting status, `cancel_token`, `upload_token` — the full authentication mechanism for `/auditions/cancel/[token]` and `/auditions/upload/[token]`) and `consent_form_submissions` (`upload_token`, volunteer and signup linkage) are readable by anon, but both tables are empty today; the empirical anon sweep returned 0 visible rows for all 18 PII/token tables, and `volunteers` has no anon SELECT policy. The first real audition signup would expose everything. (b) R42 BYPASS CONFIRMED: an anon INSERT into `slot_claims` for a role on a show date that started six days earlier succeeded (rolled back) — the closed-date rule lives only in `lib/actions/claims.ts`. Anon INSERTs also succeeded on `form_responses`, `pending_registrations` and `volunteers` (spam and queue flooding; the honeypot is bypassed). (c) Anon reads of business data: all 15 shows (5 draft, 7 archived, 3 live), so the Brief's "/shows lists only live" rule is application-only; `app_settings` returns 42 rows (reviewed; no secret-shaped keys). (d) Functions executable by anon or PUBLIC: `is_admin()`, `is_editor()`, `is_super_admin()`, `is_super_admin_or_owner_admin()`, `handle_updated_at()` and `admin_users_guard_update()` (the last two are trigger functions); `admin_users_is_sa_or_oa()` is correctly anon-revoked.
+- Token columns: the only anon-readable secrets are `audition_signups.cancel_token`, `audition_signups.upload_token` and `consent_form_submissions.upload_token`. The check-in/QR tokens on `auditions`, `calendar_events`, `show_dates`, `shows` and `forms.qr_token` are intentionally public physical-QR identifiers. `qr_codes.redirect_token`, `documents.access_token`, `opportunity_submissions.submission_token`, `slot_claims.claim_token` and `volunteers.update_token` have no anon SELECT policy.
+- Authenticated-tier findings (characterised from the catalog only; the empirical per-role work is SEC.2 Tasks D–H):
+  - 26 tables carry write policies gated only on `is_admin()`, so any active admin of any role — including Viewer and Production — can read and write them directly through the API: `app_settings`, `attendance`, `calendar_events` (UPDATE and DELETE), `email_log`, `email_log_recipients`, `form_fields`, `form_response_values`, `form_responses`, `forms`, `hearing_options`, `milestone_log`, `opportunity_submissions`, `recurrence_groups`, `rehearsal_batches`, `seasons`, `show_date_buffer`, `show_dates`, `show_editors`, `shows`, `slot_claims`, `standing_opportunities`, `volunteer_categories`, `volunteer_category_assignments`, `volunteer_hours_log`, `volunteer_roles`, `volunteers`. Several are named `super_admin_*` (`calendar_events`, `recurrence_groups`, `rehearsal_batches`, `show_date_buffer`) but check only `is_admin()`, while the Brief documents them as Super Admin write — SEC.2 Task F verifies.
+  - `forum_*` SELECT policies are unconditionally true for authenticated, so the documented per-forum access-grant model is application-layer only.
+  - `get_activity_feed()` (volunteer names and ids) and `get_show_notification_targets(show_id)` (volunteer emails) are SECURITY DEFINER and executable by any authenticated role.
+  - R42 is not enforced by the database for authenticated sessions either.
+  - Eight functions have a mutable `search_path` (`is_admin`, `is_editor`, `is_super_admin`, `is_super_admin_or_owner_admin`, `handle_updated_at`, `renumber_waitlist` and two others); `is_editor()` and `is_super_admin_or_owner_admin()` are not SECURITY DEFINER; `MAINTAIN` is held by anon and authenticated (Supabase default, low priority); leaked-password protection is disabled (a Supabase Auth dashboard setting that may need a paid plan — owner list, outside SEC); whether another table's blanket TRUNCATE grant could be CASCADE-chained into other tables is unexplored.
+  - Every active admin can read every admin's email and calendar token (§9).
+- Scratch notes: `/tmp/sec2-notes.md` on the machine that ran SEC.2 holds the full findings log (policy list, persona SQL). A fresh session can re-derive everything read-only if the file is absent.
+
+**SEC.3a — Remove all anon access from the public schema (designed; NOT applied)**
+- ONE migration at the repo root (R21), applied as a single atomic DO block (dollar-quote tag such as `$sec3a$`). Number: next free at write time (ACCOUNT.1 takes 048, so expected 049; the original draft said 048).
+- Steps: (1) CAPTURE into a temp table what `authenticated` and `service_role` can do today on every public table, sequence and function. (2) DROP every policy that applies only to anon (explicit names from a live catalog query, never from notes); `ALTER POLICY ... TO authenticated` for `locations.public_select_locations` and `locations.super_admin_all`, and for any other policy covering anon or public AND authenticated. `standing_opportunities.public_select_active` is dropped too (a retained policy would be dead once the table grants go). (3) REVOKE ALL on all public tables and sequences from anon; REVOKE EXECUTE on every non-extension public function from PUBLIC and anon, then re-GRANT to authenticated and service_role whatever either lost because it relied on PUBLIC. (4) DEFAULT PRIVILEGES: remove anon from the default table, sequence and function grants for role postgres, using the form (schema-level or global) that matches `pg_default_acl`, proven by a probe table and probe function; do not alter authenticated or service_role defaults or schema USAGE; do not attempt FOR ROLE supabase_admin (report only). (5) In-block self-checks that RAISE EXCEPTION (applying nothing) if any authenticated or service_role capability differs from the capture, any anon-or-public policy or any anon privilege remains, or any anon default ACL remains. (6) A header comment: what and why (cite SEC.2), the anon key is public, the authenticated tier is untouched (SEC.3b–3f), future migrations must GRANT explicitly (R45), and the rollback reference; the rollback block is appended as a trailing comment.
+- Rollback rule: the rollback is GENERATED from a snapshot of live grants, policies and default ACLs (Task B), never hand-written. A blanket `GRANT ALL ON ALL TABLES ... TO anon` would re-grant TRUNCATE, REFERENCES and TRIGGER on `admin_users` and undo SEC.1; the generated rollback must contain no such grant.
+- Verification by capability, not by eye: `has_table_privilege`, `has_function_privilege` and `has_sequence_privilege` for anon, authenticated and service_role on every public object (a REVOKE from anon does nothing when the privilege came through PUBLIC). Dry run first (the migration executed inside a wrapper DO block that always ends in RAISE EXCEPTION, including the probe table and function); then apply; an automatic rollback gate fires if any post-apply check fails.
+- Live tests: persona row counts (Super Admin, Owner Admin, Editor) for every table, identical before and after; direct anon REST probes (GET only; the anon key loaded into a shell variable and NEVER printed; record only HTTP status and error code; `/auth/v1/settings` must stay 200); a signed-out baseline of 18 public pages (status, redirect target, title, organization-name marker) before and after; data fingerprints (count and md5 of ordered ids) for `volunteers`, `slot_claims`, `shows`, `audition_signups`, `app_settings`, `admin_users`; SEC.1's state intact (no TRUNCATE, REFERENCES or TRIGGER for anon or authenticated on `admin_users`; five policies; trigger present). Public-page checks use invalid tokens only — a real `/go/` or `/checkin` token could write a scan or attendance row.
+- Task structure: A baseline, state and audition truth; B snapshot and generated rollback; C route sweep (every signed-out route and every parameter-passing helper — for a signed-out visitor a session client IS the anon role), live traffic, and a read-only abuse check (claims made after show start, orphan `pending_registrations`, per-day creation counts; counts and ids only, never names, emails, phones or tokens); D baselines; E design validation and proposed migration — HARD STOP; F migration file and dry run; G apply, verify, auto-rollback gate; H owner list, cleanup SQL templates, commit, push, report.
+- Owner verification after apply, in this order: V1 signed out, the home page, /shows, a live show, /callboard, /calendar, /update, an opportunity page and a form page all load; V2 a test volunteer signup and a slot claim; V3 (only after V1 and V2 pass) publish ONE audition, submit an adult test signup with an email the owner controls — NEVER a minor's details — confirm the email, and cancel through the link; V4 as Super Admin, Master Calendar, Location Management, Platform Setup and the Shows list load (the `locations` policy changed); V5 a custom form and a Request Access registration with a throwaway email (then decline it); V6 unpublish the test audition if it should not yet be live. The prompt supplies cleanup SQL templates (a SELECT count preview, then the DELETE) for test rows; the owner runs them.
+- Out of scope: the authenticated tier, the authenticated-session R42 bypass, storage, application code. Apply when the owner can run V1 and V2 immediately (not just before a volunteer-heavy show).
+
+**SEC.2-resume — Tasks D–H (read-only; resume at Task D, and rerun the Task A baseline first if `/tmp/sec2-notes.md` is absent)**
+- D Authenticated exposure by role, empirically: per table, row counts and one-row UPDATE and DELETE probes as Viewer, Production (unassigned and assigned), Editor, Owner Admin, Super Admin and an inactive user — synthetic personas in rolled-back blocks (R44).
+- E Application access inventory per table: which client, which callers, which columns. This is how every fix is tested against reality.
+- F Intended access model against reality: a verdict per table; reconcile the 26-table list with the `super_admin_*`-named policies and the Brief's documented access.
+- G Fix design and batch plan (design only): helper functions (SECURITY DEFINER, pinned search_path), a rollback block and a per-batch test matrix.
+- H Integrity check (fingerprints, leftovers) and final report.
+- Gate: any CRITICAL finding stops for the owner. Owner decisions needed afterward: Production access to volunteer data (assigned shows only?), Viewer read scope, which `app_settings` keys Owner Admin may write, and the forum read model.
+
+**SEC.3b–3f (planned; SEC.2-resume confirms or changes them).** Each fix has a snapshot-based rollback, empirical per-role tests, a fingerprint check proving no data changed, and owner smoke tests. Order: lowest break-risk first; 3d after 3c.
+- 3b Config and logs: `app_settings`, `hearing_options`, `email_log`, `email_log_recipients`, `locations`. `app_settings` writes become SA/OA only, with a key-level trigger keeping Owner Admin away from Super-Admin-only keys (maintenance mode, flags, branding); email logs become SA/OA read.
+- 3c Volunteer personal data and claims: Viewer and Production lose write; Production sees volunteer data only for shows they are assigned to; a trigger rejects `slot_claims` inserts for dates that already started, closing the R42 bypass at the database (R26: resolve role to show date through `show_dates`; org timezone).
+- 3d Shows, calendar and Production access (highest break-risk): Production access to shows, dates, roles and attendance runs through new SECURITY DEFINER helpers with a pinned search_path (`is_production_show_editor()` and an audition equivalent); `calendar_events` insert and update tied to the `calendar_editor` flag and approval status; Viewers lose all writes. Needs the owner's real test Production account and browser verification.
+- 3e Forms and forums: forum read access follows the access-grant model through a helper; forms get editor-level write; notifications get a verification-only check.
+- 3f Function and RPC hygiene: pin `search_path` on the four helpers and `renumber_waitlist`; a role check or EXECUTE revoke on `get_activity_feed()` and `get_show_notification_targets()`; revoke helper EXECUTE from roles that do not need it; revoke `MAINTAIN`; the leaked-password-protection toggle goes on the owner list.
+- SEC.4 Final verification: a full regression matrix across all roles and public pages, then ONE consolidated DOC prompt (Brief, Process and Deferred Verifications) recording SEC.1–SEC.4: migrations, the `self_cols` rule, the default-privileges convention, the new helpers, the grants-and-RLS migration checklist (R45) and the "anon key is public" note.
+
+**Test technique (SEC.1 / SEC.2).** Rolled-back DO blocks that end in RAISE EXCEPTION; `SET LOCAL ROLE`; both flat GUCs plus the claims JSON; an identity check at the head of every block; synthetic `@example.invalid` personas; fingerprints; few, large database calls; scratch notes under `/tmp`. R44 states the rules; the full method is recorded in Process (SEC test-harness note, DOC.112).
+
+**Open product and owner items touching SEC:** owner browser verifications O1–O4 (ADMIN.79–83) remain pending; Production-account creation stays on hold (above); the Supabase leaked-password-protection setting is the owner's call.
+
+### Phase ACCOUNT — My Account, Crew Away Dates & Crew Directory (Planned; design locked)
+
+*Introduced Build Pt 31. Status: ACCOUNT.A ✓ (read-only audit). Everything else below is PLANNED and not built; do not describe it as shipped. Owner-approved; every decision in this block is locked unless the owner changes it. Each prompt begins with a read-only Task A and a hard stop (R11: one deliverable per prompt).*
+
+**What it delivers**
+
+| Piece | Summary |
+|---|---|
+| My Account page | `/crew/account`, label "My Account": Profile, Change Password and Time Away cards in the Option A three-zone style |
+| Sidebar link | "My Account" directly under Dashboard, ungrouped, for all five roles |
+| TopBar | The Change Password button goes away; the name-and-role block becomes a link to `/crew/account` |
+| Old route | `/crew/settings/password` redirects to `/crew/account` (welcome emails and bookmarks keep working) |
+| Position Title | Edited by SA/OA in User Management; read-only on My Account |
+| Away dates | `crew_absences` table; every user manages their own; visible to all five roles |
+| Calendar overlay | Away dates as a muted layer on the crew calendar, with a per-user database-saved "Show away dates" toggle |
+| Dashboard widget | "Upcoming Absences", next 31 days, hides itself when empty |
+| Crew Directory | Standalone, always on, all five roles; shows title, phone and an "Away until" badge (DIRECTORY.1) |
+| Feature flag | `feature_absences`, default ON. Profile, password and the Directory are core and never flagged |
+
+The route is `/crew/account` rather than anything under `/crew/settings/` because that hub is SA/OA-only; a sub-route there invites guard confusion.
+
+**Locked owner decisions**
+- Name and route: "My Account" at `/crew/account`.
+- Position Title: edited ONLY by SA/OA, in User Management, for any row including their own; read-only on My Account; clearing it is allowed; it gets its own audit entry; on a Super Admin row only a Super Admin may set it. This is enforced by the database: `position_title` is not on `self_cols` (R43) and an Owner Admin is blocked from Super Admin rows.
+- Phone is self-edited on My Account (optional, stored through `normalizePhone()`). Email is read-only (it is the sign-in identity; changing it needs a Supabase Auth email-change flow, out of scope).
+- Away-date types: Vacation, Leave, Other — deliberately no health-related type (a reason category visible to the whole crew would be health information). A note of up to 200 characters is visible to all crew; the field's placeholder says so.
+- Visibility: all five roles see everyone's absences; they are NEVER exposed on the public `/calendar`, the iCal feed, emails or notifications.
+- No notifications and no conflict warnings in v1.
+- No history view: past absences are hidden from lists but kept in the database.
+- Flag: `feature_absences`, seeded `'true'`, flaggable so the OpenCall OS template can switch it off.
+- Calendar: the overlay has a per-user "Show away dates" toggle in the calendar's filter area, saved in the database (`admin_users.show_absences_on_calendar`, default true) so it follows the user across devices and has no first-paint flash. It affects only the calendar overlay; the dashboard widget and the Directory badge always show.
+- SA/OA may DELETE anyone's absence (never edit it), only from the calendar day panel's Away section; the audit entry records who removed it and whose it was; the person is not notified.
+- Renaming: display names are looked up live, so a rename updates every old forum post, note, message and audit-log row. The only frozen copies are the `user.create` audit entry, welcome emails already sent, and `pending_registrations`. Duplicate-name rule: a name change is rejected when it matches another ACTIVE admin user's name, ignoring case and extra spaces; it applies only when the name actually changes (a capitalization or spacing-only change counts as no change), so an existing duplicate cannot block an unrelated edit. Account creation and approval are not checked in this phase (follow-up).
+- Directory: a standalone, always-on feature for all five roles with no flag; alphabetical by name.
+- Production proxy fix: folded into DIRECTORY.1. Dead `adminRole` prop on Month, Week and Agenda calendar views: removed in ACCOUNT.5.
+- Hardening first: the `admin_users` hole was closed (SEC.1) before any ACCOUNT migration.
+
+**Data model — Migration 048 (ACCOUNT.1; migration file at the repo root, R21)**
+- `admin_users` gains three columns: `phone text` (nullable), `position_title text` (nullable; maximum 100 characters, enforced in the zod schemas and optionally by a CHECK if the ACCOUNT.1 audit agrees), and `show_absences_on_calendar boolean NOT NULL DEFAULT true`. The trigger is NOT touched (R43): `phone` and `show_absences_on_calendar` are already on `self_cols`; `position_title` deliberately is not. No `updated_at` is added to `admin_users` (the audit log already records changes).
+- New table `crew_absences`: `id uuid` primary key; `admin_user_id uuid` FK to `admin_users` ON DELETE CASCADE, indexed; `start_date` and `end_date` as `date` (inclusive; CHECK `end_date >= start_date`); `absence_type` CHECK in `vacation`, `leave`, `other`; `note` nullable, at most 200 characters; `created_at` and `updated_at` with the `handle_updated_at()` trigger; indexes on `admin_user_id` and `end_date`. Whole days only.
+- RLS on `crew_absences` (R39 naming, all TO authenticated): SELECT for `is_admin()`; INSERT only where `admin_user_id = auth.uid()`; UPDATE only own rows (USING and WITH CHECK `admin_user_id = auth.uid()`, so a row cannot be reassigned); DELETE own rows OR SA/OA (`admin_users_is_sa_or_oa()`); no edit by anyone but the owner. No new SECURITY DEFINER function.
+- Per R45 the migration also runs `REVOKE ALL ON public.crew_absences FROM anon` and `REVOKE TRUNCATE, REFERENCES, TRIGGER ON public.crew_absences FROM authenticated` (until SEC.3a ships, Supabase grants anon broad default privileges on every new table), and seeds `feature_absences = 'true'` into `app_settings` with `ON CONFLICT DO NOTHING`.
+- Verified by queries and rolled-back persona tests (R44): own-row insert/update/delete succeed; another user's row insert/update fail; SA/OA delete of another user's row succeeds; SA/OA update of another user's row fails; anon has no access; a Viewer and a Production persona can read all rows.
+
+**Absence rules (all server-enforced and mirrored in the UI)**
+- Every role manages its own absences; no one edits anyone else's; SA/OA may delete (above).
+- Create: `end_date` must be today or later in the org timezone; `start_date` may be earlier ("I'm already away"); the span is at most 366 days; a new or edited range may not overlap one of the user's own, and the error message says so.
+- Deactivated users' absences are filtered out of every view; reactivation brings them back.
+- Edit and remove: your own current and upcoming absences. Past ones are hidden from your list but kept.
+- Bare `YYYY-MM-DD` strings only (R23); no timezone conversion for the dates themselves; "today" comes from the org timezone (R41 pattern; `formatInTimeZone`).
+- Audit actions (in the `AuditAction` union in `lib/audit.ts`, with readable labels in `AuditLogTable` and the filter dropdown): `absence.create`, `absence.update`, `absence.delete` (with the remover and the owner recorded when SA/OA deletes), `user.profile_update`, and an action for position-title changes (name chosen in ACCOUNT.2).
+
+**My Account page (ACCOUNT.3)**
+- A Server Component shell owns the container and heading zone (the UPSTYLE.8 convention) and renders three client cards.
+- Profile card: display name editable (1–100 characters); email read-only with a note; phone optional (via `normalizePhone()`); position title read-only; role as a read-only badge. The profile action never accepts an id from the client, writes an explicit column allowlist (`name`, `phone` only), and takes identity from `getAdminUser()`.
+- Password card: the existing behaviour and the existing `changePassword()` action moved unchanged (new + confirm fields, minimum 8 characters, still logs `user.password_change`); the orphaned password component is removed.
+- Time Away card (gated on `feature_absences`): the user's current and upcoming absences with edit and remove, plus an add form (start date, end date, type, optional note).
+- Technical rules: controlled inputs with `onClick`, no `<form>` elements (R13.3a); native `<input type="date">` so values stay `YYYY-MM-DD`; `router.refresh()` after each mutation; `revalidatePath('/crew', 'layout')` after a name change (the name renders in the TopBar and elsewhere).
+- Navigation and proxy: the sidebar's `ACCOUNT_HREF` renders ungrouped like Dashboard; it is not orderable, so it is NOT in `DEFAULT_LINK_ORDER`; it uses the standard active-state recipe. `/crew/account` needs TWO allowlist edits for Production — the proxy's exclusion list and the sidebar's separate Production filter — and Task A checks whether a dead Dashboard link renders for Production. Stale references: grep `settings/password` in emails, Help text and tooltips and fix any that point at the header link.
+
+**Calendar overlay (ACCOUNT.5)**
+- Absences are NOT `calendar_events` rows (that would pull them into conflict detection, the approval queue and the iCal feed). They are a separate read-only layer.
+- Month view: a muted gray "N away" count chip at the bottom of a day cell, outside the 3-chip limit, no location color. Week view: a slim "Away" row under the day headers listing names; the mobile week agenda gets an "Away: …" line under each day. Agenda view: the same line under dates that already appear (an absence alone never creates a date group). Day panel: a new "Away" section (name, type, date range, note) carrying the SA/OA delete action. Public calendar and iCal are untouched.
+- "Show away dates" toggle in the filter area for everyone; a small server action updates only the caller's own `show_absences_on_calendar` (explicit column allowlist). The absences query is skipped when `feature_absences` is off or the toggle is off.
+- Data: the page fetches absences for the same grid range as the events using bare-date string comparison. A pure, client-safe `lib/utils/absences.ts` expands ranges into days, comparing `YYYY-MM-DD` strings against the views' org-timezone day keys.
+- Prop threading: the new `absences` prop crosses FIVE levels (page, calendar shell, Month/Week/Agenda views, day panel) — the MESSAGES.7 dead-prop failure mode. Task A confirms every level before any edit. The same prompt removes the dead `adminRole` prop from the Month, Week and Agenda view types and call sites.
+
+**Dashboard widget (ACCOUNT.6)**
+- "Upcoming Absences" is a self-contained Server Component following the SeasonAtAGlance pattern: it takes `timezone` as a prop and fetches its own data. Window: today through 31 days, grouped by person; anyone currently away is listed first with a "back [date]" label; the position title shows when set; the user's own entries are labeled "You"; at most 10 people with a "Showing N of M" note; it renders nothing when there are no absences; it sits right after Season at a Glance; a calendar link appears only when `feature_calendar` is on; it ignores the calendar toggle; gated on `feature_absences`.
+
+**Crew Directory — standalone (DIRECTORY.1)**
+- Today `/crew/users` exists only because Messages needs a recipient picker, gated by `feature_messages`, which defaults OFF. DIRECTORY.1 makes it a standalone, always-on feature: `proxy.ts` stops guarding `/crew/users` with `flags.messages`; the sidebar link moves out of the flag-gated hrefs; `getUsersForDirectory()` moves out of the messages data module (server-only, carries the messages flag) into its own module.
+- Rows (alphabetical by name; all five roles; the current user excluded as today): name, position title, role badge, phone if set, and an "Away until [date]" badge shown only while `feature_absences` is on (independent of the calendar toggle). Email shows when Messages is OFF; when Messages is ON the "Message" link shows and email is hidden. SA/OA still see emails on the Users page. Hiding email is a display choice, not security (§9).
+- Fixes the Production allowlist gap (§7): `/crew/messages` (still flag-gated) and `/crew/users` are added so Production can reach what its sidebar shows.
+- Brief updates expected in the DOC pass after the phase: §2 and §7 Production rows, the Private Messaging section's "User Directory" text, the feature-flag table, Help text.
+
+**Navigation and flag wiring (R34)**
+- `feature_absences`: the 5-file flag pattern plus the 6 server-side wiring points in `saveFeatureFlags()`; SETUP_KEYS goes 31 → 32; feature flags 9 → 10; the Setup Panel gets its 11th toggle (the 10th flag-typed one). There is no dedicated route to block and no sidebar link to hide; the gating points are the Time Away card, the calendar query, the widget, the Directory badge and an early return in the absence actions.
+
+**Prompt sequence**
+
+| Prompt | Deliverable | Notes |
+|---|---|---|
+| ACCOUNT.1 | Migration 048 (above) | Verified by queries and rolled-back persona tests (R44) |
+| ACCOUNT.2 | Logic layer, no UI | Types; `lib/data/absences.ts` (no `'use server'`); `lib/utils/absences.ts` with boundary tests (month and year ends, "today" in the org timezone); zod schemas; `lib/actions/account.ts` and `absences.ts` — own profile, absence create/edit/delete, SA/OA remove, SA/OA set title, calendar preference, duplicate-name rule; audit actions plus `AuditLogTable` labels and filter dropdown; flag wiring; widen `AdminUser` and the `getAdminUser()` SELECT with `show_absences_on_calendar` |
+| ACCOUNT.3 | `/crew/account` page, sidebar link, both allowlist edits, TopBar change, old-route redirect, orphaned password component removed | Needs the owner's test Production account to verify |
+| ACCOUNT.4 | Position Title editing in User Management (SA/OA; Super-Admin rows Super Admin only) | Also verify `changeRole()` against the `calendar_editor` / `inventory_manager` CHECK constraints (§8) and fix if needed |
+| DIRECTORY.1 | Directory standalone + Production allowlist fix | Test Production account |
+| ACCOUNT.5 | Calendar overlay, per-user toggle, SA/OA remove in the day panel, dead `adminRole` prop removed | Five-level prop audit |
+| ACCOUNT.6 | Dashboard "Upcoming Absences" widget | |
+| ACCOUNT.7 | Help content and tooltips | Calendar help, Dashboard help, a My Account topic, the Directory; fix stale "Change Password in the header" text |
+| DOC | Brief, Process and Deferred Verifications updates after the phase | |
+
+**Governance checks every ACCOUNT prompt carries:** template-literal `className`s; lucide icon names verified with `node -e` before use; `await getServerClient()`; local card class constants; no hand-authored dark/native pairing (R35); no non-async exports from `'use server'` files; `formatWallClockCT` takes 3 arguments; zero lint and tsc errors; flag-wiring greps; `revalidatePath` coverage on every mutation; absences excluded from the public `/calendar`, the iCal feed, emails and notifications (explicit in code and in the verification checklist). Interim SEC conditions (Phase SEC) restated in each Task A.
+
+**Owner verification for the phase:** create the test Production account in User Management (an email the owner controls, assigned to one show and one audition) before ACCOUNT.3 is verified; check `/crew/account` as each of the five roles; confirm the old password URL redirects; rename a user and confirm every old post and audit row shows the new name; try a duplicate name (rejected) and an overlapping absence (rejected); confirm absences never appear on the public calendar, the iCal feed or any email; confirm SA/OA can delete but not edit another user's absence from the day panel; confirm the Directory as Production.
+
+**Follow-ups logged (not in this phase):** SA/OA editing others' absences; notifications and conflict warnings (for example, warning when someone is rostered during an absence); a history view; the duplicate-name check at account creation and at registration approval; whether the duplicate check should also cover pending registrations; an optional explicit `force-dynamic` on `/callboard` and `/calendar` (V1-CHECK).
 
 ### Phase CAST — Cast Member Portal (post-launch)
 
@@ -10192,7 +10423,19 @@ pattern in flex row with flex-shrink-0 right block). 5 files modified,
 
 Build Pt 30 summary: ADMIN.78–83 made every public surface that depends on "now" time-correct. No migrations (next remains 047), no new env vars; feature flags (9) and SETUP_KEYS (31) unchanged. Owner browser verification is pending for ADMIN.79–83 (R16/R22). Documented in Brief v6.10: R41, R42; §8 landing page, `/shows`, `/shows/[id]`, `/callboard`, `/calendar`; §12 decisions 8–10.
 
-**30BN-DOC.109** ✓ — Brief v6.9→v6.10 (ADMIN.78–83, Build Pt 30; this prompt).
+**30BN-DOC.109** ✓ — Brief v6.9→v6.10 (ADMIN.78–83, Build Pt 30).
+
+**30BN-V1-CHECK** ✓ — Read-only R41 consistency audit (Build Pt 31; no code, no commit). Confirmed `/callboard` and `/calendar` are dynamic on three independent signals: the code (`/callboard` reads `cookies()` through `getCallboardSession()` on every render; `/calendar` awaits `searchParams`), the local build route table (`ƒ` for both) and live production headers (`x-vercel-cache: MISS`, `cache-control: private, no-cache, no-store`, no `x-nextjs-prerender`). Controls `/` and `/shows` (explicit `force-dynamic`) returned identical headers. Both routes are dynamic only implicitly; an explicit `export const dynamic = 'force-dynamic'` on each would make that a deliberate guarantee — optional hardening, an owner decision, not required (R41 is satisfied today).
+
+**30BN-ACCOUNT.A** ✓ — Read-only audit for Phase ACCOUNT (Build Pt 31; no code, no commit; targeted reads of the governance documents, owner-approved per Process §14). Key findings: (1) `admin_users` privilege-escalation hole (→ SEC.1); (2) `AdminUser` and `getAdminUser()` must be extended to carry `show_absences_on_calendar` (ACCOUNT.2); (3) the proxy's Production allowlist omits `/crew/messages` and `/crew/users` (→ DIRECTORY.1; recorded in §7); (4) `/crew/account` needs TWO allowlist edits — the proxy exclusion list and the sidebar's separate Production filter; (5) the audit-log viewer (`AuditLogTable` labels and the filter dropdown) must be extended for new action types; (6) names are looked up live everywhere — the only frozen copies of a display name are the `user.create` audit entry, welcome emails already sent, and `pending_registrations`; (7) `admin_users` has no `updated_at` (deliberately not added); (8) the Month, Week and Agenda calendar views carry a dead `adminRole` prop (removed in ACCOUNT.5); (9) two `admin_users` rows shared one display name — the owner deactivated the stale duplicate.
+
+**30BN-SEC.1** ✓ — Migration 047, `admin_users` RLS hardening. Commit d9f12e5. Full record: §9 (Migration 047 status; "admin_users — access control"), §13 R43, and §11 Phase SEC. Owner checks V1–V4 passed.
+
+**30BN-SEC.2 (Tasks A–C)** ✓ — Read-only table-level access audit: baseline, catalog inventory, anonymous-exposure analysis (a critical gate that stopped for the owner and cleared). No repository change, no commit. Tasks D–H pending. Findings and the designed SEC.3a hotfix: §11 Phase SEC.
+
+Build Pt 31 summary: SEC.1 shipped Migration 047 (next migration 048). No new env vars; feature flags (9) and SETUP_KEYS (31) unchanged. Owner browser verification for ADMIN.79–83 (R16/R22) is unchanged from Build Pt 30; SEC.1 V1–V4 passed, V5–V9 are deferred to their next natural occurrence. Phase SEC and Phase ACCOUNT are specified in full below for fresh-session execution; the owner chose to run ACCOUNT first. Documented in Brief v6.11: §7 (Production allowlist gap), §8 (database-enforced role guards), §9 (Migration 047; `admin_users` access control), §11 (these entries; Phase SEC; Phase ACCOUNT), §12 decisions 11–24, §13 R43–R45.
+
+**30BN-DOC.111** ✓ — Brief v6.10→v6.11 (Build Pt 31: V1-CHECK, ACCOUNT.A, SEC.1, SEC.2 Tasks A–C; Phase SEC and Phase ACCOUNT specification; this prompt).
 
 ---
 
@@ -10210,6 +10453,20 @@ Build Pt 30 summary: ADMIN.78–83 made every public surface that depends on "no
 | 8 | Claim cutoff time | ✅ Resolved | Slots are claimable up until show time and never after: claims close at `show_date` + `show_time` in the org timezone (not at day start, not at show end). Enforced server-side; the UI mirrors it. ADMIN.80. |
 | 9 | Past-event visual treatment | ✅ Resolved | Past calendar events keep their location color at `opacity-40` and are non-selectable (home widget and `/calendar`). A gray treatment was tried and rejected by the owner. ADMIN.79 / 79-FIX / 81. |
 | 10 | Started-date handling for cancel, waitlist, and listings | ✅ Resolved | Cancelling stays allowed after show start; waitlist promotion onto a started date is skipped; `/shows` and `/callboard` omit started dates; the Call Board indicator ignores started dates; Upcoming Slots stays whole-day so Cancel keeps working. ADMIN.82a / 82b / 83. |
+| 11 | Harden `admin_users` before ACCOUNT feature work | ✅ Resolved | The ACCOUNT.A audit found any active admin of any role could change any column of any `admin_users` row. Owner approved a dedicated hardening migration first (SEC.1, Migration 047, commit d9f12e5); ACCOUNT's migration became 048. |
+| 12 | Order of ACCOUNT versus the remaining security work | ✅ Resolved | ACCOUNT phase first (ACCOUNT.1–7 and DIRECTORY.1), then SEC.3a, SEC.2-resume, SEC.3b–3f, SEC.4, then one consolidated DOC prompt. The owner reversed an earlier "finish SEC first" choice; SEC.1 was the only prerequisite. |
+| 13 | Position Title ownership | ✅ Resolved | Edited only by SA/OA in User Management, for any row including their own; read-only on My Account; clearing allowed; on Super Admin rows only a Super Admin may set it. Database-enforced (not on `self_cols`). |
+| 14 | Crew Directory becomes standalone | ✅ Resolved | Always on, no flag, all five roles, alphabetical; fields: name, position title, role badge, phone if set, "Away until" badge. Email shows when Messages is OFF; with Messages ON the Message link shows and email is hidden. Built in DIRECTORY.1, which also fixes the Production allowlist gap. |
+| 15 | Away-date visibility, types and exposure | ✅ Resolved | All five roles see everyone's absences; types Vacation, Leave, Other (no health category); 200-character note visible to all crew; never on the public `/calendar`, the iCal feed, emails or notifications; no notifications or conflict warnings in v1; no history view. |
+| 16 | Away-date feature flag | ✅ Resolved | `feature_absences`, default ON, flaggable (OpenCall OS template). Profile, password and the Directory are core and never flagged. |
+| 17 | Calendar "Show away dates" toggle storage | ✅ Resolved | Per-user database column `admin_users.show_absences_on_calendar` (default true), not browser storage: follows the user across devices, no first-paint flash. Affects only the calendar overlay; the widget and the Directory badge always show. |
+| 18 | Absence moderation | ✅ Resolved | SA/OA may delete (not edit) anyone's absence, only from the calendar day panel; the audit entry records who and whose; the person is not notified. |
+| 19 | Renaming and duplicate display names | ✅ Resolved | Names are looked up live, so a rename applies retroactively; frozen copies are the `user.create` audit entry, welcome emails already sent and `pending_registrations`. A change to a name matching another active user's (case- and space-insensitive) is rejected, only when the name actually changes; creation and approval are not checked yet. |
+| 20 | Audition publishing hold | 🔄 Interim | Do not publish any audition until SEC.3a is applied and verified (`audition_signups` PII and tokens are anon-readable). The owner states all four existing auditions are drafts. |
+| 21 | Production and Viewer account hold | 🔄 Interim | No Production or Viewer accounts for other people until SEC.3d. One owner-controlled test Production account is allowed and needed to verify ACCOUNT.3, DIRECTORY.1 and ACCOUNT.5. |
+| 22 | Remove anon access entirely, including default privileges | ✅ Resolved (design) | Owner approved the SEC.3a design: drop every anon policy, revoke every anon privilege on the public schema, change default privileges so future tables inherit none, rollback generated from a snapshot. Timing: after the ACCOUNT phase, when the owner can run the signed-out smoke tests immediately. |
+| 23 | `/shows` hides a show whose only upcoming dates are full | 🔄 Open | Raised in ADMIN.82a (pre-existing rule): such a show disappears from `/shows`. Owner product decision pending: keep, or list it as full / waitlist. |
+| 24 | OpenCall OS template porting of R41, R42 and show-timing | 🔄 Open | The OpenCall OS template should inherit the time-correctness rules and `show-timing.ts` from this master reference; not yet ported. Owner decision pending. |
 
 ---
 
@@ -11362,6 +11619,48 @@ Established ADMIN.80 / 82a / 82b / 83.
 **Past-event pill pattern (ADMIN.79 / 79-FIX / 81):**
 A past calendar event renders as a plain `<div>` — never a `<Link>`, `<button>`, or any element with `href`, `onClick`, `tabIndex`, or `role` — keeping the event's location color (`style={{ backgroundColor: event.location?.color ?? '#555555' }}`) with `opacity-40 cursor-default` and exactly the layout classes of the upcoming pill (`block rounded px-1.5 py-1 text-white text-[11px] leading-tight line-clamp-2` on the home widget; the responsive truncate / dual-span title on `/calendar`). No hover or transition classes; the needs-volunteers dot is preserved. Fade the pill, never the day cell: a child cannot escape its parent's `opacity`, so cell-level opacity would also fade upcoming events in out-of-month cells. Out-of-month cells use `bg-gray-50` on the cell and `text-gray-400` on the day number; the today ring takes priority. Owner decision: faded location color, not gray (ADMIN.79-FIX). Applied in `HomeCalendarWidget.tsx` and `PublicCalendarGrid.tsx`.
 
+### R43 — admin_users Writes Are Column-Guarded: New Self-Editable Columns Must Be Added to `self_cols`
+
+`admin_users` is protected by scoped RLS policies and the BEFORE UPDATE trigger `admin_users_guard_update()` (Migration 047, §9). For every role except Super Admin the trigger fails CLOSED: a non-SA/OA caller may change only the columns listed in `self_cols` (`name`, `phone`, `last_login`, `activity_cleared_at`, `announcement_dismissed_at`, `calendar_subscription_token`, `show_absences_on_calendar`), and only on their own row.
+
+Rules:
+1. A new `admin_users` column that a non-SA/OA user must be able to edit on their own row requires a migration that `CREATE OR REPLACE`s the trigger function with the column added to `self_cols`. Without it the write fails at runtime — "Cannot modify restricted columns on your own row" — with no build error.
+2. A column NOT on `self_cols` is SA/OA-only by default. Use that deliberately (for example `position_title`, role and flag columns). Do not "fix" a blocked write by widening `self_cols` or by routing a user-initiated write through `getAdminClient()` unless the owner has decided the column is self-editable.
+3. The service role, migrations and the postgres role pass the trigger (`auth.uid() IS NULL`). A session-client success proves nothing about a service-role write, and the reverse — test both.
+4. Owner Admin cannot touch Super Admin rows, assign `super_admin`, change `email` or `created_at`, or rotate another user's calendar token. The application checks in `lib/actions/users.ts` remain and must stay in step with the trigger.
+5. Server actions that update `admin_users` use an explicit column allowlist and take identity from `getAdminUser()` — never an id from the client (R37: `admin_users.id` equals `auth.uid()`).
+6. Any change to these policies or the trigger is tested as rolled-back personas (R44).
+
+Established SEC.1 (Migration 047).
+
+### R44 — Database Behaviour Claims Must Be Tested, Not Asserted; Security Tests Roll Back
+
+Any statement about how the database behaves ("this will recurse", "this grant is held", "this policy blocks X") written into a prompt, report, migration comment or this Brief must come from a query or test run against the live catalog, or be labelled as an untested prediction. SEC.1's Task A asserted "infinite recursion" as fact; experiment C3 showed none. Migration comments state what was tested.
+
+Rules:
+1. Security and RLS tests run inside a transaction that always ends in `RAISE EXCEPTION` (rolled back); nothing persists. Synthetic personas use `@example.invalid` emails; `admin_users` has no foreign key to `auth.users`, so personas can be inserted inside the block (R37).
+2. Identity: `SET LOCAL ROLE authenticated` plus `set_config('request.jwt.claim.sub', <uuid>, true)`, `set_config('request.jwt.claim.role', 'authenticated', true)` AND the `request.jwt.claims` JSON; verify with `SELECT auth.uid(), auth.role()` at the head of every block.
+3. A failing legitimate path means immediate rollback with the stored rollback SQL and a report; never patch forward without owner approval. A test that fails for an unrelated reason (a CHECK constraint, a guessed column name) is isolated and re-run on a clean row; read real column names from `information_schema` first.
+4. A CHECK constraint can mask a vulnerability (an Owner Admin self-promotion was blocked only by `admin_users_calendar_editor_check`): attack tests use personas that do not trip unrelated constraints.
+5. Prove before and after with data fingerprints (row count plus md5 of ordered ids) and zero `@example.invalid` leftovers.
+6. Rollbacks are GENERATED from a snapshot of live state, never hand-written blanket grants.
+7. Rate limits: few, large database calls (one DO block per persona group); scratch notes under `/tmp`; after an interruption run a read-only state check, report the state (NOT APPLIED / FULLY APPLIED / PARTIAL / UNKNOWN) and WAIT for the owner — never "continue from memory".
+8. Never print the anon key or any token; load keys into shell variables and use them only inside header arguments.
+
+Established SEC.1 / SEC.2.
+
+### R45 — Migration Security Checklist: RLS On, No anon, Explicit Grants, Hardened Helpers
+
+The anon key ships in the browser bundle and is public, and no application flow uses anon against public tables (every public route uses `getAdminClient()` — Process public-route invariant). Every migration that creates a table, function or policy follows this checklist (it extends R28 and R39):
+1. `ENABLE ROW LEVEL SECURITY` on every new table; policies `TO authenticated` — never `anon` or `public`; scope by role or ownership, not bare `is_admin()`, wherever Viewer or Production should not write.
+2. Until SEC.3a ships (§11 Phase SEC shows its status), Supabase grants anon and authenticated broad default privileges on every new table, so the migration itself runs `REVOKE ALL ON <table> FROM anon;` and `REVOKE TRUNCATE, REFERENCES, TRIGGER ON <table> FROM authenticated;`. After SEC.3a ships, default privileges no longer grant anon and every migration must GRANT explicitly to `authenticated` and `service_role` whatever it needs — a forgotten grant then surfaces as "permission denied" in testing instead of a silent exposure.
+3. New functions: SECURITY DEFINER only when needed; always `SET search_path = public, pg_temp`; `REVOKE ALL ... FROM PUBLIC, anon`, then GRANT EXECUTE to the roles that need it (R28).
+4. Never add an anon policy. If a public page needs data, read it server-side with `getAdminClient()`.
+5. Verify by capability (`has_table_privilege`, `has_function_privilege`), not by reading grants by eye — a REVOKE from anon does nothing when the privilege came through PUBLIC.
+6. Include a rollback block as a trailing comment, generated from live state (R44).
+
+Established SEC.1–SEC.2 (checklist active now; the default-privileges clause activates with SEC.3a).
+
 ---
 
 *This document is updated at the completion of each
@@ -11399,5 +11698,6 @@ corrected here.*
 (v4.9 was inserted before v4.8/v4.7 in DOC.63);
 corrected to chronological order here.*
 *- v6.10: The v6.9 §11 log recorded the same commit hash (`d8526c1`) for both ADMIN.72 and ADMIN.75; `d8526c1` is ADMIN.75 (confirmed from git history) and ADMIN.72's hash was corrected from git log. The §1 post-Beta ADMIN list had stopped at ADMIN.47–64 since v6.7 and was brought current to ADMIN.83; the §8 landing-page note calling `VolunteerHomeMockup.tsx` a removal candidate was stale (deleted in ADMIN.74) and was replaced; the §11 overview status paragraph's mockup count (11) was stale (9 as of v6.10). DOC.102–108 have no individual §11 entries — see the version table here and Process §13 for their scope.*
+*- v6.11: DOC.110 updated `30BN_PROCESS_v1.md` only (Process v6.8) and has no Brief entry; the Brief stayed at v6.10 through it. The stale version-and-item-count reference to the Deferred Verifications document in the Phase 17 checklist was replaced with a version-independent one. Build Pt 31 content is documented in §7 (Production allowlist gap), §8 (database-enforced role guards), §9 (Migration 047; `admin_users` access control), §11 (V1-CHECK, ACCOUNT.A, SEC.1, SEC.2 Tasks A–C, Phase SEC, Phase ACCOUNT), §12 (decisions 11–24) and §13 (R43–R45). Phase SEC and Phase ACCOUNT are planning records: anything marked planned, designed or pending is not shipped.*
 
 *Full build history by phase and prompt: see §11.*
